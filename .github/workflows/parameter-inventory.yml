@@ -1,0 +1,33 @@
+name: Parameter inventory
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check out the normative TorchSynth source
+        uses: actions/checkout@v4
+        with:
+          repository: torchsynth/torchsynth
+          ref: 2b0964d4c6c3d472a2a0d54d91b408caaeffca6d
+          path: .upstream/torchsynth
+          persist-credentials: false
+      - name: Verify commit and source hashes
+        run: python tools/check_contract.py --torchsynth-root .upstream/torchsynth --require-git-commit
+      - name: Compare generated inventory with committed bytes
+        run: python tools/generate_parameter_inventory.py --torchsynth-root .upstream/torchsynth --check
+      - name: Test source-backed regeneration and rejection cases
+        env:
+          TORCHSYNTH_ROOT: .upstream/torchsynth
+        run: python -m unittest discover -s tests -p test_inventory.py -v

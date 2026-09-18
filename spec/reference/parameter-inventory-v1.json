@@ -1,0 +1,2083 @@
+{
+  "annotations_sha256": "6c21a9691dd11b2a1b92e695353cda38405032451e79245ede913ab9de59c2b7",
+  "nebula_entry_count": 156,
+  "parameter_count": 78,
+  "parameters": [
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the modulation matrix.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 6,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "adsr_1",
+      "module_class": "ADSR",
+      "name": "adsr_1.alpha",
+      "parameter": "alpha",
+      "randomization_position": 0,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "adsr_1.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 2,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "adsr_1",
+      "module_class": "ADSR",
+      "name": "adsr_1.attack",
+      "parameter": "attack",
+      "randomization_position": 1,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_1.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 3,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "adsr_1",
+      "module_class": "ADSR",
+      "name": "adsr_1.decay",
+      "parameter": "decay",
+      "randomization_position": 2,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_1.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 5,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "adsr_1",
+      "module_class": "ADSR",
+      "name": "adsr_1.release",
+      "parameter": "release",
+      "randomization_position": 3,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_1.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the modulation matrix.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 4,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "adsr_1",
+      "module_class": "ADSR",
+      "name": "adsr_1.sustain",
+      "parameter": "sustain",
+      "randomization_position": 4,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "adsr_1.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the modulation matrix.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 11,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "adsr_2",
+      "module_class": "ADSR",
+      "name": "adsr_2.alpha",
+      "parameter": "alpha",
+      "randomization_position": 5,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "adsr_2.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 7,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "adsr_2",
+      "module_class": "ADSR",
+      "name": "adsr_2.attack",
+      "parameter": "attack",
+      "randomization_position": 6,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_2.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 8,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "adsr_2",
+      "module_class": "ADSR",
+      "name": "adsr_2.decay",
+      "parameter": "decay",
+      "randomization_position": 7,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_2.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the modulation matrix.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 10,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "adsr_2",
+      "module_class": "ADSR",
+      "name": "adsr_2.release",
+      "parameter": "release",
+      "randomization_position": 8,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "adsr_2.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the modulation matrix.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 9,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "adsr_2",
+      "module_class": "ADSR",
+      "name": "adsr_2.sustain",
+      "parameter": "sustain",
+      "randomization_position": 9,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "adsr_2.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:MonophonicKeyboard.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Known note-on duration supplied to all six envelopes.",
+        "notes": "Continuous note duration within the fixed four-second clip; this is not a live note-off event or a clip-length parameter.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 1,
+      "frozen_capable": true,
+      "maximum": 4.0,
+      "minimum": 0.01,
+      "module": "keyboard",
+      "module_class": "MonophonicKeyboard",
+      "name": "keyboard.duration",
+      "parameter": "duration",
+      "randomization_position": 10,
+      "source_description": "note-on button, in seconds",
+      "symmetric": false,
+      "torch_name": "keyboard.torchparameters.duration"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:MonophonicKeyboard.forward",
+          "torchsynth/util.py:midi_to_hz"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Base pitch supplied to both audio oscillators.",
+        "notes": "Continuous MIDI pitch coordinate: 69 corresponds to 440 Hz. The keyboard returns it without integer rounding; it is not a discrete MIDI note selector.",
+        "selector": "none",
+        "unit": "MIDI note"
+      },
+      "curve": 1.0,
+      "default_frozen": false,
+      "forward_position": 0,
+      "frozen_capable": true,
+      "maximum": 127.0,
+      "minimum": 0.0,
+      "module": "keyboard",
+      "module_class": "MonophonicKeyboard",
+      "name": "keyboard.midi_f0",
+      "parameter": "midi_f0",
+      "randomization_position": 11,
+      "source_description": "pitch value in 'midi' (69 = 440Hz)",
+      "symmetric": false,
+      "torch_name": "keyboard.torchparameters.midi_f0"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.make_control"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Base oscillation frequency of this LFO.",
+        "notes": "Continuous rate before envelope modulation; the resulting frequency is clamped below at zero.",
+        "selector": "none",
+        "unit": "Hz"
+      },
+      "curve": 0.25,
+      "default_frozen": false,
+      "forward_position": 12,
+      "frozen_capable": true,
+      "maximum": 20.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.frequency",
+      "parameter": "frequency",
+      "randomization_position": 12,
+      "source_description": "Frequency in Hz of oscillation",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.frequency"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Initial phase offset added to this LFO's accumulated phase.",
+        "notes": "Continuous angle. The sin-labelled component is implemented as a shifted cosine; labels do not redefine upstream phase.",
+        "selector": "none",
+        "unit": "radians"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 14,
+      "frozen_capable": true,
+      "maximum": 3.1415927410125732,
+      "minimum": -3.1415927410125732,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.initial_phase",
+      "parameter": "initial_phase",
+      "randomization_position": 13,
+      "source_description": "Initial phase of LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.initial_phase"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.make_control",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Scale applied to this LFO's rate-envelope signal before adding the base frequency.",
+        "notes": "The envelope input is dimensionless; mod_depth supplies the frequency offset in Hz. The source's mod_signal wording alone is ambiguous about this unit.",
+        "selector": "none",
+        "unit": "Hz"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 13,
+      "frozen_capable": true,
+      "maximum": 20.0,
+      "minimum": -10.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.mod_depth",
+      "parameter": "mod_depth",
+      "randomization_position": 14,
+      "source_description": "LFO rate modulation in Hz",
+      "symmetric": true,
+      "torch_name": "lfo_1.torchparameters.mod_depth"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the reverse-sawtooth LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 18,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.rsaw",
+      "parameter": "rsaw",
+      "randomization_position": 15,
+      "source_description": "Selection parameter for rsaw LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.rsaw"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the sawtooth LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 17,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.saw",
+      "parameter": "saw",
+      "randomization_position": 16,
+      "source_description": "Selection parameter for saw LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.saw"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the sin-labelled shifted-cosine LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 15,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.sin",
+      "parameter": "sin",
+      "randomization_position": 17,
+      "source_description": "Selection parameter for sin LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.sin"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the square LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 19,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.sqr",
+      "parameter": "sqr",
+      "randomization_position": 18,
+      "source_description": "Selection parameter for sqr LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.sqr"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the triangle LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 16,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1",
+      "module_class": "LFO",
+      "name": "lfo_1.tri",
+      "parameter": "tri",
+      "randomization_position": 19,
+      "source_description": "Selection parameter for tri LFO",
+      "symmetric": false,
+      "torch_name": "lfo_1.torchparameters.tri"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the LFO amplitude.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 32,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "lfo_1_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_amp_adsr.alpha",
+      "parameter": "alpha",
+      "randomization_position": 20,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "lfo_1_amp_adsr.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 28,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_1_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_amp_adsr.attack",
+      "parameter": "attack",
+      "randomization_position": 21,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_amp_adsr.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 29,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_1_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_amp_adsr.decay",
+      "parameter": "decay",
+      "randomization_position": 22,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_amp_adsr.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 31,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "lfo_1_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_amp_adsr.release",
+      "parameter": "release",
+      "randomization_position": 23,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_amp_adsr.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the LFO amplitude.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 30,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_amp_adsr.sustain",
+      "parameter": "sustain",
+      "randomization_position": 24,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "lfo_1_amp_adsr.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the LFO rate.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 42,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "lfo_1_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_rate_adsr.alpha",
+      "parameter": "alpha",
+      "randomization_position": 25,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "lfo_1_rate_adsr.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 38,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_1_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_rate_adsr.attack",
+      "parameter": "attack",
+      "randomization_position": 26,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_rate_adsr.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 39,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_1_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_rate_adsr.decay",
+      "parameter": "decay",
+      "randomization_position": 27,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_rate_adsr.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 41,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "lfo_1_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_rate_adsr.release",
+      "parameter": "release",
+      "randomization_position": 28,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_1_rate_adsr.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the LFO rate.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 40,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_1_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_1_rate_adsr.sustain",
+      "parameter": "sustain",
+      "randomization_position": 29,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "lfo_1_rate_adsr.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.make_control"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Base oscillation frequency of this LFO.",
+        "notes": "Continuous rate before envelope modulation; the resulting frequency is clamped below at zero.",
+        "selector": "none",
+        "unit": "Hz"
+      },
+      "curve": 0.25,
+      "default_frozen": false,
+      "forward_position": 20,
+      "frozen_capable": true,
+      "maximum": 20.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.frequency",
+      "parameter": "frequency",
+      "randomization_position": 30,
+      "source_description": "Frequency in Hz of oscillation",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.frequency"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Initial phase offset added to this LFO's accumulated phase.",
+        "notes": "Continuous angle. The sin-labelled component is implemented as a shifted cosine; labels do not redefine upstream phase.",
+        "selector": "none",
+        "unit": "radians"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 22,
+      "frozen_capable": true,
+      "maximum": 3.1415927410125732,
+      "minimum": -3.1415927410125732,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.initial_phase",
+      "parameter": "initial_phase",
+      "randomization_position": 31,
+      "source_description": "Initial phase of LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.initial_phase"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.make_control",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Scale applied to this LFO's rate-envelope signal before adding the base frequency.",
+        "notes": "The envelope input is dimensionless; mod_depth supplies the frequency offset in Hz. The source's mod_signal wording alone is ambiguous about this unit.",
+        "selector": "none",
+        "unit": "Hz"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 21,
+      "frozen_capable": true,
+      "maximum": 20.0,
+      "minimum": -10.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.mod_depth",
+      "parameter": "mod_depth",
+      "randomization_position": 32,
+      "source_description": "LFO rate modulation in Hz",
+      "symmetric": true,
+      "torch_name": "lfo_2.torchparameters.mod_depth"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the reverse-sawtooth LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 26,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.rsaw",
+      "parameter": "rsaw",
+      "randomization_position": 33,
+      "source_description": "Selection parameter for rsaw LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.rsaw"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the sawtooth LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 25,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.saw",
+      "parameter": "saw",
+      "randomization_position": 34,
+      "source_description": "Selection parameter for saw LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.saw"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the sin-labelled shifted-cosine LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 23,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.sin",
+      "parameter": "sin",
+      "randomization_position": 35,
+      "source_description": "Selection parameter for sin LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.sin"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the square LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 27,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.sqr",
+      "parameter": "sqr",
+      "randomization_position": 36,
+      "source_description": "Selection parameter for sqr LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.sqr"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:LFO.output",
+          "torchsynth/module.py:LFO.make_lfo_shapes"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Unnormalized selection weight for the triangle LFO component.",
+        "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+        "selector": "continuous_weight",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 24,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2",
+      "module_class": "LFO",
+      "name": "lfo_2.tri",
+      "parameter": "tri",
+      "randomization_position": 37,
+      "source_description": "Selection parameter for tri LFO",
+      "symmetric": false,
+      "torch_name": "lfo_2.torchparameters.tri"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the LFO amplitude.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 37,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "lfo_2_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_amp_adsr.alpha",
+      "parameter": "alpha",
+      "randomization_position": 38,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "lfo_2_amp_adsr.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 33,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_2_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_amp_adsr.attack",
+      "parameter": "attack",
+      "randomization_position": 39,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_amp_adsr.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 34,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_2_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_amp_adsr.decay",
+      "parameter": "decay",
+      "randomization_position": 40,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_amp_adsr.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the LFO amplitude.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 36,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "lfo_2_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_amp_adsr.release",
+      "parameter": "release",
+      "randomization_position": 41,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_amp_adsr.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the LFO amplitude.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 35,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2_amp_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_amp_adsr.sustain",
+      "parameter": "sustain",
+      "randomization_position": 42,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "lfo_2_amp_adsr.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR.ramp"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Ramp-shaping exponent of the envelope feeding the LFO rate.",
+        "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 47,
+      "frozen_capable": true,
+      "maximum": 6.0,
+      "minimum": 0.1,
+      "module": "lfo_2_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_rate_adsr.alpha",
+      "parameter": "alpha",
+      "randomization_position": 43,
+      "source_description": "envelope curve. 1 is linear, >1 is exponential.",
+      "symmetric": false,
+      "torch_name": "lfo_2_rate_adsr.torchparameters.alpha"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Attack time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 43,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_2_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_rate_adsr.attack",
+      "parameter": "attack",
+      "randomization_position": 44,
+      "source_description": "attack time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_rate_adsr.torchparameters.attack"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Decay time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 44,
+      "frozen_capable": true,
+      "maximum": 2.0,
+      "minimum": 0.0,
+      "module": "lfo_2_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_rate_adsr.decay",
+      "parameter": "decay",
+      "randomization_position": 45,
+      "source_description": "decay time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_rate_adsr.torchparameters.decay"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Release time of the envelope feeding the LFO rate.",
+        "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+        "selector": "none",
+        "unit": "seconds"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 46,
+      "frozen_capable": true,
+      "maximum": 5.0,
+      "minimum": 0.0,
+      "module": "lfo_2_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_rate_adsr.release",
+      "parameter": "release",
+      "randomization_position": 46,
+      "source_description": "release time (sec)",
+      "symmetric": false,
+      "torch_name": "lfo_2_rate_adsr.torchparameters.release"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ADSR"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Sustain amplitude of the envelope feeding the LFO rate.",
+        "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 45,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "lfo_2_rate_adsr",
+      "module_class": "ADSR",
+      "name": "lfo_2_rate_adsr.sustain",
+      "parameter": "sustain",
+      "randomization_position": 47,
+      "source_description": "sustain amplitude 0-1. The only part of ADSR that (confusingly, by convention) is not a time value.",
+      "symmetric": false,
+      "torch_name": "lfo_2_rate_adsr.torchparameters.sustain"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:AudioMixer.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear level of the noise audio input in the final sum.",
+        "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.025,
+      "default_frozen": false,
+      "forward_position": 77,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mixer",
+      "module_class": "AudioMixer",
+      "name": "mixer.noise",
+      "parameter": "noise",
+      "randomization_position": 48,
+      "source_description": "noise mix level",
+      "symmetric": false,
+      "torch_name": "mixer.torchparameters.noise"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:AudioMixer.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear level of the vco_1 audio input in the final sum.",
+        "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1.0,
+      "default_frozen": false,
+      "forward_position": 75,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mixer",
+      "module_class": "AudioMixer",
+      "name": "mixer.vco_1",
+      "parameter": "vco_1",
+      "randomization_position": 49,
+      "source_description": "vco_1 mix level",
+      "symmetric": false,
+      "torch_name": "mixer.torchparameters.vco_1"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:AudioMixer.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear level of the vco_2 audio input in the final sum.",
+        "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 1.0,
+      "default_frozen": false,
+      "forward_position": 76,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mixer",
+      "module_class": "AudioMixer",
+      "name": "mixer.vco_2",
+      "parameter": "vco_2",
+      "randomization_position": 50,
+      "source_description": "vco_2 mix level",
+      "symmetric": false,
+      "torch_name": "mixer.torchparameters.vco_2"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_1 to the noise_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 52,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_1->noise_amp",
+      "parameter": "adsr_1->noise_amp",
+      "randomization_position": 51,
+      "source_description": "Modulation adsr_1 to noise_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_1->noise_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_1 to the vco_1_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 49,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_1->vco_1_amp",
+      "parameter": "adsr_1->vco_1_amp",
+      "randomization_position": 52,
+      "source_description": "Modulation adsr_1 to vco_1_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_1->vco_1_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_1 to the vco_1_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 48,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_1->vco_1_pitch",
+      "parameter": "adsr_1->vco_1_pitch",
+      "randomization_position": 53,
+      "source_description": "Modulation adsr_1 to vco_1_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_1->vco_1_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_1 to the vco_2_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 51,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_1->vco_2_amp",
+      "parameter": "adsr_1->vco_2_amp",
+      "randomization_position": 54,
+      "source_description": "Modulation adsr_1 to vco_2_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_1->vco_2_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_1 to the vco_2_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 50,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_1->vco_2_pitch",
+      "parameter": "adsr_1->vco_2_pitch",
+      "randomization_position": 55,
+      "source_description": "Modulation adsr_1 to vco_2_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_1->vco_2_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_2 to the noise_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 57,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_2->noise_amp",
+      "parameter": "adsr_2->noise_amp",
+      "randomization_position": 56,
+      "source_description": "Modulation adsr_2 to noise_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_2->noise_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_2 to the vco_1_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 54,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_2->vco_1_amp",
+      "parameter": "adsr_2->vco_1_amp",
+      "randomization_position": 57,
+      "source_description": "Modulation adsr_2 to vco_1_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_2->vco_1_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_2 to the vco_1_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 53,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_2->vco_1_pitch",
+      "parameter": "adsr_2->vco_1_pitch",
+      "randomization_position": 58,
+      "source_description": "Modulation adsr_2 to vco_1_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_2->vco_1_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_2 to the vco_2_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 56,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_2->vco_2_amp",
+      "parameter": "adsr_2->vco_2_amp",
+      "randomization_position": 59,
+      "source_description": "Modulation adsr_2 to vco_2_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_2->vco_2_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of adsr_2 to the vco_2_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 55,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.adsr_2->vco_2_pitch",
+      "parameter": "adsr_2->vco_2_pitch",
+      "randomization_position": 60,
+      "source_description": "Modulation adsr_2 to vco_2_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.adsr_2->vco_2_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_1 to the noise_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 62,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_1->noise_amp",
+      "parameter": "lfo_1->noise_amp",
+      "randomization_position": 61,
+      "source_description": "Modulation lfo_1 to noise_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_1->noise_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_1 to the vco_1_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 59,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_1->vco_1_amp",
+      "parameter": "lfo_1->vco_1_amp",
+      "randomization_position": 62,
+      "source_description": "Modulation lfo_1 to vco_1_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_1->vco_1_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_1 to the vco_1_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 58,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_1->vco_1_pitch",
+      "parameter": "lfo_1->vco_1_pitch",
+      "randomization_position": 63,
+      "source_description": "Modulation lfo_1 to vco_1_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_1->vco_1_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_1 to the vco_2_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 61,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_1->vco_2_amp",
+      "parameter": "lfo_1->vco_2_amp",
+      "randomization_position": 64,
+      "source_description": "Modulation lfo_1 to vco_2_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_1->vco_2_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_1 to the vco_2_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 60,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_1->vco_2_pitch",
+      "parameter": "lfo_1->vco_2_pitch",
+      "randomization_position": 65,
+      "source_description": "Modulation lfo_1 to vco_2_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_1->vco_2_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_2 to the noise_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 67,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_2->noise_amp",
+      "parameter": "lfo_2->noise_amp",
+      "randomization_position": 66,
+      "source_description": "Modulation lfo_2 to noise_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_2->noise_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_2 to the vco_1_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 64,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_2->vco_1_amp",
+      "parameter": "lfo_2->vco_1_amp",
+      "randomization_position": 67,
+      "source_description": "Modulation lfo_2 to vco_1_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_2->vco_1_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_2 to the vco_1_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 63,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_2->vco_1_pitch",
+      "parameter": "lfo_2->vco_1_pitch",
+      "randomization_position": 68,
+      "source_description": "Modulation lfo_2 to vco_1_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_2->vco_1_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_2 to the vco_2_amp control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 66,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_2->vco_2_amp",
+      "parameter": "lfo_2->vco_2_amp",
+      "randomization_position": 69,
+      "source_description": "Modulation lfo_2 to vco_2_amp",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_2->vco_2_amp"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:ModulationMixer.forward",
+          "torchsynth/synth.py:Voice.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Linear contribution of lfo_2 to the vco_2_pitch control signal.",
+        "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+        "selector": "none",
+        "unit": "dimensionless"
+      },
+      "curve": 0.5,
+      "default_frozen": false,
+      "forward_position": 65,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "mod_matrix",
+      "module_class": "ModulationMixer",
+      "name": "mod_matrix.lfo_2->vco_2_pitch",
+      "parameter": "lfo_2->vco_2_pitch",
+      "randomization_position": 70,
+      "source_description": "Modulation lfo_2 to vco_2_pitch",
+      "symmetric": false,
+      "torch_name": "mod_matrix.torchparameters.lfo_2->vco_2_pitch"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Initial phase offset added to the audio oscillator's accumulated phase.",
+        "notes": "Continuous angle, not a waveform selector.",
+        "selector": "none",
+        "unit": "radians"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 70,
+      "frozen_capable": true,
+      "maximum": 3.1415927410125732,
+      "minimum": -3.1415927410125732,
+      "module": "vco_1",
+      "module_class": "SineVCO",
+      "name": "vco_1.initial_phase",
+      "parameter": "initial_phase",
+      "randomization_position": 71,
+      "source_description": "Initial phase for this oscillator",
+      "symmetric": false,
+      "torch_name": "vco_1.torchparameters.initial_phase"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.make_control_as_frequency"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Scale applied to the dimensionless pitch-modulation signal.",
+        "notes": "Signed pitch offset per unit input; modulated MIDI pitch is clamped to [0, 127] before conversion to Hz.",
+        "selector": "none",
+        "unit": "semitones"
+      },
+      "curve": 0.2,
+      "default_frozen": false,
+      "forward_position": 69,
+      "frozen_capable": true,
+      "maximum": 96.0,
+      "minimum": -96.0,
+      "module": "vco_1",
+      "module_class": "SineVCO",
+      "name": "vco_1.mod_depth",
+      "parameter": "mod_depth",
+      "randomization_position": 72,
+      "source_description": "depth of the pitch modulation in semitones",
+      "symmetric": true,
+      "torch_name": "vco_1.torchparameters.mod_depth"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.make_control_as_frequency"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Pitch offset added to the keyboard's MIDI pitch.",
+        "notes": "Continuous signed offset; there is no rounding to integer semitones.",
+        "selector": "none",
+        "unit": "semitones"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 68,
+      "frozen_capable": true,
+      "maximum": 24.0,
+      "minimum": -24.0,
+      "module": "vco_1",
+      "module_class": "SineVCO",
+      "name": "vco_1.tuning",
+      "parameter": "tuning",
+      "randomization_position": 73,
+      "source_description": "tuning adjustment for VCO in midi",
+      "symmetric": false,
+      "torch_name": "vco_1.torchparameters.tuning"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.output"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Initial phase offset added to the audio oscillator's accumulated phase.",
+        "notes": "Continuous angle, not a waveform selector.",
+        "selector": "none",
+        "unit": "radians"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 73,
+      "frozen_capable": true,
+      "maximum": 3.1415927410125732,
+      "minimum": -3.1415927410125732,
+      "module": "vco_2",
+      "module_class": "SquareSawVCO",
+      "name": "vco_2.initial_phase",
+      "parameter": "initial_phase",
+      "randomization_position": 74,
+      "source_description": "Initial phase for this oscillator",
+      "symmetric": false,
+      "torch_name": "vco_2.torchparameters.initial_phase"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.make_control_as_frequency"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Scale applied to the dimensionless pitch-modulation signal.",
+        "notes": "Signed pitch offset per unit input; modulated MIDI pitch is clamped to [0, 127] before conversion to Hz.",
+        "selector": "none",
+        "unit": "semitones"
+      },
+      "curve": 0.2,
+      "default_frozen": false,
+      "forward_position": 72,
+      "frozen_capable": true,
+      "maximum": 96.0,
+      "minimum": -96.0,
+      "module": "vco_2",
+      "module_class": "SquareSawVCO",
+      "name": "vco_2.mod_depth",
+      "parameter": "mod_depth",
+      "randomization_position": 75,
+      "source_description": "depth of the pitch modulation in semitones",
+      "symmetric": true,
+      "torch_name": "vco_2.torchparameters.mod_depth"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:SquareSawVCO.oscillator"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Continuous square-to-saw waveshape control.",
+        "notes": "Zero is square and one is saw according to the upstream class documentation. Intermediate values enter the oscillator formula continuously; there is no integer selector or threshold.",
+        "selector": "continuous_morph",
+        "unit": "dimensionless"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 74,
+      "frozen_capable": true,
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "module": "vco_2",
+      "module_class": "SquareSawVCO",
+      "name": "vco_2.shape",
+      "parameter": "shape",
+      "randomization_position": 76,
+      "source_description": "Waveshape - square to saw [0,1]",
+      "symmetric": false,
+      "torch_name": "vco_2.torchparameters.shape"
+    },
+    {
+      "annotation": {
+        "evidence": [
+          "torchsynth/module.py:VCO.make_control_as_frequency"
+        ],
+        "interpretation": "continuous",
+        "meaning": "Pitch offset added to the keyboard's MIDI pitch.",
+        "notes": "Continuous signed offset; there is no rounding to integer semitones.",
+        "selector": "none",
+        "unit": "semitones"
+      },
+      "curve": 1,
+      "default_frozen": false,
+      "forward_position": 71,
+      "frozen_capable": true,
+      "maximum": 24.0,
+      "minimum": -24.0,
+      "module": "vco_2",
+      "module_class": "SquareSawVCO",
+      "name": "vco_2.tuning",
+      "parameter": "tuning",
+      "randomization_position": 77,
+      "source_description": "tuning adjustment for VCO in midi",
+      "symmetric": false,
+      "torch_name": "vco_2.torchparameters.tuning"
+    }
+  ],
+  "profile": "torchsynth-1-voice-default",
+  "schema_version": 1,
+  "source": {
+    "commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+    "files": {
+      "torchsynth/config.py": "0a0fbd308aacbf54a9b3ddf91825f2084857fd018ab928a8297af8f8b02c5264",
+      "torchsynth/module.py": "f2450efee7cfa5a450238885db636cb673d6dd3c731983dc08ccc0a0e42faa8c",
+      "torchsynth/nebulae/voice/default.json": "29818c50a2b9ece101d3952edc746a75fb7d043f2d68624f356c66b83bbeae24",
+      "torchsynth/parameter.py": "db4e81bff3e930293b3e74377053e9b3d485b0939ad4ac6dd63b34bbc523a7a3",
+      "torchsynth/synth.py": "64b3c2909757f944397e4243425ceab889e6b71472445fa6710c734edb4d28f3",
+      "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
+    },
+    "manifest_sha256": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af"
+  }
+}

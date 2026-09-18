@@ -1,0 +1,819 @@
+{
+  "schema_version": 1,
+  "parameters": {
+    "adsr_1.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "adsr_1.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_1.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_1.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_1.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_2.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "adsr_2.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_2.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_2.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "adsr_2.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the modulation matrix.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "keyboard.duration": {
+      "unit": "seconds",
+      "meaning": "Known note-on duration supplied to all six envelopes.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous note duration within the fixed four-second clip; this is not a live note-off event or a clip-length parameter.",
+      "evidence": [
+        "torchsynth/module.py:MonophonicKeyboard.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "keyboard.midi_f0": {
+      "unit": "MIDI note",
+      "meaning": "Base pitch supplied to both audio oscillators.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous MIDI pitch coordinate: 69 corresponds to 440 Hz. The keyboard returns it without integer rounding; it is not a discrete MIDI note selector.",
+      "evidence": [
+        "torchsynth/module.py:MonophonicKeyboard.forward",
+        "torchsynth/util.py:midi_to_hz"
+      ]
+    },
+    "lfo_1.frequency": {
+      "unit": "Hz",
+      "meaning": "Base oscillation frequency of this LFO.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous rate before envelope modulation; the resulting frequency is clamped below at zero.",
+      "evidence": [
+        "torchsynth/module.py:LFO.make_control"
+      ]
+    },
+    "lfo_1.initial_phase": {
+      "unit": "radians",
+      "meaning": "Initial phase offset added to this LFO's accumulated phase.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous angle. The sin-labelled component is implemented as a shifted cosine; labels do not redefine upstream phase.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output"
+      ]
+    },
+    "lfo_1.mod_depth": {
+      "unit": "Hz",
+      "meaning": "Scale applied to this LFO's rate-envelope signal before adding the base frequency.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "The envelope input is dimensionless; mod_depth supplies the frequency offset in Hz. The source's mod_signal wording alone is ambiguous about this unit.",
+      "evidence": [
+        "torchsynth/module.py:LFO.make_control",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "lfo_1.rsaw": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the reverse-sawtooth LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_1.saw": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the sawtooth LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_1.sin": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the sin-labelled shifted-cosine LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_1.sqr": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the square LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_1.tri": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the triangle LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_1_amp_adsr.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "lfo_1_amp_adsr.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_amp_adsr.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_amp_adsr.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_amp_adsr.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_rate_adsr.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "lfo_1_rate_adsr.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_rate_adsr.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_rate_adsr.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_1_rate_adsr.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2.frequency": {
+      "unit": "Hz",
+      "meaning": "Base oscillation frequency of this LFO.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous rate before envelope modulation; the resulting frequency is clamped below at zero.",
+      "evidence": [
+        "torchsynth/module.py:LFO.make_control"
+      ]
+    },
+    "lfo_2.initial_phase": {
+      "unit": "radians",
+      "meaning": "Initial phase offset added to this LFO's accumulated phase.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous angle. The sin-labelled component is implemented as a shifted cosine; labels do not redefine upstream phase.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output"
+      ]
+    },
+    "lfo_2.mod_depth": {
+      "unit": "Hz",
+      "meaning": "Scale applied to this LFO's rate-envelope signal before adding the base frequency.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "The envelope input is dimensionless; mod_depth supplies the frequency offset in Hz. The source's mod_signal wording alone is ambiguous about this unit.",
+      "evidence": [
+        "torchsynth/module.py:LFO.make_control",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "lfo_2.rsaw": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the reverse-sawtooth LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_2.saw": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the sawtooth LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_2.sin": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the sin-labelled shifted-cosine LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_2.sqr": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the square LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_2.tri": {
+      "unit": "dimensionless",
+      "meaning": "Unnormalized selection weight for the triangle LFO component.",
+      "interpretation": "continuous",
+      "selector": "continuous_weight",
+      "notes": "Continuous blend weight, not a discrete selector. LFO.output raises all five weights to exponent 2.718281828 and divides by their sum. All-zero weights have a zero denominator; no fallback shape is declared.",
+      "evidence": [
+        "torchsynth/module.py:LFO.output",
+        "torchsynth/module.py:LFO.make_lfo_shapes"
+      ]
+    },
+    "lfo_2_amp_adsr.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "lfo_2_amp_adsr.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_amp_adsr.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_amp_adsr.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_amp_adsr.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the LFO amplitude.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_rate_adsr.alpha": {
+      "unit": "dimensionless",
+      "meaning": "Ramp-shaping exponent of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "No physical unit. This shapes the envelope signal, independently of the parameter-range curve hyperparameter.",
+      "evidence": [
+        "torchsynth/module.py:ADSR.ramp"
+      ]
+    },
+    "lfo_2_rate_adsr.attack": {
+      "unit": "seconds",
+      "meaning": "Attack time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_rate_adsr.decay": {
+      "unit": "seconds",
+      "meaning": "Decay time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_rate_adsr.release": {
+      "unit": "seconds",
+      "meaning": "Release time of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous requested duration; control-rate sample conversion and note-duration truncation remain upstream behavior.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "lfo_2_rate_adsr.sustain": {
+      "unit": "dimensionless",
+      "meaning": "Sustain amplitude of the envelope feeding the LFO rate.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A relative amplitude in [0, 1], not a duration or decibel value.",
+      "evidence": [
+        "torchsynth/module.py:ADSR"
+      ]
+    },
+    "mixer.noise": {
+      "unit": "dimensionless",
+      "meaning": "Linear level of the noise audio input in the final sum.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+      "evidence": [
+        "torchsynth/module.py:AudioMixer.output"
+      ]
+    },
+    "mixer.vco_1": {
+      "unit": "dimensionless",
+      "meaning": "Linear level of the vco_1 audio input in the final sum.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+      "evidence": [
+        "torchsynth/module.py:AudioMixer.output"
+      ]
+    },
+    "mixer.vco_2": {
+      "unit": "dimensionless",
+      "meaning": "Linear level of the vco_2 audio input in the final sum.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Relative linear amplitude, not decibels. Full-clip conditional normalization is separate upstream behavior and does not change this parameter's meaning.",
+      "evidence": [
+        "torchsynth/module.py:AudioMixer.output"
+      ]
+    },
+    "mod_matrix.adsr_1->noise_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_1 to the noise_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_1->vco_1_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_1 to the vco_1_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_1->vco_1_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_1 to the vco_1_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_1->vco_2_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_1 to the vco_2_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_1->vco_2_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_1 to the vco_2_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_2->noise_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_2 to the noise_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_2->vco_1_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_2 to the vco_1_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_2->vco_1_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_2 to the vco_1_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_2->vco_2_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_2 to the vco_2_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.adsr_2->vco_2_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of adsr_2 to the vco_2_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_1->noise_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_1 to the noise_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_1->vco_1_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_1 to the vco_1_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_1->vco_1_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_1 to the vco_1_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_1->vco_2_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_1 to the vco_2_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_1->vco_2_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_1 to the vco_2_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_2->noise_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_2 to the noise_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_2->vco_1_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_2 to the vco_1_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_2->vco_1_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_2 to the vco_1_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_2->vco_2_amp": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_2 to the vco_2_amp control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "mod_matrix.lfo_2->vco_2_pitch": {
+      "unit": "dimensionless",
+      "meaning": "Linear contribution of lfo_2 to the vco_2_pitch control signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "A gain coefficient, not Hz, semitones, or decibels. Contributions are summed without weight normalization; destination oscillator mod_depth supplies pitch units.",
+      "evidence": [
+        "torchsynth/module.py:ModulationMixer.forward",
+        "torchsynth/synth.py:Voice.output"
+      ]
+    },
+    "vco_1.initial_phase": {
+      "unit": "radians",
+      "meaning": "Initial phase offset added to the audio oscillator's accumulated phase.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous angle, not a waveform selector.",
+      "evidence": [
+        "torchsynth/module.py:VCO.output"
+      ]
+    },
+    "vco_1.mod_depth": {
+      "unit": "semitones",
+      "meaning": "Scale applied to the dimensionless pitch-modulation signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Signed pitch offset per unit input; modulated MIDI pitch is clamped to [0, 127] before conversion to Hz.",
+      "evidence": [
+        "torchsynth/module.py:VCO.make_control_as_frequency"
+      ]
+    },
+    "vco_1.tuning": {
+      "unit": "semitones",
+      "meaning": "Pitch offset added to the keyboard's MIDI pitch.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous signed offset; there is no rounding to integer semitones.",
+      "evidence": [
+        "torchsynth/module.py:VCO.make_control_as_frequency"
+      ]
+    },
+    "vco_2.initial_phase": {
+      "unit": "radians",
+      "meaning": "Initial phase offset added to the audio oscillator's accumulated phase.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous angle, not a waveform selector.",
+      "evidence": [
+        "torchsynth/module.py:VCO.output"
+      ]
+    },
+    "vco_2.mod_depth": {
+      "unit": "semitones",
+      "meaning": "Scale applied to the dimensionless pitch-modulation signal.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Signed pitch offset per unit input; modulated MIDI pitch is clamped to [0, 127] before conversion to Hz.",
+      "evidence": [
+        "torchsynth/module.py:VCO.make_control_as_frequency"
+      ]
+    },
+    "vco_2.shape": {
+      "unit": "dimensionless",
+      "meaning": "Continuous square-to-saw waveshape control.",
+      "interpretation": "continuous",
+      "selector": "continuous_morph",
+      "notes": "Zero is square and one is saw according to the upstream class documentation. Intermediate values enter the oscillator formula continuously; there is no integer selector or threshold.",
+      "evidence": [
+        "torchsynth/module.py:SquareSawVCO.oscillator"
+      ]
+    },
+    "vco_2.tuning": {
+      "unit": "semitones",
+      "meaning": "Pitch offset added to the keyboard's MIDI pitch.",
+      "interpretation": "continuous",
+      "selector": "none",
+      "notes": "Continuous signed offset; there is no rounding to integer semitones.",
+      "evidence": [
+        "torchsynth/module.py:VCO.make_control_as_frequency"
+      ]
+    }
+  }
+}
