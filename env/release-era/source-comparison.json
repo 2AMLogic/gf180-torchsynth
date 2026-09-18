@@ -1,0 +1,129 @@
+{
+  "interpretation": "DSP module, config, parameter, signal, util and default nebula bytes are identical. synth.py differs in one import plus two docstrings. profile.py changes the unused Lightning profiling CLI. Only the import line is patched on the release side; docstrings and profiling CLI remain release-original.",
+  "package_diffs": {
+    "torchsynth/profile.py": "--- v1.0.2/torchsynth/profile.py\n+++ selected/torchsynth/profile.py\n@@ -18,12 +18,10 @@\n import argparse\n import cProfile\n import io\n-import multiprocessing\n import pstats\n import sys\n-from typing import Any\n-\n-import pytorch_lightning as pl\n+from typing import Any, Optional\n+import lightning as pl\n import torch\n \n import torchsynth.synth  # noqa: E402\n@@ -32,10 +30,8 @@\n \n # TODO: Disable DEBUG\n \n-\n # Check for available GPUs and processing cores\n GPUS = torch.cuda.device_count()\n-NCORES = multiprocessing.cpu_count()\n \n \n class BatchIDXDataset(torch.utils.data.Dataset):\n@@ -57,7 +53,7 @@\n         outputs: Any,\n         batch: Any,\n         batch_idx: int,\n-        dataloader_idx: int,\n+        dataloader_idx: Optional[int] = 0,\n     ) -> None:\n         _ = pl_module(batch_idx)\n \n@@ -80,30 +76,30 @@\n ):\n     mock_dataset = BatchIDXDataset(batch_size * n_batches)\n     dataloader = torch.utils.data.DataLoader(\n-        mock_dataset, num_workers=NCORES, batch_size=batch_size\n+        mock_dataset, num_workers=0, batch_size=batch_size\n     )\n \n     if GPUS == 0 and device == \"cuda\":\n         raise SystemExit(\"cuda specified but no gpus are avaiable\")\n \n-    accelerator = None\n+    # Default to cpu\n+    accelerator = \"cpu\"\n     if GPUS == 0 or device == \"cpu\":\n-        use_gpus = None\n+        devices = \"auto\"\n     else:  # pragma: no cover\n-        # specifies all available GPUs (if only one GPU is not occupied,\n-        # auto_select_gpus=True uses one gpu)\n-        use_gpus = -1\n-        if GPUS > 1:\n-            accelerator = \"ddp\"\n+        # specifies all available GPUs\n+        accelerator = \"gpu\"\n+        devices = -1\n \n+    print(f\"Running on {accelerator} with {GPUS} GPUs\")\n     # Use deterministic?\n     trainer = pl.Trainer(\n-        gpus=use_gpus,\n-        auto_select_gpus=True,\n+        devices=devices,\n         accelerator=accelerator,\n         deterministic=True,\n         max_epochs=0,\n         callbacks=[TorchSynthCallback()],\n+        logger=False,\n     )\n \n     if profile:\n",
+    "torchsynth/synth.py": "--- v1.0.2/torchsynth/synth.py\n+++ selected/torchsynth/synth.py\n@@ -3,7 +3,7 @@\n :class:`~torchsynth.synth.Voice` is our default synthesizer, and is used to\n generate `synth1B1 <../reproducibility/synth1B1.html>`_.\n \n-We base off pytorch-lightning :class:`~pytorch_lightning.core.lightning.LightningModule`\n+We base off pytorch-lightning :class:`~lightning.LightningModule`\n because it makes `multi-GPU\n <https://pytorch-lightning.readthedocs.io/en/stable/accelerators/gpu.html>`_\n inference easy. Nonetheless, you can treat each synth as a native\n@@ -26,7 +26,7 @@\n     from typing import Dict as OrderedDictType\n \n import torch\n-from pytorch_lightning.core.lightning import LightningModule\n+from lightning import LightningModule\n from torch import Tensor as T\n \n from torchsynth.config import N_BATCHSIZE_FOR_TRAIN_TEST_REPRODUCIBILITY, SynthConfig\n@@ -270,8 +270,7 @@\n     def test_step(self, batch, batch_idx):\n         \"\"\"\n         This is boilerplate required by pytorch-lightning\n-        :class:`~pytorch_lightning.LightningTrainer`\n-        when calling test.\n+        :class:`~lightning.Trainer` when calling test.\n         \"\"\"\n         return 0.0\n \n"
+  },
+  "patch": {
+    "after": "from lightning import LightningModule\n",
+    "before": "from pytorch_lightning.core.lightning import LightningModule\n",
+    "patched_file_sha256": "107cd71a89b53c6cd207d5670833dd8d4a7f21ff544063b9760de01e2cb1bbea",
+    "patched_tree_sha256": "9817a8ca638827d11da69e17cedaf5216b3abde2bbc9fce253c1cbbb748c8fcb",
+    "path": "torchsynth/synth.py",
+    "sha256": "34e5160e48b6361b0f9d56919381c0af547997bb25feec63040ad9470a417d52",
+    "unified_diff": "--- a/torchsynth/synth.py\n+++ b/torchsynth/synth.py\n@@ -29 +29 @@\n-from pytorch_lightning.core.lightning import LightningModule\n+from lightning import LightningModule\n"
+  },
+  "release": {
+    "archive_sha256": "8c6200d8d92927cdc82259ebd1d70e0b1f295a83f101e07c6ea99a4626dcfee6",
+    "archive_url": "https://codeload.github.com/torchsynth/torchsynth/tar.gz/115af79de4021408e05cc0785b9710e0982d0ce6",
+    "commit": "115af79de4021408e05cc0785b9710e0982d0ce6",
+    "file_count": 78,
+    "files": {
+      "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
+      "torchsynth/__init__.py": "6925d4e20fc74fa347978662cd1d7ba7341cbcdd45a56dee464cc3391cebc370",
+      "torchsynth/config.py": "0a0fbd308aacbf54a9b3ddf91825f2084857fd018ab928a8297af8f8b02c5264",
+      "torchsynth/module.py": "f2450efee7cfa5a450238885db636cb673d6dd3c731983dc08ccc0a0e42faa8c",
+      "torchsynth/nebulae/voice/default.json": "29818c50a2b9ece101d3952edc746a75fb7d043f2d68624f356c66b83bbeae24",
+      "torchsynth/nebulae/voice/drum.json": "87a136e7c8156d659d22cb69d79199c1564be2b111b6136b60a7fcd429c656f8",
+      "torchsynth/parameter.py": "db4e81bff3e930293b3e74377053e9b3d485b0939ad4ac6dd63b34bbc523a7a3",
+      "torchsynth/profile.py": "b14a42711b7210ba3d2a01a0208b183150734abe0dd5ffc012169df3f51e9fd4",
+      "torchsynth/signal.py": "0087090d47efc6b297387e9f6f7ceb1c2be923970b3330757399a5a769d8683c",
+      "torchsynth/synth.py": "9785e715287399c86e050e26f6c25a40e6f7da0ddb44129a395f5debd247dfeb",
+      "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
+    },
+    "tag": "v1.0.2",
+    "tree_sha256": "b089eb811245915ae0e5f7b06cb47676dbad329688457cef53b2bc463fb6dff1"
+  },
+  "repository": "https://github.com/torchsynth/torchsynth",
+  "repository_deltas": [
+    {
+      "path": ".github/dependabot.yml",
+      "release_sha256": null,
+      "selected_sha256": "422afa46cdd60f9a837e17c50dcc9f2a8049a5317da71b848fc6ccbb8a9dd5e9"
+    },
+    {
+      "path": ".github/workflows/codecov.yml",
+      "release_sha256": "9a0269ec4ef4083085b90403c4868dd02de4e7f330bf385f63cc1f063655626a",
+      "selected_sha256": "e18cc87aae071315eea1d25b654f614f5cadb8215c6a3e5ad7ffd20794148d30"
+    },
+    {
+      "path": ".github/workflows/dependency-review-action.yaml",
+      "release_sha256": null,
+      "selected_sha256": "2f67483877a3ace39cb85a9c1b357f18273b4f8f3ef7663105eeddce5203542f"
+    },
+    {
+      "path": ".github/workflows/pytest.yml",
+      "release_sha256": "797152d3237752d1f3ce95c89e5a0ee1d8261055dcd6c8567fa3e47811141f2a",
+      "selected_sha256": "083dde4346cdf82566931b3c2a8488383c075ec38e617b29e5b641a7b659277d"
+    },
+    {
+      "path": ".github/workflows/sphinx-build.yml",
+      "release_sha256": "82bff0ce03a4a5eeb92d9ce86c444310a9ba52ddbb41d13b3ed7897bf2090208",
+      "selected_sha256": "0af7cfbff9e24f932ff350b75e5bd330176c131fdf816bf6db82f543d132d080"
+    },
+    {
+      "path": ".github/workflows/sphinx-linkcheck.yml",
+      "release_sha256": "1ff68f7b3c8d55aaf86cf1b1f4855614cc74b3dcf7d70f05145f60bb13a51629",
+      "selected_sha256": "1f31f75d8c9227d4b29989bf73eafc4bdc33df542aa7282638fe3b91fa1aa965"
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "release_sha256": "5096f0e1666c1fd829814e2d6e39941cb4d583129c3c2ce40e5d97808bff4ec2",
+      "selected_sha256": "edaa839531a9498e46084ec305ea902cbbf8c502a6488d66eaf28b5f00a6d775"
+    },
+    {
+      "path": ".scrutinizer.yml",
+      "release_sha256": null,
+      "selected_sha256": "8d4220c8a3d74f9bc26b1192c67b7cceedc361e267a39832c29d55c1e15a871b"
+    },
+    {
+      "path": "docs/requirements.txt",
+      "release_sha256": "symlink:../requirements.txt",
+      "selected_sha256": null
+    },
+    {
+      "path": "requirements.txt",
+      "release_sha256": "d016a1410be2511c3a90b62547e5877e5ed2dbcfff6b3380b202149d054f013f",
+      "selected_sha256": "10a08605f4c88958237a472cb883f2997bb9e8cf84a072ab0a2c2aa6114a096e"
+    },
+    {
+      "path": "setup.py",
+      "release_sha256": "cdf074d1ce8a9b9cd114ab01cf53769678ae922273de6e8104a47062c5117026",
+      "selected_sha256": "07901f13fd9192ad01bd3fc75de41c7e8fa967c840d1ca2787a5720bc919850b"
+    },
+    {
+      "path": "tests/test_synth.py",
+      "release_sha256": "2e6f5fd7f0aa0487d7e452e4d7454d32a928683dab1313726766e070b19b6f81",
+      "selected_sha256": "744ffb1cea43a94b9cf0e71750224ed91cf342ea9444ea2a93fb649132e41ab3"
+    },
+    {
+      "path": "torchsynth/profile.py",
+      "release_sha256": "b14a42711b7210ba3d2a01a0208b183150734abe0dd5ffc012169df3f51e9fd4",
+      "selected_sha256": "eac9e6eed462f6e9c3315b064208785ac597769fa4ec84241fa67a10b9ce025f"
+    },
+    {
+      "path": "torchsynth/synth.py",
+      "release_sha256": "9785e715287399c86e050e26f6c25a40e6f7da0ddb44129a395f5debd247dfeb",
+      "selected_sha256": "64b3c2909757f944397e4243425ceab889e6b71472445fa6710c734edb4d28f3"
+    }
+  ],
+  "schema_version": 1,
+  "selected": {
+    "commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+    "file_count": 80,
+    "files": {
+      "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
+      "torchsynth/__init__.py": "6925d4e20fc74fa347978662cd1d7ba7341cbcdd45a56dee464cc3391cebc370",
+      "torchsynth/config.py": "0a0fbd308aacbf54a9b3ddf91825f2084857fd018ab928a8297af8f8b02c5264",
+      "torchsynth/module.py": "f2450efee7cfa5a450238885db636cb673d6dd3c731983dc08ccc0a0e42faa8c",
+      "torchsynth/nebulae/voice/default.json": "29818c50a2b9ece101d3952edc746a75fb7d043f2d68624f356c66b83bbeae24",
+      "torchsynth/nebulae/voice/drum.json": "87a136e7c8156d659d22cb69d79199c1564be2b111b6136b60a7fcd429c656f8",
+      "torchsynth/parameter.py": "db4e81bff3e930293b3e74377053e9b3d485b0939ad4ac6dd63b34bbc523a7a3",
+      "torchsynth/profile.py": "eac9e6eed462f6e9c3315b064208785ac597769fa4ec84241fa67a10b9ce025f",
+      "torchsynth/signal.py": "0087090d47efc6b297387e9f6f7ceb1c2be923970b3330757399a5a769d8683c",
+      "torchsynth/synth.py": "64b3c2909757f944397e4243425ceab889e6b71472445fa6710c734edb4d28f3",
+      "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
+    },
+    "tree_sha256": "57c354f97e4dd8f1142ff7b4e1e586a3de8b7f96a16226019fe39371d2b7d896"
+  }
+}

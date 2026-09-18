@@ -121,3 +121,67 @@ For a build with no reusable Docker layers, first run
 `docker build --no-cache --platform linux/amd64 -f env/release-era/Dockerfile .`,
 then run the reproduction command. Do not regenerate the lock simply to run
 the probe.
+
+## Selected source versus v1.0.2
+
+```sh
+./env/release-era/compare_sources.sh
+```
+
+This dedicated A/B runner reuses the Dockerfile and lock above. It downloads
+the hash-pinned v1.0.2 archive and renders each source in a fresh offline
+container from the same image. Results default to `out/source-equivalence/`;
+an optional directory argument keeps a separate run. A failed rerun removes
+the old aggregate report, retains diagnostics, and exits nonzero.
+
+`source-comparison.json` pins both commits, every exported source tree, all
+package-file hashes, the release archive, and the exact import-only patch
+(including its bytes, SHA-256, and resulting file/tree hashes). Before import,
+the runner checks the original release tree, patches a temporary copy, then
+checks the patched tree. It also checks the selected tree and the unchanged
+normative manifest. Additional files, missing files, modified DSP or nebula
+bytes, or any other unapproved source edit fail closed. The runner exercises
+a deliberate source mutation in a fresh process as a negative control.
+
+The manifest enumerates all repository deltas and includes complete diffs
+for the two changed package files. In the Voice path, DSP/config/parameter/
+signal/util/default-nebula bytes are identical. `synth.py` also has two
+docstring edits beyond its import change; these remain unpatched on v1.0.2.
+The unused `profile.py` CLI has separate Lightning API changes. This is a
+Voice compatibility comparison, not whole-repository byte equivalence.
+
+Four probes use the default nebula, 44.1 kHz, 441 Hz control rate, four seconds,
+CPU float32, seed-13 noise, and the 32-row reproducible fixture protocol:
+
+| Probe | Named physical overrides after deterministic randomization |
+| --- | --- |
+| `normalization-off` | Global-0 parameters, all three mixer levels set to 0.2 |
+| `normalization-on` | Global-0 parameters, all three mixer levels set to 1.0 |
+| `noise-bearing` | Global-0 parameters, oscillator mixer levels 0, noise mixer level 0.2 |
+| `global-39942` | Unchanged global-39942 parameters, batch 1248, slot 6 |
+
+Each source independently generates the same named inputs. The comparator
+requires exact normalized and physical parameter maps, configuration, and
+selected noise before judging audio. A Python call profiler captures the
+actual input to the unmodified `normalize_if_clipping`; module hooks observe
+raw noise and the mixer's weighted noise contribution. They do not replace
+DSP functions or mutate tensors. The runner requires the off/on probes to
+land below/above the threshold and the noise-only probe to be nonzero.
+All comparisons use the stored little-endian float32 bytes, without sample
+alignment, rescaling, or postprocessing. Differences report the first byte
+and sample, first values, maximum absolute difference, and RMS difference.
+
+The bounded execution record is
+[`sim/reference/source-equivalence.json`](../../sim/reference/source-equivalence.json).
+It retains the source/patch identities, runtime, actual named parameters,
+normalization decisions, trace/audio hashes, comparison metrics, and warnings.
+Raw audio/traces remain in the ignored output directory. This evidence
+supports or rejects DR-0001 for these probes in this environment; it does
+not ratify a runtime, infer perceptual fidelity, or qualify scalar/batch or
+hardware execution. Hardware still produces one four-second sound per trigger.
+
+Run the dedicated tests and the existing preflight tests without Torch:
+
+```sh
+python3 -m unittest discover -s env/release-era -v
+```
