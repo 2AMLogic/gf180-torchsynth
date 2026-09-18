@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "name": "default-voice-random-v0",
+  "profile": "torchsynth-1-voice-default",
+  "identity": "global_sound_index",
+  "cases": [
+    {
+      "start_inclusive": 0,
+      "stop_exclusive": 96,
+      "split": "development"
+    },
+    {
+      "start_inclusive": 96,
+      "stop_exclusive": 128,
+      "split": "holdout"
+    }
+  ],
+  "rules": {
+    "holdout_is_blind_until_thresholds_are_frozen": true,
+    "case_count": 128,
+    "development_count": 96,
+    "holdout_count": 32
+  },
+  "note": "Directed module and mutation fixtures are a separate qualification corpus and must be preregistered before use."
+}

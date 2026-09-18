@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-18",
+  "claim": "One CPU render repeated byte-for-byte in one locked environment; this is not yet a canonical corpus or cross-version qualification.",
+  "profile": "torchsynth-1-voice-default",
+  "upstream_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "environment": {
+    "architecture": "arm64",
+    "python": "3.13.2",
+    "torch": "2.14.0",
+    "torchsynth_distribution": "1.0.2",
+    "lightning": "2.6.6",
+    "numpy": "2.5.3",
+    "device": "cpu",
+    "lockfile": "uv.lock"
+  },
+  "case": {
+    "sound_index": 0,
+    "render_batch_size": 32,
+    "sample_rate": 44100,
+    "sample_count": 176400,
+    "audio_sha256_first": "b2e045150875df63044d269db824bb4e90be9ab5823f9d48b8b77176d15658c9",
+    "audio_sha256_second": "b2e045150875df63044d269db824bb4e90be9ab5823f9d48b8b77176d15658c9",
+    "metadata_byte_identical": true,
+    "audio_byte_identical": true,
+    "peak_abs": 1.0,
+    "peak_index": 21625,
+    "rms": 0.08608256155351238,
+    "dc_mean": 9.022183242201491e-08,
+    "clipped_sample_count": 0
+  },
+  "commands": [
+    "uv sync --extra reference",
+    "uv run gf180-torchsynth render 0 --out out/qualification-a",
+    "uv run gf180-torchsynth render 0 --out out/qualification-b",
+    "cmp out/qualification-a/audio.f32le out/qualification-b/audio.f32le",
+    "cmp out/qualification-a/metadata.json out/qualification-b/metadata.json"
+  ],
+  "known_limitations": [
+    "Only one sound identity was rendered.",
+    "Only one host/runtime combination was tested.",
+    "The selected runtime has not been compared with a paper-era PyTorch runtime.",
+    "Named internal traces were not captured.",
+    "The generated audio artifacts remain local and are not committed."
+  ],
+  "packaging_observation": "A normal Git dependency checkout failed because an upstream documentation LFS object is missing. The dependency was changed to a commit-addressed source archive; the adapter independently verifies all runtime Voice file hashes."
+}

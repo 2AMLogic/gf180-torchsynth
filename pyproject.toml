@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gf180-torchsynth"
+version = "0.1.0"
+description = "Reference tooling for a GF180 implementation of TorchSynth Voice"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "2AM Logic" }]
+dependencies = []
+
+[project.optional-dependencies]
+reference = [
+  "lightning>=2.4,<3",
+  "numpy>=1.26,<3",
+  "setuptools>=70,<81",
+  "torch>=2.4,<3",
+  "torchsynth @ https://github.com/torchsynth/torchsynth/archive/2b0964d4c6c3d472a2a0d54d91b408caaeffca6d.tar.gz",
+]
+test = []
+
+[project.scripts]
+gf180-torchsynth = "torchsynth_voice.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/torchsynth_voice"]
+
+[tool.hatch.metadata]
+allow-direct-references = true

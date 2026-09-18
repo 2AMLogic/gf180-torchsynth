@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "repository": "https://github.com/torchsynth/torchsynth",
+  "target_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "target_commit_date": "2024-10-07T04:18:42+02:00",
+  "released_baseline": {
+    "tag": "v1.0.2",
+    "commit": "115af79de4021408e05cc0785b9710e0982d0ce6",
+    "published": "2022-08-19T23:15:56Z"
+  },
+  "paper_lineage": {
+    "tag": "v1.0.0",
+    "commit": "78313d3cc9ed8bc331daa18a58595721284f2de4"
+  },
+  "profile": "torchsynth-1-voice-default",
+  "execution_device": "cpu",
+  "files": {
+    "torchsynth/config.py": "0a0fbd308aacbf54a9b3ddf91825f2084857fd018ab928a8297af8f8b02c5264",
+    "torchsynth/module.py": "f2450efee7cfa5a450238885db636cb673d6dd3c731983dc08ccc0a0e42faa8c",
+    "torchsynth/nebulae/voice/default.json": "29818c50a2b9ece101d3952edc746a75fb7d043f2d68624f356c66b83bbeae24",
+    "torchsynth/parameter.py": "db4e81bff3e930293b3e74377053e9b3d485b0939ad4ac6dd63b34bbc523a7a3",
+    "torchsynth/synth.py": "64b3c2909757f944397e4243425ceab889e6b71472445fa6710c734edb4d28f3",
+    "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
+  },
+  "source_checkout_only_files": {
+    "examples/examples.py": "0b76395368cb4599cc43712bdc815c8400d0e9d383c8c763490b0383bb245f38"
+  },
+  "expected": {
+    "sample_rate": 44100,
+    "control_rate": 441,
+    "duration_seconds": 4.0,
+    "output_samples": 176400,
+    "latent_parameter_count": 78,
+    "nebula_entry_count": 156,
+    "minimum_reproducible_batch_size": 32,
+    "noise_seed": 13
+  }
+}
