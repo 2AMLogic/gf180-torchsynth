@@ -1,0 +1,34 @@
+{
+  "schema": "torchsynth-corpus-index",
+  "schema_version": 1,
+  "corpus_id": "synthetic-v1",
+  "corpus_manifest_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "profile": "torchsynth-1-voice-default",
+  "runtime_lock_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "complete",
+  "expected_case_count": 1,
+  "observed_case_count": 1,
+  "cases": [
+    {
+      "case_id": "synthetic-39942",
+      "split": "development",
+      "fixture": {
+        "sound_index": 39942,
+        "upstream_batch_index": 312,
+        "upstream_slot": 6,
+        "upstream_name": "synth1B1-312-6",
+        "is_train": false
+      },
+      "status": "complete",
+      "artifact": {
+        "artifact_id": "ra1-be7fdf9f52bd498ce2af9500b9cf159fffb26dfe37b3a5056ee830c507277585",
+        "sha256": "27671db861fef5139f10bc67d63cb896add8d91a3f21c82a2184e3cc4ea1f6f6",
+        "ref": "complete.json"
+      },
+      "warnings": [],
+      "failures": []
+    }
+  ],
+  "warnings": [],
+  "failures": []
+}

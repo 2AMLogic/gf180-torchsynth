@@ -1,0 +1,406 @@
+[
+  {
+    "name": "unsafe-reference-0",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "/Users/example/audio.f32le"
+  },
+  {
+    "name": "unsafe-reference-1",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "C:\\Users\\example\\audio.f32le"
+  },
+  {
+    "name": "unsafe-reference-2",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "\\\\server\\share\\audio"
+  },
+  {
+    "name": "unsafe-reference-3",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "../audio"
+  },
+  {
+    "name": "unsafe-reference-4",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "audio/../file"
+  },
+  {
+    "name": "unsafe-reference-5",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "audio//file"
+  },
+  {
+    "name": "unsafe-reference-6",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "audio/%2e%2e/file"
+  },
+  {
+    "name": "unsafe-reference-7",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "file:///home/user/audio"
+  },
+  {
+    "name": "unsafe-reference-8",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "https://user:secret@example/audio"
+  },
+  {
+    "name": "unsafe-reference-9",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "ref"
+    ],
+    "value": "~/audio"
+  },
+  {
+    "name": "embedded-absolute-runtime-path",
+    "path": [
+      "inputs",
+      "value",
+      "runtime",
+      "cpu"
+    ],
+    "value": "CPU /Users/example"
+  },
+  {
+    "name": "untracked-host-path",
+    "path": [
+      "inputs",
+      "value",
+      "project_git",
+      "untracked_sha256"
+    ],
+    "value": "/Users/example/project"
+  },
+  {
+    "name": "wrong-noise-slot",
+    "path": [
+      "inputs",
+      "value",
+      "noise",
+      "slot"
+    ],
+    "value": 7
+  },
+  {
+    "name": "wrong-noise-seed",
+    "path": [
+      "inputs",
+      "value",
+      "noise",
+      "seed"
+    ],
+    "value": 14
+  },
+  {
+    "name": "wrong-train-test",
+    "path": [
+      "inputs",
+      "value",
+      "fixture",
+      "is_train"
+    ],
+    "value": true
+  },
+  {
+    "name": "wrong-batch-coordinate",
+    "path": [
+      "inputs",
+      "value",
+      "fixture",
+      "upstream_batch_index"
+    ],
+    "value": 311
+  },
+  {
+    "name": "wrong-upstream-slot",
+    "path": [
+      "inputs",
+      "value",
+      "fixture",
+      "upstream_slot"
+    ],
+    "value": 7
+  },
+  {
+    "name": "wrong-upstream-name",
+    "path": [
+      "inputs",
+      "value",
+      "fixture",
+      "upstream_name"
+    ],
+    "value": "synth1B1-311-6"
+  },
+  {
+    "name": "short-hash",
+    "path": [
+      "inputs",
+      "value",
+      "noise",
+      "sha256"
+    ],
+    "value": "bad"
+  },
+  {
+    "name": "uppercase-hash",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "sha256"
+    ],
+    "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+  },
+  {
+    "name": "missing-sample",
+    "path": [
+      "audio",
+      "value",
+      "observed_sample_count"
+    ],
+    "value": 176399
+  },
+  {
+    "name": "extra-sample",
+    "path": [
+      "audio",
+      "value",
+      "observed_sample_count"
+    ],
+    "value": 176401
+  },
+  {
+    "name": "wrong-byte-count",
+    "path": [
+      "audio",
+      "value",
+      "file",
+      "size_bytes"
+    ],
+    "value": 705596
+  },
+  {
+    "name": "peak-outside-clip",
+    "path": [
+      "audio",
+      "value",
+      "peak_index"
+    ],
+    "value": 176400
+  },
+  {
+    "name": "wrong-sample-rate",
+    "path": [
+      "inputs",
+      "value",
+      "profile",
+      "sample_rate"
+    ],
+    "value": 48000
+  },
+  {
+    "name": "wrong-duration",
+    "path": [
+      "inputs",
+      "value",
+      "profile",
+      "duration_seconds"
+    ],
+    "value": 3
+  },
+  {
+    "name": "wrong-source-pin",
+    "path": [
+      "inputs",
+      "value",
+      "source",
+      "commit"
+    ],
+    "value": "dddddddddddddddddddddddddddddddddddddddd"
+  },
+  {
+    "name": "wrong-manifest-hash",
+    "path": [
+      "inputs",
+      "value",
+      "source",
+      "manifest_sha256"
+    ],
+    "value": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  },
+  {
+    "name": "unnamed-source-files",
+    "path": [
+      "inputs",
+      "value",
+      "source",
+      "files"
+    ],
+    "value": {}
+  },
+  {
+    "name": "invalid-normalized-value",
+    "path": [
+      "inputs",
+      "value",
+      "parameters",
+      "normalized_by_name",
+      "synthetic.p00"
+    ],
+    "value": 1.1
+  },
+  {
+    "name": "unknown-lock",
+    "path": [
+      "inputs",
+      "value",
+      "parameters",
+      "locks_physical"
+    ],
+    "value": {
+      "unknown.parameter": 0.1
+    }
+  },
+  {
+    "name": "inconsistent-lock",
+    "path": [
+      "inputs",
+      "value",
+      "parameters",
+      "locks_physical"
+    ],
+    "value": {
+      "synthetic.p00": 0.1
+    }
+  },
+  {
+    "name": "scalar-mode-wrong-width",
+    "path": [
+      "inputs",
+      "value",
+      "execution"
+    ],
+    "value": {
+      "mode": "resolved-scalar",
+      "batch_size": 32,
+      "reproducible": false
+    }
+  },
+  {
+    "name": "scalar-mode-reproducible",
+    "path": [
+      "inputs",
+      "value",
+      "execution"
+    ],
+    "value": {
+      "mode": "resolved-scalar",
+      "batch_size": 1,
+      "reproducible": true
+    }
+  },
+  {
+    "name": "batch-mode-wrong-width",
+    "path": [
+      "inputs",
+      "value",
+      "execution"
+    ],
+    "value": {
+      "mode": "canonical-batch",
+      "batch_size": 1,
+      "reproducible": true
+    }
+  },
+  {
+    "name": "batch-mode-not-reproducible",
+    "path": [
+      "inputs",
+      "value",
+      "execution"
+    ],
+    "value": {
+      "mode": "canonical-batch",
+      "batch_size": 32,
+      "reproducible": false
+    }
+  },
+  {
+    "name": "duplicate-trace-requests",
+    "path": [
+      "inputs",
+      "value",
+      "requested_traces"
+    ],
+    "value": [
+      "mixer",
+      "mixer"
+    ]
+  },
+  {
+    "name": "nan-as-string",
+    "path": [
+      "audio",
+      "value",
+      "rms"
+    ],
+    "value": "NaN"
+  },
+  {
+    "name": "null-as-provenance",
+    "path": [
+      "inputs",
+      "value",
+      "runtime"
+    ],
+    "value": null
+  }
+]

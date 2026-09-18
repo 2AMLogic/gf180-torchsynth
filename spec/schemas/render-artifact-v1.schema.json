@@ -1,0 +1,635 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://2amlogic.github.io/gf180-torchsynth/schemas/render-artifact-v1.schema.json",
+  "title": "Portable TorchSynth render artifact v1",
+  "description": "Structural schema; ARTIFACT-CONTRACT.md and artifacts.py add semantic checks. Not legacy adapter schema_version:1.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "torchsynth-render-artifact"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "failed"
+      ]
+    },
+    "artifact_id": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^ra1-[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "inputs": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "available"
+            },
+            "value": {
+              "$ref": "#/$defs/inputs"
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/absent"
+        }
+      ]
+    },
+    "audio": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "available"
+            },
+            "value": {
+              "$ref": "#/$defs/audio"
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/absent"
+        }
+      ]
+    },
+    "traces": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "available"
+            },
+            "value": {
+              "$ref": "#/$defs/traceMap"
+            }
+          },
+          "required": [
+            "state",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "$ref": "#/$defs/absent"
+        }
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "diagnostic_orders": {
+      "$ref": "#/$defs/orders"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "status",
+    "artifact_id",
+    "inputs",
+    "audio",
+    "traces",
+    "warnings",
+    "failures"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "token": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "integer": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "absent": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "enum": [
+            "unavailable",
+            "invalid"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        }
+      },
+      "required": [
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "$ref": "#/$defs/integer"
+        }
+      },
+      "required": [
+        "ref",
+        "sha256",
+        "size_bytes"
+      ],
+      "additionalProperties": false
+    },
+    "artifactReference": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "ref": {
+          "$ref": "#/$defs/path"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "dirty": {
+          "type": "boolean"
+        },
+        "diff_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "untracked_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "commit",
+        "dirty",
+        "diff_sha256",
+        "untracked_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "fixture": {
+      "type": "object",
+      "properties": {
+        "sound_index": {
+          "$ref": "#/$defs/integer"
+        },
+        "upstream_batch_index": {
+          "$ref": "#/$defs/integer"
+        },
+        "upstream_slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        },
+        "upstream_name": {
+          "$ref": "#/$defs/id"
+        },
+        "is_train": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sound_index",
+        "upstream_batch_index",
+        "upstream_slot",
+        "upstream_name",
+        "is_train"
+      ],
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "const": "torchsynth-1-voice-default"
+        },
+        "contract_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sample_rate": {
+          "const": 44100
+        },
+        "control_rate": {
+          "const": 441
+        },
+        "duration_seconds": {
+          "const": 4
+        },
+        "expected_sample_count": {
+          "const": 176400
+        },
+        "channels": {
+          "const": 1
+        },
+        "dtype": {
+          "const": "float32"
+        },
+        "nebula": {
+          "const": "default"
+        },
+        "normalization": {
+          "const": "conditional-whole-clip-peak"
+        }
+      },
+      "required": [
+        "name",
+        "contract_sha256",
+        "sample_rate",
+        "control_rate",
+        "duration_seconds",
+        "expected_sample_count",
+        "channels",
+        "dtype",
+        "nebula",
+        "normalization"
+      ],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "commit": {
+          "const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "files": {
+          "type": "object",
+          "minProperties": 6,
+          "propertyNames": {
+            "$ref": "#/$defs/path"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      },
+      "required": [
+        "commit",
+        "manifest_sha256",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "runtime": {
+      "type": "object",
+      "properties": {
+        "lock_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "os": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+        },
+        "architecture": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+        },
+        "cpu": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+        },
+        "device": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+        },
+        "versions": {
+          "type": "object",
+          "properties": {
+            "python": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+            },
+            "torch": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+            },
+            "lightning": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+            },
+            "numpy": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+            },
+            "torchsynth": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+            }
+          },
+          "required": [
+            "python",
+            "torch",
+            "lightning",
+            "numpy",
+            "torchsynth"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "lock_sha256",
+        "os",
+        "architecture",
+        "cpu",
+        "device",
+        "versions"
+      ],
+      "additionalProperties": false
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "normalized_by_name": {
+          "$ref": "#/$defs/normalizedMap"
+        },
+        "physical_by_name": {
+          "$ref": "#/$defs/physicalMap"
+        },
+        "locks_physical": {
+          "$ref": "#/$defs/physicalMap"
+        }
+      },
+      "required": [
+        "normalized_by_name",
+        "physical_by_name",
+        "locks_physical"
+      ],
+      "additionalProperties": false
+    },
+    "normalizedMap": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "physicalMap": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "canonical-batch",
+            "resolved-scalar"
+          ]
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "reproducible": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "mode",
+        "batch_size",
+        "reproducible"
+      ],
+      "additionalProperties": false
+    },
+    "noise": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "const": 13
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "seed",
+        "slot",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "traceMap": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "audio": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "$ref": "#/$defs/file"
+        },
+        "encoding": {
+          "const": "f32le-mono"
+        },
+        "observed_sample_count": {
+          "$ref": "#/$defs/integer"
+        },
+        "peak_abs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "peak_index": {
+          "$ref": "#/$defs/integer"
+        },
+        "rms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dc_mean": {
+          "type": "number"
+        },
+        "clipped_sample_count": {
+          "$ref": "#/$defs/integer"
+        },
+        "normalization_gain": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "file",
+        "encoding",
+        "observed_sample_count",
+        "peak_abs",
+        "peak_index",
+        "rms",
+        "dc_mean",
+        "clipped_sample_count",
+        "normalization_gain"
+      ],
+      "additionalProperties": false
+    },
+    "orders": {
+      "type": "object",
+      "properties": {
+        "randomization_order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "forward_order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "randomization_order",
+        "forward_order"
+      ],
+      "additionalProperties": false
+    },
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "runtime": {
+          "$ref": "#/$defs/runtime"
+        },
+        "project_git": {
+          "$ref": "#/$defs/git"
+        },
+        "renderer_version": {
+          "$ref": "#/$defs/token"
+        },
+        "fixture": {
+          "$ref": "#/$defs/fixture"
+        },
+        "execution": {
+          "$ref": "#/$defs/execution"
+        },
+        "parameters": {
+          "$ref": "#/$defs/parameters"
+        },
+        "noise": {
+          "$ref": "#/$defs/noise"
+        },
+        "trace_registry_version": {
+          "$ref": "#/$defs/id"
+        },
+        "requested_traces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "profile",
+        "source",
+        "runtime",
+        "project_git",
+        "renderer_version",
+        "fixture",
+        "execution",
+        "parameters",
+        "noise",
+        "trace_registry_version",
+        "requested_traces"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
