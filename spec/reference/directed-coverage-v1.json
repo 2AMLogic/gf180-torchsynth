@@ -1,0 +1,896 @@
+{
+  "audio_render": "not_run",
+  "case_count": 392,
+  "discrete_modes": {
+    "count": 0,
+    "reason": "All 78 inventory parameters are continuous."
+  },
+  "envelopes": {
+    "adsr_1:cut-attack": "envelope:adsr_1:cut-attack",
+    "adsr_1:cut-decay": "envelope:adsr_1:cut-decay",
+    "adsr_1:long-release": "envelope:adsr_1:long-release",
+    "adsr_1:zero-stages": "envelope:adsr_1:zero-stages",
+    "adsr_2:cut-attack": "envelope:adsr_2:cut-attack",
+    "adsr_2:cut-decay": "envelope:adsr_2:cut-decay",
+    "adsr_2:long-release": "envelope:adsr_2:long-release",
+    "adsr_2:zero-stages": "envelope:adsr_2:zero-stages",
+    "lfo_1_amp_adsr:cut-attack": "envelope:lfo_1_amp_adsr:cut-attack",
+    "lfo_1_amp_adsr:cut-decay": "envelope:lfo_1_amp_adsr:cut-decay",
+    "lfo_1_amp_adsr:long-release": "envelope:lfo_1_amp_adsr:long-release",
+    "lfo_1_amp_adsr:zero-stages": "envelope:lfo_1_amp_adsr:zero-stages",
+    "lfo_1_rate_adsr:cut-attack": "envelope:lfo_1_rate_adsr:cut-attack",
+    "lfo_1_rate_adsr:cut-decay": "envelope:lfo_1_rate_adsr:cut-decay",
+    "lfo_1_rate_adsr:long-release": "envelope:lfo_1_rate_adsr:long-release",
+    "lfo_1_rate_adsr:zero-stages": "envelope:lfo_1_rate_adsr:zero-stages",
+    "lfo_2_amp_adsr:cut-attack": "envelope:lfo_2_amp_adsr:cut-attack",
+    "lfo_2_amp_adsr:cut-decay": "envelope:lfo_2_amp_adsr:cut-decay",
+    "lfo_2_amp_adsr:long-release": "envelope:lfo_2_amp_adsr:long-release",
+    "lfo_2_amp_adsr:zero-stages": "envelope:lfo_2_amp_adsr:zero-stages",
+    "lfo_2_rate_adsr:cut-attack": "envelope:lfo_2_rate_adsr:cut-attack",
+    "lfo_2_rate_adsr:cut-decay": "envelope:lfo_2_rate_adsr:cut-decay",
+    "lfo_2_rate_adsr:long-release": "envelope:lfo_2_rate_adsr:long-release",
+    "lfo_2_rate_adsr:zero-stages": "envelope:lfo_2_rate_adsr:zero-stages"
+  },
+  "inventory_sha256": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+  "manifest_identity": {
+    "sha256": "7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249",
+    "version": "directed-voice-v1-sha256:7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249"
+  },
+  "normalization": {
+    "above": {
+      "case": "normalization:above",
+      "peak_status": "unmeasured",
+      "relation": "above",
+      "render_obligation": "Capture full-clip pre-normalization peak and gain; require exact target peak before claiming this Voice case exercises the branch. Strict peak > 1; tie retains input. No tolerance or gain fitting.",
+      "target_peak": 1.0000001192092896
+    },
+    "below": {
+      "case": "normalization:below",
+      "peak_status": "unmeasured",
+      "relation": "below",
+      "render_obligation": "Capture full-clip pre-normalization peak and gain; require exact target peak before claiming this Voice case exercises the branch. Strict peak > 1; tie retains input. No tolerance or gain fitting.",
+      "target_peak": 0.9999999403953552
+    },
+    "tie": {
+      "case": "normalization:tie",
+      "peak_status": "unmeasured",
+      "relation": "tie",
+      "render_obligation": "Capture full-clip pre-normalization peak and gain; require exact target peak before claiming this Voice case exercises the branch. Strict peak > 1; tie retains input. No tolerance or gain fitting.",
+      "target_peak": 1.0
+    }
+  },
+  "parameters": {
+    "adsr_1.alpha": {
+      "lower": "boundary:adsr_1.alpha:lower",
+      "near-lower": "boundary:adsr_1.alpha:near-lower",
+      "near-upper": "boundary:adsr_1.alpha:near-upper",
+      "upper": "boundary:adsr_1.alpha:upper"
+    },
+    "adsr_1.attack": {
+      "lower": "boundary:adsr_1.attack:lower",
+      "near-lower": "boundary:adsr_1.attack:near-lower",
+      "near-upper": "boundary:adsr_1.attack:near-upper",
+      "upper": "boundary:adsr_1.attack:upper"
+    },
+    "adsr_1.decay": {
+      "lower": "boundary:adsr_1.decay:lower",
+      "near-lower": "boundary:adsr_1.decay:near-lower",
+      "near-upper": "boundary:adsr_1.decay:near-upper",
+      "upper": "boundary:adsr_1.decay:upper"
+    },
+    "adsr_1.release": {
+      "lower": "boundary:adsr_1.release:lower",
+      "near-lower": "boundary:adsr_1.release:near-lower",
+      "near-upper": "boundary:adsr_1.release:near-upper",
+      "upper": "boundary:adsr_1.release:upper"
+    },
+    "adsr_1.sustain": {
+      "lower": "boundary:adsr_1.sustain:lower",
+      "near-lower": "boundary:adsr_1.sustain:near-lower",
+      "near-upper": "boundary:adsr_1.sustain:near-upper",
+      "upper": "boundary:adsr_1.sustain:upper"
+    },
+    "adsr_2.alpha": {
+      "lower": "boundary:adsr_2.alpha:lower",
+      "near-lower": "boundary:adsr_2.alpha:near-lower",
+      "near-upper": "boundary:adsr_2.alpha:near-upper",
+      "upper": "boundary:adsr_2.alpha:upper"
+    },
+    "adsr_2.attack": {
+      "lower": "boundary:adsr_2.attack:lower",
+      "near-lower": "boundary:adsr_2.attack:near-lower",
+      "near-upper": "boundary:adsr_2.attack:near-upper",
+      "upper": "boundary:adsr_2.attack:upper"
+    },
+    "adsr_2.decay": {
+      "lower": "boundary:adsr_2.decay:lower",
+      "near-lower": "boundary:adsr_2.decay:near-lower",
+      "near-upper": "boundary:adsr_2.decay:near-upper",
+      "upper": "boundary:adsr_2.decay:upper"
+    },
+    "adsr_2.release": {
+      "lower": "boundary:adsr_2.release:lower",
+      "near-lower": "boundary:adsr_2.release:near-lower",
+      "near-upper": "boundary:adsr_2.release:near-upper",
+      "upper": "boundary:adsr_2.release:upper"
+    },
+    "adsr_2.sustain": {
+      "lower": "boundary:adsr_2.sustain:lower",
+      "near-lower": "boundary:adsr_2.sustain:near-lower",
+      "near-upper": "boundary:adsr_2.sustain:near-upper",
+      "upper": "boundary:adsr_2.sustain:upper"
+    },
+    "keyboard.duration": {
+      "lower": "boundary:keyboard.duration:lower",
+      "near-lower": "boundary:keyboard.duration:near-lower",
+      "near-upper": "boundary:keyboard.duration:near-upper",
+      "upper": "boundary:keyboard.duration:upper"
+    },
+    "keyboard.midi_f0": {
+      "lower": "boundary:keyboard.midi_f0:lower",
+      "near-lower": "boundary:keyboard.midi_f0:near-lower",
+      "near-upper": "boundary:keyboard.midi_f0:near-upper",
+      "upper": "boundary:keyboard.midi_f0:upper"
+    },
+    "lfo_1.frequency": {
+      "lower": "boundary:lfo_1.frequency:lower",
+      "near-lower": "boundary:lfo_1.frequency:near-lower",
+      "near-upper": "boundary:lfo_1.frequency:near-upper",
+      "upper": "boundary:lfo_1.frequency:upper"
+    },
+    "lfo_1.initial_phase": {
+      "lower": "boundary:lfo_1.initial_phase:lower",
+      "near-lower": "boundary:lfo_1.initial_phase:near-lower",
+      "near-upper": "boundary:lfo_1.initial_phase:near-upper",
+      "upper": "boundary:lfo_1.initial_phase:upper"
+    },
+    "lfo_1.mod_depth": {
+      "center": "boundary:lfo_1.mod_depth:center",
+      "center-above": "boundary:lfo_1.mod_depth:center-above",
+      "center-below": "boundary:lfo_1.mod_depth:center-below",
+      "lower": "boundary:lfo_1.mod_depth:lower",
+      "near-lower": "boundary:lfo_1.mod_depth:near-lower",
+      "near-upper": "boundary:lfo_1.mod_depth:near-upper",
+      "upper": "boundary:lfo_1.mod_depth:upper"
+    },
+    "lfo_1.rsaw": {
+      "lower": "boundary:lfo_1.rsaw:lower",
+      "near-lower": "boundary:lfo_1.rsaw:near-lower",
+      "near-upper": "boundary:lfo_1.rsaw:near-upper",
+      "upper": "boundary:lfo_1.rsaw:upper"
+    },
+    "lfo_1.saw": {
+      "lower": "boundary:lfo_1.saw:lower",
+      "near-lower": "boundary:lfo_1.saw:near-lower",
+      "near-upper": "boundary:lfo_1.saw:near-upper",
+      "upper": "boundary:lfo_1.saw:upper"
+    },
+    "lfo_1.sin": {
+      "lower": "boundary:lfo_1.sin:lower",
+      "near-lower": "boundary:lfo_1.sin:near-lower",
+      "near-upper": "boundary:lfo_1.sin:near-upper",
+      "upper": "boundary:lfo_1.sin:upper"
+    },
+    "lfo_1.sqr": {
+      "lower": "boundary:lfo_1.sqr:lower",
+      "near-lower": "boundary:lfo_1.sqr:near-lower",
+      "near-upper": "boundary:lfo_1.sqr:near-upper",
+      "upper": "boundary:lfo_1.sqr:upper"
+    },
+    "lfo_1.tri": {
+      "lower": "boundary:lfo_1.tri:lower",
+      "near-lower": "boundary:lfo_1.tri:near-lower",
+      "near-upper": "boundary:lfo_1.tri:near-upper",
+      "upper": "boundary:lfo_1.tri:upper"
+    },
+    "lfo_1_amp_adsr.alpha": {
+      "lower": "boundary:lfo_1_amp_adsr.alpha:lower",
+      "near-lower": "boundary:lfo_1_amp_adsr.alpha:near-lower",
+      "near-upper": "boundary:lfo_1_amp_adsr.alpha:near-upper",
+      "upper": "boundary:lfo_1_amp_adsr.alpha:upper"
+    },
+    "lfo_1_amp_adsr.attack": {
+      "lower": "boundary:lfo_1_amp_adsr.attack:lower",
+      "near-lower": "boundary:lfo_1_amp_adsr.attack:near-lower",
+      "near-upper": "boundary:lfo_1_amp_adsr.attack:near-upper",
+      "upper": "boundary:lfo_1_amp_adsr.attack:upper"
+    },
+    "lfo_1_amp_adsr.decay": {
+      "lower": "boundary:lfo_1_amp_adsr.decay:lower",
+      "near-lower": "boundary:lfo_1_amp_adsr.decay:near-lower",
+      "near-upper": "boundary:lfo_1_amp_adsr.decay:near-upper",
+      "upper": "boundary:lfo_1_amp_adsr.decay:upper"
+    },
+    "lfo_1_amp_adsr.release": {
+      "lower": "boundary:lfo_1_amp_adsr.release:lower",
+      "near-lower": "boundary:lfo_1_amp_adsr.release:near-lower",
+      "near-upper": "boundary:lfo_1_amp_adsr.release:near-upper",
+      "upper": "boundary:lfo_1_amp_adsr.release:upper"
+    },
+    "lfo_1_amp_adsr.sustain": {
+      "lower": "boundary:lfo_1_amp_adsr.sustain:lower",
+      "near-lower": "boundary:lfo_1_amp_adsr.sustain:near-lower",
+      "near-upper": "boundary:lfo_1_amp_adsr.sustain:near-upper",
+      "upper": "boundary:lfo_1_amp_adsr.sustain:upper"
+    },
+    "lfo_1_rate_adsr.alpha": {
+      "lower": "boundary:lfo_1_rate_adsr.alpha:lower",
+      "near-lower": "boundary:lfo_1_rate_adsr.alpha:near-lower",
+      "near-upper": "boundary:lfo_1_rate_adsr.alpha:near-upper",
+      "upper": "boundary:lfo_1_rate_adsr.alpha:upper"
+    },
+    "lfo_1_rate_adsr.attack": {
+      "lower": "boundary:lfo_1_rate_adsr.attack:lower",
+      "near-lower": "boundary:lfo_1_rate_adsr.attack:near-lower",
+      "near-upper": "boundary:lfo_1_rate_adsr.attack:near-upper",
+      "upper": "boundary:lfo_1_rate_adsr.attack:upper"
+    },
+    "lfo_1_rate_adsr.decay": {
+      "lower": "boundary:lfo_1_rate_adsr.decay:lower",
+      "near-lower": "boundary:lfo_1_rate_adsr.decay:near-lower",
+      "near-upper": "boundary:lfo_1_rate_adsr.decay:near-upper",
+      "upper": "boundary:lfo_1_rate_adsr.decay:upper"
+    },
+    "lfo_1_rate_adsr.release": {
+      "lower": "boundary:lfo_1_rate_adsr.release:lower",
+      "near-lower": "boundary:lfo_1_rate_adsr.release:near-lower",
+      "near-upper": "boundary:lfo_1_rate_adsr.release:near-upper",
+      "upper": "boundary:lfo_1_rate_adsr.release:upper"
+    },
+    "lfo_1_rate_adsr.sustain": {
+      "lower": "boundary:lfo_1_rate_adsr.sustain:lower",
+      "near-lower": "boundary:lfo_1_rate_adsr.sustain:near-lower",
+      "near-upper": "boundary:lfo_1_rate_adsr.sustain:near-upper",
+      "upper": "boundary:lfo_1_rate_adsr.sustain:upper"
+    },
+    "lfo_2.frequency": {
+      "lower": "boundary:lfo_2.frequency:lower",
+      "near-lower": "boundary:lfo_2.frequency:near-lower",
+      "near-upper": "boundary:lfo_2.frequency:near-upper",
+      "upper": "boundary:lfo_2.frequency:upper"
+    },
+    "lfo_2.initial_phase": {
+      "lower": "boundary:lfo_2.initial_phase:lower",
+      "near-lower": "boundary:lfo_2.initial_phase:near-lower",
+      "near-upper": "boundary:lfo_2.initial_phase:near-upper",
+      "upper": "boundary:lfo_2.initial_phase:upper"
+    },
+    "lfo_2.mod_depth": {
+      "center": "boundary:lfo_2.mod_depth:center",
+      "center-above": "boundary:lfo_2.mod_depth:center-above",
+      "center-below": "boundary:lfo_2.mod_depth:center-below",
+      "lower": "boundary:lfo_2.mod_depth:lower",
+      "near-lower": "boundary:lfo_2.mod_depth:near-lower",
+      "near-upper": "boundary:lfo_2.mod_depth:near-upper",
+      "upper": "boundary:lfo_2.mod_depth:upper"
+    },
+    "lfo_2.rsaw": {
+      "lower": "boundary:lfo_2.rsaw:lower",
+      "near-lower": "boundary:lfo_2.rsaw:near-lower",
+      "near-upper": "boundary:lfo_2.rsaw:near-upper",
+      "upper": "boundary:lfo_2.rsaw:upper"
+    },
+    "lfo_2.saw": {
+      "lower": "boundary:lfo_2.saw:lower",
+      "near-lower": "boundary:lfo_2.saw:near-lower",
+      "near-upper": "boundary:lfo_2.saw:near-upper",
+      "upper": "boundary:lfo_2.saw:upper"
+    },
+    "lfo_2.sin": {
+      "lower": "boundary:lfo_2.sin:lower",
+      "near-lower": "boundary:lfo_2.sin:near-lower",
+      "near-upper": "boundary:lfo_2.sin:near-upper",
+      "upper": "boundary:lfo_2.sin:upper"
+    },
+    "lfo_2.sqr": {
+      "lower": "boundary:lfo_2.sqr:lower",
+      "near-lower": "boundary:lfo_2.sqr:near-lower",
+      "near-upper": "boundary:lfo_2.sqr:near-upper",
+      "upper": "boundary:lfo_2.sqr:upper"
+    },
+    "lfo_2.tri": {
+      "lower": "boundary:lfo_2.tri:lower",
+      "near-lower": "boundary:lfo_2.tri:near-lower",
+      "near-upper": "boundary:lfo_2.tri:near-upper",
+      "upper": "boundary:lfo_2.tri:upper"
+    },
+    "lfo_2_amp_adsr.alpha": {
+      "lower": "boundary:lfo_2_amp_adsr.alpha:lower",
+      "near-lower": "boundary:lfo_2_amp_adsr.alpha:near-lower",
+      "near-upper": "boundary:lfo_2_amp_adsr.alpha:near-upper",
+      "upper": "boundary:lfo_2_amp_adsr.alpha:upper"
+    },
+    "lfo_2_amp_adsr.attack": {
+      "lower": "boundary:lfo_2_amp_adsr.attack:lower",
+      "near-lower": "boundary:lfo_2_amp_adsr.attack:near-lower",
+      "near-upper": "boundary:lfo_2_amp_adsr.attack:near-upper",
+      "upper": "boundary:lfo_2_amp_adsr.attack:upper"
+    },
+    "lfo_2_amp_adsr.decay": {
+      "lower": "boundary:lfo_2_amp_adsr.decay:lower",
+      "near-lower": "boundary:lfo_2_amp_adsr.decay:near-lower",
+      "near-upper": "boundary:lfo_2_amp_adsr.decay:near-upper",
+      "upper": "boundary:lfo_2_amp_adsr.decay:upper"
+    },
+    "lfo_2_amp_adsr.release": {
+      "lower": "boundary:lfo_2_amp_adsr.release:lower",
+      "near-lower": "boundary:lfo_2_amp_adsr.release:near-lower",
+      "near-upper": "boundary:lfo_2_amp_adsr.release:near-upper",
+      "upper": "boundary:lfo_2_amp_adsr.release:upper"
+    },
+    "lfo_2_amp_adsr.sustain": {
+      "lower": "boundary:lfo_2_amp_adsr.sustain:lower",
+      "near-lower": "boundary:lfo_2_amp_adsr.sustain:near-lower",
+      "near-upper": "boundary:lfo_2_amp_adsr.sustain:near-upper",
+      "upper": "boundary:lfo_2_amp_adsr.sustain:upper"
+    },
+    "lfo_2_rate_adsr.alpha": {
+      "lower": "boundary:lfo_2_rate_adsr.alpha:lower",
+      "near-lower": "boundary:lfo_2_rate_adsr.alpha:near-lower",
+      "near-upper": "boundary:lfo_2_rate_adsr.alpha:near-upper",
+      "upper": "boundary:lfo_2_rate_adsr.alpha:upper"
+    },
+    "lfo_2_rate_adsr.attack": {
+      "lower": "boundary:lfo_2_rate_adsr.attack:lower",
+      "near-lower": "boundary:lfo_2_rate_adsr.attack:near-lower",
+      "near-upper": "boundary:lfo_2_rate_adsr.attack:near-upper",
+      "upper": "boundary:lfo_2_rate_adsr.attack:upper"
+    },
+    "lfo_2_rate_adsr.decay": {
+      "lower": "boundary:lfo_2_rate_adsr.decay:lower",
+      "near-lower": "boundary:lfo_2_rate_adsr.decay:near-lower",
+      "near-upper": "boundary:lfo_2_rate_adsr.decay:near-upper",
+      "upper": "boundary:lfo_2_rate_adsr.decay:upper"
+    },
+    "lfo_2_rate_adsr.release": {
+      "lower": "boundary:lfo_2_rate_adsr.release:lower",
+      "near-lower": "boundary:lfo_2_rate_adsr.release:near-lower",
+      "near-upper": "boundary:lfo_2_rate_adsr.release:near-upper",
+      "upper": "boundary:lfo_2_rate_adsr.release:upper"
+    },
+    "lfo_2_rate_adsr.sustain": {
+      "lower": "boundary:lfo_2_rate_adsr.sustain:lower",
+      "near-lower": "boundary:lfo_2_rate_adsr.sustain:near-lower",
+      "near-upper": "boundary:lfo_2_rate_adsr.sustain:near-upper",
+      "upper": "boundary:lfo_2_rate_adsr.sustain:upper"
+    },
+    "mixer.noise": {
+      "lower": "boundary:mixer.noise:lower",
+      "near-lower": "boundary:mixer.noise:near-lower",
+      "near-upper": "boundary:mixer.noise:near-upper",
+      "upper": "boundary:mixer.noise:upper"
+    },
+    "mixer.vco_1": {
+      "lower": "boundary:mixer.vco_1:lower",
+      "near-lower": "boundary:mixer.vco_1:near-lower",
+      "near-upper": "boundary:mixer.vco_1:near-upper",
+      "upper": "boundary:mixer.vco_1:upper"
+    },
+    "mixer.vco_2": {
+      "lower": "boundary:mixer.vco_2:lower",
+      "near-lower": "boundary:mixer.vco_2:near-lower",
+      "near-upper": "boundary:mixer.vco_2:near-upper",
+      "upper": "boundary:mixer.vco_2:upper"
+    },
+    "mod_matrix.adsr_1->noise_amp": {
+      "lower": "boundary:mod_matrix.adsr_1->noise_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_1->noise_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_1->noise_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_1->noise_amp:upper"
+    },
+    "mod_matrix.adsr_1->vco_1_amp": {
+      "lower": "boundary:mod_matrix.adsr_1->vco_1_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_1->vco_1_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_1->vco_1_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_1->vco_1_amp:upper"
+    },
+    "mod_matrix.adsr_1->vco_1_pitch": {
+      "lower": "boundary:mod_matrix.adsr_1->vco_1_pitch:lower",
+      "near-lower": "boundary:mod_matrix.adsr_1->vco_1_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_1->vco_1_pitch:near-upper",
+      "upper": "boundary:mod_matrix.adsr_1->vco_1_pitch:upper"
+    },
+    "mod_matrix.adsr_1->vco_2_amp": {
+      "lower": "boundary:mod_matrix.adsr_1->vco_2_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_1->vco_2_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_1->vco_2_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_1->vco_2_amp:upper"
+    },
+    "mod_matrix.adsr_1->vco_2_pitch": {
+      "lower": "boundary:mod_matrix.adsr_1->vco_2_pitch:lower",
+      "near-lower": "boundary:mod_matrix.adsr_1->vco_2_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_1->vco_2_pitch:near-upper",
+      "upper": "boundary:mod_matrix.adsr_1->vco_2_pitch:upper"
+    },
+    "mod_matrix.adsr_2->noise_amp": {
+      "lower": "boundary:mod_matrix.adsr_2->noise_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_2->noise_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_2->noise_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_2->noise_amp:upper"
+    },
+    "mod_matrix.adsr_2->vco_1_amp": {
+      "lower": "boundary:mod_matrix.adsr_2->vco_1_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_2->vco_1_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_2->vco_1_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_2->vco_1_amp:upper"
+    },
+    "mod_matrix.adsr_2->vco_1_pitch": {
+      "lower": "boundary:mod_matrix.adsr_2->vco_1_pitch:lower",
+      "near-lower": "boundary:mod_matrix.adsr_2->vco_1_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_2->vco_1_pitch:near-upper",
+      "upper": "boundary:mod_matrix.adsr_2->vco_1_pitch:upper"
+    },
+    "mod_matrix.adsr_2->vco_2_amp": {
+      "lower": "boundary:mod_matrix.adsr_2->vco_2_amp:lower",
+      "near-lower": "boundary:mod_matrix.adsr_2->vco_2_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_2->vco_2_amp:near-upper",
+      "upper": "boundary:mod_matrix.adsr_2->vco_2_amp:upper"
+    },
+    "mod_matrix.adsr_2->vco_2_pitch": {
+      "lower": "boundary:mod_matrix.adsr_2->vco_2_pitch:lower",
+      "near-lower": "boundary:mod_matrix.adsr_2->vco_2_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.adsr_2->vco_2_pitch:near-upper",
+      "upper": "boundary:mod_matrix.adsr_2->vco_2_pitch:upper"
+    },
+    "mod_matrix.lfo_1->noise_amp": {
+      "lower": "boundary:mod_matrix.lfo_1->noise_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_1->noise_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_1->noise_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_1->noise_amp:upper"
+    },
+    "mod_matrix.lfo_1->vco_1_amp": {
+      "lower": "boundary:mod_matrix.lfo_1->vco_1_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_1->vco_1_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_1->vco_1_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_1->vco_1_amp:upper"
+    },
+    "mod_matrix.lfo_1->vco_1_pitch": {
+      "lower": "boundary:mod_matrix.lfo_1->vco_1_pitch:lower",
+      "near-lower": "boundary:mod_matrix.lfo_1->vco_1_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_1->vco_1_pitch:near-upper",
+      "upper": "boundary:mod_matrix.lfo_1->vco_1_pitch:upper"
+    },
+    "mod_matrix.lfo_1->vco_2_amp": {
+      "lower": "boundary:mod_matrix.lfo_1->vco_2_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_1->vco_2_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_1->vco_2_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_1->vco_2_amp:upper"
+    },
+    "mod_matrix.lfo_1->vco_2_pitch": {
+      "lower": "boundary:mod_matrix.lfo_1->vco_2_pitch:lower",
+      "near-lower": "boundary:mod_matrix.lfo_1->vco_2_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_1->vco_2_pitch:near-upper",
+      "upper": "boundary:mod_matrix.lfo_1->vco_2_pitch:upper"
+    },
+    "mod_matrix.lfo_2->noise_amp": {
+      "lower": "boundary:mod_matrix.lfo_2->noise_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_2->noise_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_2->noise_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_2->noise_amp:upper"
+    },
+    "mod_matrix.lfo_2->vco_1_amp": {
+      "lower": "boundary:mod_matrix.lfo_2->vco_1_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_2->vco_1_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_2->vco_1_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_2->vco_1_amp:upper"
+    },
+    "mod_matrix.lfo_2->vco_1_pitch": {
+      "lower": "boundary:mod_matrix.lfo_2->vco_1_pitch:lower",
+      "near-lower": "boundary:mod_matrix.lfo_2->vco_1_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_2->vco_1_pitch:near-upper",
+      "upper": "boundary:mod_matrix.lfo_2->vco_1_pitch:upper"
+    },
+    "mod_matrix.lfo_2->vco_2_amp": {
+      "lower": "boundary:mod_matrix.lfo_2->vco_2_amp:lower",
+      "near-lower": "boundary:mod_matrix.lfo_2->vco_2_amp:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_2->vco_2_amp:near-upper",
+      "upper": "boundary:mod_matrix.lfo_2->vco_2_amp:upper"
+    },
+    "mod_matrix.lfo_2->vco_2_pitch": {
+      "lower": "boundary:mod_matrix.lfo_2->vco_2_pitch:lower",
+      "near-lower": "boundary:mod_matrix.lfo_2->vco_2_pitch:near-lower",
+      "near-upper": "boundary:mod_matrix.lfo_2->vco_2_pitch:near-upper",
+      "upper": "boundary:mod_matrix.lfo_2->vco_2_pitch:upper"
+    },
+    "vco_1.initial_phase": {
+      "lower": "boundary:vco_1.initial_phase:lower",
+      "near-lower": "boundary:vco_1.initial_phase:near-lower",
+      "near-upper": "boundary:vco_1.initial_phase:near-upper",
+      "upper": "boundary:vco_1.initial_phase:upper"
+    },
+    "vco_1.mod_depth": {
+      "center": "boundary:vco_1.mod_depth:center",
+      "center-above": "boundary:vco_1.mod_depth:center-above",
+      "center-below": "boundary:vco_1.mod_depth:center-below",
+      "lower": "boundary:vco_1.mod_depth:lower",
+      "near-lower": "boundary:vco_1.mod_depth:near-lower",
+      "near-upper": "boundary:vco_1.mod_depth:near-upper",
+      "upper": "boundary:vco_1.mod_depth:upper"
+    },
+    "vco_1.tuning": {
+      "lower": "boundary:vco_1.tuning:lower",
+      "near-lower": "boundary:vco_1.tuning:near-lower",
+      "near-upper": "boundary:vco_1.tuning:near-upper",
+      "upper": "boundary:vco_1.tuning:upper"
+    },
+    "vco_2.initial_phase": {
+      "lower": "boundary:vco_2.initial_phase:lower",
+      "near-lower": "boundary:vco_2.initial_phase:near-lower",
+      "near-upper": "boundary:vco_2.initial_phase:near-upper",
+      "upper": "boundary:vco_2.initial_phase:upper"
+    },
+    "vco_2.mod_depth": {
+      "center": "boundary:vco_2.mod_depth:center",
+      "center-above": "boundary:vco_2.mod_depth:center-above",
+      "center-below": "boundary:vco_2.mod_depth:center-below",
+      "lower": "boundary:vco_2.mod_depth:lower",
+      "near-lower": "boundary:vco_2.mod_depth:near-lower",
+      "near-upper": "boundary:vco_2.mod_depth:near-upper",
+      "upper": "boundary:vco_2.mod_depth:upper"
+    },
+    "vco_2.shape": {
+      "lower": "boundary:vco_2.shape:lower",
+      "near-lower": "boundary:vco_2.shape:near-lower",
+      "near-upper": "boundary:vco_2.shape:near-upper",
+      "upper": "boundary:vco_2.shape:upper"
+    },
+    "vco_2.tuning": {
+      "lower": "boundary:vco_2.tuning:lower",
+      "near-lower": "boundary:vco_2.tuning:near-lower",
+      "near-upper": "boundary:vco_2.tuning:near-upper",
+      "upper": "boundary:vco_2.tuning:upper"
+    }
+  },
+  "routes": {
+    "mod_matrix.adsr_1->noise_amp:isolated": "route:mod_matrix.adsr_1->noise_amp",
+    "mod_matrix.adsr_1->vco_1_amp:isolated": "route:mod_matrix.adsr_1->vco_1_amp",
+    "mod_matrix.adsr_1->vco_1_pitch:isolated": "route:mod_matrix.adsr_1->vco_1_pitch",
+    "mod_matrix.adsr_1->vco_2_amp:isolated": "route:mod_matrix.adsr_1->vco_2_amp",
+    "mod_matrix.adsr_1->vco_2_pitch:isolated": "route:mod_matrix.adsr_1->vco_2_pitch",
+    "mod_matrix.adsr_2->noise_amp:isolated": "route:mod_matrix.adsr_2->noise_amp",
+    "mod_matrix.adsr_2->vco_1_amp:isolated": "route:mod_matrix.adsr_2->vco_1_amp",
+    "mod_matrix.adsr_2->vco_1_pitch:isolated": "route:mod_matrix.adsr_2->vco_1_pitch",
+    "mod_matrix.adsr_2->vco_2_amp:isolated": "route:mod_matrix.adsr_2->vco_2_amp",
+    "mod_matrix.adsr_2->vco_2_pitch:isolated": "route:mod_matrix.adsr_2->vco_2_pitch",
+    "mod_matrix.lfo_1->noise_amp:isolated": "route:mod_matrix.lfo_1->noise_amp",
+    "mod_matrix.lfo_1->vco_1_amp:isolated": "route:mod_matrix.lfo_1->vco_1_amp",
+    "mod_matrix.lfo_1->vco_1_pitch:isolated": "route:mod_matrix.lfo_1->vco_1_pitch",
+    "mod_matrix.lfo_1->vco_2_amp:isolated": "route:mod_matrix.lfo_1->vco_2_amp",
+    "mod_matrix.lfo_1->vco_2_pitch:isolated": "route:mod_matrix.lfo_1->vco_2_pitch",
+    "mod_matrix.lfo_2->noise_amp:isolated": "route:mod_matrix.lfo_2->noise_amp",
+    "mod_matrix.lfo_2->vco_1_amp:isolated": "route:mod_matrix.lfo_2->vco_1_amp",
+    "mod_matrix.lfo_2->vco_1_pitch:isolated": "route:mod_matrix.lfo_2->vco_1_pitch",
+    "mod_matrix.lfo_2->vco_2_amp:isolated": "route:mod_matrix.lfo_2->vco_2_amp",
+    "mod_matrix.lfo_2->vco_2_pitch:isolated": "route:mod_matrix.lfo_2->vco_2_pitch"
+  },
+  "schema_version": 1,
+  "sources": {
+    "noise:isolated": "source:noise",
+    "vco_1:isolated": "source:vco_1",
+    "vco_2:isolated": "source:vco_2"
+  },
+  "special": {
+    "near-silence": "special:near-silence",
+    "silence": "special:silence",
+    "stress": "special:stress"
+  },
+  "traces": {
+    "adsr_1.output": {
+      "cases": [
+        "envelope:adsr_1:zero-stages",
+        "envelope:adsr_1:cut-attack",
+        "envelope:adsr_1:cut-decay",
+        "envelope:adsr_1:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "adsr_2.output": {
+      "cases": [
+        "envelope:adsr_2:zero-stages",
+        "envelope:adsr_2:cut-attack",
+        "envelope:adsr_2:cut-decay",
+        "envelope:adsr_2:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "control_upsample.noise_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->noise_amp",
+        "route:mod_matrix.adsr_2->noise_amp",
+        "route:mod_matrix.lfo_1->noise_amp",
+        "route:mod_matrix.lfo_2->noise_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "control_upsample.vco_1_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_1_amp",
+        "route:mod_matrix.adsr_2->vco_1_amp",
+        "route:mod_matrix.lfo_1->vco_1_amp",
+        "route:mod_matrix.lfo_2->vco_1_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "control_upsample.vco_1_pitch": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_1_pitch",
+        "route:mod_matrix.adsr_2->vco_1_pitch",
+        "route:mod_matrix.lfo_1->vco_1_pitch",
+        "route:mod_matrix.lfo_2->vco_1_pitch"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "control_upsample.vco_2_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_2_amp",
+        "route:mod_matrix.adsr_2->vco_2_amp",
+        "route:mod_matrix.lfo_1->vco_2_amp",
+        "route:mod_matrix.lfo_2->vco_2_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "control_upsample.vco_2_pitch": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_2_pitch",
+        "route:mod_matrix.adsr_2->vco_2_pitch",
+        "route:mod_matrix.lfo_1->vco_2_pitch",
+        "route:mod_matrix.lfo_2->vco_2_pitch"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "keyboard.duration": {
+      "cases": [
+        "boundary:keyboard.duration:upper"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "keyboard.midi_f0": {
+      "cases": [
+        "boundary:keyboard.midi_f0:upper"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "lfo_1.post_control_vca": {
+      "cases": [
+        "waveform:lfo_1:sin",
+        "waveform:lfo_1:tri",
+        "waveform:lfo_1:saw",
+        "waveform:lfo_1:rsaw",
+        "waveform:lfo_1:sqr",
+        "waveform:lfo_1:blend"
+      ],
+      "isolation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "status": "planned"
+    },
+    "lfo_1.raw": {
+      "cases": [
+        "waveform:lfo_1:sin",
+        "waveform:lfo_1:tri",
+        "waveform:lfo_1:saw",
+        "waveform:lfo_1:rsaw",
+        "waveform:lfo_1:sqr",
+        "waveform:lfo_1:blend"
+      ],
+      "isolation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "status": "planned"
+    },
+    "lfo_1_amp_adsr.output": {
+      "cases": [
+        "envelope:lfo_1_amp_adsr:zero-stages",
+        "envelope:lfo_1_amp_adsr:cut-attack",
+        "envelope:lfo_1_amp_adsr:cut-decay",
+        "envelope:lfo_1_amp_adsr:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "lfo_1_rate_adsr.output": {
+      "cases": [
+        "envelope:lfo_1_rate_adsr:zero-stages",
+        "envelope:lfo_1_rate_adsr:cut-attack",
+        "envelope:lfo_1_rate_adsr:cut-decay",
+        "envelope:lfo_1_rate_adsr:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "lfo_2.post_control_vca": {
+      "cases": [
+        "waveform:lfo_2:sin",
+        "waveform:lfo_2:tri",
+        "waveform:lfo_2:saw",
+        "waveform:lfo_2:rsaw",
+        "waveform:lfo_2:sqr",
+        "waveform:lfo_2:blend"
+      ],
+      "isolation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "status": "planned"
+    },
+    "lfo_2.raw": {
+      "cases": [
+        "waveform:lfo_2:sin",
+        "waveform:lfo_2:tri",
+        "waveform:lfo_2:saw",
+        "waveform:lfo_2:rsaw",
+        "waveform:lfo_2:sqr",
+        "waveform:lfo_2:blend"
+      ],
+      "isolation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "status": "planned"
+    },
+    "lfo_2_amp_adsr.output": {
+      "cases": [
+        "envelope:lfo_2_amp_adsr:zero-stages",
+        "envelope:lfo_2_amp_adsr:cut-attack",
+        "envelope:lfo_2_amp_adsr:cut-decay",
+        "envelope:lfo_2_amp_adsr:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "lfo_2_rate_adsr.output": {
+      "cases": [
+        "envelope:lfo_2_rate_adsr:zero-stages",
+        "envelope:lfo_2_rate_adsr:cut-attack",
+        "envelope:lfo_2_rate_adsr:cut-decay",
+        "envelope:lfo_2_rate_adsr:long-release"
+      ],
+      "isolation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "status": "planned"
+    },
+    "mixer.gain": {
+      "cases": [
+        "normalization:below",
+        "normalization:tie",
+        "normalization:above"
+      ],
+      "isolation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "status": "planned"
+    },
+    "mixer.output": {
+      "cases": [
+        "normalization:below",
+        "normalization:tie",
+        "normalization:above"
+      ],
+      "isolation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "status": "planned"
+    },
+    "mixer.peak": {
+      "cases": [
+        "normalization:below",
+        "normalization:tie",
+        "normalization:above"
+      ],
+      "isolation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "status": "planned"
+    },
+    "mixer.pre_normalization": {
+      "cases": [
+        "normalization:below",
+        "normalization:tie",
+        "normalization:above"
+      ],
+      "isolation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "status": "planned"
+    },
+    "mod_matrix.noise_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->noise_amp",
+        "route:mod_matrix.adsr_2->noise_amp",
+        "route:mod_matrix.lfo_1->noise_amp",
+        "route:mod_matrix.lfo_2->noise_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "mod_matrix.vco_1_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_1_amp",
+        "route:mod_matrix.adsr_2->vco_1_amp",
+        "route:mod_matrix.lfo_1->vco_1_amp",
+        "route:mod_matrix.lfo_2->vco_1_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "mod_matrix.vco_1_pitch": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_1_pitch",
+        "route:mod_matrix.adsr_2->vco_1_pitch",
+        "route:mod_matrix.lfo_1->vco_1_pitch",
+        "route:mod_matrix.lfo_2->vco_1_pitch"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "mod_matrix.vco_2_amp": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_2_amp",
+        "route:mod_matrix.adsr_2->vco_2_amp",
+        "route:mod_matrix.lfo_1->vco_2_amp",
+        "route:mod_matrix.lfo_2->vco_2_amp"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "mod_matrix.vco_2_pitch": {
+      "cases": [
+        "route:mod_matrix.adsr_1->vco_2_pitch",
+        "route:mod_matrix.adsr_2->vco_2_pitch",
+        "route:mod_matrix.lfo_1->vco_2_pitch",
+        "route:mod_matrix.lfo_2->vco_2_pitch"
+      ],
+      "isolation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "status": "planned"
+    },
+    "noise.post_vca": {
+      "cases": [
+        "source:noise"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    },
+    "noise.raw": {
+      "cases": [
+        "source:noise"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    },
+    "vco_1.post_vca": {
+      "cases": [
+        "source:vco_1"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    },
+    "vco_1.raw": {
+      "cases": [
+        "source:vco_1"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    },
+    "vco_2.post_vca": {
+      "cases": [
+        "source:vco_2"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    },
+    "vco_2.raw": {
+      "cases": [
+        "source:vco_2"
+      ],
+      "isolation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "status": "planned"
+    }
+  },
+  "waveforms": {
+    "lfo_1:blend": "waveform:lfo_1:blend",
+    "lfo_1:rsaw": "waveform:lfo_1:rsaw",
+    "lfo_1:saw": "waveform:lfo_1:saw",
+    "lfo_1:sin": "waveform:lfo_1:sin",
+    "lfo_1:sqr": "waveform:lfo_1:sqr",
+    "lfo_1:tri": "waveform:lfo_1:tri",
+    "lfo_2:blend": "waveform:lfo_2:blend",
+    "lfo_2:rsaw": "waveform:lfo_2:rsaw",
+    "lfo_2:saw": "waveform:lfo_2:saw",
+    "lfo_2:sin": "waveform:lfo_2:sin",
+    "lfo_2:sqr": "waveform:lfo_2:sqr",
+    "lfo_2:tri": "waveform:lfo_2:tri",
+    "vco_2:blend": "waveform:vco_2:blend",
+    "vco_2:saw": "waveform:vco_2:saw",
+    "vco_2:square": "waveform:vco_2:square"
+  }
+}
