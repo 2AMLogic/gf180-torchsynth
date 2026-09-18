@@ -83,6 +83,12 @@ Index `39942` is the batch-size-independent identity of the quickstart example
 `Voice(...)(312)[0][6]`: `312 * 128 + 6`. The adapter renders with the minimum
 reproducible batch size of 32 but produces the same indexed sound.
 
+That batch of 32 is only the canonical Python parameter/noise-selection path.
+The hardware core is a one-sound engine: it receives one resolved named patch
+and one selected noise stream, then renders one clip. The scalar execution
+boundary and small PyTorch batch-shape numeric drift are tracked in
+[issue #88](https://github.com/2AMLogic/gf180-torchsynth/issues/88).
+
 The dependency uses a commit-addressed source archive rather than a Git clone.
 This is intentional: a normal checkout currently fails when Git LFS requests a
 missing documentation image. Runtime Voice files are still verified against

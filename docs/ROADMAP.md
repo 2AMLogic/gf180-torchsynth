@@ -59,6 +59,9 @@ does not yet prove an audio render.
 - Render the preregistered 96-case development corpus twice and prove repeat.
 - Compare selected snapshot against `v1.0.2` with only the import compatibility
   adjustment.
+- Qualify one-sound execution with a resolved named patch and explicitly
+  selected noise stream against the canonical batched reference. Treat Python
+  batch shape as an implementation detail whose numeric drift is measured.
 - Capture parameters, noise identity, audio, traces, and full provenance.
 - Keep 32 holdout cases sealed until the rubric is frozen.
 

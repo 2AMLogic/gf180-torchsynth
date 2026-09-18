@@ -121,9 +121,21 @@ Their limits matter:
 - CPU/GPU closeness in the documentation is not an exact cross-device contract;
 - TorchSynth's profiler measures performance, not semantic correctness.
 
-Canonical fixtures therefore remain CPU/float32 in a pinned runtime. Supported
-reproducible batch sizes are multiples of 32. Batch size 1 is not a valid probe
-for this profile, even though it would be a tempting generic invariant.
+Canonical synth1B1 fixtures therefore remain CPU/float32 in a pinned runtime,
+and their randomization path uses supported batch sizes that are multiples of
+32. The device is nevertheless a one-sound engine. A batch-size-1 upstream
+probe is valid only after disabling batch randomization, loading all named
+parameters, and injecting the selected noise stream. It tests scalar execution,
+not synth1B1 identity generation.
+
+An initial ad-hoc probe found that this resolved batch-1 path is very close but
+not byte-identical to batch 32 in the current runtime: three tested slots had
+final maximum absolute errors from about `4.3e-6` to `2.0e-4`. For slot 0, the
+first observed difference was a `2.38e-7` LFO-envelope value; oscillator phase
+accumulation magnified later errors. [Issue #88](https://github.com/2AMLogic/gf180-torchsynth/issues/88)
+turns that observation into a provenance-complete trace experiment and decides
+which scalar semantics bridge to the fixed model. The observation is not yet a
+scorecard result.
 
 ## Scorecard contract
 
@@ -189,4 +201,3 @@ first divergent seam and the exact invalidated claim obvious.
 - [Pinned upstream reproducibility tests](https://github.com/torchsynth/torchsynth/blob/2b0964d4c6c3d472a2a0d54d91b408caaeffca6d/tests/test_reproducibility.py)
 - [Parasynth capability DAG](https://github.com/2AMLogic/gf180-parasynth/blob/main/docs/capability-dag.md)
 - [Parasynth scorecard rules](https://github.com/2AMLogic/gf180-parasynth/blob/main/docs/scorecard/README.md)
-

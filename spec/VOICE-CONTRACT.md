@@ -27,7 +27,8 @@ Git commit.
 | Output samples | 176,400 |
 | Channels | 1 |
 | Python reference dtype | float32 |
-| Adapter batch size | 32, the minimum reproducible multiple |
+| Canonical corpus adapter batch size | 32, the minimum reproducible multiple |
+| Hardware execution width | one resolved sound |
 | Patch distribution | default Voice nebula |
 
 TorchSynth's global identity for a sound is
@@ -35,6 +36,14 @@ TorchSynth's global identity for a sound is
 identity in a different supported batch size without changing the selected
 parameter draw. For example, upstream `synth1B1-312-6` at batch size 128 is
 global sound index `39942`, or batch 1248 slot 6 at batch size 32.
+
+Those batch coordinates belong to synth1B1 parameter/noise selection and to
+efficient Python execution. They do not require a 32-lane implementation. Once
+the canonical named patch and selected noise stream are resolved, the device
+executes one sound. The relationship between batched upstream floating-point
+evaluation and `batch_size=1, reproducible=False` scalar evaluation is being
+qualified in [issue #88](https://github.com/2AMLogic/gf180-torchsynth/issues/88);
+byte identity is not assumed.
 
 ## Graph
 
@@ -74,7 +83,7 @@ format.
 
 ## Hardware boundary
 
-The initial boundary in DR-0003 is proposed, not ratified. Numeric formats,
+The accepted product profile renders one clip at a time. The remaining initial
+boundary details in DR-0003 are proposed, not ratified. Numeric formats,
 function approximations, rounding, saturation, output word length, clocks,
 transport, and reset semantics are all **unratified** until measurement.
-

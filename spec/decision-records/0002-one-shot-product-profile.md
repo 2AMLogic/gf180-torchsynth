@@ -27,9 +27,10 @@ real-time gain semantics.
 ## Consequences
 
 - Canonical output is mono, 44.1 kHz, four seconds (176,400 samples).
+- The core renders one resolved sound at a time; TorchSynth's software batch
+  dimension is not part of the device interface.
 - Repeat/recall and parameter identity are first-class product behavior.
 - Live MIDI and sustained-note behavior require a separately named profile and
   a decision record; they must not silently alter the exact clip renderer.
 - A host may provide exploration and patch storage before these functions are
   implemented on chip.
-
