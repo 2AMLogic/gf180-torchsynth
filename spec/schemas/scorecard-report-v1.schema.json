@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gf180-torchsynth:scorecard-report:v1",
+  "title": "Scorecard report v1",
+  "description": "Raw rows and separate counts, never a product verdict. validate_report additionally enforces rubric equality and recomputes counts; JSON Schema alone cannot establish these relationships.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "partition", "rubric", "rows", "summary"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "partition": {"enum": ["development", "holdout"]},
+    "rubric": {"$ref": "urn:gf180-torchsynth:scorecard-row:v1#/$defs/rubric"},
+    "rows": {"type": "array", "items": {"$ref": "urn:gf180-torchsynth:scorecard-row:v1"}},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_rows", "verdicts", "coverage"],
+      "properties": {
+        "total_rows": {"$ref": "#/$defs/count"},
+        "verdicts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["PASS", "FAIL", "NO VERDICT", "MISSING EVIDENCE"],
+          "properties": {
+            "PASS": {"$ref": "#/$defs/count"},
+            "FAIL": {"$ref": "#/$defs/count"},
+            "NO VERDICT": {"$ref": "#/$defs/count"},
+            "MISSING EVIDENCE": {"$ref": "#/$defs/count"}
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["complete", "partial", "none"],
+          "properties": {
+            "complete": {"$ref": "#/$defs/count"},
+            "partial": {"$ref": "#/$defs/count"},
+            "none": {"$ref": "#/$defs/count"}
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"partition": {"const": "development"}}},
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {"properties": {"case": {"properties": {"partition": {"const": "development"}}}}}
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"partition": {"const": "holdout"}}},
+      "then": {
+        "properties": {
+          "rows": {
+            "items": {"properties": {"case": {"properties": {"partition": {"const": "holdout"}}}}}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {"count": {"type": "integer", "minimum": 0}}
+}

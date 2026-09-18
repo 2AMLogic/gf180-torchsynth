@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gf180-torchsynth:scorecard-row:v1",
+  "title": "Scorecard row v1",
+  "description": "A producer assertion, not independently verified measurement evidence. Parse strict JSON before validation; reject duplicate keys and non-finite numbers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "case", "trace", "property", "estimator", "rubric", "unit",
+    "expected", "observed", "tolerance", "validity", "coverage", "verdict", "artifact"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "partition"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "partition": {"enum": ["development", "holdout"]}
+      }
+    },
+    "trace": {"$ref": "#/$defs/text"},
+    "property": {"$ref": "#/$defs/text"},
+    "estimator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"$ref": "#/$defs/text"},
+        "version": {"$ref": "#/$defs/text"}
+      }
+    },
+    "rubric": {"$ref": "#/$defs/rubric"},
+    "unit": {"$ref": "#/$defs/text"},
+    "expected": {"$ref": "#/$defs/sourcedValue"},
+    "observed": {"$ref": "#/$defs/nullableNumber"},
+    "tolerance": {
+      "allOf": [
+        {"$ref": "#/$defs/sourcedValue"},
+        {"properties": {"value": {"minimum": 0}}}
+      ]
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {"enum": ["valid", "invalid", "insufficient", "missing"]},
+        "reason": {"$ref": "#/$defs/text"}
+      }
+    },
+    "coverage": {"enum": ["complete", "partial", "none"]},
+    "verdict": {"enum": ["PASS", "FAIL", "NO VERDICT", "MISSING EVIDENCE"]},
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "sha256"],
+      "properties": {
+        "identity": {"$ref": "#/$defs/text"},
+        "sha256": {"type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "verdict": {"enum": ["PASS", "FAIL"]},
+        "validity": {"properties": {"status": {"const": "valid"}}},
+        "coverage": {"const": "complete"},
+        "expected": {"properties": {"value": {"type": "number"}}},
+        "observed": {"type": "number"},
+        "tolerance": {"properties": {"value": {"type": "number"}}}
+      }
+    },
+    {
+      "properties": {
+        "verdict": {"const": "NO VERDICT"},
+        "validity": {"properties": {"status": {"enum": ["invalid", "insufficient"]}}},
+        "observed": {"type": "null"}
+      }
+    },
+    {
+      "properties": {
+        "verdict": {"const": "MISSING EVIDENCE"},
+        "validity": {"properties": {"status": {"const": "missing"}}},
+        "coverage": {"const": "none"},
+        "observed": {"type": "null"}
+      }
+    }
+  ],
+  "$defs": {
+    "text": {"type": "string", "pattern": "\\S"},
+    "nullableNumber": {
+      "type": ["number", "null"],
+      "minimum": -1.7976931348623157e308,
+      "maximum": 1.7976931348623157e308
+    },
+    "sourcedValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source"],
+      "properties": {
+        "value": {"$ref": "#/$defs/nullableNumber"},
+        "source": {"$ref": "#/$defs/text"}
+      }
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "version": {"$ref": "#/$defs/text"}
+      }
+    }
+  }
+}
