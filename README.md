@@ -98,7 +98,28 @@ The next gates are deliberately sound-first:
 4. Implement one-shot RTL and compare it exactly with the fixed model.
 5. Measure FPGA/gf180 fit before selecting performance controls or shrinking.
 
-See [the roadmap](docs/ROADMAP.md) and [the contract](spec/VOICE-CONTRACT.md).
+See [the roadmap](docs/ROADMAP.md),
+[piecewise bring-up and evidence architecture](docs/BRINGUP-AND-EVIDENCE.md),
+and [the contract](spec/VOICE-CONTRACT.md).
+
+## Executable backlog
+
+The work is decomposed in Loom as two linked epics with blocked phase trackers
+and small leaf issues. Each leaf names its deliverable, acceptance tests,
+evidence, non-goals, and machine-readable dependencies:
+
+- [Reference, measurement, and fixed numeric contract](https://github.com/2AMLogic/gf180-torchsynth/issues/1)
+- [RTL, feasibility, and sound-explorer instrument](https://github.com/2AMLogic/gf180-torchsynth/issues/2)
+
+The Loom issue DAG schedules work. A separate evidence-derived capability DAG
+([#85](https://github.com/2AMLogic/gf180-torchsynth/issues/85)) will say which
+claims are current, and a generated scorecard
+([#87](https://github.com/2AMLogic/gf180-torchsynth/issues/87)) will report
+case/trace/property coverage. Neither is claimed implemented yet.
+
+The immediate parallel frontier is recorded in the first epic. Leaf issues use
+`loom:architect` until reviewed/approved; broad phase trackers remain
+`loom:blocked` so they cannot be mistaken for builder-sized work.
 
 ## License
 

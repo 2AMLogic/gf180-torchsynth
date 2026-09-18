@@ -134,6 +134,15 @@ constructed signals spanning its intended range. Measure its error floor per
 row. If the expected implementation error approaches that floor, the estimator
 cannot distinguish pass from fail and must return `NO VERDICT`.
 
+The preparation path is qualified independently from the estimator. Every row
+declares allowed preparation, forbidden preparation, time origin, window, and
+refusal conditions. Reference and candidate use the same implementation.
+Exact paired rows prohibit automatic alignment, trimming, resampling, and level
+normalization. Property-specific invariants—such as common-shift invariance for
+onset-relative measures or common-gain invariance for ratios—exercise the
+apparatus without assuming the expected measurement value. An apparatus
+failure makes dependent rows `NO VERDICT`.
+
 The suite must deliberately inject at least these faults and show which required
 rows turn red:
 
@@ -241,4 +250,3 @@ The “audio similarity” caution is not an argument against exact comparisons.
 It says similarity metrics should not be misrepresented as human quality. Here,
 sample/trace identity establishes implementation behavior, while listening
 evidence addresses perceptual transparency as a separate claim.
-

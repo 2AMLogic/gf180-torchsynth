@@ -3,6 +3,17 @@
 Verification is the product. Each milestone produces reusable evidence before
 the next implementation layer is allowed to obscure it.
 
+The executable issue DAG lives in [Epic #1](https://github.com/2AMLogic/gf180-torchsynth/issues/1)
+and [Epic #2](https://github.com/2AMLogic/gf180-torchsynth/issues/2). This
+document explains the gates; the issues own builder-sized deliverables and
+dependencies.
+
+The scheduling DAG is not the evidence graph. The planned capability DAG
+derives claim status from current checks, artifacts, controls, and covered-input
+hashes; the scorecard reports case-level coverage and agreement. Their design
+and the module-by-module debug order are in
+[piecewise bring-up and evidence architecture](BRINGUP-AND-EVIDENCE.md).
+
 ```text
 version/profile contract
         |
@@ -64,6 +75,10 @@ Exit: replayable corpus with immutable hashes and an honest portability report.
 Exit: every required estimator has known validity bounds and every named fault
 is detected by a required row.
 
+Signal preparation is qualified separately from the estimators it feeds.
+Applicable invariants must detect asymmetric windows, shifts, gain treatment,
+and resampling errors without relying only on known-answer grids.
+
 ## Milestone 3 — fixed-point feasibility
 
 - Sweep widths, rounding, saturation, interpolation, oscillator/envelope
@@ -90,4 +105,3 @@ Exit: claims are limited to the actual completed flow stage.
 - Evaluate whether nebula sampling belongs on host or device.
 - Treat live keyboard semantics as a separately named, separately verified
   profile.
-
