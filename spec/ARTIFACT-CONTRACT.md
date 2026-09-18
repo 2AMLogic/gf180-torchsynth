@@ -170,8 +170,11 @@ and selected noise stream. These executions receive different content IDs.
 No batched/scalar sample equality or hardware batch requirement is implied.
 
 Both parameter maps contain 78 entries with identical names. Names have
-`module.parameter` syntax; physical locks must match entries in the
-resolved physical map. Normalized values lie in [0,1], and all values must be
+`module.parameter` syntax, including modulation routes such as
+`mod_matrix.adsr_1->vco_1_pitch`. Module names and each side of a route use
+ASCII identifier syntax; at most one `->` is allowed in the parameter component.
+Physical locks must match entries in the resolved physical map.
+Normalized values lie in [0,1], and all values must be
 finite. Optional forward/randomization orders must each be permutations of
 the map keys. They never define a patch. The validator checks syntax, counts,
 and consistency; authentic inventory membership and normalized-to-physical

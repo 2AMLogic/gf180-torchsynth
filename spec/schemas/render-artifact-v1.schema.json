@@ -21,7 +21,7 @@
       "oneOf": [
         {
           "type": "string",
-          "pattern": "^ra1-[a-f0-9]{64}$"
+          "pattern": "^ra1-[a-f0-9]{64}(?![\\s\\S])"
         },
         {
           "type": "null"
@@ -130,11 +130,16 @@
   "$defs": {
     "token": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
     },
     "id": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*(?![\\s\\S])"
+    },
+    "parameterName": {
+      "description": "The module.identifier or module.source->destination syntax used by the pinned inventory. The final assertion forbids trailing line terminators under JSON Schema search semantics.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*(->[A-Za-z_][A-Za-z0-9_]*)?(?![\\s\\S])"
     },
     "integer": {
       "type": "integer",
@@ -143,7 +148,7 @@
     },
     "sha256": {
       "type": "string",
-      "pattern": "^[a-f0-9]{64}$"
+      "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
     },
     "absent": {
       "type": "object",
@@ -156,7 +161,7 @@
         },
         "reason": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*(?![\\s\\S])"
         }
       },
       "required": [
@@ -167,7 +172,7 @@
     },
     "path": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$"
+      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*(?![\\s\\S])"
     },
     "file": {
       "type": "object",
@@ -213,7 +218,7 @@
       "properties": {
         "commit": {
           "type": "string",
-          "pattern": "^[a-f0-9]{40}$"
+          "pattern": "^[a-f0-9]{40}(?![\\s\\S])"
         },
         "dirty": {
           "type": "boolean"
@@ -346,42 +351,42 @@
         },
         "os": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
         },
         "architecture": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
         },
         "cpu": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
         },
         "device": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
         },
         "versions": {
           "type": "object",
           "properties": {
             "python": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
             },
             "torch": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
             },
             "lightning": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
             },
             "numpy": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
             },
             "torchsynth": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$"
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._+ ()-]*(?![\\s\\S])"
             }
           },
           "required": [
@@ -427,8 +432,7 @@
     "normalizedMap": {
       "type": "object",
       "propertyNames": {
-        "type": "string",
-        "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+        "$ref": "#/$defs/parameterName"
       },
       "additionalProperties": {
         "type": "number",
@@ -439,8 +443,7 @@
     "physicalMap": {
       "type": "object",
       "propertyNames": {
-        "type": "string",
-        "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\.[A-Za-z_][A-Za-z0-9_]*$"
+        "$ref": "#/$defs/parameterName"
       },
       "additionalProperties": {
         "type": "number"
@@ -497,7 +500,7 @@
       "type": "object",
       "propertyNames": {
         "type": "string",
-        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*(?![\\s\\S])"
       },
       "additionalProperties": {
         "$ref": "#/$defs/file"
@@ -557,14 +560,14 @@
         "randomization_order": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/parameterName"
           },
           "uniqueItems": true
         },
         "forward_order": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/id"
+            "$ref": "#/$defs/parameterName"
           },
           "uniqueItems": true
         }

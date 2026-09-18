@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import unittest
@@ -22,10 +23,83 @@ from torchsynth_voice.artifacts import (  # noqa: E402
 )
 
 FIXTURES = Path(__file__).parent / "fixtures/artifacts"
+LINE_TERMINATORS = ("\n", "\r", "\r\n", "\u2028", "\u2029")
 
 
 def artifact():
     return loads((FIXTURES / "complete.json").read_text(encoding="utf-8"))
+
+
+def canonical_named_artifact():
+    record = artifact()
+    inventory = loads(
+        (ROOT / "spec/reference/parameter-inventory-v1.json").read_bytes()
+    )["parameters"]
+    names = [parameter["name"] for parameter in inventory]
+    # Values remain synthetic: this exercises representation, not render fidelity.
+    for mapping in record["inputs"]["value"]["parameters"]:
+        record["inputs"]["value"]["parameters"][mapping] = dict.fromkeys(names, 0.5)
+    record["diagnostic_orders"] = {
+        f"{order}_order": [
+            parameter["name"]
+            for parameter in sorted(inventory, key=lambda p: p[f"{order}_position"])
+        ]
+        for order in ("randomization", "forward")
+    }
+    record["artifact_id"] = content_id(record["inputs"]["value"])
+    return record
+
+
+def line_terminated_documents():
+    """Shared negative probes for native and independent JSON Schema checks."""
+    inputs = ("inputs", "value")
+    paths = (
+        ("artifact", ("artifact_id",)),
+        ("artifact", ("audio", "value", "file", "ref")),
+        ("artifact", ("audio", "value", "file", "sha256")),
+        ("artifact", (*inputs, "project_git", "commit")),
+        ("artifact", (*inputs, "renderer_version")),
+        ("artifact", (*inputs, "runtime", "os")),
+        ("artifact", (*inputs, "runtime", "versions", "python")),
+        ("index", ("corpus_id",)),
+        ("index", ("cases", 0, "artifact", "artifact_id")),
+        ("index", ("cases", 0, "artifact", "ref")),
+        ("index", ("cases", 0, "artifact", "sha256")),
+    )
+    for ending in LINE_TERMINATORS:
+        for kind, path in paths:
+            record = artifact() if kind == "artifact" else index()
+            target = record
+            for key in path[:-1]:
+                target = target[key]
+            target[path[-1]] += ending
+            if path[:2] == inputs:
+                record["artifact_id"] = content_id(record["inputs"]["value"])
+            yield kind, path, ending, record
+        # Keep map counts, key agreement, locks, orders and content ID consistent:
+        # the invalid name must fail structurally, not at a later semantic check.
+        record = canonical_named_artifact()
+        name = "mod_matrix.adsr_1->vco_1_pitch"
+        for mapping in record["inputs"]["value"]["parameters"].values():
+            mapping[name + ending] = mapping.pop(name)
+        for order in record["diagnostic_orders"].values():
+            order[order.index(name)] += ending
+        record["artifact_id"] = content_id(record["inputs"]["value"])
+        yield "artifact", ("parameter names and orders",), ending, record
+        for mapping_name in (
+            "normalized_by_name",
+            "physical_by_name",
+            "locks_physical",
+        ):
+            record = canonical_named_artifact()
+            mapping = record["inputs"]["value"]["parameters"][mapping_name]
+            mapping[name + ending] = mapping.pop(name)
+            record["artifact_id"] = content_id(record["inputs"]["value"])
+            yield "artifact", (mapping_name,), ending, record
+        for order_name in ("randomization_order", "forward_order"):
+            record = canonical_named_artifact()
+            record["diagnostic_orders"][order_name][0] += ending
+            yield "artifact", (order_name,), ending, record
 
 
 def index(record=None):
@@ -66,6 +140,63 @@ def index(record=None):
 
 
 class ArtifactTests(unittest.TestCase):
+    def test_all_canonical_parameter_names_maps_locks_and_orders(self):
+        record = canonical_named_artifact()
+        names = record["inputs"]["value"]["parameters"]["normalized_by_name"]
+        self.assertEqual(len(names), 78)
+        self.assertEqual(sum("->" in name for name in names), 20)
+        validate_artifact(record)
+        validate_corpus_index(index(record), artifacts={record["artifact_id"]: record})
+
+    def test_rejects_line_terminated_lexemes(self):
+        for kind, path, ending, record in line_terminated_documents():
+            validate = (
+                validate_artifact if kind == "artifact" else validate_corpus_index
+            )
+            with self.subTest(kind=kind, path=path, ending=ending):
+                with self.assertRaises(ValidationError):
+                    validate(record)
+
+    def test_schema_patterns_use_full_string_search_semantics(self):
+        # JSON Schema uses regex search, whereas the native validator uses
+        # fullmatch. Exercise every pattern without adding a runtime dependency.
+        examples = (
+            "ra1-" + "a" * 64,
+            "a" * 64,
+            "b" * 40,
+            "portable-id",
+            "1.2.3+cpu (x86)",
+            "relative/path.json",
+            "adsr_1.attack",
+            "mod_matrix.adsr_1->vco_1_pitch",
+        )
+
+        def check(node):
+            if isinstance(node, dict):
+                if "pattern" in node:
+                    pattern = node["pattern"]
+                    accepted = [
+                        value for value in examples if re.search(pattern, value)
+                    ]
+                    self.assertTrue(accepted, pattern)
+                    for value in accepted:
+                        for ending in LINE_TERMINATORS:
+                            with self.subTest(
+                                pattern=pattern, value=value, ending=ending
+                            ):
+                                self.assertIsNone(re.search(pattern, value + ending))
+                for child in node.values():
+                    check(child)
+            elif isinstance(node, list):
+                for child in node:
+                    check(child)
+
+        for filename in (
+            "render-artifact-v1.schema.json",
+            "corpus-index-v1.schema.json",
+        ):
+            check(loads((ROOT / "spec/schemas" / filename).read_bytes()))
+
     def test_complete_synthetic_artifact_and_index(self):
         record = artifact()
         validate_artifact(record)
