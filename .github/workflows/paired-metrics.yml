@@ -1,0 +1,28 @@
+name: Paired metrics
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Install only the metrics extra
+        run: uv sync --locked --extra metrics --python '${{ matrix.python }}'
+      - name: Verify the environment excludes Torch
+        run: uv run --no-sync python -c "import importlib.util; assert importlib.util.find_spec('torch') is None"
+      - name: Run analytic, FFT, scorecard, and full-clip smoke tests
+        run: uv run --no-sync python tests/test_paired_metrics.py --spectral -v

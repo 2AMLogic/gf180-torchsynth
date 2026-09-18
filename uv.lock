@@ -375,6 +375,10 @@ version = "0.1.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
+metrics = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
 reference = [
     { name = "lightning" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -387,12 +391,13 @@ reference = [
 [package.metadata]
 requires-dist = [
     { name = "lightning", marker = "extra == 'reference'", specifier = ">=2.4,<3" },
+    { name = "numpy", marker = "extra == 'metrics'", specifier = ">=1.26,<3" },
     { name = "numpy", marker = "extra == 'reference'", specifier = ">=1.26,<3" },
     { name = "setuptools", marker = "extra == 'reference'", specifier = ">=70,<81" },
     { name = "torch", marker = "extra == 'reference'", specifier = ">=2.4,<3" },
     { name = "torchsynth", marker = "extra == 'reference'", url = "https://github.com/torchsynth/torchsynth/archive/2b0964d4c6c3d472a2a0d54d91b408caaeffca6d.tar.gz" },
 ]
-provides-extras = ["reference", "test"]
+provides-extras = ["metrics", "reference", "test"]
 
 [[package]]
 name = "idna"
