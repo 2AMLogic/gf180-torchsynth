@@ -1,0 +1,8 @@
+**
+!env/
+!env/release-era/
+!env/release-era/**
+!spec/
+!spec/reference/
+!spec/reference/upstream.json
+**/__pycache__/

@@ -1,0 +1,11 @@
+# August 2022 numerical stack; December 2022 Lightning supplies the selected
+# source's `from lightning import LightningModule` without a source patch.
+torch @ https://download.pytorch.org/whl/cpu/torch-1.12.1%2Bcpu-cp39-cp39-linux_x86_64.whl
+numpy==1.23.2
+scipy==1.9.0
+lightning==1.8.6
+# Lightning 1.8.6 imports websockets but omits it from wheel requirements.
+websockets==10.4
+setuptools==65.5.1
+pip==22.2.2
+wheel==0.37.1
