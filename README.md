@@ -11,25 +11,68 @@ The target is pinned to TorchSynth commit
 oscillators plus noise, six ADSRs, two LFOs, a 4-by-5 modulation matrix, VCAs,
 and a mixer. There is no ladder filter in the target graph.
 
-## Status — read this before believing any claim
+<!-- CAPABILITIES:BEGIN -->
+## Evidence-derived capability status
 
-Done in this repository:
+Generated from [canonical node declarations](spec/capabilities-v1.json) and validated evidence. [Full claims, reasons and exclusions](docs/CAPABILITIES.md) · [machine-readable status](docs/capabilities.json) · [case/property scorecard](docs/SCORECARD.md).
 
-- The product and reference profile are recorded in ratified decision records.
-- The upstream source files and default nebula are pinned by commit and SHA-256.
-- A global sound-index identity is defined independently of render batch size.
-- A reference adapter can render one sound, save its normalized and physical
-  parameters, write lossless float32 samples, and create an audition WAV.
-- A 128-sound corpus is preregistered as indices 0–127, with 96 development
-  cases and 32 holdout cases.
+| READY | BLOCKED | NOT RUN | PASS | FAIL | NO VERDICT | STALE |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 16 | 1 | 0 | 0 | 0 | 0 |
 
-Not done and not claimed:
+These are claim counts, not a completion percentage or a quality score. READY is unrun, not PASS. BLOCKED retains its local evidence state in the full report. An unattached planned node is allowed by the health check, but establishes no capability. Existing implementations, bounded measurements, closed issues and Loom labels do not stamp PASS; an accepted, current qualification record must cover the exact claim.
 
-- The reference corpus has not yet been rendered or measured.
-- There is no fixed-point model, RTL, FPGA bitstream, gf180mcu netlist, layout,
-  signoff result, hardware playback, or fabricated silicon.
-- No arithmetic widths, approximation tables, area, clock, power, or acoustic
-  error limits have been ratified.
+```mermaid
+graph TD
+  n0["apparatus: NOT RUN"]
+  n1["contract: READY"]
+  n2["parameters: BLOCKED"]
+  n3["runtime: BLOCKED"]
+  n4["reference: BLOCKED"]
+  n5["traces: BLOCKED"]
+  n6["float-modules: BLOCKED"]
+  n7["rubric: BLOCKED"]
+  n8["scalar: BLOCKED"]
+  n9["fixed-model: BLOCKED"]
+  n10["auditory: BLOCKED"]
+  n11["distribution: BLOCKED"]
+  n12["rtl-modules: BLOCKED"]
+  n13["rtl-clip: BLOCKED"]
+  n14["fpga: BLOCKED"]
+  n15["synthesized: BLOCKED"]
+  n16["routed: BLOCKED"]
+  n17["silicon: BLOCKED"]
+  n1 --> n2
+  n1 --> n3
+  n2 --> n4
+  n3 --> n4
+  n2 --> n5
+  n4 --> n5
+  n0 --> n6
+  n5 --> n6
+  n0 --> n7
+  n6 --> n7
+  n4 --> n8
+  n6 --> n9
+  n7 --> n9
+  n8 --> n9
+  n0 --> n10
+  n9 --> n10
+  n0 --> n11
+  n9 --> n11
+  n9 --> n12
+  n12 --> n13
+  n13 --> n14
+  n13 --> n15
+  n15 --> n16
+  n16 --> n17
+  n13 --> n17
+```
+
+Only a node's stated scope is covered by its PASS: implementation identity, auditory/distribution evidence, FPGA, synthesis, routing and silicon are separate claims. The compiler does not run measurements, unseal holdout data, or infer hardware playback.
+
+Regenerate all three views with `python3 tools/compile_capabilities.py`; `--check` checks agreement without writing, and `--strict` additionally rejects unhealthy declared evidence. See [refresh and evidence policy](docs/CAPABILITY-WORKFLOW.md).
+<!-- CAPABILITIES:END -->
 
 ## Why the first profile is a clip renderer
 
@@ -117,11 +160,10 @@ evidence, non-goals, and machine-readable dependencies:
 - [Reference, measurement, and fixed numeric contract](https://github.com/2AMLogic/gf180-torchsynth/issues/1)
 - [RTL, feasibility, and sound-explorer instrument](https://github.com/2AMLogic/gf180-torchsynth/issues/2)
 
-The Loom issue DAG schedules work. A separate evidence-derived capability DAG
-([#85](https://github.com/2AMLogic/gf180-torchsynth/issues/85)) will say which
-claims are current, and a generated scorecard
-([#87](https://github.com/2AMLogic/gf180-torchsynth/issues/87)) will report
-case/trace/property coverage. Neither is claimed implemented yet.
+The Loom issue DAG schedules work. The [capability DAG](docs/CAPABILITIES.md)
+derives claim states from validated evidence, and the generated
+[scorecard](docs/SCORECARD.md) reports case/trace/property coverage. The views
+are not measurements: explicit unrun claims and sealed holdout remain so.
 
 The immediate parallel frontier is recorded in the first epic. Leaf issues use
 `loom:architect` until reviewed/approved; broad phase trackers remain
