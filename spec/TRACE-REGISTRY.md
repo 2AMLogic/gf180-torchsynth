@@ -135,3 +135,23 @@ The host separately checks raw-file hashes after the worker exits. Inspection
 of the committed record is not a fresh numerical run; rerun the command for
 fresh evidence. This single-case experiment does not qualify corpus capture,
 scalar equivalence, independent-model DSP, RTL or hardware.
+
+## Recorded prototype, 2026-09-19
+
+The final run used clean implementation commit
+`d02c8e23daf548d0a5a7928e737f8f6658d5cd9d` and the command above with
+`--output out/trace-registry-prototype-final`. All 32 captures, both main ADSRs,
+eleven prior sentinel artifacts, five upsample endpoint pairs, and the complete
+captured/uncaptured batch-audio and named-parameter byte comparisons passed.
+All five structural negative controls were rejected with their exact reasons.
+Python warnings, Docker stderr and build-warning lists were empty.
+
+The selected final-audio SHA-256 is
+`acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463`;
+the complete 32-row audio SHA-256 is
+`6afe0dc58bf076e0f136333c7b7ca7552726ccd26888f93bee03a53a760e2506`.
+The publication SHA-256 is
+`b074579f66bcebb879621d59464cd4abd366fb61b1a368df265b7729f1af29ad`.
+Report-inspection tests check these retained bindings and independently compare
+the named-parameter byte encodings and existing sentinel hashes. They do not
+substitute for the executed worker. No holdout case was accessed.

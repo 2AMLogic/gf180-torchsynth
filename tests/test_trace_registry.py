@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import unittest
 
@@ -177,6 +178,91 @@ class TraceRegistryTests(unittest.TestCase):
             "('torch','numpy','torchsynth','torchsynth_voice'))"
         )
         subprocess.run([sys.executable, "-S", "-c", code], check=True)
+
+    def test_committed_prototype_provenance_and_inventory(self):
+        """Check retained evidence bindings; this is not a fresh numerical run."""
+        report = registry.loads(
+            (ROOT / "sim/reference/trace-registry-prototype.json").read_bytes()
+        )
+        self.assertEqual(report["status"], "PASS")
+        self.assertEqual(report["registry_token"], registry.registry_token())
+        self.assertEqual(report["schema_sha256"], self.document["schema_sha256"])
+        self.assertEqual(report["runtime_profile"], "release-mkl-compatible-v1")
+        self.assertEqual(
+            report["runtime"]["math_environment"],
+            {"MKL_CBWR": "COMPATIBLE", "ATEN_CPU_CAPABILITY": None},
+        )
+        self.assertEqual(report["runtime"]["threads"], 1)
+        self.assertEqual(report["runtime"]["interop_threads"], 1)
+        self.assertEqual(report["runtime"]["python"], "3.9.13")
+        self.assertEqual(report["runtime"]["torch"], "1.12.1+cpu")
+        self.assertFalse(report["project_git"]["dirty"])
+        for field in ("runtime", "configuration"):
+            encoded = json.dumps(
+                report[field], sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode()
+            self.assertEqual(
+                report[field + "_sha256"], hashlib.sha256(encoded).hexdigest()
+            )
+        for path, sha in report["producer_sha256"].items():
+            self.assertEqual(
+                hashlib.sha256((ROOT / path).read_bytes()).hexdigest(), sha, path
+            )
+        registry.validate_capture(self.document, report["capture_inventory"], 32)
+        self.assertEqual(
+            report["negative_controls"], registry.negative_controls(self.document)
+        )
+        self.assertEqual(
+            report["upsampling_endpoint_checks"], dict.fromkeys(registry.ROUTES, "PASS")
+        )
+        self.assertTrue(report["passive_capture_equal_bytes"])
+        for module, count in (("control_vca", 2), ("control_upsample", 5), ("vca", 3)):
+            self.assertEqual(report["invocation_counts"][module], count)
+
+    def test_committed_parameter_bytes_and_independent_sentinel(self):
+        report = registry.loads(
+            (ROOT / "sim/reference/trace-registry-prototype.json").read_bytes()
+        )
+        sides = report["executions"]
+        self.assertEqual(sides["captured"], sides["uncaptured"])
+        for execution in sides.values():
+            self.assertEqual(execution["before"], execution["after"])
+            for kind in ("normalized", "physical"):
+                parameters = execution["after"][kind]
+                self.assertEqual(
+                    sorted(parameters["values"]), report["parameter_names"]
+                )
+                self.assertEqual(len(parameters["values"]), 78)
+                data = b""
+                for name in report["parameter_names"]:
+                    encoded = struct.pack("<f", parameters["values"][name])
+                    self.assertEqual(
+                        encoded.hex(), parameters["bytes_hex_by_name"][name]
+                    )
+                    data += encoded
+                self.assertEqual(
+                    hashlib.sha256(data).hexdigest(), parameters["selected_sha256"]
+                )
+        baseline = json.loads(
+            (ROOT / "sim/reference/repeatability-runtime.json").read_text()
+        )
+        cell = next(
+            c
+            for c in baseline["cells"]
+            if c["runtime"] == "release"
+            and c["case"] == "global-0"
+            and c["batch_size"] == 32
+            and c["repeat"] == 1
+        )
+        traces = {t["name"]: t for t in report["capture_inventory"]}
+        for alias, mapping in self.document["aliases"]["repeatability-v1"].items():
+            observed = (
+                sides["captured"]["after"][alias]["selected_sha256"]
+                if mapping["kind"] == "input-checkpoint"
+                else traces[mapping["target"]]["sha256"]
+            )
+            self.assertEqual(observed, cell["artifacts"][alias]["sha256"], alias)
+            self.assertEqual(report["previous_sentinel_comparison"][alias], "PASS")
 
 
 if __name__ == "__main__":
