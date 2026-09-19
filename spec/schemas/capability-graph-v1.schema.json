@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "capability-graph-v1",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "claim": {
+            "type": "string",
+            "pattern": "^[^\\r\\n\\u2028\\u2029]*\\S[^\\r\\n\\u2028\\u2029]*(?![\\s\\S])"
+          },
+          "claim_class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "engine": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "layer": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "scope": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "coverage": {
+            "type": "object",
+            "properties": {
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "references": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+                    },
+                    "kind": {
+                      "enum": [
+                        "render-artifact",
+                        "scorecard-row"
+                      ]
+                    },
+                    "path": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "path"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "inputs",
+              "references"
+            ],
+            "additionalProperties": false
+          },
+          "check": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+          },
+          "negative_controls": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+            },
+            "minProperties": 1
+          },
+          "exclusions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^\\r\\n\\u2028\\u2029]*\\S[^\\r\\n\\u2028\\u2029]*(?![\\s\\S])"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "expensive": {
+            "type": "boolean"
+          },
+          "cheaper_predecessor": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha256"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "claim",
+          "claim_class",
+          "dependencies",
+          "engine",
+          "layer",
+          "scope",
+          "coverage",
+          "check",
+          "negative_controls",
+          "exclusions",
+          "expensive",
+          "cheaper_predecessor",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "nodes"
+  ],
+  "additionalProperties": false
+}

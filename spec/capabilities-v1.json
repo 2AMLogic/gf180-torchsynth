@@ -1,0 +1,562 @@
+{
+  "schema_version": 1,
+  "nodes": [
+    {
+      "id": "contract",
+      "claim": "Pinned manifest consistency and missing/changed-file rejection",
+      "claim_class": "source-contract",
+      "dependencies": [],
+      "engine": "stdlib",
+      "layer": "reference-contract",
+      "scope": "manifest-consistency",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "contract-tests-v1",
+      "negative_controls": {
+        "missing-and-changed-files": "hash-mismatch"
+      },
+      "exclusions": [
+        "Executing the pinned upstream source",
+        "Runtime qualification",
+        "DSP correctness",
+        "Hardware"
+      ],
+      "expensive": false,
+      "cheaper_predecessor": null,
+      "evidence": null
+    },
+    {
+      "id": "runtime",
+      "claim": "Source, default nebula and CPU float32 runtime qualification",
+      "claim_class": "runtime-identity",
+      "dependencies": [
+        "contract"
+      ],
+      "engine": "pinned-upstream",
+      "layer": "reference",
+      "scope": "cpu-float32",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json",
+          "env/release-era/requirements.lock",
+          "env/release-era/probe.py",
+          "env/release-era/test_probe.py"
+        ],
+        "references": []
+      },
+      "check": "runtime-qualification-v1",
+      "negative_controls": {
+        "changed-source": "hash-mismatch",
+        "changed-runtime": "runtime-mismatch"
+      },
+      "exclusions": [
+        "Cross-runtime byte identity",
+        "Scalar/batched equality",
+        "Hardware"
+      ],
+      "expensive": false,
+      "cheaper_predecessor": null,
+      "evidence": null
+    },
+    {
+      "id": "parameters",
+      "claim": "Name-keyed normalized and physical parameter contract",
+      "claim_class": "parameter-identity",
+      "dependencies": [
+        "contract"
+      ],
+      "engine": "stdlib",
+      "layer": "reference",
+      "scope": "named-parameters",
+      "coverage": {
+        "inputs": [
+          "spec/reference/parameter-inventory-v1.json",
+          "src/torchsynth_voice/inventory.py"
+        ],
+        "references": []
+      },
+      "check": "parameter-qualification-v1",
+      "negative_controls": {
+        "renamed-parameter": "name-mismatch"
+      },
+      "exclusions": [
+        "Sound fidelity",
+        "Runtime qualification",
+        "Parameter array ordering as identity"
+      ],
+      "expensive": false,
+      "cheaper_predecessor": null,
+      "evidence": null
+    },
+    {
+      "id": "reference",
+      "claim": "Repeatable named canonical batched reference cases",
+      "claim_class": "reference-repeatability",
+      "dependencies": [
+        "runtime",
+        "parameters"
+      ],
+      "engine": "pinned-upstream",
+      "layer": "reference",
+      "scope": "canonical-batch-fixtures",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "check": "reference-repeatability-v1",
+      "negative_controls": {
+        "changed-noise-slot": "noise-mismatch",
+        "fresh-process-drift": "repeatability-mismatch"
+      },
+      "exclusions": [
+        "Hardware batching",
+        "DSP correctness from self-comparison",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "parameters",
+      "evidence": null
+    },
+    {
+      "id": "scalar",
+      "claim": "Resolved one-sound execution and measured scalar/batched divergence",
+      "claim_class": "scalar-execution",
+      "dependencies": [
+        "reference"
+      ],
+      "engine": "pinned-upstream",
+      "layer": "reference",
+      "scope": "resolved-scalar",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json",
+          "docs/BRINGUP-AND-EVIDENCE.md"
+        ],
+        "references": []
+      },
+      "check": "scalar-qualification-v1",
+      "negative_controls": {
+        "wrong-resolved-parameter": "parameter-mismatch",
+        "wrong-noise-stream": "noise-mismatch"
+      },
+      "exclusions": [
+        "Assumed scalar/batched bit identity",
+        "Changing normalization or the default nebula",
+        "Hardware qualification"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "reference",
+      "evidence": null
+    },
+    {
+      "id": "traces",
+      "claim": "Non-perturbing named upstream seam captures",
+      "claim_class": "trace-identity",
+      "dependencies": [
+        "reference",
+        "parameters"
+      ],
+      "engine": "pinned-upstream",
+      "layer": "reference",
+      "scope": "named-seams",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "check": "trace-qualification-v1",
+      "negative_controls": {
+        "perturbed-capture": "final-audio-mismatch",
+        "omitted-seam": "trace-missing"
+      },
+      "exclusions": [
+        "Independent implementation correctness",
+        "Auditory transparency"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "parameters",
+      "evidence": null
+    },
+    {
+      "id": "apparatus",
+      "claim": "Qualified signal preparation and estimators",
+      "claim_class": "measurement-apparatus",
+      "dependencies": [],
+      "engine": "measurement",
+      "layer": "verification",
+      "scope": "property-specific-preparation",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "apparatus-qualification-v1",
+      "negative_controls": {
+        "invalid-window": "invalid-preparation",
+        "asymmetric-filter": "invariance-failure"
+      },
+      "exclusions": [
+        "Synth correctness",
+        "Fidelity verdict for invalid measurements",
+        "Automatic alignment for exact paired rows"
+      ],
+      "expensive": false,
+      "cheaper_predecessor": null,
+      "evidence": null
+    },
+    {
+      "id": "float-modules",
+      "claim": "Independent floating modules match qualified upstream seams",
+      "claim_class": "implementation-fidelity",
+      "dependencies": [
+        "traces",
+        "apparatus"
+      ],
+      "engine": "independent-float",
+      "layer": "model",
+      "scope": "seam-metrics",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "float-module-qualification-v1",
+      "negative_controls": {
+        "wrong-route-sign": "seam-mismatch"
+      },
+      "exclusions": [
+        "Fixed-point sample identity",
+        "Auditory transparency",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "apparatus",
+      "evidence": null
+    },
+    {
+      "id": "rubric",
+      "claim": "Frozen property rubric with live negative-control matrix",
+      "claim_class": "measurement-rubric",
+      "dependencies": [
+        "float-modules",
+        "apparatus"
+      ],
+      "engine": "measurement",
+      "layer": "verification",
+      "scope": "frozen-rubric",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "rubric-qualification-v1",
+      "negative_controls": {
+        "undetected-mutation": "control-failure"
+      },
+      "exclusions": [
+        "Averaging unlike units into a quality score",
+        "Holdout tuning",
+        "Hardware"
+      ],
+      "expensive": false,
+      "cheaper_predecessor": null,
+      "evidence": null
+    },
+    {
+      "id": "fixed-model",
+      "claim": "Fixed numeric model satisfies declared float-to-fixed metrics",
+      "claim_class": "numeric-fidelity",
+      "dependencies": [
+        "rubric",
+        "float-modules",
+        "scalar"
+      ],
+      "engine": "fixed-model",
+      "layer": "model",
+      "scope": "default-one-shot",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "fixed-model-qualification-v1",
+      "negative_controls": {
+        "numeric-mutation": "metric-failure"
+      },
+      "exclusions": [
+        "RTL identity",
+        "Auditory transparency",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "rubric",
+      "evidence": null
+    },
+    {
+      "id": "rtl-modules",
+      "claim": "RTL modules are sample-exact with the fixed model",
+      "claim_class": "implementation-identity",
+      "dependencies": [
+        "fixed-model"
+      ],
+      "engine": "rtl-simulation",
+      "layer": "rtl",
+      "scope": "module-sample-exact",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "rtl-module-qualification-v1",
+      "negative_controls": {
+        "one-bit-mutation": "sample-mismatch"
+      },
+      "exclusions": [
+        "Physical timing",
+        "Sound fidelity beyond fixed model"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "fixed-model",
+      "evidence": null
+    },
+    {
+      "id": "rtl-clip",
+      "claim": "Integrated four-second RTL clip is sample-exact with the fixed model",
+      "claim_class": "implementation-identity",
+      "dependencies": [
+        "rtl-modules"
+      ],
+      "engine": "rtl-simulation",
+      "layer": "rtl",
+      "scope": "default-one-shot",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "rtl-clip-qualification-v1",
+      "negative_controls": {
+        "sample-slip": "sample-mismatch",
+        "normalization-mutation": "gain-mismatch"
+      },
+      "exclusions": [
+        "Live notes",
+        "Drum nebula",
+        "FPGA or silicon execution",
+        "Auditory transparency"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "rtl-modules",
+      "evidence": null
+    },
+    {
+      "id": "auditory",
+      "claim": "Auditory transparency under a separately frozen listening protocol",
+      "claim_class": "auditory-transparency",
+      "dependencies": [
+        "fixed-model",
+        "apparatus"
+      ],
+      "engine": "listening-study",
+      "layer": "perception",
+      "scope": "preregistered-listening",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "check": "auditory-qualification-v1",
+      "negative_controls": {
+        "audible-anchor": "anchor-not-detected"
+      },
+      "exclusions": [
+        "Sample identity",
+        "Distribution preservation",
+        "FPGA or silicon operation"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "apparatus",
+      "evidence": null
+    },
+    {
+      "id": "distribution",
+      "claim": "Distribution preservation over a declared corpus and statistical protocol",
+      "claim_class": "distribution-preservation",
+      "dependencies": [
+        "fixed-model",
+        "apparatus"
+      ],
+      "engine": "statistical-study",
+      "layer": "distribution",
+      "scope": "preregistered-corpus",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "check": "distribution-qualification-v1",
+      "negative_controls": {
+        "biased-corpus": "distribution-shift"
+      },
+      "exclusions": [
+        "Auditory transparency",
+        "Per-sound identity",
+        "Hardware"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "apparatus",
+      "evidence": null
+    },
+    {
+      "id": "fpga",
+      "claim": "FPGA digital captures match the integrated one-shot model",
+      "claim_class": "fpga-operation",
+      "dependencies": [
+        "rtl-clip"
+      ],
+      "engine": "fpga-capture",
+      "layer": "hardware",
+      "scope": "digital-one-shot",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "fpga-qualification-v1",
+      "negative_controls": {
+        "capture-bit-flip": "sample-mismatch"
+      },
+      "exclusions": [
+        "Analog audio",
+        "gf180 synthesis or routing",
+        "Silicon"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "rtl-clip",
+      "evidence": null
+    },
+    {
+      "id": "synthesized",
+      "claim": "gf180mcu synthesis with committed mapped-flow evidence",
+      "claim_class": "gf180-synthesis",
+      "dependencies": [
+        "rtl-clip"
+      ],
+      "engine": "klt",
+      "layer": "synthesis",
+      "scope": "gf180-default-one-shot",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "gf180-synthesis-qualification-v1",
+      "negative_controls": {
+        "wrong-library": "library-mismatch"
+      },
+      "exclusions": [
+        "Routing",
+        "Timing signoff",
+        "Hardware playback",
+        "Sound fidelity from cell counts"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "rtl-clip",
+      "evidence": null
+    },
+    {
+      "id": "routed",
+      "claim": "gf180mcu routed implementation with declared physical checks",
+      "claim_class": "gf180-routing",
+      "dependencies": [
+        "synthesized"
+      ],
+      "engine": "klt",
+      "layer": "physical",
+      "scope": "gf180-default-one-shot",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "gf180-routing-qualification-v1",
+      "negative_controls": {
+        "physical-violation": "physical-check-failure"
+      },
+      "exclusions": [
+        "Silicon fabrication",
+        "Board audio",
+        "Unmeasured signoff corners"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "synthesized",
+      "evidence": null
+    },
+    {
+      "id": "silicon",
+      "claim": "Fabricated silicon operates as the declared one-shot digital engine",
+      "claim_class": "silicon-operation",
+      "dependencies": [
+        "routed",
+        "rtl-clip"
+      ],
+      "engine": "silicon-capture",
+      "layer": "hardware",
+      "scope": "digital-one-shot",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "check": "silicon-qualification-v1",
+      "negative_controls": {
+        "capture-corruption": "sample-mismatch"
+      },
+      "exclusions": [
+        "Analog auditory transparency",
+        "Distribution preservation",
+        "Unmeasured operating conditions"
+      ],
+      "expensive": true,
+      "cheaper_predecessor": "routed",
+      "evidence": null
+    }
+  ]
+}
