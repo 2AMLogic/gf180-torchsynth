@@ -73,11 +73,20 @@ jobs:
             cat "out/scalar-ci/lfo-$variant.json"
           done
       - name: Compare with committed seam bytes
+        id: baseline_verification
+        continue-on-error: true
         run: python3 -S env/release-era/qualify_scalar.py verify --output out/scalar-ci
+      - name: Explicit compatible-profile sentinel experiment
+        run: ./env/release-era/qualify_scalar.sh --sentinel --mkl-compatible out/scalar-compatible-ci
+      - name: Preserve baseline check failure during profile experiment
+        if: steps.baseline_verification.outcome == 'failure'
+        run: exit 1
       - name: Retain measured results and failures
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: scalar-sentinel
-          path: out/scalar-ci
+          path: |
+            out/scalar-ci
+            out/scalar-compatible-ci
           if-no-files-found: error

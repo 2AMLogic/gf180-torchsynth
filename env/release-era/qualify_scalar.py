@@ -13,6 +13,7 @@ import re
 import struct
 import sys
 import traceback
+import uuid
 import warnings
 from pathlib import Path
 
@@ -245,6 +246,9 @@ def runtime_identity(torch):
                 "VECLIB_MAXIMUM_THREADS",
             )
         },
+        "math_environment": {
+            k: os.environ.get(k) for k in ("ATEN_CPU_CAPABILITY", "MKL_CBWR")
+        },
         "lock_versions_verified": True,
     }
 
@@ -396,6 +400,80 @@ def directed_patch(case, directed):
     return values
 
 
+def require_execution(report, side, repeat=None, campaign=None):
+    if report.get("side") != side:
+        raise ValueError("execution role mismatch: expected " + side)
+    execution = report.get("execution", {})
+    try:
+        for key in ("uuid", "campaign_id"):
+            if str(uuid.UUID(execution[key], version=4)) != execution[key]:
+                raise ValueError("noncanonical UUID")
+        started = datetime.datetime.fromisoformat(execution["started_utc"])
+        if (
+            started.tzinfo is None
+            or type(execution["pid"]) is not int
+            or execution["pid"] <= 0
+        ):
+            raise ValueError("invalid process identity")
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("missing or invalid execution identity") from error
+    if type(execution.get("repeat")) is not int or execution["repeat"] not in (1, 2):
+        raise ValueError("invalid execution repeat")
+    if repeat is not None and execution["repeat"] != repeat:
+        raise ValueError("execution repeat association mismatch")
+    if campaign is not None and execution["campaign_id"] != campaign:
+        raise ValueError("execution campaign association mismatch")
+    return execution["uuid"]
+
+
+def require_render(report, side):
+    require_execution(report, side)
+    plan, cases = load_plan()
+    if (
+        report.get("status") != "PASS"
+        or report.get("mutation") is not None
+        or report.get("capture_version") != plan["capture_version"]
+        or report.get("rng_sentinel") != "PASS"
+        or report.get("source_unchanged_after_render") is not True
+    ):
+        raise ValueError("an actual render failed or lacks required gates")
+    definitions = {c["id"]: c for c in cases}
+    seen = set()
+    for case in report["cases"]:
+        if case["id"] in seen or case["id"] not in definitions:
+            raise ValueError("missing, duplicate or unknown render case")
+        seen.add(case["id"])
+        expected = definitions[case["id"]]
+        if (
+            type(case.get("execution_width")) is not int
+            or case["execution_width"] != (32 if side == "canonical" else 1)
+            or case.get("reproducible") is not (side == "canonical")
+            or case["configuration"] != plan["configuration"]
+        ):
+            raise ValueError("execution configuration mismatch: " + side)
+        require_provenance(expected, case["case_definition"])
+        require_provenance(
+            identity(expected["sound_index"]), case["corpus_coordinates"]
+        )
+    if not seen:
+        raise ValueError("missing render cases")
+
+
+def require_association(canonical, scalar, canonical_path):
+    require_execution(
+        scalar,
+        "scalar",
+        canonical["execution"]["repeat"],
+        canonical["execution"]["campaign_id"],
+    )
+    if scalar.get("canonical_execution_uuid") != canonical["execution"][
+        "uuid"
+    ] or scalar.get("canonical_report_sha256") != sha256(canonical_path.read_bytes()):
+        raise ValueError("canonical execution association mismatch")
+    if scalar["execution"]["uuid"] == canonical["execution"]["uuid"]:
+        raise ValueError("reused execution identity")
+
+
 def run_render(args):
     plan, cases = load_plan(args.sentinel)
     before = provenance(args.source_root, plan)
@@ -423,8 +501,12 @@ def run_render(args):
     canonical = None
     if args.side == "scalar":
         canonical = json.loads((args.canonical / "report.json").read_text())
-        if canonical["status"] != "PASS":
-            raise ValueError("canonical render did not pass")
+        require_render(canonical, "canonical")
+        require_execution(canonical, "canonical", args.repeat, args.campaign_id)
+        args.canonical_execution_uuid = canonical["execution"]["uuid"]
+        args.canonical_report_sha256 = sha256(
+            (args.canonical / "report.json").read_bytes()
+        )
         require_provenance(before, canonical["provenance"])
         require_provenance(runtime, canonical["runtime"])
         if [r["id"] for r in canonical["cases"]] != [c["id"] for c in cases]:
@@ -488,6 +570,8 @@ def run_render(args):
                 if args.mutation == "fresh-randomization":
                     voice.randomize(seed=0)
                 if args.mutation:
+                    actual_noise = tensor_bytes(voice.noise.noise[slot], torch)
+                    (args.output / "actual-noise.f32le").write_bytes(actual_noise)
                     args.control_observation = {
                         "case": case["id"],
                         "runtime": runtime,
@@ -495,9 +579,12 @@ def run_render(args):
                         "expected_normalized": normalized,
                         "actual_normalized": named_values(voice, slot),
                         "expected_noise_sha256": sha256(expected_noise),
-                        "actual_noise_sha256": sha256(
-                            tensor_bytes(voice.noise.noise[slot], torch)
-                        ),
+                        "actual_noise_sha256": sha256(actual_noise),
+                        "actual_noise": {
+                            "file": "actual-noise.f32le",
+                            "shape": [176400],
+                            "sha256": sha256(actual_noise),
+                        },
                         "expected_noise_slot": coordinates["noise_slot"],
                         "actual_noise_slot": 0
                         if args.mutation == "wrong-noise"
@@ -588,8 +675,9 @@ def compare_run(canonical_dir, scalar_dir):
     left, right = [
         json.loads((p / "report.json").read_text()) for p in (canonical_dir, scalar_dir)
     ]
-    if left["status"] != "PASS" or right["status"] != "PASS":
-        raise ValueError("an actual render failed")
+    require_render(left, "canonical")
+    require_render(right, "scalar")
+    require_association(left, right, canonical_dir / "report.json")
     require_provenance(left["provenance"], right["provenance"])
     require_provenance(left["runtime"], right["runtime"])
     if [r["id"] for r in left["cases"]] != [r["id"] for r in right["cases"]]:
@@ -638,12 +726,79 @@ def compare_run(canonical_dir, scalar_dir):
     return left, right, comparisons
 
 
+def require_control(report, name, definition, canonical, canonical_dir, control_dir):
+    if report.get("mutation") != name:
+        raise ValueError("control mutation association mismatch")
+    require_association(canonical, report, canonical_dir / "report.json")
+    if report.get("status") != "NO_VERDICT" or not report.get("error", "").startswith(
+        "ValueError: " + definition["expected_seam"] + ":"
+    ):
+        raise ValueError("start-red control failed at unexpected seam: " + name)
+    observed = report.get("control_observation", {})
+    for key in ("provenance", "runtime"):
+        require_provenance(canonical[key], observed.get(key))
+    if observed.get("case") != definition["case"]:
+        raise ValueError("control case association mismatch")
+    case = next(c for c in canonical["cases"] if c["id"] == definition["case"])
+    expected, actual = case["normalized_by_name"], observed.get("actual_normalized", {})
+    require_named(expected, observed.get("expected_normalized", {}))
+    require_named(dict.fromkeys(expected, 0.0), dict.fromkeys(actual, 0.0))
+    require_named(actual, actual)
+    changed = [
+        key
+        for key in expected
+        if struct.pack("<f", expected[key]) != struct.pack("<f", actual[key])
+    ]
+    original_noise = read_artifact(canonical_dir, case["traces"][1])
+    actual_noise = read_artifact(control_dir, observed["actual_noise"])
+    if (
+        observed.get("expected_noise_sha256") != sha256(original_noise)
+        or observed.get("actual_noise_sha256") != sha256(actual_noise)
+        or observed.get("expected_noise_slot")
+        != case["corpus_coordinates"]["noise_slot"]
+    ):
+        raise ValueError("control noise provenance mismatch")
+    if name == "wrong-noise":
+        require_named(expected, actual)
+        if actual_noise == original_noise or observed.get("actual_noise_slot") != 0:
+            raise ValueError("control noise mutation was not observed")
+    else:
+        require_noise(
+            original_noise,
+            actual_noise,
+            observed["expected_noise_slot"],
+            observed.get("actual_noise_slot"),
+        )
+        if name == "wrong-parameter":
+            endpoint = 0.0 if expected["keyboard.midi_f0"] != 0 else 1.0
+            if (
+                changed != ["keyboard.midi_f0"]
+                or actual["keyboard.midi_f0"] != endpoint
+            ):
+                raise ValueError("control wrong-parameter mutation was not observed")
+        elif len(changed) < 2:
+            raise ValueError("control fresh-randomization mutation was not observed")
+
+
 def aggregate(output, sentinel):
     plan, cases = load_plan(sentinel)
     runs = [
         compare_run(output / f"run-{n}" / "canonical", output / f"run-{n}" / "scalar")
         for n in (1, 2)
     ]
+    campaign = (output / "campaign.id").read_text().strip()
+    executions = {}
+    directories = []
+    for repeat, run in enumerate(runs, 1):
+        for side, report in zip(("canonical", "scalar"), run[:2]):
+            key = f"run-{repeat}/{side}"
+            identity_id = require_execution(report, side, repeat, campaign)
+            if identity_id in executions:
+                raise ValueError("reused execution identity")
+            executions[identity_id] = dict(report["execution"], path=key, side=side)
+            directories.append((output / key).resolve())
+    if len(set(directories)) != 4:
+        raise ValueError("reused render directory")
     for name, expected in runs[0][0]["provenance"]["definition_sha256"].items():
         if sha256((REPO / name).read_bytes()) != expected:
             raise ValueError("stale run definition provenance: " + name)
@@ -657,10 +812,20 @@ def aggregate(output, sentinel):
     controls = {}
     for name, definition in plan["controls"].items():
         report = json.loads((output / "controls" / name / "report.json").read_text())
-        if report["status"] != "NO_VERDICT" or not report.get("error", "").startswith(
-            "ValueError: " + definition["expected_seam"] + ":"
-        ):
-            raise ValueError("start-red control failed at unexpected seam: " + name)
+        require_control(
+            report,
+            name,
+            definition,
+            runs[0][0],
+            output / "run-1/canonical",
+            output / "controls" / name,
+        )
+        identity_id = require_execution(report, "scalar", 1, campaign)
+        if identity_id in executions:
+            raise ValueError("reused control execution identity")
+        executions[identity_id] = dict(
+            report["execution"], path="controls/" + name, side="scalar", mutation=name
+        )
         controls[name] = {
             "expected_seam": definition["expected_seam"],
             "observed": report,
@@ -677,7 +842,13 @@ def aggregate(output, sentinel):
         "batch_1_oracle": "diagnostic",
         "runtime_reconciliation": "pending issue 12; no chosen-runtime bridge qualification",
         "command": "./env/release-era/qualify_scalar.sh"
-        + (" --sentinel" if sentinel else ""),
+        + (" --sentinel" if sentinel else "")
+        + (
+            " --mkl-compatible"
+            if runs[0][0]["runtime"].get("math_environment", {}).get("MKL_CBWR")
+            == "COMPATIBLE"
+            else ""
+        ),
         "provenance": runs[0][0]["provenance"],
         "runtime": runs[0][0]["runtime"],
         "runtime_sha256": sha256(
@@ -687,6 +858,8 @@ def aggregate(output, sentinel):
         "docker_server": (output / "docker-server.txt").read_text().strip(),
         "host": {"system": platform.system(), "machine": platform.machine()},
         "fresh_render_processes": 4,
+        "execution_records": list(executions.values()),
+        "campaign_id": campaign,
         "fresh_process_repeats_equal": True,
         "capture_manifest": [{"name": n, "shape": s} for n, s in capture_manifest()],
         "comparisons": runs[0][2],
@@ -739,6 +912,7 @@ def verify_expected(observed, expected, case_ids):
         "dtype",
         "threads",
         "interop_threads",
+        "math_environment",
     ):
         require_provenance(expected["runtime"][key], observed["runtime"][key])
     require_provenance(expected["provenance"], observed["provenance"])
@@ -767,6 +941,8 @@ def main():
     parser.add_argument("--source-root", type=Path, default=Path("/opt/torchsynth"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--canonical", type=Path)
+    parser.add_argument("--campaign-id")
+    parser.add_argument("--repeat", type=int, choices=(1, 2))
     parser.add_argument(
         "--expected", type=Path, default=REPO / "sim/reference/scalar-execution.json"
     )
@@ -775,6 +951,13 @@ def main():
         "--mutation", choices=("wrong-parameter", "wrong-noise", "fresh-randomization")
     )
     args = parser.parse_args()
+    execution = {
+        "uuid": str(uuid.uuid4()),
+        "pid": os.getpid(),
+        "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),  # noqa: UP017 -- Python 3.9 runtime
+        "campaign_id": args.campaign_id,
+        "repeat": args.repeat,
+    }
     if args.action == "verify":
         plan, _ = load_plan(True)
         observed = json.loads((args.output / "scalar-execution.json").read_text())
@@ -809,6 +992,9 @@ def main():
                     raise ValueError(
                         "render requires side, canonical inputs for scalar, and scalar-only mutations"
                     )
+                require_execution(
+                    {"side": args.side, "execution": execution}, args.side
+                )
                 report = run_render(args)
         except Exception as error:  # noqa: BLE001 -- persist failure and traceback, then exit nonzero
             report = {
@@ -819,6 +1005,8 @@ def main():
             if hasattr(args, "control_observation"):
                 report["control_observation"] = args.control_observation
     report.update(
+        side=args.side,
+        execution=execution,
         mutation=args.mutation,
         torchsynth_imported="torchsynth" in sys.modules,
         stdout=stdout.getvalue(),
@@ -833,6 +1021,9 @@ def main():
             for w in caught
         ],
     )
+    if hasattr(args, "canonical_execution_uuid"):
+        report["canonical_execution_uuid"] = args.canonical_execution_uuid
+        report["canonical_report_sha256"] = args.canonical_report_sha256
     (args.output / "report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
     )
