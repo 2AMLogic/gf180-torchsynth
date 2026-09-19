@@ -4,6 +4,8 @@ The specification describes what must be reproduced before implementation
 details are allowed to become the de facto product.
 
 - [`VOICE-CONTRACT.md`](VOICE-CONTRACT.md) is the current behavioral contract.
+- [`protocol/`](protocol/) specifies the core/host transport protocol subset
+  that is independent of the pending numeric contract (#53).
 - [`decision-records/`](decision-records/) records choices and unresolved
   boundaries.
 - [`reference/upstream.json`](reference/upstream.json) pins upstream content.
