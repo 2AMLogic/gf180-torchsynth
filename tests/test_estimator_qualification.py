@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import copy
 import hashlib
 import json
@@ -15,6 +16,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import estimator_qualification as eq  # noqa: E402
 from torchsynth_voice.scorecard import make_report  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "tools"))
+import qualify_estimators  # noqa: E402
 
 MODULE_BYTES = b"synthetic module bytes\n"
 SYNTHETIC_PREP_DIGEST = hashlib.sha256(MODULE_BYTES).hexdigest()
@@ -538,6 +542,96 @@ class LandedTreeTestCase(unittest.TestCase):
                 self.assertGreater(family["floors"]["count"], 0)
             else:
                 self.assertEqual(family["floors"], [])
+
+
+class ReplayOrchestrationTestCase(unittest.TestCase):
+    """cmd_replay must stage replayed artifacts at the ARTIFACT_PATHS layout
+    build_ledger expects and build/compare once, after all four families run.
+
+    Producer runs are simulated (the mock writes the synthetic artifact to
+    whatever --output path the orchestrator chose); the executed grids
+    themselves run in the CI ``replay`` job.
+    """
+
+    FAMILY_OF_TOOL = {
+        "qualify_periodic_estimators.py": "periodic",
+        "qualify_envelope_estimators.py": "envelope",
+        "qualify_spectral_estimators.py": "spectral",
+        "qualify_preparation.py": "preparation",
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.directory = Path(tempfile.mkdtemp(prefix="estimator-replay-"))
+        cls.artifacts = synthetic_tree(cls.directory)
+        committed = eq.build_ledger(cls.directory)
+        cls.ledger_path = cls.directory / "committed-ledger.json"
+        cls.ledger_path.write_text(
+            eq.ledger_to_json(committed), encoding="utf-8"
+        )
+        inventory = {
+            "schema_version": 1,
+            "inventory": "estimator-obligations",
+            "families": {
+                name: eq._ledger_inventory_view(committed, name)
+                for name in eq.FAMILIES
+            },
+            "artifacts": committed["artifacts"],
+        }
+        cls.inventory_path = cls.directory / "committed-inventory.json"
+        cls.inventory_path.write_text(json.dumps(inventory), encoding="utf-8")
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.directory, ignore_errors=True)
+
+    def staged_replay(self, command, *, flat=False, mutate=None):
+        """Simulated producer run: writes its family artifact at --output."""
+        family = self.FAMILY_OF_TOOL[Path(command[1]).name]
+        output = Path(command[command.index("--output") + 1])
+        if flat:
+            output = output.parents[2] / f"{family}-replay.json"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        artifact = copy.deepcopy(self.artifacts[family])
+        if mutate is not None and family == "periodic":
+            mutate(artifact)
+        output.write_text(json.dumps(artifact), encoding="utf-8")
+        return unittest.mock.Mock(returncode=0, stderr="")
+
+    def patched(self, side_effect):
+        run = unittest.mock.Mock(side_effect=side_effect)
+        return unittest.mock.patch.multiple(
+            qualify_estimators,
+            ROOT=self.directory,
+            LEDGER_PATH=self.ledger_path,
+            INVENTORY_PATH=self.inventory_path,
+            _no_numpy=unittest.mock.Mock(return_value=False),
+            subprocess=unittest.mock.Mock(run=run),
+        )
+
+    def test_replay_then_build_succeeds_end_to_end(self):
+        with self.patched(lambda command, **_: self.staged_replay(command)):
+            self.assertEqual(qualify_estimators.cmd_replay(argparse.Namespace()), 0)
+
+    def test_flat_replay_output_layout_fails_loudly(self):
+        with self.patched(
+            lambda command, **_: self.staged_replay(command, flat=True)
+        ):
+            with self.assertRaises(FileNotFoundError):
+                qualify_estimators.cmd_replay(argparse.Namespace())
+
+    def test_replayed_census_drift_refuses(self):
+        def drift(artifact):
+            artifact["range_cells"]["extra-cell"] = {
+                "algorithm": "periodic-v2",
+                "cap_failures": [],
+                "qualified": True,
+            }
+
+        with self.patched(
+            lambda command, **_: self.staged_replay(command, mutate=drift)
+        ):
+            self.assertEqual(qualify_estimators.cmd_replay(argparse.Namespace()), 2)
 
 
 if __name__ == "__main__":

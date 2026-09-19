@@ -40,7 +40,16 @@ LEDGER_PATH = ROOT / "sim/qualification/estimators-v1.json"
 # regenerable by an analytic run, so replay compares the analytic census only.
 REPLAY_TOOLS = {
     "periodic": ["python3", "tools/qualify_periodic_estimators.py"],
-    "envelope": ["python3", "tools/qualify_envelope_estimators.py"],
+    # The committed envelope evidence binds the executed shared-preparation
+    # sentinel (status "executed"); with #86 landed in this checkout the
+    # replay regenerates it read-only from this same tree
+    # (spec/ENVELOPE-ESTIMATORS.md: --preparation-root .).
+    "envelope": [
+        "python3",
+        "tools/qualify_envelope_estimators.py",
+        "--preparation-root",
+        str(ROOT),
+    ],
     "spectral": ["python3", "tools/qualify_spectral_estimators.py"],
     "preparation": ["python3", "tools/qualify_preparation.py", "analytic"],
 }
@@ -149,12 +158,14 @@ def cmd_replay(args: argparse.Namespace) -> int:
     committed = eq.ledger_from_json(LEDGER_PATH.read_text(encoding="utf-8"))
     failures: list[str] = []
     with tempfile.TemporaryDirectory(prefix="estimator-replay-") as workdir:
+        workdir = Path(workdir)
+        # Stage each replayed artifact at the relative path build_ledger
+        # expects (ARTIFACT_PATHS layout under the artifact root), and build
+        # and compare once only after all four family artifacts exist.
         for name, command in REPLAY_TOOLS.items():
-            output = Path(workdir) / f"{name}-replay.json"
-            if name == "preparation":
-                run = list(command) + ["--output", str(output)]
-            else:
-                run = list(command) + ["--output", str(output)]
+            output = workdir / eq.ARTIFACT_PATHS[name]
+            output.parent.mkdir(parents=True, exist_ok=True)
+            run = list(command) + ["--output", str(output)]
             completed = subprocess.run(
                 run, cwd=ROOT, capture_output=True, text=True, check=False
             )
@@ -164,9 +175,10 @@ def cmd_replay(args: argparse.Namespace) -> int:
                     f"{completed.stderr.strip()[-400:]}"
                 )
                 continue
+        if not failures:
             fresh_ledger = eq.build_ledger(ROOT, artifact_root=workdir)
             # Compare per-family census identity against the committed ledger.
-            for family in ("periodic", "envelope", "spectral", "preparation"):
+            for family in eq.ARTIFACT_PATHS:
                 fresh_view = _replay_view(fresh_ledger, family)
                 old_view = _replay_view(committed, family)
                 if fresh_view != old_view:
