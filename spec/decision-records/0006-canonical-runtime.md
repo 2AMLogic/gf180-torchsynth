@@ -36,7 +36,9 @@ Use the unchanged `env/release-era/Dockerfile` and `requirements.lock` to
 generate canonical floating reference fixtures. This selects CPython 3.9.13,
 PyTorch 1.12.1+cpu, NumPy 1.23.2 and Lightning 1.8.6 on Linux/amd64, CPU float32,
 with one Torch intra-op/inter-op thread and one thread for each declared BLAS
-backend. The base-image digest, wheel hashes, source archive and lock are
+backend, `MKL_CBWR=COMPATIBLE`, and `ATEN_CPU_CAPABILITY` explicitly unset.
+This is the separately named `release-mkl-compatible-v1` profile, not the
+uncontrolled initial baseline. The base-image digest, wheel hashes, source archive and lock are
 normative; a mutable image tag is not an environment identity.
 
 The selected source remains
@@ -86,6 +88,11 @@ checked with a separately constructed unhooked Voice.
 | Passive capture controls | Four byte-exact PASS controls (two repeats per runtime) |
 | Release normalization controls | Pre-normalization peaks 0.7895715833 and 3.9478583336 |
 
+The table and numerical examples immediately below describe the retained
+**initial baseline**. The candidate profile's separately measured outcomes
+and its drift against these bytes are recorded separately; the historical
+baseline is never silently overwritten or used to imply host portability.
+
 Every comparison covers normalized and actual physical name-keyed parameter
 arrays, selected noise, train/test label, named traces and raw audio. All 78
 normalized parameters, selected noise and labels agree across runtimes for
@@ -96,6 +103,44 @@ its first differing sample is 1. Global 0 has maximum absolute difference
 `0.00018268823623657227`, RMS `8.418629731837671e-7`, first sample 46.
 The complete per-seam first/max/mean/RMS measurements remain in the record.
 
+### Measured explicit COMPATIBLE profile
+
+The Doctor run preregistered in `f67c1fd` completed all 128 cells in sixteen
+distinct fresh worker executions, using the unchanged source and locks.
+All 64 repeat pairs and 48 batch pairs are byte-exact under the strengthened
+raw-file/receipt gates. All 32 cross-runtime pairs remain FAIL; the largest
+audio maximum difference is `0.002283453941345215` (global 39942), with RMS
+`0.00031971254165640906`. Global 0 has maximum `0.00006675533950328827`, RMS
+`6.842280549817693e-7`, and first differing sample 0. Four passive capture
+controls remain byte-exact; the two normalization peaks remain as above.
+
+The new run also audited the hash-pinned original raw report and compared
+all 128 new cells directly with its raw files. All 64 current-runtime cells
+match the historical baseline exactly. All 64 release cells differ at one or
+more artifacts. The largest observed final-audio change from the original
+release profile is global 32: maximum `0.0011997967958450317`, RMS
+`0.00010262387368317195`, first differing sample 2. These are raw unaligned
+differences, not corrected or tolerated errors in an exact comparison.
+The complete original publication and every original cross-runtime FAIL
+are retained under `historical_baseline`; the transition metrics are retained
+under `baseline_comparison`. Historical schema-1 math environment fields were
+not recorded and are not retroactively asserted.
+
+The new global-0 row matches all eleven raw artifacts of the earlier native
+CI run 35415961204 exactly. This is a bounded cross-check against that native
+baseline observation. A fresh local COMPATIBLE sentinel separately verifies
+the newly measured expectations and source/input/audio mutation controls.
+Final native COMPATIBLE CI must pass on the reviewed head; its scope remains
+one global-0/batch-32 case on its observed host, not the full matrix.
+
+This measured transition resolves the uncontrolled numerical dispatch that
+made the original native sentinel fail. The new profile is proposed because
+it is explicit and reproduces the bounded native observations while retaining
+the original disagreements. It is not a claim that MKL's mode establishes
+universal portability. DR-0007's measured diagnostic profile also sets
+`MKL_CBWR=COMPATIBLE` with `ATEN_CPU_CAPABILITY` unset. Root must reconcile
+both final reviewed records; scalar remains separately scoped diagnostic work.
+
 These successful same-runtime comparisons satisfy the measured batch
 invariant for the preregistered cases. They are not exhaustive proof over
 every possible index. Cross-runtime failure is resolved by selecting one
@@ -104,6 +149,7 @@ no cross-runtime byte-identity claim or relaxed equality threshold is adopted.
 
 The contemporary comparator is the unchanged `uv.lock` environment on native
 Apple M5/macOS, Python 3.13.2, Torch 2.14.0, NumPy 2.5.3 and Lightning 2.6.6.
+Its new experiment explicitly unsets both `MKL_CBWR` and `ATEN_CPU_CAPABILITY`.
 This comparison changes both runtime and host architecture; it cannot assign
 causality to one library upgrade. Its disagreement is retained without time
 alignment or level normalization. Neither environment's output is silently

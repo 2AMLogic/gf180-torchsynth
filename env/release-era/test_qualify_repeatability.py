@@ -284,6 +284,45 @@ class RepeatabilityTests(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             q.pair(cell, cell, self.root)
 
+    def test_synchronized_receipts_still_require_source_and_profile_bindings(self):
+        cell = self.cell()
+        directory = self.root / cell["directory"]
+        for field in (
+            "source_sha256",
+            "runner_sha256",
+            "math_environment",
+            "thread_environment",
+        ):
+            self.receipt(cell)
+            worker = json.loads((directory / "result.json").read_text())
+            if field in ("math_environment", "thread_environment"):
+                worker["runtime"][field] = {}
+            else:
+                worker[field] = "wrong"
+            q.write_json(directory / "result.json", worker)
+            q.write_json(directory / "stdout.json", worker)
+            receipt = json.loads((directory / "execution.json").read_text())
+            receipt["stdout_sha256"] = q.sha256(
+                (directory / "stdout.json").read_bytes()
+            )
+            q.write_json(directory / "execution.json", receipt)
+            with (
+                self.subTest(field=field),
+                self.assertRaisesRegex(ValueError, "source/runtime/process binding"),
+            ):
+                q.check_sentinel(cell, self.expected(cell), self.root)
+
+    def test_real_short_audio_cannot_hide_behind_declared_count(self):
+        cell = self.cell()
+        data = struct.pack("<78f", *([0.25] * 78))
+        cell["artifacts"]["audio"]["sha256"] = q.sha256(data)
+        (
+            self.root / cell["directory"] / cell["artifacts"]["audio"]["file"]
+        ).write_bytes(data)
+        self.receipt(cell)
+        with self.assertRaisesRegex(ValueError, "sample count mismatch"):
+            q.check_sentinel(cell, self.expected(cell), self.root)
+
     def test_absent_cells_keep_comparison_denominator_without_pass(self):
         comparisons = q.summarize(
             self.plan, self.refused_matrix(), self.root / "absent"
