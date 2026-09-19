@@ -9,7 +9,7 @@
 ## Decision
 
 Batch-size-1 PyTorch is a **diagnostic oracle under the measured release-era
-runtime**, not the normative corpus identity generator or a ratified
+runtime and explicitly recorded math environment**, not the normative corpus identity generator or a ratified
 single-lane float/fixed bridge. It may replay a resolved patch only after
 all 78 normalized binary32 values have been assigned and read back by
 canonical name and the selected canonical noise samples have been copied
@@ -41,16 +41,56 @@ server running the amd64 image under emulation. Numerical intra-op and
 inter-op threads are one. Exact packages, build configuration, source,
 image, commands and artifact hashes are retained in the evidence.
 
-The full `qualify_scalar.sh` run recorded **byte equality for all twelve
+The revised diagnostic profile explicitly sets `MKL_CBWR=COMPATIBLE` before
+Python starts and leaves `ATEN_CPU_CAPABILITY` unset. Both values are
+verification inputs. This scoped experiment does not ratify a canonical
+runtime or broaden the measured host set; DR-0006 / issue #12 still own
+that integration decision.
+
+The original full `qualify_scalar.sh` run recorded **byte equality for all twelve
 cases at all 36 seams** in both fresh canonical/scalar process pairs.
 Every first-divergence field is null; all maximum/mean/RMS differences
 are zero. Both widths reproduced their own records exactly across fresh
 processes, and all 48 per-case hooked/unhooked checks passed. This is the
 measured outcome on this runtime/host, not a batch-1 identity guarantee.
+That original report is preserved as historical evidence. Its process
+freshness claim did not include per-execution identities and must not be
+used as evidence for the strengthened aggregation protocol.
+
+Native CI run `35415309295` failed the original committed-byte sentinel:
+global-6 first differed at `lfo_1.raw` sample 2 (`0.5217112302780151` locally,
+`0.5217111706733704` natively). Inputs, physical parameters and the four
+preceding envelopes agreed. The original final audio max/RMS differences
+were `0.0007759928703308105` / `0.000031622327713416255`; no tolerance is
+introduced for them. Two directed sentinel cases also differed at the LFO
+despite equal final audio.
+
+An isolated LFO test on native CI run `35416191562` compared baseline and
+`MKL_CBWR=COMPATIBLE`: frequency, phase argument, waveform shapes, weights
+and output all agreed. The compatible local isolated output matched native
+bytes, while local baseline differed only after the weighted reduction.
+This justified measuring a separate compatible profile, not replacing the
+source graph or declaring unrestricted cross-host determinism. Historical
+bytes and the failed CI runs remain part of the record.
+
+The revised compatible-profile full run measured all twelve cases locally
+under amd64 emulation: every one of the 36 scalar/canonical seams was byte
+exact in both fresh repetitions, and all three independently observed
+controls refused at their specified input seam. Native CI run `35416530832`
+then measured the three preregistered sentinel cases with the same explicit
+environment. Both widths' complete case records matched the local run
+exactly. The committed `profile_validation` retains the native runtime,
+provenance, execution identities, report hashes and case-record hash; its
+`historical_baseline` retains the complete original report. This is evidence
+for twelve local cases and three native cases, not twelve native cases or
+unrestricted portability. That intermediate CI run deliberately remained
+red to preserve the uncontrolled baseline failure while measuring the new
+profile; the final sentinel explicitly selects the compatible profile.
 
 The explicit sine bypass peak was `0.24973656237125397`; the explicit
 noise normalization peak was `1.9999518394470215`. The unmodified global-0
-case also applied normalization (`1.8409372568130493`). The wrong-parameter
+case also applied normalization (`1.8409372568130493` in the historical
+baseline; `1.8409373760223389` in the compatible profile). The wrong-parameter
 control failed at `input.normalized` for `keyboard.midi_f0`; the wrong-noise
 control failed at `input.noise`; fresh scalar randomization failed at
 `input.normalized` for `adsr_1.alpha`. Each returned exit code 1 as required.
@@ -79,6 +119,12 @@ provenance, unrun environment or failed repeat cannot become a pass.
 Independent wrong-parameter, wrong-noise and fresh-randomization controls
 refuse at their preregistered input seam before final audio can conceal
 an error through cancellation.
+The revised reports additionally bind execution UUID/PID/UTC, campaign and
+repetition identities, scalar-to-canonical UUID/report hashes, and the actual
+32/reproducible versus 1/nonreproducible configuration. All seven execution
+UUIDs must differ. Control provenance/runtime and retained changed inputs
+must match their associated canonical run and independent mutation; a
+stale report or matching error-string prefix alone cannot pass aggregation.
 
 The issue's earlier nonzero drift observations used a different current
 runtime and remain exploratory. The release-era measurement does not

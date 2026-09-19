@@ -157,6 +157,12 @@ class AggregateRefusalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "role"):
             probe.compare_run(path, path)
 
+    def test_canonical_only_aggregate_refuses(self):
+        canonical = json.loads((self.root / "run-1/canonical/report.json").read_text())
+        self.write(self.root / "run-1/scalar/report.json", canonical)
+        with self.assertRaisesRegex(ValueError, "role"):
+            probe.aggregate(self.root, True)
+
     def test_wrong_width_and_reproducibility_refuse_through_aggregate(self):
         for key, value in (("execution_width", 32), ("reproducible", True)):
             path = self.root / "run-1/scalar/report.json"
