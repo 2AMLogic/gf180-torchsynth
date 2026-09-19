@@ -248,6 +248,108 @@ class CorpusTests(unittest.TestCase):
         self.assertEqual(resumed["counts"]["retry"], 1)
         self.assertIsNone(resumed["elapsed_seconds"])
 
+    def assert_interrupted_reuse_recovers(self, **options):
+        from torchsynth_voice import corpus
+
+        first = self.run_cases(**options)
+        original = corpus.write_once
+        before = {
+            p: (p.read_bytes(), p.stat().st_mtime_ns)
+            for p in self.root.rglob("*")
+            if p.is_file()
+        }
+
+        def interrupt(path, data):
+            if Path(path).name == "000002-finish.json":
+                raise KeyboardInterrupt("synthetic reuse interruption")
+            original(path, data)
+
+        with patch.object(corpus, "write_once", side_effect=interrupt):
+            with self.assertRaises(KeyboardInterrupt):
+                self.run_cases(resume=first["run_id"], **options)
+        resumed = self.run_cases(resume=first["run_id"], **options)
+        self.assertEqual(len(self.backend.calls), 2)
+        self.assertEqual(resumed["index"], first["index"])
+        self.assertEqual(
+            resumed["counts"],
+            dict(
+                expected=2,
+                observed=2,
+                success=2,
+                failure=0,
+                attempt=2,
+                retry=0,
+                resume=2,
+            ),
+        )
+        interrupted = resumed["attempts"][2]
+        self.assertEqual(interrupted["kind"], "resume")
+        self.assertEqual(interrupted["failure"], "interrupted-attempt")
+        self.assertIsNone(interrupted["artifact"])
+        self.assertIsNone(interrupted["elapsed_seconds"])
+        self.assertIsNone(resumed["elapsed_seconds"])
+        self.assertEqual(
+            resumed["attempts"][3]["artifact"], first["attempts"][0]["artifact"]
+        )
+        plan, index = self.documents(resumed)
+        for changes in (
+            {"failure": "render-ValidationError"},
+            {"elapsed_seconds": 0},
+            {"receipt": {"unexpected": True}},
+        ):
+            bad = copy.deepcopy(resumed)
+            bad["attempts"][2].update(changes)
+            with self.assertRaisesRegex(ValidationError, "invalid interrupted resume"):
+                validate_run(bad, plan, index)
+        bad = copy.deepcopy(resumed)
+        bad["attempts"].pop(0)
+        for sequence, event in enumerate(bad["attempts"]):
+            event["sequence"] = sequence
+        with self.assertRaisesRegex(ValidationError, "resume without a completed"):
+            validate_run(bad, plan, index)
+        self.assertEqual(
+            verify_run(
+                self.root,
+                first["run_id"],
+                allow_holdout=options.get("mode") == "holdout",
+            ),
+            resumed,
+        )
+        self.assertEqual(
+            before, {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before}
+        )
+        return first
+
+    def test_interrupted_reuse_retains_completed_artifact_without_rendering(self):
+        self.assert_interrupted_reuse_recovers()
+
+    def test_interrupted_holdout_reuse_retains_one_shot_admission(self):
+        freeze = self.directory / "frozen.json"
+        freeze.write_bytes(
+            json_bytes(
+                dict(
+                    schema="torchsynth-frozen-rubric",
+                    schema_version=1,
+                    frozen=True,
+                    rubric={"synthetic-threshold": 0},
+                )
+            )
+        )
+        options = dict(
+            mode="holdout",
+            frozen_rubric=freeze,
+            audit_root=self.directory / "audit",
+            indices=[96, 97],
+        )
+        first = self.assert_interrupted_reuse_recovers(**options)
+        admission = read_reference(self.root, first["admission"])
+        plan, _ = self.documents(first)
+        ledger = options["audit_root"] / (plan["manifest"]["sha256"] + ".json")
+        self.assertEqual(ledger.read_bytes(), admission)
+        with self.assertRaisesRegex(ValidationError, "one-shot"):
+            self.run_cases(**options)
+        self.assertEqual(len(self.backend.calls), 2)
+
     def test_verification_without_site_packages_is_read_only(self):
         first = self.run_cases()
         before = {

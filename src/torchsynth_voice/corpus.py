@@ -292,8 +292,17 @@ def _journal(root):
     return events
 
 
+def _case_results(events):
+    """An interrupted reuse does not invalidate the completed case it rechecked."""
+    results = {}
+    for event in events:
+        if event["kind"] != "resume" or event["status"] == "complete":
+            results[event["case_id"]] = event
+    return results
+
+
 def _counts(selection, events):
-    latest = {event["case_id"]: event for event in events}
+    latest = _case_results(events)
     renders = Counter(e["case_id"] for e in events if e["kind"] == "render")
     success = sum(e["status"] == "complete" for e in latest.values())
     return dict(
@@ -303,12 +312,12 @@ def _counts(selection, events):
         failure=len(selection) - success,
         attempt=sum(renders.values()),
         retry=sum(n - 1 for n in renders.values()),
-        resume=sum(e["kind"] == "resume" for e in events),
+        resume=sum(e["kind"] == "resume" and e["status"] == "complete" for e in events),
     )
 
 
 def _index(plan, events):
-    latest = {e["case_id"]: e for e in events}
+    latest = _case_results(events)
     cases = []
     for case in plan["selection"]:
         case_id = "global-" + str(case["sound_index"])
@@ -397,13 +406,21 @@ def validate_run(envelope, plan, index, *, root=None):
         )
         if event["kind"] == "resume":
             require(
-                complete and event["case_id"] in completed,
+                event["case_id"] in completed,
                 "resume without a completed render",
             )
-            require(
-                event["artifact"] == completed[event["case_id"]],
-                "resume changed the exact artifact reference",
-            )
+            if complete:
+                require(
+                    event["artifact"] == completed[event["case_id"]],
+                    "resume changed the exact artifact reference",
+                )
+            else:
+                require(
+                    event["failure"] == "interrupted-attempt"
+                    and event["elapsed_seconds"] is None
+                    and event["receipt"] == {},
+                    "invalid interrupted resume",
+                )
         else:
             require(
                 event["case_id"] not in completed, "recomputation of completed case"
@@ -570,7 +587,7 @@ def run_corpus(
         if events:
             interim = _envelope(plan, plan_data, _index(plan, events), events)
             validate_run(interim, plan, _index(plan, events), root=root)
-        latest = {e["case_id"]: e for e in events}
+        latest = _case_results(events)
         for case in selection:
             case_id = "global-" + str(case["sound_index"])
             request = _request(template, case)
