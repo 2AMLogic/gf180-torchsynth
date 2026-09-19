@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "torchsynth-favorite v1",
+  "description": "Portable saved-sound favorite (issue #65). A captured favorite pins one verified store artifact and its recorded name-keyed patch; a variation records a deterministic nearby patch derived from a parent favorite with locked parameters held fixed. Structure only: kind-specific presence, exact canonical name coverage, identity recomputation, holdout refusal, and portability are enforced in code. Cross-file references reuse the render-artifact v1 definitions; no absolute paths are permitted in any locator field.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "torchsynth-favorite"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "kind": {
+      "enum": ["capture", "variation"]
+    },
+    "favorite_id": {
+      "$ref": "#/$defs/favoriteId"
+    },
+    "parent_id": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/favoriteId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional free text. Never used for file resolution; excluded from favorite identity."
+    },
+    "sound_index": {
+      "$ref": "render-artifact-v1.schema.json#/$defs/integer"
+    },
+    "artifact": {
+      "$ref": "render-artifact-v1.schema.json#/$defs/artifactReference"
+    },
+    "audio": {
+      "$ref": "#/$defs/audio"
+    },
+    "recorded": {
+      "$ref": "#/$defs/recorded"
+    },
+    "parameters": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/captureParameters"
+        },
+        {
+          "$ref": "#/$defs/variationParameters"
+        }
+      ]
+    },
+    "variation": {
+      "$ref": "#/$defs/variationSpec"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "kind",
+    "favorite_id",
+    "parent_id",
+    "sound_index",
+    "recorded",
+    "parameters"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "favoriteId": {
+      "type": "string",
+      "pattern": "^fv1-[a-f0-9]{64}(?![\\s\\S])"
+    },
+    "audio": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/sha256"
+        },
+        "size_bytes": {
+          "const": 705600
+        },
+        "sample_count": {
+          "const": 176400
+        }
+      },
+      "required": ["sha256", "size_bytes", "sample_count"],
+      "additionalProperties": false
+    },
+    "recorded": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/profile"
+        },
+        "source": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/source"
+        },
+        "runtime": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/runtime"
+        }
+      },
+      "required": ["profile", "source", "runtime"],
+      "additionalProperties": false
+    },
+    "captureParameters": {
+      "type": "object",
+      "properties": {
+        "normalized_by_name": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/normalizedMap"
+        },
+        "physical_by_name": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/physicalMap"
+        },
+        "locks_physical": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/physicalMap"
+        }
+      },
+      "required": [
+        "normalized_by_name",
+        "physical_by_name",
+        "locks_physical"
+      ],
+      "additionalProperties": false
+    },
+    "variationParameters": {
+      "type": "object",
+      "properties": {
+        "physical_by_name": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/physicalMap"
+        },
+        "locks_physical": {
+          "$ref": "render-artifact-v1.schema.json#/$defs/physicalMap"
+        }
+      },
+      "required": ["physical_by_name", "locks_physical"],
+      "additionalProperties": false
+    },
+    "variationSpec": {
+      "type": "object",
+      "properties": {
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": ["seed", "amount"],
+      "additionalProperties": false
+    }
+  }
+}
