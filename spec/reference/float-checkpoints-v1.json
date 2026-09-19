@@ -1,0 +1,560 @@
+{
+  "schema": "torchsynth-float-checkpoints",
+  "schema_version": 1,
+  "semantic_version": "float-checkpoints-v1",
+  "schema_sha256": "e9d479d63aa677940beb4b0b37f8cd4c4ef11178dc95c1d49c4353671f556cba",
+  "registry_token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259",
+  "inventory_sha256": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+  "source_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "profile": "torchsynth-1-voice-default",
+  "numeric_contract": "unbound:#53",
+  "shared_instances": {
+    "control_vca": 2,
+    "control_upsample": 5,
+    "vca": 3
+  },
+  "resolved_inputs": [
+    {
+      "name": "input.normalized",
+      "kind": "input-checkpoint",
+      "comparison": "exact-bytes",
+      "encoding": "f32le",
+      "count": 78,
+      "meaning": "Name-keyed normalized binary32 parameter values for the exact 78 canonical names, before physical conversion and DSP; preserved separately from observed physical values."
+    },
+    {
+      "name": "input.noise",
+      "kind": "input-checkpoint",
+      "comparison": "exact-bytes",
+      "encoding": "f32le",
+      "count": 176400,
+      "meaning": "Selected canonical noise stream (seed 13, slot sound_index % 32); noise.raw is its later graph observation. Never regenerated from a fresh batch-1 seed."
+    },
+    {
+      "name": "physical.parameters",
+      "kind": "input-checkpoint",
+      "comparison": "measured-observation",
+      "encoding": "f32le",
+      "count": 78,
+      "meaning": "Observed name-keyed runtime physical conversion of the accepted normalized inputs; the earliest numerical comparison seam. Analytic fixture values must not be substituted for it."
+    }
+  ],
+  "checkpoints": [
+    {
+      "order": 1,
+      "module": "keyboard",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [],
+      "roles": [],
+      "outputs": [
+        "keyboard.midi_f0",
+        "keyboard.duration"
+      ]
+    },
+    {
+      "order": 2,
+      "module": "lfo_1_rate_adsr",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "lfo_1_rate_adsr.output"
+      ]
+    },
+    {
+      "order": 3,
+      "module": "lfo_2_rate_adsr",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "lfo_2_rate_adsr.output"
+      ]
+    },
+    {
+      "order": 4,
+      "module": "lfo_1_amp_adsr",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "lfo_1_amp_adsr.output"
+      ]
+    },
+    {
+      "order": 5,
+      "module": "lfo_2_amp_adsr",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "lfo_2_amp_adsr.output"
+      ]
+    },
+    {
+      "order": 6,
+      "module": "lfo_1",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "lfo_1_rate_adsr.output"
+        }
+      ],
+      "roles": [
+        "frequency-envelope"
+      ],
+      "outputs": [
+        "lfo_1.raw"
+      ]
+    },
+    {
+      "order": 7,
+      "module": "control_vca",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "lfo_1.raw"
+        },
+        {
+          "position": 1,
+          "source": "lfo_1_amp_adsr.output"
+        }
+      ],
+      "roles": [
+        "waveform",
+        "gain-envelope"
+      ],
+      "outputs": [
+        "lfo_1.post_control_vca"
+      ]
+    },
+    {
+      "order": 8,
+      "module": "lfo_2",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "lfo_2_rate_adsr.output"
+        }
+      ],
+      "roles": [
+        "frequency-envelope"
+      ],
+      "outputs": [
+        "lfo_2.raw"
+      ]
+    },
+    {
+      "order": 9,
+      "module": "control_vca",
+      "occurrence": 2,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "lfo_2.raw"
+        },
+        {
+          "position": 1,
+          "source": "lfo_2_amp_adsr.output"
+        }
+      ],
+      "roles": [
+        "waveform",
+        "gain-envelope"
+      ],
+      "outputs": [
+        "lfo_2.post_control_vca"
+      ]
+    },
+    {
+      "order": 10,
+      "module": "adsr_1",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "adsr_1.output"
+      ]
+    },
+    {
+      "order": 11,
+      "module": "adsr_2",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.duration"
+        }
+      ],
+      "roles": [
+        "note-duration"
+      ],
+      "outputs": [
+        "adsr_2.output"
+      ]
+    },
+    {
+      "order": 12,
+      "module": "mod_matrix",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "adsr_1.output"
+        },
+        {
+          "position": 1,
+          "source": "adsr_2.output"
+        },
+        {
+          "position": 2,
+          "source": "lfo_1.post_control_vca"
+        },
+        {
+          "position": 3,
+          "source": "lfo_2.post_control_vca"
+        }
+      ],
+      "roles": [
+        "main-envelope-1",
+        "main-envelope-2",
+        "modulated-lfo-1",
+        "modulated-lfo-2"
+      ],
+      "outputs": [
+        "mod_matrix.vco_1_pitch",
+        "mod_matrix.vco_1_amp",
+        "mod_matrix.vco_2_pitch",
+        "mod_matrix.vco_2_amp",
+        "mod_matrix.noise_amp"
+      ]
+    },
+    {
+      "order": 13,
+      "module": "control_upsample",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "mod_matrix.vco_1_pitch"
+        }
+      ],
+      "roles": [
+        "control-column"
+      ],
+      "outputs": [
+        "control_upsample.vco_1_pitch"
+      ]
+    },
+    {
+      "order": 14,
+      "module": "vco_1",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.midi_f0"
+        },
+        {
+          "position": 1,
+          "source": "control_upsample.vco_1_pitch"
+        }
+      ],
+      "roles": [
+        "pitch-base",
+        "pitch-modulation"
+      ],
+      "outputs": [
+        "vco_1.raw"
+      ]
+    },
+    {
+      "order": 15,
+      "module": "control_upsample",
+      "occurrence": 2,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "mod_matrix.vco_1_amp"
+        }
+      ],
+      "roles": [
+        "control-column"
+      ],
+      "outputs": [
+        "control_upsample.vco_1_amp"
+      ]
+    },
+    {
+      "order": 16,
+      "module": "vca",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "vco_1.raw"
+        },
+        {
+          "position": 1,
+          "source": "control_upsample.vco_1_amp"
+        }
+      ],
+      "roles": [
+        "source",
+        "gain-envelope"
+      ],
+      "outputs": [
+        "vco_1.post_vca"
+      ]
+    },
+    {
+      "order": 17,
+      "module": "control_upsample",
+      "occurrence": 3,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "mod_matrix.vco_2_pitch"
+        }
+      ],
+      "roles": [
+        "control-column"
+      ],
+      "outputs": [
+        "control_upsample.vco_2_pitch"
+      ]
+    },
+    {
+      "order": 18,
+      "module": "vco_2",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "keyboard.midi_f0"
+        },
+        {
+          "position": 1,
+          "source": "control_upsample.vco_2_pitch"
+        }
+      ],
+      "roles": [
+        "pitch-base",
+        "pitch-modulation"
+      ],
+      "outputs": [
+        "vco_2.raw"
+      ]
+    },
+    {
+      "order": 19,
+      "module": "control_upsample",
+      "occurrence": 4,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "mod_matrix.vco_2_amp"
+        }
+      ],
+      "roles": [
+        "control-column"
+      ],
+      "outputs": [
+        "control_upsample.vco_2_amp"
+      ]
+    },
+    {
+      "order": 20,
+      "module": "vca",
+      "occurrence": 2,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "vco_2.raw"
+        },
+        {
+          "position": 1,
+          "source": "control_upsample.vco_2_amp"
+        }
+      ],
+      "roles": [
+        "source",
+        "gain-envelope"
+      ],
+      "outputs": [
+        "vco_2.post_vca"
+      ]
+    },
+    {
+      "order": 21,
+      "module": "noise",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [],
+      "roles": [],
+      "outputs": [
+        "noise.raw"
+      ]
+    },
+    {
+      "order": 22,
+      "module": "control_upsample",
+      "occurrence": 5,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "mod_matrix.noise_amp"
+        }
+      ],
+      "roles": [
+        "control-column"
+      ],
+      "outputs": [
+        "control_upsample.noise_amp"
+      ]
+    },
+    {
+      "order": 23,
+      "module": "vca",
+      "occurrence": 3,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "noise.raw"
+        },
+        {
+          "position": 1,
+          "source": "control_upsample.noise_amp"
+        }
+      ],
+      "roles": [
+        "source",
+        "gain-envelope"
+      ],
+      "outputs": [
+        "noise.post_vca"
+      ]
+    },
+    {
+      "order": 24,
+      "module": "normalize_if_clipping",
+      "occurrence": 1,
+      "mechanism": "python-call",
+      "inputs": [],
+      "roles": [],
+      "outputs": [
+        "mixer.pre_normalization"
+      ]
+    },
+    {
+      "order": 25,
+      "module": "normalize_if_clipping",
+      "occurrence": 1,
+      "mechanism": "python-return-local",
+      "inputs": [],
+      "roles": [],
+      "outputs": [
+        "mixer.peak"
+      ]
+    },
+    {
+      "order": 26,
+      "module": "normalize_if_clipping",
+      "occurrence": 1,
+      "mechanism": "derived-from-observed-peak",
+      "inputs": [],
+      "roles": [],
+      "outputs": [
+        "mixer.gain"
+      ]
+    },
+    {
+      "order": 27,
+      "module": "mixer",
+      "occurrence": 1,
+      "mechanism": "forward-hook",
+      "inputs": [
+        {
+          "position": 0,
+          "source": "vco_1.post_vca"
+        },
+        {
+          "position": 1,
+          "source": "vco_2.post_vca"
+        },
+        {
+          "position": 2,
+          "source": "noise.post_vca"
+        }
+      ],
+      "roles": [
+        "weighted-source-1",
+        "weighted-source-2",
+        "weighted-source-3"
+      ],
+      "outputs": [
+        "mixer.output"
+      ]
+    }
+  ]
+}

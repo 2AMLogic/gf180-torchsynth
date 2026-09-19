@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/2AMLogic/gf180-torchsynth/spec/schemas/float-interface-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "semantic_version",
+    "schema_sha256",
+    "registry_token",
+    "inventory_sha256",
+    "source_commit",
+    "profile",
+    "numeric_contract",
+    "shared_instances",
+    "resolved_inputs",
+    "checkpoints"
+  ],
+  "properties": {
+    "schema": {
+      "const": "torchsynth-float-checkpoints"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "semantic_version": {
+      "const": "float-checkpoints-v1"
+    },
+    "schema_sha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "registry_token": {
+      "type": "string",
+      "pattern": "^tr1-[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "inventory_sha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "source_commit": {
+      "const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+    },
+    "profile": {
+      "const": "torchsynth-1-voice-default"
+    },
+    "numeric_contract": {
+      "const": "unbound:#53"
+    },
+    "shared_instances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "control_vca",
+        "control_upsample",
+        "vca"
+      ],
+      "properties": {
+        "control_vca": {
+          "const": 2
+        },
+        "control_upsample": {
+          "const": 5
+        },
+        "vca": {
+          "const": 3
+        }
+      }
+    },
+    "resolved_inputs": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/input"
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "minItems": 27,
+      "maxItems": 27,
+      "items": {
+        "$ref": "#/$defs/checkpoint"
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "comparison",
+        "meaning"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "input.normalized",
+            "input.noise",
+            "physical.parameters"
+          ]
+        },
+        "kind": {
+          "const": "input-checkpoint"
+        },
+        "comparison": {
+          "enum": [
+            "exact-bytes",
+            "measured-observation"
+          ]
+        },
+        "encoding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "meaning": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "module",
+        "occurrence",
+        "mechanism",
+        "inputs",
+        "roles",
+        "outputs"
+      ],
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 27
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "occurrence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mechanism": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/binding"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position",
+        "source"
+      ],
+      "properties": {
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
