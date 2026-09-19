@@ -72,13 +72,16 @@ import warnings
 from pathlib import Path
 
 sys.path.insert(0, "/repo/env/release-era")
-sys.path.insert(0, "/repo/src")
 sys.path.insert(0, "/repo/src/torchsynth_voice")
 
 import render_artifact as worker
 import trace_capture
 import trace_registry
-from torchsynth_voice.trace_artifacts import NORMALIZATION_SEAMS
+
+# Literal copy of trace_artifacts.NORMALIZATION_SEAMS: this driver runs on the
+# release image's Python 3.9, which cannot import the >=3.11 root package.
+# check_inputs asserts this copy matches the module constant.
+NORMALIZATION_SEAMS = ("mixer.pre_normalization", "mixer.peak", "mixer.gain")
 
 
 class ProviderSession(object):
@@ -207,6 +210,10 @@ def selection_record():
 
 def check_inputs():
     """Stdlib-only preregistered pins and structural negative controls."""
+    require(
+        all(seam in DRIVER_SOURCE for seam in ta.NORMALIZATION_SEAMS),
+        "driver seam copy drifted from the module constant",
+    )
     binding = registry_binding()
     selection = selection_record()
     document = trace_registry.load_registry()
