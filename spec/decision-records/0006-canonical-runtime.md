@@ -7,6 +7,31 @@
 
 ## Decision
 
+### Candidate profile preregistration, before the Doctor remeasurement
+
+The initial profile omitted explicit math-dispatch settings. Native CI run
+35415961204 failed global-0 bytes; normalized/physical parameters, noise and
+ADSRs matched, with the first captured numeric divergence in LFOs. The original
+128-cell baseline and its 32 cross-runtime FAIL results must remain evidence.
+
+Preregister `release-mkl-compatible-v1`: `MKL_CBWR=COMPATIBLE` and
+`ATEN_CPU_CAPABILITY` explicitly unset, with unchanged source, image recipe,
+package locks, threads, cases, counts and exact-byte rules. The current-runtime
+comparator explicitly unsets both variables. These settings are supplied before
+Python starts and recorded, never selected from host detection or inheritance.
+This candidate is motivated by the isolated LFO reduction diagnosis and PR100
+run 35416530832 at 86e7f45be378ccd1c18ab5154f605dab48f7a603: the explicit
+COMPATIBLE three-case scalar/canonical sentinel step passed on native Linux;
+the workflow deliberately retained its earlier baseline failure. This is
+bounded supporting evidence, not native twelve-case/full-matrix qualification.
+
+Rerun all 128 cells and compare them with the retained original raw bytes,
+without alignment or level normalization. Require complete artifacts, exact
+counts/dtypes/name maps and source/process/input bindings before comparison
+credit. Only successful measured repeats/batches and a native actual-render
+sentinel can support the proposed profile. Reviewed merge remains the
+ratification gate; no broader host portability is assumed.
+
 Use the unchanged `env/release-era/Dockerfile` and `requirements.lock` to
 generate canonical floating reference fixtures. This selects CPython 3.9.13,
 PyTorch 1.12.1+cpu, NumPy 1.23.2 and Lightning 1.8.6 on Linux/amd64, CPU float32,
