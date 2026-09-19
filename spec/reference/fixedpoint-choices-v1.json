@@ -1,0 +1,209 @@
+{
+  "schema": "gf180-torchsynth/fixedpoint-choices-v1",
+  "source": "spec/decision-records/0008-fixed-point-numeric-contract.md",
+  "source_section": "12. Choice register (machine-readable status)",
+  "dr_status": "Proposed",
+  "status_vocabulary": {
+    "register_terms": [
+      "proposed",
+      "selected",
+      "accepted",
+      "rejected"
+    ],
+    "note": "Vocabulary and consumer rule per DR-0008 Section 12: 'selected' is not 'accepted'; a choice becomes accepted only when DR-0008 reaches Accepted by reviewed merge. Consumers must refuse proposed, stale, and any not-yet-accepted value wherever the contract requires accepted ones."
+  },
+  "consumer_rule": "No entry in this file is accepted while DR-0008 status is Proposed. torchsynth_voice.fixedpoint.choices.require_accepted refuses every entry today; parameters here are candidate instantiation data only.",
+  "choices": [
+    {
+      "id": "C1",
+      "choice": "Audio word 24-bit Q2.21 [-4, +4)",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "signed": true,
+        "int_bits": 2,
+        "frac_bits": 21,
+        "width": 24,
+        "range": "[-4, +4)"
+      },
+      "evidence": "spec/decision-records/0006-canonical-runtime.md:89",
+      "affected_traces": [
+        "all audio-rate traces"
+      ],
+      "change_trigger": "new peak evidence outside [-4, +4)"
+    },
+    {
+      "id": "C2",
+      "choice": "Phase: u32 wrapping, 2^32 units/turn",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "signed": false,
+        "width": 32,
+        "modular": true,
+        "units_per_turn": 4294967296,
+        "semantics": "wrapping"
+      },
+      "evidence": "#83 comment 5743848538; DR-0004",
+      "affected_traces": [
+        "vco_1.raw",
+        "vco_2.raw",
+        "phase ports"
+      ],
+      "change_trigger": "new phase-semantics evidence"
+    },
+    {
+      "id": "C3",
+      "choice": "Frequency word Q16.15",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "signed": true,
+        "int_bits": 16,
+        "frac_bits": 15,
+        "width": 32
+      },
+      "evidence": "#83 groundwork Section 3.1",
+      "affected_traces": [
+        "control_upsample.vco_1_pitch consumers"
+      ],
+      "change_trigger": "upstream clamp evidence change"
+    },
+    {
+      "id": "C4",
+      "choice": "MIDI domain Q10.21",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "signed": true,
+        "int_bits": 10,
+        "frac_bits": 21,
+        "width": 32
+      },
+      "evidence": "pinned torchsynth/module.py:600 via #83",
+      "affected_traces": [
+        "keyboard/tuning/depth paths"
+      ],
+      "change_trigger": "fixture evidence of clamp mismatch"
+    },
+    {
+      "id": "C5",
+      "choice": "Sine: 4096x24 quarter-wave LUT + linear interp; 1K quadratic fallback pre-authorized",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "n_entries": 4096,
+        "entry_width": 24,
+        "index_bits": 12,
+        "interp_bits": 18,
+        "phase_bits": 32,
+        "method": "linear",
+        "fallback": "1024-entry quadratic interpolation, pre-authorized (DR-0008 Section 5)"
+      },
+      "evidence": "DR-0008 Section 5 table; M2 sweep",
+      "affected_traces": [
+        "vco_1.raw"
+      ],
+      "change_trigger": "M2 sweep or #82 memory evidence"
+    },
+    {
+      "id": "C6",
+      "choice": "Rounding: half-even at S1-S5",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "rounding_mode": "half_even",
+        "sites": [
+          "S1",
+          "S2",
+          "S3",
+          "S4",
+          "S5"
+        ]
+      },
+      "evidence": "DR-0008 Section 6",
+      "affected_traces": [
+        "all narrowing sites"
+      ],
+      "change_trigger": "directed fixture requiring an exception"
+    },
+    {
+      "id": "C7",
+      "choice": "Saturation + sticky counters; Nyquist clamp forbidden",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": true,
+      "parameters": {
+        "policy": "saturate",
+        "counters": "sticky per-site saturate/overflow",
+        "nyquist_clamp": "forbidden",
+        "never_saturate_words": [
+          "phase",
+          "frequency"
+        ]
+      },
+      "evidence": "#83 groundwork Section 1",
+      "affected_traces": [
+        "saturate counters",
+        "vco_*.raw"
+      ],
+      "change_trigger": "upstream behavior change at pin"
+    },
+    {
+      "id": "C8",
+      "choice": "Noise: host-fed exact stream, slot sound_index % 32, seed 13",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": false,
+      "parameters": {},
+      "evidence": "spec/VOICE-CONTRACT.md:75-77; DR-0003",
+      "affected_traces": [
+        "noise.raw"
+      ],
+      "change_trigger": "new noise-policy decision record"
+    },
+    {
+      "id": "C9",
+      "choice": "Normalization replay gain 1/peak, declared-precision reciprocal",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": false,
+      "parameters": {},
+      "evidence": "DR-0003; spec/decision-records/0003-host-boundary-and-normalization.md:40-44",
+      "affected_traces": [
+        "final output",
+        "replay traces"
+      ],
+      "change_trigger": "reciprocal precision measurement"
+    },
+    {
+      "id": "C10",
+      "choice": "Thresholds: 2x-measured power-of-two, preregistered pre-freeze",
+      "register_term": "selected",
+      "status": "selected (operator ruling 2026-09-19); pending ratification",
+      "accepted": false,
+      "instantiable": false,
+      "parameters": {},
+      "evidence": "DR-0008 Section 10; DR-0004",
+      "affected_traces": [
+        "M1/M2 bands"
+      ],
+      "change_trigger": "new calibration-policy evidence"
+    }
+  ]
+}
