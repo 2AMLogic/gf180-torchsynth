@@ -1,7 +1,8 @@
 {
   "schema_version": 2,
-  "preregistered_utc": "2026-09-19T03:05:00Z",
+  "preregistered_utc": "2026-09-19T02:52:41Z",
   "profile": "release-mkl-compatible-v1",
+  "baseline_raw_report_sha256": "15113fce6457d4eb178eef6833615e568f57a37d90163ab7434feefa4545814f",
   "baseline_plan_sha256": "f17b8a2fc0fd526323188fdddf24a4bdaf07226e7f36cd52663facde15bb92f3",
   "profile_environment": {
     "release": {

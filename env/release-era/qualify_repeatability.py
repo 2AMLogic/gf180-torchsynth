@@ -59,6 +59,29 @@ def validate_plan(plan):
         raise ValueError("incomplete preregistered matrix")
     if [c["index"] for c in plan["cases"]] != [0, 31, 32, 9215, 9216, 39942, 0, 0]:
         raise ValueError("incorrect preregistered identities")
+    inventory = json.loads(
+        (REPO / "spec/reference/parameter-inventory-v1.json").read_text()
+    )
+    names = sorted(p["name"] for p in inventory["parameters"])
+    required = {
+        name: {"dtype": "<f4", "shape": [count]}
+        for name, count in (
+            [(n, 1764) for n in ("adsr_1", "adsr_2", "lfo_1", "lfo_2")]
+            + [
+                (n, 176400)
+                for n in ("vco_1", "vco_2", "noise", "pre_normalization", "audio")
+            ]
+            + [(n, 78) for n in ("normalized", "physical")]
+        )
+    }
+    if (
+        plan["parameter_names"] != names
+        or plan["artifacts"] != required
+        or set(plan["seams"]) != set(required) - {"normalized", "physical"}
+        or plan["sample_count"] != 176400
+        or plan["control_sample_count"] != 1764
+    ):
+        raise ValueError("invalid preregistered artifact contract")
 
 
 def plan_hash(plan):
@@ -99,7 +122,7 @@ def cell_key(cell):
     return tuple(cell[k] for k in ("runtime", "batch_size", "repeat", "case"))
 
 
-def validate_results(plan, cells):
+def validate_results(plan, cells, root=None):
     keys = [cell_key(c) for c in cells]
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate matrix cells")
@@ -112,6 +135,151 @@ def validate_results(plan, cells):
             raise ValueError("invalid cell status")
         if cell["status"] != "PASS" and not cell.get("error"):
             raise ValueError("refusal/failure requires a reason")
+        if cell["status"] == "PASS":
+            validate_cell(plan, cell, root)
+    passed = [c for c in cells if c["status"] == "PASS"]
+    if len({c["run_id"] for c in passed}) > 1:
+        raise ValueError("mixed experiment run IDs")
+    executions = {}
+    for cell in passed:
+        group = cell_key(cell)[:3]
+        execution = cell["execution_id"]
+        if group in executions and executions[group] != execution:
+            raise ValueError("worker group changed execution ID")
+        executions[group] = execution
+    if len(set(executions.values())) != len(executions):
+        raise ValueError("fresh processes reused an execution ID")
+
+
+def case_inputs(plan, case):
+    return {
+        "index": case["index"],
+        "physical_overrides": case["physical_overrides"],
+        "configuration": plan["configuration"],
+        "nebula": plan["nebula"],
+        "noise_seed": plan["noise_seed"],
+    }
+
+
+def expected_source_hashes():
+    manifests = [
+        json.loads((REPO / "spec/reference/upstream.json").read_text()),
+        json.loads((HERE / "source-comparison.json").read_text())["selected"],
+    ]
+    return {
+        k: v
+        for m in manifests
+        for group in ("files", "source_checkout_only_files")
+        for k, v in m.get(group, {}).items()
+    }
+
+
+def validate_cell(plan, cell, root=None):
+    """Refuse incomplete observations before any aggregate or byte credit."""
+    if cell.get("status") != "PASS":
+        raise ValueError("render unavailable")
+    if cell_key(cell) not in {cell_key(c) for c in expected_cells(plan)}:
+        raise ValueError("unexpected cell coordinates")
+    case = next(c for c in plan["cases"] if c["name"] == cell["case"])
+    identity = coordinates(case["index"], cell["batch_size"])
+    inputs = case_inputs(plan, case)
+    if cell.get("identity") != identity:
+        raise ValueError("cell identity mismatch")
+    if cell.get("inputs") != inputs or cell.get("input_sha256") != sha256(
+        json_bytes(inputs)
+    ):
+        raise ValueError("cell input/configuration mismatch")
+    if cell.get("plan_sha256") != plan_hash(plan):
+        raise ValueError("stale matrix result")
+    if cell.get("label_byte_hex") != bytes([int(identity["is_train"])]).hex():
+        raise ValueError("cell label mismatch")
+    names = plan["parameter_names"]
+    if cell.get("parameter_names") != names:
+        raise ValueError("parameter names mismatch")
+    for kind in ("normalized", "physical"):
+        values = cell.get(kind, {})
+        if set(values) != set(names) or not all(
+            math.isfinite(v) for v in values.values()
+        ):
+            raise ValueError("parameter map mismatch")
+    if set(cell.get("artifacts", {})) != set(plan["artifacts"]):
+        raise ValueError("required artifact set mismatch")
+    for name, spec in plan["artifacts"].items():
+        record = cell["artifacts"][name]
+        if (
+            record.get("samples") != spec["shape"][0]
+            or record.get("shape") != spec["shape"]
+            or record.get("dtype") != spec["dtype"]
+            or record.get("file") != case["name"] + "." + name + ".f32le"
+        ):
+            raise ValueError("artifact count/shape/dtype/name mismatch: " + name)
+    if not cell.get("run_id") or not cell.get("execution_id"):
+        raise ValueError("missing process identity")
+    if root is None:
+        return None
+    provenance = json.loads((root / "provenance.json").read_text())
+    if (
+        provenance.get("plan_sha256") != plan_hash(plan)
+        or provenance.get("run_id") != cell["run_id"]
+    ):
+        raise ValueError("controller/cell binding mismatch")
+    directory = "{}-{}-{}".format(cell["runtime"], cell["batch_size"], cell["repeat"])
+    if cell.get("directory") != directory:
+        raise ValueError("cell directory mismatch")
+    worker = json.loads((root / directory / "result.json").read_text())
+    receipt = json.loads((root / directory / "execution.json").read_text())
+    stdout = (root / directory / "stdout.json").read_bytes()
+    if (
+        receipt.get("exit_code") != 0
+        or receipt.get("directory") != directory
+        or receipt.get("stdout_sha256") != sha256(stdout)
+        or json.loads(stdout) != worker
+    ):
+        raise ValueError("worker execution receipt mismatch")
+    matches = [c for c in worker["cells"] if cell_key(c) == cell_key(cell)]
+    if matches != [{k: v for k, v in cell.items() if k != "directory"}]:
+        raise ValueError("cell/worker result mismatch")
+    definition = plan["runtime_definitions"][cell["runtime"]]
+    observed = worker["runtime"]
+    if (
+        worker.get("run_id") != cell["run_id"]
+        or worker.get("execution_id") != cell["execution_id"]
+        or worker.get("plan_sha256") != plan_hash(plan)
+        or worker.get("source_sha256") != expected_source_hashes()
+        or worker.get("source_validated_before_import") is not True
+        or worker.get("rng_sentinel") != "PASS"
+        or worker.get("runner_sha256") != provenance["runner_sha256"]
+        or any(
+            observed.get(k) != definition[k]
+            for k in ("python", "torch", "numpy", "lightning", "lock_sha256")
+        )
+        or observed.get("math_environment")
+        != plan["profile_environment"][cell["runtime"]]
+        or observed.get("thread_environment") != THREAD_ENV
+        or observed.get("threads") != 1
+        or observed.get("interop_threads") != 1
+    ):
+        raise ValueError("worker source/runtime/process binding mismatch")
+    artifacts = {
+        name: read_artifact(root / directory, cell["artifacts"][name])
+        for name in plan["artifacts"]
+    }
+    for name, data in artifacts.items():
+        if not all(math.isfinite(v[0]) for v in struct.iter_unpack("<f", data)):
+            raise ValueError("nonfinite artifact: " + name)
+    for kind in ("normalized", "physical"):
+        if artifacts[kind] != struct.pack("<78f", *[cell[kind][n] for n in names]):
+            raise ValueError("parameter map/raw bytes mismatch")
+    peak = max(
+        abs(v[0]) for v in struct.iter_unpack("<f", artifacts["pre_normalization"])
+    )
+    if (
+        cell.get("normalization_applied") != (peak > 1)
+        or (case["name"] == "normalization-off" and not 0 < peak <= 1)
+        or (case["name"] == "normalization-on" and peak <= 1)
+    ):
+        raise ValueError("normalization observation mismatch")
+    return artifacts
 
 
 def verdict(statuses):
@@ -225,6 +393,9 @@ def runtime_record(runtime, plan, torch, packages):
         threads=torch.get_num_threads(),
         interop_threads=torch.get_num_interop_threads(),
         thread_environment={k: os.environ.get(k) for k in THREAD_ENV},
+        math_environment={
+            k: os.environ.get(k) for k in plan["profile_environment"][runtime]
+        },
     )
 
 
@@ -320,6 +491,7 @@ def render_case(case, size, plan, output, torch, np, Voice, SynthConfig, normali
             "sha256": sha256(data),
             "samples": count,
             "peak": float(np.abs(array).max()),
+            **plan["artifacts"][name],
         }
     for kind, values in (("normalized", normalized), ("physical", physical)):
         data = struct.pack("<78f", *[values[k] for k in sorted(values)])
@@ -327,7 +499,12 @@ def render_case(case, size, plan, output, torch, np, Voice, SynthConfig, normali
             raise ValueError("nonfinite parameter")
         path = output["directory"] / (case["name"] + "." + kind + ".f32le")
         path.write_bytes(data)
-        artifacts[kind] = {"file": path.name, "sha256": sha256(data), "samples": 78}
+        artifacts[kind] = {
+            "file": path.name,
+            "sha256": sha256(data),
+            "samples": 78,
+            **plan["artifacts"][kind],
+        }
     peak = artifacts["pre_normalization"]["peak"]
     if (
         case["name"] == "normalization-off"
@@ -381,6 +558,10 @@ def worker(args):
     hashes = source_gate(args.source_root)
     if args.preflight_only:
         return {"status": "PASS", "source_sha256": hashes, "torch_imported": False}
+    # Refuse incidental host inheritance before importing any numerical package.
+    expected_env = dict(THREAD_ENV, **plan["profile_environment"][args.runtime])
+    if any(os.environ.get(k) != v for k, v in expected_env.items()):
+        raise ValueError("worker environment outside explicit runtime profile")
     # setuptools may append its vendored distributions to sys.path on import.
     # Inventory the installed environment before any third-party import.
     packages = dict(
@@ -407,6 +588,8 @@ def worker(args):
     runtime = runtime_record(args.runtime, plan, torch, packages)
     report = {
         "run_id": args.run_id,
+        "plan_sha256": plan_hash(plan),
+        "runner_sha256": sha256(Path(__file__).read_bytes()),
         "execution_id": str(uuid.uuid4()),
         "process_id": os.getpid(),
         # datetime.UTC is unavailable in the pinned Python 3.9 worker.
@@ -427,6 +610,8 @@ def worker(args):
             "repeat": args.repeat,
             "case": case["name"],
             "plan_sha256": plan_hash(plan),
+            "run_id": report["run_id"],
+            "execution_id": report["execution_id"],
         }
         start = time.monotonic()
         try:
@@ -452,17 +637,16 @@ def worker(args):
     return report
 
 
-def pair(left, right, root):
+def pair(left, right, root, plan=None):
     if left["status"] != "PASS" or right["status"] != "PASS":
         return {
             "status": "NO_VERDICT",
             "reason": "one or both render cells unavailable",
         }
-    compared = {}
-    for name in left["artifacts"]:
-        a = read_artifact(root / left["directory"], left["artifacts"][name])
-        b = read_artifact(root / right["directory"], right["artifacts"][name])
-        compared[name] = compare_bytes(a, b)
+    plan = load_plan() if plan is None else plan
+    a = validate_cell(plan, left, root)
+    b = validate_cell(plan, right, root)
+    compared = {name: compare_bytes(a[name], b[name]) for name in plan["artifacts"]}
     inputs_equal = (
         left["input_sha256"] == right["input_sha256"]
         and left["parameter_names"] == right["parameter_names"]
@@ -478,7 +662,7 @@ def pair(left, right, root):
 
 
 def summarize(plan, cells, root):
-    validate_results(plan, cells)
+    validate_results(plan, cells, root)
     lookup = {cell_key(c): c for c in cells}
     comparisons = []
     for runtime in plan["runtime_definitions"]:
@@ -504,15 +688,21 @@ def summarize(plan, cells, root):
                             kind=kind,
                             left=list(a),
                             right=list(b),
-                            **pair(lookup[a], lookup[b], root),
+                            **pair(lookup[a], lookup[b], root, plan),
                         )
                     )
     return comparisons
 
 
-def check_sentinel(cell, expected):
+def check_sentinel(cell, expected, root):
+    if root is None:
+        raise ValueError("sentinel requires verified raw files")
     if cell["status"] != "PASS":
         raise ValueError("sentinel render unavailable: " + cell.get("error", "unknown"))
+    plan = load_plan()
+    validate_cell(plan, cell, root)
+    if cell_key(cell) != ("release", 32, 1, "global-0"):
+        raise ValueError("sentinel coordinates mismatch")
     if cell["input_sha256"] != expected["input_sha256"]:
         raise ValueError("sentinel input mismatch")
     if cell["plan_sha256"] != expected["plan_sha256"]:
@@ -527,16 +717,21 @@ def check_sentinel(cell, expected):
         raise ValueError("sentinel passive capture mismatch")
 
 
-def invoke(command, timeout=1800):
+def invoke(command, timeout=1800, profile=None):
     """Unavailable executables and timeouts are results, never missing cells."""
     try:
+        environment = dict(os.environ, **THREAD_ENV, PYTHONDONTWRITEBYTECODE="1")
+        for key, value in (profile or {}).items():
+            environment.pop(key, None)
+            if value is not None:
+                environment[key] = value
         return subprocess.run(
             command,
             capture_output=True,
             text=True,
             check=False,
             timeout=timeout,
-            env=dict(os.environ, **THREAD_ENV, PYTHONDONTWRITEBYTECODE="1"),
+            env=environment,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         if isinstance(exc, subprocess.TimeoutExpired) and command[:2] == [
@@ -557,6 +752,7 @@ def invoke(command, timeout=1800):
 
 
 def command_for(args, runtime, size, repeat, directory, run_id):
+    profile = load_plan()["profile_environment"][runtime]
     suffix = [
         "worker",
         "--runtime",
@@ -584,6 +780,12 @@ def command_for(args, runtime, size, repeat, directory, run_id):
             "--network",
             "none",
             *[part for k, v in THREAD_ENV.items() for part in ("--env", k + "=" + v)],
+            *[
+                part
+                for k, v in profile.items()
+                if v is not None
+                for part in ("--env", k + "=" + v)
+            ],
             "--memory",
             "6g",
             "--cpus",
@@ -593,8 +795,10 @@ def command_for(args, runtime, size, repeat, directory, run_id):
             "--mount",
             "type=bind,src=" + str(directory) + ",dst=/output",
             "--entrypoint",
-            "python",
+            "env",
             args.image,
+            *[part for k, v in profile.items() if v is None for part in ("-u", k)],
+            "python",
             "/repo/env/release-era/qualify_repeatability.py",
             *suffix,
             "--source-root",
@@ -640,7 +844,10 @@ def run(args):
         "docker_server": docker.stdout.strip(),
         "host_platform": platform.platform(),
         "runner_sha256": sha256(Path(__file__).read_bytes()),
+        "plan_sha256": plan_hash(plan),
+        "run_id": run_id,
     }
+    write_json(root / "provenance.json", provenance)
     for runtime in runtimes:
         for size in sizes:
             for repeat in repeats:
@@ -651,7 +858,11 @@ def run(args):
                 if runtime not in controls:
                     negative_command = list(command)
                     negative_command[negative_command.index("worker")] = "negative"
-                    negative = invoke(negative_command, timeout=120)
+                    negative = invoke(
+                        negative_command,
+                        timeout=120,
+                        profile=plan["profile_environment"][runtime],
+                    )
                     controls[runtime] = {
                         "command": negative_command,
                         "result": json.loads(negative.stdout)
@@ -663,7 +874,7 @@ def run(args):
                     }
                 print("Rendering " + relative, flush=True)
                 started = time.monotonic()
-                result = invoke(command)
+                result = invoke(command, profile=plan["profile_environment"][runtime])
                 stdout, stderr, code = result.stdout, result.stderr, result.returncode
                 (directory / "stdout.json").write_text(stdout)
                 (directory / "stderr.txt").write_text(stderr)
@@ -682,7 +893,17 @@ def run(args):
                 if data and data.get("run_id") != run_id:
                     raise ValueError("stale worker result")
                 record["worker"] = {k: v for k, v in data.items() if k != "cells"}
+                write_json(directory / "execution.json", record)
                 observed = {c["case"]: c for c in data.get("cells", [])}
+                if len(observed) != len(data.get("cells", [])):
+                    raise ValueError("duplicate worker cells")
+                allowed = {
+                    c["name"]
+                    for c in plan["cases"]
+                    if args.mode != "sentinel" or c["name"] == "global-0"
+                }
+                if set(observed) - allowed:
+                    raise ValueError("unexpected worker cells")
                 for case in plan["cases"]:
                     if args.mode == "sentinel" and case["name"] != "global-0":
                         continue
@@ -698,6 +919,8 @@ def run(args):
                             "error": f"worker exit {code}: {stdout[-2000:]} {stderr[-2000:]}",
                         },
                     )
+                    if cell_key(cell) != (runtime, size, repeat, case["name"]):
+                        raise ValueError("worker/cell coordinates mismatch")
                     cells.append(dict(cell, directory=relative))
                 records.append(record)
                 write_json(root / "progress.json", {"records": records, "cells": cells})
@@ -705,10 +928,8 @@ def run(args):
         if controls["release"]["result"]["status"] != "PASS":
             raise ValueError("sentinel source negative control unavailable")
         expected = json.loads(args.expected.read_text())["sentinel"]
-        check_sentinel(cells[0], expected)
-        controls["input_audio"] = sentinel_controls(
-            cells[0], expected, root / cells[0]["directory"]
-        )
+        check_sentinel(cells[0], expected, root)
+        controls["input_audio"] = sentinel_controls(cells[0], expected, root)
         write_json(
             root / "sentinel.json",
             {
@@ -738,6 +959,8 @@ def run(args):
             + [c["status"] for c in comparisons if c["kind"] != "cross_runtime"]
         ),
     }
+    if args.baseline is not None:
+        report["baseline_comparison"] = baseline_drift(plan, cells, root, args.baseline)
     write_json(root / "repeatability-runtime.json", report)
     publish = dict(report)
     publish["raw_report_sha256"] = sha256(
@@ -772,7 +995,98 @@ def run(args):
     return 0 if report["status"] == "PASS" else 1
 
 
-def sentinel_controls(cell, expected, directory=None):
+def baseline_drift(plan, cells, root, baseline):
+    """Audit historical schema-1 receipts without inventing missing profile fields.
+
+    This is a drift comparison, never a legacy path to current qualification.
+    The exact historical raw report was pinned before the new measurement.
+    """
+    raw = (baseline / "repeatability-runtime.json").read_bytes()
+    if sha256(raw) != plan["baseline_raw_report_sha256"]:
+        raise ValueError("historical raw report hash mismatch")
+    old = json.loads(raw)
+    old_plan = json.loads((baseline / "preregistered-plan.json").read_text())
+    if plan_hash(old_plan) != plan["baseline_plan_sha256"]:
+        raise ValueError("historical preregistration mismatch")
+    old_cells = {cell_key(c): c for c in old["cells"]}
+    if (
+        set(old_cells) != {cell_key(c) for c in expected_cells(plan)}
+        or len(old["cells"]) != 128
+    ):
+        raise ValueError("historical matrix completeness mismatch")
+    executions = set()
+    for record in old["records"]:
+        directory = baseline / record["directory"]
+        worker = json.loads((directory / "result.json").read_text())
+        if (
+            record["exit_code"] != 0
+            or record["worker"] != {k: v for k, v in worker.items() if k != "cells"}
+            or worker["run_id"] != old["run_id"]
+            or worker["source_sha256"] != expected_source_hashes()
+            or not worker["source_validated_before_import"]
+        ):
+            raise ValueError("historical worker provenance mismatch")
+        executions.add(worker["execution_id"])
+        for c in worker["cells"]:
+            if dict(c, directory=record["directory"]) != old_cells[cell_key(c)]:
+                raise ValueError("historical cell/worker mismatch")
+    if len(executions) != 16:
+        raise ValueError("historical fresh-process count mismatch")
+    comparisons = []
+    for cell in cells:
+        previous = old_cells[cell_key(cell)]
+        case = next(c for c in old_plan["cases"] if c["name"] == cell["case"])
+        if (
+            previous["status"] != "PASS"
+            or previous["identity"] != coordinates(case["index"], cell["batch_size"])
+            or previous["inputs"] != case_inputs(old_plan, case)
+            or previous["input_sha256"] != sha256(json_bytes(previous["inputs"]))
+            or previous["parameter_names"] != plan["parameter_names"]
+            or previous["label_byte_hex"] != cell["label_byte_hex"]
+            or set(previous["artifacts"]) != set(plan["artifacts"])
+        ):
+            raise ValueError("historical cell contract mismatch")
+        historical = {}
+        for name, spec in plan["artifacts"].items():
+            record = previous["artifacts"][name]
+            if (
+                record["samples"] != spec["shape"][0]
+                or record["file"] != cell["case"] + "." + name + ".f32le"
+            ):
+                raise ValueError("historical artifact count/name mismatch")
+            historical[name] = read_artifact(baseline / previous["directory"], record)
+        for kind in ("normalized", "physical"):
+            if historical[kind] != struct.pack(
+                "<78f", *[previous[kind][n] for n in plan["parameter_names"]]
+            ):
+                raise ValueError("historical parameter map mismatch")
+        if cell["status"] != "PASS":
+            comparisons.append({"cell": list(cell_key(cell)), "status": "NO_VERDICT"})
+            continue
+        actual = validate_cell(plan, cell, root)
+        metrics = {
+            name: compare_bytes(historical[name], actual[name])
+            for name in plan["artifacts"]
+        }
+        comparisons.append(
+            {
+                "cell": list(cell_key(cell)),
+                "status": "PASS"
+                if all(m["equal_bytes"] for m in metrics.values())
+                else "FAIL",
+                "artifacts": metrics,
+            }
+        )
+    return {
+        "historical_raw_report_sha256": sha256(raw),
+        "historical_plan_sha256": plan_hash(old_plan),
+        "historical_profile_environment": "not recorded by schema 1; not retroactively asserted",
+        "new_profile": plan["profile"],
+        "comparisons": comparisons,
+    }
+
+
+def sentinel_controls(cell, expected, root):
     controls = {}
     for field, message in (
         ("input_sha256", "sentinel input mismatch"),
@@ -784,22 +1098,29 @@ def sentinel_controls(cell, expected, directory=None):
         else:
             mutated[field]["audio"] = "0" * 64
         try:
-            check_sentinel(cell, mutated)
+            check_sentinel(cell, mutated, root)
         except ValueError as exc:
             if str(exc) != message:
                 raise
             controls[field] = {"status": "PASS", "rejected_reason": str(exc)}
         else:
             raise ValueError("negative control accepted mutation")
-    if directory is not None:
+    if root is not None:
+        directory = root / cell["directory"]
         original = read_artifact(directory, cell["artifacts"]["audio"])
         changed = bytes([original[0] ^ 1]) + original[1:]
-        mutated_cell = json.loads(json.dumps(cell))
-        mutated_cell["artifacts"]["audio"]["sha256"] = sha256(changed)
+        # Mutate an actual copied raw file; preserve the genuine measurement.
+        temporary = tempfile.TemporaryDirectory()
+        copied_root = Path(temporary.name)
+        shutil.copyfile(root / "provenance.json", copied_root / "provenance.json")
+        shutil.copytree(directory, copied_root / cell["directory"])
+        (
+            copied_root / cell["directory"] / cell["artifacts"]["audio"]["file"]
+        ).write_bytes(changed)
         try:
-            check_sentinel(mutated_cell, expected)
+            check_sentinel(cell, expected, copied_root)
         except ValueError as exc:
-            if str(exc) != "sentinel artifact hash mismatch":
+            if str(exc) != "artifact hash mismatch":
                 raise
             controls["actual_audio_byte_flip"] = {
                 "status": "PASS",
@@ -808,13 +1129,15 @@ def sentinel_controls(cell, expected, directory=None):
             }
         else:
             raise ValueError("actual audio mutation accepted")
+        finally:
+            temporary.cleanup()
         mutated_cell = json.loads(json.dumps(cell))
         mutated_cell["inputs"]["index"] += 1
         mutated_cell["input_sha256"] = sha256(json_bytes(mutated_cell["inputs"]))
         try:
-            check_sentinel(mutated_cell, expected)
+            check_sentinel(mutated_cell, expected, root)
         except ValueError as exc:
-            if str(exc) != "sentinel input mismatch":
+            if str(exc) != "cell input/configuration mismatch":
                 raise
             controls["actual_input_change"] = {
                 "status": "PASS",
@@ -870,6 +1193,11 @@ def main():
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--run-id", default="standalone")
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        help="preserved schema-1 raw matrix to audit and compare",
+    )
     parser.add_argument("--preflight-only", action="store_true")
     parser.add_argument("--sentinel", action="store_true")
     parser.add_argument(
