@@ -1,0 +1,602 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gf180-torchsynth:case-registry:1",
+  "title": "Case registry v1 (result and measurement contracts in $defs)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "evidence_root",
+    "sources",
+    "rubric",
+    "engine",
+    "inputs",
+    "configuration",
+    "required_rows"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "evidence_root": {
+      "$ref": "#/$defs/path"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      },
+      "minItems": 1
+    },
+    "rubric": {
+      "$ref": "#/$defs/rubric"
+    },
+    "engine": {
+      "$ref": "#/$defs/engine"
+    },
+    "inputs": {
+      "$ref": "#/$defs/inputs"
+    },
+    "configuration": {
+      "type": "object"
+    },
+    "required_rows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/requirement"
+      },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9_.-]*(?![\\s\\S])"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-][A-Za-z0-9_.-]*(/[A-Za-z0-9_-][A-Za-z0-9_.-]*)*(?![\\s\\S])"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+    },
+    "number": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": -1.7976931348623157e+308,
+      "maximum": 1.7976931348623157e+308
+    },
+    "partition": {
+      "enum": [
+        "development",
+        "holdout"
+      ]
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/text"
+        },
+        "version": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "estimator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "version": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "limit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "source"
+      ],
+      "properties": {
+        "value": {
+          "$ref": "#/$defs/number"
+        },
+        "source": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trace",
+        "property",
+        "unit",
+        "estimator",
+        "expected",
+        "tolerance"
+      ],
+      "properties": {
+        "trace": {
+          "$ref": "#/$defs/text"
+        },
+        "property": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/text"
+        },
+        "estimator": {
+          "$ref": "#/$defs/estimator"
+        },
+        "expected": {
+          "$ref": "#/$defs/limit"
+        },
+        "tolerance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "source"],
+          "properties": {
+            "value": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "maximum": 1.7976931348623157e+308
+            },
+            "source": {"$ref": "#/$defs/text"}
+          }
+        }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "identity"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "identity": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "manifest"
+      ],
+      "properties": {
+        "family": {
+          "enum": [
+            "random",
+            "directed",
+            "synthetic"
+          ]
+        },
+        "manifest": {
+          "$ref": "#/$defs/manifest"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "files"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/text"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/path"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "implementation",
+        "preparation",
+        "estimator",
+        "rubric"
+      ],
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/input"
+        },
+        "implementation": {
+          "$ref": "#/$defs/input"
+        },
+        "preparation": {
+          "$ref": "#/$defs/input"
+        },
+        "estimator": {
+          "$ref": "#/$defs/input"
+        },
+        "rubric": {
+          "$ref": "#/$defs/input"
+        }
+      }
+    },
+    "engine": {
+      "enum": [
+        "software",
+        "fixed-model",
+        "integrated-rtl",
+        "board",
+        "silicon",
+        "synthetic"
+      ]
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "partition",
+        "family",
+        "fixture_identity"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/text"
+        },
+        "partition": {
+          "$ref": "#/$defs/partition"
+        },
+        "family": {
+          "enum": [
+            "random",
+            "directed",
+            "synthetic"
+          ]
+        },
+        "fixture_identity": {
+          "$ref": "#/$defs/hash"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "identity",
+        "sha256",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "measurement",
+            "render"
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/text"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "ref": {
+          "$ref": "#/$defs/path"
+        }
+      }
+    },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "trace",
+        "ref",
+        "sha256",
+        "size_bytes",
+        "encoding",
+        "sample_count",
+        "sample_rate_hz"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "reference",
+            "candidate"
+          ]
+        },
+        "trace": {
+          "$ref": "#/$defs/text"
+        },
+        "ref": {
+          "$ref": "#/$defs/path"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "encoding": {
+          "enum": [
+            "f32le",
+            "f64le"
+          ]
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sample_rate_hz": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1.7976931348623157e+308
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trace",
+        "property",
+        "unit",
+        "estimator",
+        "value",
+        "status",
+        "reason",
+        "coverage"
+      ],
+      "properties": {
+        "trace": {
+          "$ref": "#/$defs/text"
+        },
+        "property": {
+          "$ref": "#/$defs/text"
+        },
+        "unit": {
+          "$ref": "#/$defs/text"
+        },
+        "estimator": {
+          "$ref": "#/$defs/estimator"
+        },
+        "value": {
+          "$ref": "#/$defs/number"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "invalid",
+            "insufficient",
+            "missing"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/text"
+        },
+        "coverage": {
+          "enum": [
+            "complete",
+            "partial",
+            "none"
+          ]
+        }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "schema_version",
+        "case",
+        "fingerprint",
+        "captures",
+        "measurements"
+      ],
+      "properties": {
+        "schema": {
+          "const": "case-measurement"
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "case": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "partition"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/text"
+            },
+            "partition": {
+              "$ref": "#/$defs/partition"
+            }
+          }
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/hash"
+        },
+        "captures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capture"
+          },
+          "minItems": 0
+        },
+        "measurements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/metric"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "case",
+        "rubric",
+        "reference",
+        "implementation",
+        "configuration",
+        "configuration_sha256",
+        "command",
+        "access",
+        "fingerprint",
+        "covered_inputs",
+        "artifacts",
+        "rows",
+        "outcome"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "case": {
+          "$ref": "#/$defs/case"
+        },
+        "rubric": {
+          "$ref": "#/$defs/rubric"
+        },
+        "reference": {
+          "$ref": "#/$defs/text"
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine",
+            "identity"
+          ],
+          "properties": {
+            "engine": {
+              "$ref": "#/$defs/engine"
+            },
+            "identity": {
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "configuration": {
+          "type": "object"
+        },
+        "configuration_sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 1
+        },
+        "access": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "partition",
+            "holdout_authorization"
+          ],
+          "properties": {
+            "partition": {
+              "$ref": "#/$defs/partition"
+            },
+            "holdout_authorization": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "fingerprint": {
+          "$ref": "#/$defs/hash"
+        },
+        "covered_inputs": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "$ref": "#/$defs/path"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/hash"
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "minItems": 0
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+          "$ref": "urn:gf180-torchsynth:scorecard-row:v1"
+          },
+          "minItems": 0
+        },
+        "outcome": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NO VERDICT"
+          ]
+        }
+      }
+    }
+  }
+}
