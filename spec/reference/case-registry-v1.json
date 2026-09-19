@@ -1,0 +1,1243 @@
+{
+  "schema_version": 1,
+  "id": "voice-evidence-inventory-v1",
+  "evidence_root": "evidence/scorecard-v1",
+  "sources": [
+    {
+      "family": "random",
+      "manifest": {
+        "path": "spec/reference/corpus-v0.json",
+        "sha256": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+        "identity": "default-voice-random-v0"
+      }
+    },
+    {
+      "family": "directed",
+      "manifest": {
+        "path": "spec/reference/directed-voice-v1.json",
+        "sha256": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+        "identity": "directed-voice-v1-sha256:7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249"
+      }
+    }
+  ],
+  "rubric": {
+    "id": "voice-comparison-unqualified",
+    "version": "1"
+  },
+  "engine": "integrated-rtl",
+  "inputs": {
+    "reference": {
+      "identity": "torchsynth-2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+      "files": [
+        "spec/reference/upstream.json",
+        "spec/VOICE-CONTRACT.md"
+      ]
+    },
+    "implementation": {
+      "identity": "integrated-rtl-not-implemented",
+      "files": []
+    },
+    "preparation": {
+      "identity": "pending-preparation-qualification",
+      "files": []
+    },
+    "estimator": {
+      "identity": "pending-estimator-qualification",
+      "files": [
+        "src/torchsynth_voice/paired_metrics.py",
+        "spec/PAIRED-METRICS.md"
+      ]
+    },
+    "rubric": {
+      "identity": "voice-comparison-unqualified-v1",
+      "files": [
+        "spec/CASE-REGISTRY.md",
+        "spec/SCORECARD-CONTRACT.md",
+        "docs/MEASUREMENT-PLAN.md"
+      ]
+    }
+  },
+  "configuration": {
+    "profile": "torchsynth-1-voice-default",
+    "sample_rate_hz": 44100,
+    "duration_seconds": 4,
+    "preparation": "unqualified",
+    "holdout_policy": "sealed-until-thresholds-frozen",
+    "comparison": "time-locked-no-alignment-no-scaling"
+  },
+  "required_rows": [
+    {
+      "trace": "adsr_1.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "adsr_1.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "adsr_2.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "adsr_2.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.noise_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.noise_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_1_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_1_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_1_pitch",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_1_pitch",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_2_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_2_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_2_pitch",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "control_upsample.vco_2_pitch",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "keyboard.duration",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "keyboard.duration",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "keyboard.midi_f0",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "keyboard.midi_f0",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1.post_control_vca",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1.post_control_vca",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1.raw",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1.raw",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1_amp_adsr.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1_amp_adsr.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1_rate_adsr.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_1_rate_adsr.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2.post_control_vca",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2.post_control_vca",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2.raw",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2.raw",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2_amp_adsr.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2_amp_adsr.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2_rate_adsr.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "lfo_2_rate_adsr.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.gain",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.gain",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.peak",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.peak",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.pre_normalization",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.pre_normalization",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.noise_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.noise_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_1_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_1_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_1_pitch",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_1_pitch",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_2_amp",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_2_amp",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_2_pitch",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mod_matrix.vco_2_pitch",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "noise.post_vca",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "noise.post_vca",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "noise.raw",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "noise.raw",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_1.post_vca",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_1.post_vca",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_1.raw",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_1.raw",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_2.post_vca",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_2.post_vca",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_2.raw",
+      "property": "framing_match",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "vco_2.raw",
+      "property": "exact_equal",
+      "unit": "1",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "mean_error",
+      "unit": "amplitude",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "error_rms",
+      "unit": "amplitude",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "max_abs_error",
+      "unit": "amplitude",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "sample_count_delta",
+      "unit": "sample",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    },
+    {
+      "trace": "mixer.output",
+      "property": "snr_db",
+      "unit": "dB",
+      "estimator": {
+        "name": "time-locked-paired",
+        "version": "pending-qualification"
+      },
+      "expected": {
+        "value": null,
+        "source": "unavailable: Voice comparison rubric not frozen"
+      },
+      "tolerance": {
+        "value": null,
+        "source": "unavailable: no qualified Voice fidelity limit"
+      }
+    }
+  ]
+}
