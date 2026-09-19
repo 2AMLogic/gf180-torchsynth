@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "capture_version": "scalar-capture-v1",
+  "source_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "package_tree_sha256": "810041dffb7ce4e59ee1fc2cc5494fdf4e731dd461ff0ce5fc3a81da156898bf",
+  "input_sha256": {
+    "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+    "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+    "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+    "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc"
+  },
+  "configuration": {
+    "sample_rate": 44100,
+    "buffer_size_seconds": 4.0,
+    "control_rate": 441,
+    "no_grad": true,
+    "debug": false,
+    "eps": 0.000001
+  },
+  "cases": [
+    {"id": "global-0", "sound_index": 0},
+    {"id": "global-6", "sound_index": 6},
+    {"id": "global-31", "sound_index": 31},
+    {"id": "global-39942", "sound_index": 39942},
+    {"id": "sine-bypass", "sound_index": 0, "directed": "source:vco_1", "normalization": "bypassed"},
+    {"id": "square", "sound_index": 6, "directed": "waveform:vco_2:square"},
+    {"id": "saw", "sound_index": 31, "directed": "waveform:vco_2:saw"},
+    {"id": "oscillator-blend", "sound_index": 6, "directed": "waveform:vco_2:blend"},
+    {"id": "lfo-blend", "sound_index": 31, "directed": "waveform:lfo_1:blend"},
+    {"id": "zero-envelope", "sound_index": 6, "directed": "envelope:adsr_1:zero-stages"},
+    {"id": "overlapping-envelope", "sound_index": 31, "directed": "envelope:adsr_1:cut-attack"},
+    {"id": "noise-applied", "sound_index": 6, "directed": "source:noise", "normalization": "applied", "normalized_overrides": {
+      "keyboard.duration": 1.0,
+      "adsr_1.attack": 0.0, "adsr_1.decay": 0.0, "adsr_1.release": 0.0, "adsr_1.sustain": 1.0,
+      "adsr_2.attack": 0.0, "adsr_2.decay": 0.0, "adsr_2.release": 0.0, "adsr_2.sustain": 1.0,
+      "mod_matrix.adsr_2->noise_amp": 1.0, "mixer.noise": 1.0
+    }}
+  ],
+  "sentinel": ["global-6", "sine-bypass", "noise-applied"],
+  "controls": {
+    "wrong-parameter": {"case": "global-6", "expected_seam": "input.normalized", "mutation": "Replace keyboard.midi_f0 with its opposite endpoint before exact readback."},
+    "wrong-noise": {"case": "global-6", "expected_seam": "input.noise", "mutation": "Retain constructor seed-13 batch-1 noise (slot 0), instead of injecting selected slot 6."},
+    "fresh-randomization": {"case": "global-6", "expected_seam": "input.normalized", "mutation": "Call scalar randomize(seed=0) after loading resolved inputs."}
+  },
+  "comparison": "Original float32 bytes, no alignment/rescaling; numeric differences use float64. No closeness tolerance constitutes equivalence.",
+  "normalization_gain": "Derived diagnostic 1/peak if peak>1, else 1. Upstream divides by peak; this is not a captured reciprocal multiplier.",
+  "scope": "Development probes only. Directed variants retain corpus noise coordinates but are not unmodified corpus sounds. No holdout access. Runtime selection belongs to issue 12."
+}
