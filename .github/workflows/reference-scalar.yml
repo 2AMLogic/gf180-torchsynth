@@ -1,0 +1,30 @@
+name: Reference scalar sentinel
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scalar:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Protocol refusal tests
+        run: python3 -S -m unittest discover -s env/release-era -p test_qualify_scalar.py -v
+      - name: Actual pinned-runtime compatible-profile scalar sentinel
+        run: ./env/release-era/qualify_scalar.sh --sentinel --mkl-compatible out/scalar-ci
+      - name: Compare with committed seam bytes
+        run: python3 -S env/release-era/qualify_scalar.py verify --output out/scalar-ci
+      - name: Retain measured results and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scalar-sentinel
+          path: out/scalar-ci
+          if-no-files-found: error
