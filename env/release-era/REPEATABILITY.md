@@ -157,3 +157,9 @@ The bounded sentinel is evidence for that case on the CI host. Passing it does
 not qualify a new CPU for the full matrix. See
 [DR-0006](../../spec/decision-records/0006-canonical-runtime.md) for host scope
 and the policy for drift or a host that cannot reproduce the reference bytes.
+
+`native_sentinel_observation` records the successful COMPATIBLE native run
+35417872896 at `fe4a103`, including its downloaded-and-rechecked raw receipt.
+The measured native CPU was AMD EPYC 9V45. This is global-0/batch-32 evidence,
+not permission to generate a full canonical corpus on that host. The final
+review head receives a separate exact-head CI check after this record is committed.

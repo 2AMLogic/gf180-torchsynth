@@ -133,6 +133,17 @@ the newly measured expectations and source/input/audio mutation controls.
 Final native COMPATIBLE CI must pass on the reviewed head; its scope remains
 one global-0/batch-32 case on its observed host, not the full matrix.
 
+Native COMPATIBLE run
+[35417872896](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35417872896)
+at candidate head `fe4a1032a511e948ce0fae8083e82b86df97db39` completed
+successfully. Its AMD EPYC 9V45 host reproduced all eleven expected artifacts
+and passed passive capture and all source/input/audio mutation controls.
+The downloaded raw files were independently checked through the strengthened
+public sentinel gate. `native_sentinel_observation` retains the full receipt,
+CPU/profile/source/process identities, run/artifact IDs and hashes. This
+observation establishes only the stated native sentinel case. Final-head CI
+is checked again after committing this receipt; it does not expand host scope.
+
 This measured transition resolves the uncontrolled numerical dispatch that
 made the original native sentinel fail. The new profile is proposed because
 it is explicit and reproduces the bounded native observations while retaining
