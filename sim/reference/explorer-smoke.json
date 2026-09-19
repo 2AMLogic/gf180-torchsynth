@@ -1,0 +1,102 @@
+{
+  "schema": "torchsynth-explorer-smoke",
+  "schema_version": 1,
+  "actual_holdout_access": false,
+  "backend": "docker-qualified-release-mkl-compatible-v1",
+  "bounded_run_scope": {
+    "generated_identities": 1,
+    "selected_index": 41,
+    "selection_method": "tools/explore.py --seed 7 random (session default development partition 0-95)",
+    "full_corpus_or_holdout": false
+  },
+  "commands": [
+    "python3 tools/explore.py --store out/explorer-smoke-64/store --backend docker --producer-root <clean-producer-checkout> --seed 7 random",
+    "python3 tools/explore.py --store out/explorer-smoke-64/store --backend none --selected 41 ra1-af24ce6eb0de2fbff91e9322c2c5847c600125499e8802d7edd2a56900be33fa 253e72c1374c0c4f66bc2434dd6a0963e3b2332c579308da408e019bdb880357 save out/explorer-smoke-64/bookmark.json",
+    "python3 tools/explore.py --store out/explorer-smoke-64/store --backend none --bookmark out/explorer-smoke-64/bookmark.json repeat",
+    "python3 tools/explore.py --store out/explorer-smoke-64/store --backend none --bookmark out/explorer-smoke-64/bookmark.json audition",
+    "python3 tools/explore.py --store out/explorer-smoke-64/store --backend none --bookmark out/explorer-smoke-64/bookmark.json show"
+  ],
+  "command_exit_codes": [0, 0, 0, 0, 0],
+  "environment_probes": {
+    "host_architecture": "arm64",
+    "host_os_version": "26.5.1",
+    "host_cpu": "Apple M5",
+    "docker_server": "linux/arm64 29.7.2",
+    "qualified_image_inspected": "sha256:b601c37179dba973b0a9b83b26e1d4d648f0695138fe7e5d4069cef9f521d58f amd64/linux",
+    "dr0006_measured_host_scope": true
+  },
+  "rendered_artifact": {
+    "sound_index": 41,
+    "profile": "torchsynth-1-voice-default",
+    "artifact_id": "ra1-af24ce6eb0de2fbff91e9322c2c5847c600125499e8802d7edd2a56900be33fa",
+    "metadata_sha256": "253e72c1374c0c4f66bc2434dd6a0963e3b2332c579308da408e019bdb880357",
+    "audio_sha256": "6c389a3db7d077173a0f3c467adc015abc1c6a1274c75e79fbb409729a2f142e",
+    "audio_size_bytes": 705600,
+    "artifact_directory_files": ["audio.f32le", "metadata.json"],
+    "noise": {"seed": 13, "slot": 9, "sha256": "906e0236c94a5d7a7584d4834a0b05250e34c915227d6eed1365fd435476df0b"},
+    "locks_physical": {},
+    "audio_measurements": {
+      "peak_abs": 0.6370346546173096,
+      "rms": 0.18643614204718728,
+      "normalization_gain": 1.0
+    },
+    "warnings": []
+  },
+  "runtime_admission": {
+    "profile": "release-mkl-compatible-v1",
+    "status": "admitted",
+    "checks": {"renderer_version": true, "runtime": true, "execution": true},
+    "basis": "recorded provenance compared with the ratified publication sim/reference/repeatability-runtime.json per DR-0006",
+    "note": "Display-time provenance comparison by explorer.runtime_admission; render-time admission was enforced by the #15 adapter and #12 DockerBackend before and during the render."
+  },
+  "identity_binding": {
+    "producer_commit": "18c1e434150f2c163a7f002fd171b9926a230602",
+    "producer_clean": true,
+    "producer_root_provided": "--producer-root <clean-producer-checkout> (host path elided)",
+    "artifact_project_git_matches_producer": true,
+    "explorer_evidence_commit": "this commit (evidence publication, later than the producer commit per spec/CORPUS-RUNNER.md conventions)"
+  },
+  "repeat_and_restart": {
+    "save_then_repeat_processes": 4,
+    "processes_after_generation_used_backend": "none (no renderer configured, so zero render calls were structurally possible)",
+    "repeat_reused_saved_artifact": true,
+    "bookmark_sha256": "ddb5ea8c451165a893f9850dcb190ac8891aa4dad3139f552341babaf5ed2fdb",
+    "store_artifact_count_after_all_processes": 1,
+    "additional_render_attempts": 0
+  },
+  "audition": {
+    "player": ["afplay"],
+    "invocation": "argument array via subprocess.run, no shell",
+    "exit_code": 0,
+    "session_audition_status": "succeeded",
+    "preview": {
+      "encoding": "wav-pcm16-mono-44100hz",
+      "derived_from": "validated f32le-mono stored samples",
+      "lossy_quantization": true,
+      "written_outside_artifact_store": true
+    },
+    "artifact_hashes_unchanged_by_playback": true
+  },
+  "local_checks": [
+    {"command": "timeout 120 python3 -m compileall -q src tests tools", "exit_code": 0},
+    {
+      "command": "timeout 300 python3 -m unittest discover -s tests -p 'test_explorer.py'",
+      "exit_code": 0,
+      "tests": 17
+    },
+    {
+      "command": "timeout 300 python3 -m unittest discover -s tests -p 'test_explorer*.py'",
+      "exit_code": 0,
+      "tests": 42
+    },
+    {"command": "ruff format + ruff check on the three changed Python files", "exit_code": 0}
+  ],
+  "limits": [
+    "One selected development identity (global 41) only; no full corpus, no holdout access, no admission of new hosts.",
+    "The store, bookmark and preview WAV are local uncommitted run products; the embedded documents authenticate exact metadata/audio digests, not retained raw bytes.",
+    "Audition success records a local preview-player process outcome (afplay exit 0 over a lossy PCM16 preview); it is not an acoustic fidelity, device, or hardware playback claim.",
+    "Fake-backed tests prove UI/session behavior only and are labeled synthetic; they establish no render, admission or playback evidence.",
+    "Rendering was performed from a clean producer checkout at the recorded commit; this evidence-publication commit is later and must not re-render over the recorded project_git.",
+    "No sound fidelity, scalar promotion, hardware, RTL, silicon, live-note or keyboard-performance claim is made."
+  ]
+}
