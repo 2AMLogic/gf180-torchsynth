@@ -489,6 +489,198 @@ class QualificationCommandTests(unittest.TestCase):
         self.assertIn("exact 40-digit SHA", result["reason"])
         self.assertIn("pending", result["closure"])
 
+    def test_historical_runner_is_explicit_and_repeatability_only(self):
+        result = self.tool.integration_report(
+            Path.cwd(),
+            "a" * 40,
+            "scalar",
+            Path.cwd(),
+            historical_runner="2182bc9524016476f9a538d11fe2e3035fe0ae45",
+        )
+        self.assertEqual(result["evidence_status"], "REFUSED")
+        self.assertIn("repeatability only", result["reason"])
+
+    def test_repeatability_historical_selection_reaches_same_public_gate(self):
+        revision = "2182bc9524016476f9a538d11fe2e3035fe0ae45"
+        historical_hash = "b" * 64
+        plan = {
+            "schema_version": 2,
+            "profile": "release-mkl-compatible-v1",
+            "profile_environment": {
+                "release": self.tool.SCALAR_MATH_PROFILE,
+                "current": {"ATEN_CPU_CAPABILITY": None, "MKL_CBWR": None},
+            },
+            "sample_count": 176400,
+            "control_sample_count": 1764,
+            "nebula": "default",
+            "noise_seed": 13,
+            "configuration": {"reproducible": True},
+            "source_commit": "synthetic",
+        }
+        native = {
+            "status": "PASS",
+            "source_commit": "synthetic",
+            "plan_sha256": "plan",
+            "provenance": {"runner_sha256": historical_hash},
+            "cells": [],
+        }
+        data = self.tool.record_bytes(native)
+        report = dict(native, raw_report_sha256=self.tool.sha(data))
+        runner = SimpleNamespace(
+            validate_plan=Mock(),
+            plan_hash=Mock(return_value="plan"),
+            historical_runner_hash=Mock(return_value=historical_hash),
+            validate_results=Mock(side_effect=ValueError("public gate reached")),
+        )
+        with patch.object(self.tool, "safe_read", return_value=data):
+            with self.assertRaisesRegex(ValueError, "stale producer implementation"):
+                self.tool.repeatability_projection(
+                    report,
+                    plan,
+                    runner,
+                    "a" * 64,
+                    Path.cwd(),
+                    {},
+                    {},
+                )
+            runner.historical_runner_hash.assert_not_called()
+            runner.validate_results.assert_not_called()
+            with self.assertRaisesRegex(ValueError, "public gate reached"):
+                self.tool.repeatability_projection(
+                    report,
+                    plan,
+                    runner,
+                    "a" * 64,
+                    Path.cwd(),
+                    {},
+                    {},
+                    historical_runner=revision,
+                )
+        runner.historical_runner_hash.assert_called_once_with(revision)
+        runner.validate_results.assert_called_once_with(
+            plan,
+            [],
+            Path.cwd(),
+            historical_runner=revision,
+        )
+        runner.validate_results.side_effect = None
+        runner.summarize = Mock(side_effect=ValueError("comparison gate reached"))
+        values = {
+            "repeatability-runtime.json": data,
+            "provenance.json": self.tool.record_bytes(native["provenance"]),
+            "preregistered-plan.json": self.tool.record_bytes(plan),
+        }
+        with (
+            patch.object(
+                self.tool, "safe_read", side_effect=lambda _, name: values[name]
+            ),
+            self.assertRaisesRegex(ValueError, "comparison gate reached"),
+        ):
+            self.tool.repeatability_projection(
+                report,
+                plan,
+                runner,
+                "a" * 64,
+                Path.cwd(),
+                {},
+                {},
+                historical_runner=revision,
+            )
+        runner.summarize.assert_called_once_with(
+            plan,
+            [],
+            Path.cwd(),
+            historical_runner=revision,
+        )
+
+    def test_scalar_refresh_binding_cannot_fall_back_to_historical_campaign(self):
+        data = b'{"status":"PASS"}'
+        report = {
+            "status": "PASS",
+            "profile_validation": {"local_full_report_sha256": "old"},
+            "evidence_refresh": {"local_full_report_sha256": self.tool.sha(data)},
+        }
+        with patch.object(self.tool, "safe_read", return_value=data):
+            self.assertEqual(self.tool.scalar_aggregate_bytes(report, Path.cwd()), data)
+            report["profile_validation"]["local_full_report_sha256"] = self.tool.sha(
+                data
+            )
+            for refresh in ({"local_full_report_sha256": "stale"}, {}, None):
+                with self.subTest(refresh=refresh):
+                    report["evidence_refresh"] = refresh
+                    with self.assertRaises((ValueError, KeyError, TypeError)):
+                        self.tool.scalar_aggregate_bytes(report, Path.cwd())
+            del report["evidence_refresh"]
+            self.assertEqual(self.tool.scalar_aggregate_bytes(report, Path.cwd()), data)
+            report["status"] = "FAIL"
+            with self.assertRaisesRegex(
+                ValueError, "committed/current aggregate mismatch"
+            ):
+                self.tool.scalar_aggregate_bytes(report, Path.cwd())
+
+    def test_cli_forwards_explicit_historical_runner(self):
+        revision = "2182bc9524016476f9a538d11fe2e3035fe0ae45"
+        result = {"status": "NO_VERDICT"}
+        with (
+            patch.object(
+                self.tool, "integration_report", return_value=result
+            ) as integrate,
+            patch.object(self.tool, "integration_receipt", return_value={}),
+            patch("builtins.print"),
+        ):
+            self.assertEqual(
+                self.tool.main(
+                    [
+                        "integrate",
+                        "--kind",
+                        "repeatability",
+                        "--producer-root",
+                        ".",
+                        "--producer-commit",
+                        "a" * 40,
+                        "--raw-root",
+                        ".",
+                        "--historical-runner",
+                        revision,
+                    ]
+                ),
+                2,
+            )
+        integrate.assert_called_once_with(
+            Path.cwd(),
+            "a" * 40,
+            "repeatability",
+            Path.cwd(),
+            historical_runner=revision,
+        )
+
+    def test_historical_object_refusal_is_not_a_hash_fallback(self):
+        runner = SimpleNamespace(historical_runner_hash=Mock())
+        for reason in (
+            "unreviewed historical runner revision",
+            "historical runner Git object unavailable; explicitly acquire it",
+            "historical runner Git-object hash mismatch",
+        ):
+            runner.historical_runner_hash.side_effect = ValueError(reason)
+            with (
+                self.subTest(reason=reason),
+                patch.object(
+                    self.tool, "committed_bytes", return_value=b'{"schema_version":1}'
+                ),
+                patch.object(
+                    self.tool, "load_producer", return_value=(runner, "a" * 64)
+                ),
+            ):
+                result = self.tool.integration_report(
+                    Path.cwd(),
+                    "a" * 40,
+                    "repeatability",
+                    Path.cwd(),
+                    historical_runner="2182bc9524016476f9a538d11fe2e3035fe0ae45",
+                )
+                self.assertEqual(result["evidence_status"], "REFUSED")
+                self.assertEqual(result["reason"], reason)
+
     def test_repeatability_old_or_mismatched_profile_refuses_before_replay(self):
         runner = SimpleNamespace(validate_plan=Mock())
         for plan in (

@@ -627,9 +627,13 @@ def replay_scalar_aggregate(runner, raw_root, report):
     }
 
 
-def integration_report(root, commit, kind, raw_root):
+def integration_report(root, commit, kind, raw_root, *, historical_runner=None):
     """Read committed native reports and re-run their artifact comparisons."""
     try:
+        require(
+            historical_runner is None or kind == "repeatability",
+            "historical runner selection is supported for repeatability only",
+        )
         require(
             len(commit) == 40 and all(c in "0123456789abcdef" for c in commit),
             "producer commit must be an exact 40-digit SHA",
@@ -642,6 +646,13 @@ def integration_report(root, commit, kind, raw_root):
         report = strict_json(data)
         require(report["schema_version"] == 1, "unsupported native report version")
         runner, runner_hash = load_producer(root, commit, kind)
+        # The current committed validator owns the fixed allowlist and verifies
+        # the historical Git-object bytes. Never infer this opt-in from a report.
+        measurement_runner_hash = (
+            runner_hash
+            if historical_runner is None
+            else runner.historical_runner_hash(historical_runner)
+        )
         plan_name = (
             "repeatability-matrix" if kind == "repeatability" else "scalar-cases"
         )
@@ -669,6 +680,11 @@ def integration_report(root, commit, kind, raw_root):
             "report_path": path,
             "report_sha256": sha(data),
             "runner_sha256": runner_hash,
+            "measurement_runner": {
+                "mode": "current" if historical_runner is None else "historical",
+                "commit": commit if historical_runner is None else historical_runner,
+                "sha256": measurement_runner_hash,
+            },
         }
         decision_path = (
             "spec/decision-records/0006-canonical-runtime.md"
@@ -698,7 +714,14 @@ def integration_report(root, commit, kind, raw_root):
                     "repeatability lock identity mismatch",
                 )
             cells, oracle, diagnostics = repeatability_projection(
-                report, plan, runner, runner_hash, raw_root, expected, manifest
+                report,
+                plan,
+                runner,
+                runner_hash,
+                raw_root,
+                expected,
+                manifest,
+                historical_runner=historical_runner,
             )
         else:
             cells, oracle, diagnostics = scalar_projection(
@@ -752,13 +775,22 @@ def integration_report(root, commit, kind, raw_root):
             "evidence_status": "REFUSED",
             "producer_commit": commit,
             "kind": kind,
+            "historical_runner": historical_runner,
             "reason": str(error),
             "closure": "Actual runtime acceptance remains pending; refusal is not completion.",
         }
 
 
 def repeatability_projection(
-    report, plan, runner, runner_hash, raw_root, expected, manifest
+    report,
+    plan,
+    runner,
+    runner_hash,
+    raw_root,
+    expected,
+    manifest,
+    *,
+    historical_runner=None,
 ):
     require(
         plan.get("schema_version") == 2
@@ -801,8 +833,13 @@ def repeatability_projection(
         "repeatability profile mismatch",
     )
     require(report["source_commit"] == plan["source_commit"], "report source mismatch")
+    measurement_runner_hash = (
+        runner_hash
+        if historical_runner is None
+        else runner.historical_runner_hash(historical_runner)
+    )
     require(
-        report["provenance"]["runner_sha256"] == runner_hash,
+        report["provenance"]["runner_sha256"] == measurement_runner_hash,
         "stale producer implementation",
     )
     require(report["plan_sha256"] == runner.plan_hash(plan), "stale report plan")
@@ -814,7 +851,9 @@ def repeatability_projection(
                 .is_relative_to(raw_root.resolve()),
                 "nonlocal producer artifact",
             )
-    runner.validate_results(plan, report["cells"], raw_root)
+    runner.validate_results(
+        plan, report["cells"], raw_root, historical_runner=historical_runner
+    )
     require(
         strict_json(safe_read(raw_root, "provenance.json")) == report["provenance"],
         "repeatability controller provenance mismatch",
@@ -825,7 +864,10 @@ def repeatability_projection(
     )
     # Hash/count-check and replay every original-byte comparison, including drift.
     require(
-        runner.summarize(plan, report["cells"], raw_root) == report["comparisons"],
+        runner.summarize(
+            plan, report["cells"], raw_root, historical_runner=historical_runner
+        )
+        == report["comparisons"],
         "reported repeat/batch/divergence comparisons do not reproduce",
     )
     records = {r["directory"]: r for r in report["records"]}
@@ -915,7 +957,7 @@ def repeatability_projection(
             )
             require(
                 worker["execution_id"] == raw["execution_id"]
-                and worker["runner_sha256"] == runner_hash,
+                and worker["runner_sha256"] == measurement_runner_hash,
                 "repeatability process/source association mismatch",
             )
             require(
@@ -1033,6 +1075,24 @@ def repeatability_projection(
             "runtime_ratification": "pending reviewed producers and root DR-0006 reconciliation; no production oracle",
         },
     )
+
+
+def scalar_aggregate_bytes(report, raw_root):
+    """Bind the current campaign; an explicit refresh never falls back to history."""
+    binding = report[
+        "evidence_refresh" if "evidence_refresh" in report else "profile_validation"
+    ]
+    raw_data = safe_read(raw_root, "scalar-execution.json")
+    require(
+        sha(raw_data) == binding["local_full_report_sha256"],
+        "scalar actual aggregate hash mismatch",
+    )
+    raw_aggregate = strict_json(raw_data)
+    require(
+        all(report.get(k) == v for k, v in raw_aggregate.items()),
+        "scalar committed/current aggregate mismatch",
+    )
+    return raw_data
 
 
 def scalar_projection(report, plan, runner, root, commit, raw_root, expected, manifest):
@@ -1153,16 +1213,7 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
             == sha((ROOT / name).read_bytes()),
             "scalar consumer source/lock mismatch: " + name,
         )
-    raw_data = safe_read(raw_root, "scalar-execution.json")
-    require(
-        sha(raw_data) == report["profile_validation"]["local_full_report_sha256"],
-        "scalar actual aggregate hash mismatch",
-    )
-    raw_aggregate = strict_json(raw_data)
-    require(
-        all(report.get(k) == v for k, v in raw_aggregate.items()),
-        "scalar committed/current aggregate mismatch",
-    )
+    raw_data = scalar_aggregate_bytes(report, raw_root)
     bindings = validate_scalar_records(
         report, plan, raw_root, expected["parameter_names"]
     )
@@ -1369,6 +1420,11 @@ def main(argv=None):
     )
     integration.add_argument("--raw-root", type=Path, required=True)
     integration.add_argument(
+        "--historical-runner",
+        help="explicit repeatability measurement revision; the committed producer "
+        "must allowlist and verify its Git-object bytes (no automatic fetch)",
+    )
+    integration.add_argument(
         "--record",
         type=Path,
         help="append a bounded actual receipt to an existing analytic qualification",
@@ -1385,6 +1441,7 @@ def main(argv=None):
             args.producer_commit,
             args.kind,
             args.raw_root.resolve(),
+            historical_runner=args.historical_runner,
         )
         receipt = integration_receipt(result)
         if args.record:

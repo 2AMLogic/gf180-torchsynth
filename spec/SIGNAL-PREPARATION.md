@@ -197,6 +197,24 @@ historical matrices cannot replace these current observations. The repeatability
 adapter reconstructs omitted name maps only from the hash-bound complete raw
 report, matches its publication and worker/controller receipts, then invokes the
 producer's strengthened raw-artifact validation and all comparison records.
+Current validator bytes remain mandatory by default. Replaying the retained
+#12 matrix with its earlier measurement runner requires the explicit
+`--historical-runner <exact-revision>` option. The committed producer's
+`historical_runner_hash` owns the fixed revision/hash allowlist and checks the
+actual Git object locally; the consumer neither fetches nor accepts a hash-only
+substitute. Missing objects, unknown revisions and wrong bytes refuse. The same
+selection is passed through `validate_results` and `summarize`, and all worker
+and controller runner bindings use that verified measurement digest. Receipts
+retain the current validator as `producer.commit` / `producer.runner_sha256`
+and the measured revision separately as `producer.measurement_runner`.
+This option is valid only for repeatability and does not relax profile gates.
+
+Fresh scalar campaigns bind `evidence_refresh.local_full_report_sha256` when
+`evidence_refresh` is present. Only older reports without that field use
+`profile_validation.local_full_report_sha256`. An invalid or missing refreshed
+digest refuses rather than falling back to a historical campaign. The raw
+aggregate must still agree with the committed top-level observations and replay
+through the current producer validator.
 Both adapters keep production-oracle credit refused pending reviewed producers
 and root decision reconciliation. Scalar status remains diagnostic regardless
 of apparatus or byte-equivalence PASS.
@@ -208,6 +226,8 @@ python3 -S tools/qualify_preparation.py integrate \
   --kind repeatability --producer-root ../issue-12 \
   --producer-commit <exact-committed-head> --raw-root <actual-matrix-artifacts>
 # Repeat with --kind scalar, ../issue-88 and its actual raw-artifact root.
+# The retained #12 matrix requires this explicit additional argument:
+# --historical-runner 2182bc9524016476f9a538d11fe2e3035fe0ae45
 ```
 
 Exit 0 means the named consumer check passed, not a product/release verdict.
@@ -326,9 +346,38 @@ The corresponding bounded receipt records the actual consumer outcome.
 This does not independently revalidate the native raw sentinel or historical
 baseline under the new profile.
 
-Both actual integrations remain provisional development evidence. PR #100's
-independent re-review requested additional producer artifact/passivity gates;
-the consumer independently enforces those checks on genuine local artifacts.
-Reviewed and landed producers plus root's DR-0006/0007 reconciliation are still
-required for the original runtime AC. No completion marker or unilateral
-runtime ratification is supplied by this work.
+Those earlier receipts are retained as development history. The refreshed
+integrations below supersede their producer pins for the current follow-up.
+
+### Landed scalar and explicit historical matrix replay, 2026-09-19
+
+The scalar consumer now revalidates landed #100 at
+`801d92515eb95400bdca2e7618d7c3d1e971ffdc`, committed report SHA-256
+`cc82ce5182f3c0350f7ce356f054f77a21769213d6e0ea10a7cd7352bd9a930d`, against
+`../issue-88/out/doctor100-grace-full`. Its fresh raw aggregate SHA-256 is
+`b35d70d93d7a095ca727a956296add4e4428cf13dd0328c4ae0fdc654a6e0c92`, bound by
+`evidence_refresh`. Twelve cases, 36 seams, all seven executions and 1,731
+artifacts revalidate, including the strengthened controls and passive capture.
+Aggregate replay and byte equivalence PASS; evidence is VALIDATED and production
+remains NO_VERDICT because batch-1 is diagnostic.
+
+The repeatability validator is #106 candidate
+`d3fff7a489856d7fe226efca61ad09c756e56450`, runner SHA-256
+`e5e10c2158aa0fa55ec7e8e9804a2ec678572fe1c56f09e95e0b243f82b25328`.
+The unchanged 128-cell raw matrix named above was measured with
+`2182bc9524016476f9a538d11fe2e3035fe0ae45`, runner SHA-256
+`1ad50da4cde6e72ea25327dc828016337dc6cf0cb926fd3488bc92d6188c98b9`.
+The explicit historical option validates the producer allowlist and local Git
+bytes before checking all 16 executions and 1,408 artifacts with current gates.
+All 144 comparisons reproduce: 64 repeat PASS, 48 batch PASS and 32 cross-runtime
+FAIL. The latter remain reported drift. Omitting the option refuses the stale
+measurement runner rather than silently selecting history.
+
+Both refreshed commands return exit 2 / NO_VERDICT with validated evidence;
+neither grants a production oracle. The new receipts under `actual_integrations`
+preserve distinct validator and measurement identities. These are retained-byte
+replays, with no new Torch render or independent native sentinel revalidation.
+The shared preparation math/API remains byte-unchanged. #100 is landed, while
+reviewed landing of #106 and root's DR-0006/0007 reconciliation remain required
+for the original runtime AC. This PR stays blocked without a completion marker
+or unilateral runtime ratification.
