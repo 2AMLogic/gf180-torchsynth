@@ -252,6 +252,7 @@ class NumericalTests(unittest.TestCase):
         measurement = self.measure(self.cosine())
         qualification = {
             "range_key": measurement["range_key"],
+            "algorithm": measurement["algorithm"],
             "qualified": True,
             "guard_floors": {"frequency_hz": 1e-7},
         }
@@ -270,6 +271,7 @@ class NumericalTests(unittest.TestCase):
             {"limits": {}},
             {"qualification": dict(qualification, range_key="wrong")},
             {"qualification": dict(qualification, qualified=False)},
+            {"qualification": dict(qualification, algorithm="superseded")},
         ):
             args = dict(good, **changes)
             rows, _ = score_periodic(measurement, case_id="refused", **args)
@@ -317,7 +319,7 @@ class NumericalTests(unittest.TestCase):
             rows = {r["property"]: r for r in record["rows"]}
             for name in case["mandatory"]:
                 self.assertEqual(rows[name]["verdict"], "FAIL")
-            if "resolution-edge" in case["id"]:
+            if "resolution_limit" in case:
                 self.assertEqual(rows["frequency_hz"]["verdict"], "NO VERDICT")
 
 

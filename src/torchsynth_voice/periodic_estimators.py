@@ -14,8 +14,8 @@ from fractions import Fraction
 
 from .scorecard import validate_row
 
-VERSION = "periodic-v1"
-RUBRIC = {"id": "periodic-analytic-only", "version": "1"}
+VERSION = "periodic-v2"
+RUBRIC = {"id": "periodic-analytic-only", "version": "2"}
 FORBIDDEN = (
     "alignment",
     "trimming",
@@ -127,15 +127,17 @@ def _sine(np, x, rate, family):
     # The second-order recurrence estimates frequency independently of the
     # declared reference. An intercept allows raw unipolar LFO samples.
     middle = x[1:-1]
-    adjacent = x[:-2] + x[2:]
+    # Form the small curvature directly. Computing cos(w) as a ratio near 1
+    # and then acos loses low-frequency precision in backend-dependent sums.
+    curvature = (x[:-2] - middle) + (x[2:] - middle)
     centered = middle - np.mean(middle)
-    cosine = float(
-        np.dot(centered, adjacent - np.mean(adjacent))
-        / (2 * np.dot(centered, centered))
+    half_sine_squared = float(
+        -np.dot(centered, curvature - np.mean(curvature))
+        / (4 * np.dot(centered, centered))
     )
-    if not -1 < cosine < 1:
+    if not 0 < half_sine_squared < 1:
         return None
-    frequency = math.acos(cosine) * rate / math.tau
+    frequency = math.asin(math.sqrt(half_sine_squared)) * rate / math.pi
     angle = math.tau * frequency * np.arange(len(x)) / rate
     design = np.column_stack((np.cos(angle), np.sin(angle), np.ones(len(x))))
     a, b, dc = (float(v) for v in np.linalg.lstsq(design, x, rcond=None)[0])
@@ -628,7 +630,8 @@ def score_periodic(
             ):
                 reason = "truth_or_limit_unavailable"
             elif (
-                q.get("range_key") != measurement["range_key"]
+                q.get("algorithm") != measurement["algorithm"]
+                or q.get("range_key") != measurement["range_key"]
                 or q.get("qualified") is not True
                 or not _finite(floor)
                 or floor < 0
@@ -663,7 +666,11 @@ def score_periodic(
             "estimator": {
                 "name": VERSION,
                 "version": digest(
-                    {"config": config, "backend": measurement.get("backend")}
+                    {
+                        "algorithm": measurement["algorithm"],
+                        "config": config,
+                        "backend": measurement.get("backend"),
+                    }
                 ),
             },
             "rubric": RUBRIC.copy(),

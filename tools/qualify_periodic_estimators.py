@@ -21,6 +21,7 @@ from torchsynth_voice.paired_metrics import (
 )
 from torchsynth_voice.periodic_estimators import (
     PROPERTIES,
+    VERSION,
     canonical_bytes,
     digest,
     estimate_periodic,
@@ -176,6 +177,18 @@ def grid():
             comparison=comparison,
             mandatory=mandatory,
             **changes,
+        )
+    # Preregistered supplemental controls after the curvature correction;
+    # unchanged acceptance caps/guards. Preserve representable injected deltas.
+    for delta in (1e-14, 1e-15):
+        add(
+            f"mutation-floating-floor-{delta}",
+            "lfo",
+            4.37 + delta,
+            comparison={"frequency_hz": 4.37},
+            resolution_limit=1e-16,
+            requested_delta_hz=delta,
+            represented_delta_hz=(4.37 + delta) - 4.37,
         )
     return cases
 
@@ -335,6 +348,7 @@ def qualification():
             key,
             {
                 "range_key": key,
+                "algorithm": VERSION,
                 "accepted": [],
                 "refused": [],
                 "measured_floors": dict.fromkeys(PROPERTIES),
@@ -420,10 +434,7 @@ def qualification():
                 failures.append(
                     case["id"] + ": mandatory detector did not FAIL: " + mandatory
                 )
-        if (
-            case["id"] == "mutation-resolution-edge"
-            and rows[0]["verdict"] != "NO VERDICT"
-        ):
+        if "resolution_limit" in case and rows[0]["verdict"] != "NO VERDICT":
             failures.append("resolution edge was laundered into a verdict")
     # Primary, unaligned +1 dB and a zero-padded one-sample delay.
     paired = []

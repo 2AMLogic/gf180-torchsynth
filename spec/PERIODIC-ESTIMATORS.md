@@ -1,5 +1,9 @@
 # Periodic estimator qualification v1
 
+The report/schema is v1. The final curvature algorithm and analytic rubric are
+v2, superseding the first PR draft's cosine-ratio estimator. Qualification cells
+bind the algorithm identity; superseded floors cannot silently qualify v2 rows.
+
 This is an analytic apparatus contract, not a float/fixed or hardware tolerance.
 Holdout remains sealed. The target is TorchSynth commit
 `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`, default nebula, four seconds,
@@ -50,6 +54,12 @@ analytic signals only.
   Resolution controls use +1e-8 Hz and a requested 1e-10 Hz limit; retain
   undetectable or refused outcomes. No fitted signal replaces primary paired
   samples; +1 dB and delay must also fail time-locked paired exactness.
+
+Supplemental controls preregistered before the curvature-v2 run: LFO offsets
++1e-14 and +1e-15 Hz at 4.37 Hz, each requesting a 1e-16 Hz limit. These bracket
+the measured floating-resolution region. The record retains both requested and
+actually representable offsets, raw estimates and any unresolved outcome.
+They do not change any original cap, guard or mutation magnitude.
 
 ## Measurement and preparation boundary
 
@@ -115,8 +125,9 @@ and LFO rate use separately named traces (`analytic.oscillator` and
 `analytic.lfo`) with property `frequency_hz`; independent `cents`, `phase_rad`,
 `timing_samples`, and `depth_peak_to_peak` rows cannot substitute for each other.
 
-Sine frequency uses a second-order recurrence with a DC intercept, followed by
-sin/cos coefficient measurement and a full-window residual/DC gate of 1e-7.
+Sine frequency uses centered second differences to measure `sin(omega/2)^2`
+with a DC intercept, avoiding a ratio near one followed by `acos`. Sin/cos
+coefficient measurement follows, with a full-window residual/DC gate of 1e-7.
 Directed shapes use crossings and a diagnostic template consistency fit; the
 full-window relative RMS residual gate is 1e-4. Square rate instead intersects
 all transition-time intervals, preserving its frequency interval and refusing
@@ -164,10 +175,10 @@ preparation invariants (#86 consuming #12/#88), actual directed Voice capture
 
 ## Executed evidence (2026-09-18 local date, base fdc909d)
 
-The committed [raw report](../sim/qualification/periodic-v1.json) contains 319
-cases: 200 valid raw measurements and 119 refused cases, with 41 floor/validity
-cells and zero qualification failures. Its 1,595 periodic rows contain 926
-PASS, 663 NO VERDICT, and six **expected mutation FAILs**. These counts describe
+The committed [raw report](../sim/qualification/periodic-v1.json) contains 321
+cases: 202 valid raw measurements and 119 refused cases, with 41 floor/validity
+cells and zero qualification failures. Its 1,605 periodic rows contain 934
+PASS, 665 NO VERDICT, and six **expected mutation FAILs**. These counts describe
 apparatus checks, not a sound-quality verdict. All requested identifiable grid
 fixtures were measured; all twelve negative controls refused. The 119 refusals
 also retain silence/near-silence, zero rate, insufficient cycles, and cancelling
@@ -176,6 +187,10 @@ the 1e-10 Hz resolution request refuses, and the same 1e-8 Hz perturbation is
 honestly undetectable under the ordinary 0.02 Hz limit. Both time-locked paired
 sentinels independently fail exact equality. The phase delay uses a periodic
 continuation; the paired delay instead prepends zero and drops the last sample.
+Both supplemental floating-floor controls refuse the requested 1e-16 Hz limit.
+Their represented offsets are 9.77e-15 and 8.88e-16 Hz; their raw estimated
+offsets are 1.24e-14 and 4.44e-15 Hz. The latter does not resolve the injected
+offset reliably, and the raw diagnostics retain that outcome.
 
 Approximate measured maxima for sine grids are shown below for orientation;
 the machine report retains the separate duration/gain/reference/origin cells
@@ -184,11 +199,11 @@ for every unsampled point or substitutes for the preregistered limits.
 
 | Family / frequency band | Hz error | Cents error | Phase error (rad) |
 | --- | ---: | ---: | ---: |
-| Audio, below 20 Hz | 8.14e-9 | 6.90e-6 | 1.02e-7 |
-| Audio, 20–2000 Hz | 2.81e-10 | 2.42e-8 | 3.53e-9 |
-| Audio, above 2000 Hz | 3.64e-12 | 0 measured | 5.61e-11 |
-| LFO, below 20 Hz | 1.32e-13 | 5.23e-11 | 1.77e-12 |
-| LFO, 20–40 Hz | 2.14e-14 | 1.37e-12 | 2.69e-13 |
+| Audio, below 20 Hz | 4.89e-15 | 2.73e-12 | 6.18e-14 |
+| Audio, 20–2000 Hz | 1.31e-12 | 2.14e-11 | 6.85e-12 |
+| Audio, above 2000 Hz | 1.10e-11 | 1.82e-12 | 1.44e-10 |
+| LFO, below 20 Hz | 7.11e-15 | 2.67e-12 | 4.22e-14 |
+| LFO, 20–40 Hz | 7.11e-15 | 0 measured | 9.73e-14 |
 
 Executed checks:
 
@@ -199,9 +214,11 @@ Executed checks:
   passed, with the same case validity counts and zero qualification failures.
   Its floating bytes are not claimed identical to the committed 3.13 report.
 * Standard-library-only discovery with pinned source: 169 tests passed, zero
-  failures/skips; Git/source-hash contract check passed.
+  failures/skips on base fdc909d. After rebasing onto 2b8934c (#87), 191 tests
+  passed with zero failures/skips; Git/source-hash contract check and clean
+  committed-worktree full-grid regeneration passed again.
 * Actual read-only #86 adapter probe passed against preparation source SHA-256
-  `52d42960f1fec157a48e9ba0bc35fb13619c0c6b3f4274fa711cd22c58a99426`:
+  `0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297`:
   explicit window, absolute gain and phase, matching prepared-sample hash,
   and production-scope refusal. This source was concurrently under development;
   the default import still needs its merge, and production evidence is pending.
@@ -213,3 +230,12 @@ Initial tests failed because the new module did not exist. The first grid also
 exposed a square-edge point-fit failure; transition-interval estimation fixed
 it without changing the grid's limits. No holdout, TorchSynth audio, scalar
 byte-identity, hardware or physical evidence is claimed here.
+
+The first Linux CI run exposed backend-dependent cancellation in the original
+cosine-ratio recurrence on the out-of-domain 1 Hz refusal control. The curvature
+form above removes that cancellation; the complete grid and both locked local
+numerical suites were rerun. All preregistered limits and conservative guards
+remain unchanged. The original 319 cases retain their 200/119 validity counts;
+the two supplemental controls add valid raw estimates with refused frequency
+verdicts. Algorithm and rubric v2 distinguish this correction from the first
+draft, and qualification cells from a superseded algorithm are rejected.
