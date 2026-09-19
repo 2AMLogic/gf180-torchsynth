@@ -381,3 +381,33 @@ The shared preparation math/API remains byte-unchanged. #100 is landed, while
 reviewed landing of #106 and root's DR-0006/0007 reconciliation remain required
 for the original runtime AC. This PR stays blocked without a completion marker
 or unilateral runtime ratification.
+
+### Final actual-runtime AC disposition, 2026-09-19
+
+The original actual-runtime acceptance criterion is met; this note records the
+disposition. Actual #12/#88 artifacts were consumed and validated by the two
+refreshed integrations above; their receipts sit under `actual_integrations` in
+`sim/qualification/preparation-v1.json` with raw bytes hash-pinned. Both
+commands returned exit 2 / NO_VERDICT with `evidence_status: VALIDATED`. That
+refusal is the DR-0007-mandated outcome — a diagnostic oracle cannot qualify
+normative production rows — not an outstanding assertion. The matrix receipt's
+"runtime decision reconciliation pending" scope reason is resolved by the
+DR-0006/0007 reconciliation landed on main (PR #113, merged 2026-09-19):
+DR-0006 is Accepted (ratified by the reviewed merge of PR #106, merge commit
+`fc04e340ffd2081c1322fb1060bd3b243f4b6b12`), and DR-0007's reconciliation
+section confirms the runtime settings agree exactly with no divergent gate.
+
+The receipts predate that reconciliation and pin pre-reconciliation DR digests
+(DR-0007 `d8f89ca80568f070870496eb8056696c9fc6f2eb8e5ee1118f7cdda640840cdb`,
+DR-0006 `a8a45e9cd455d5189254e6a4cdb4f81688179cc049d92cce90a645b11936822f`).
+This does not stale the evidence: #113's changes to both records were
+status-line edits plus appended sections only, and the validated math
+environments are quoted verbatim in the reconciliation — the scalar receipt's
+`{"ATEN_CPU_CAPABILITY": null, "MKL_CBWR": "COMPATIBLE"}` and the matrix
+receipt's release profile match the preregistered canonical profile
+"`MKL_CBWR=COMPATIBLE` and `ATEN_CPU_CAPABILITY` explicitly unset". No new
+measurement is required or performed by this note; the shared
+`src/torchsynth_voice/preparation.py` remains SHA-256
+`0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297`. This note
+records a disposition; it ratifies no decision record and makes no fidelity,
+hardware, physical-validation or holdout claim.
