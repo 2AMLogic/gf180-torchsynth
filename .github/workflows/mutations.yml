@@ -1,0 +1,29 @@
+name: Mutation framework
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  stdlib:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile mutation surfaces
+        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py
+      - name: Test fault-injection seam contract on the apparatus harness
+        run: python -m unittest discover -s tests -p test_mutations.py -v
+      - name: Qualify controls and fault matrix, then check the committed publication
+        run: |
+          python tools/qualify_mutations.py
+          python tools/qualify_mutations.py --check

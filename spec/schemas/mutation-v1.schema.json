@@ -1,0 +1,306 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/2AMLogic/gf180-torchsynth/spec/schemas/mutation-v1.schema.json",
+  "title": "Mutation plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "source_binding",
+    "mutations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "plan_id": {
+      "$ref": "#/$defs/mp1-identity"
+    },
+    "source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "partition",
+        "fixture_identity"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "partition": {
+          "enum": [
+            "development",
+            "holdout"
+          ]
+        },
+        "fixture_identity": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    },
+    "mutations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mutation"
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "[0-9a-f]{64}"
+    },
+    "mp1-identity": {
+      "type": "string",
+      "pattern": "mp1-[0-9a-f]{64}"
+    },
+    "mu1-identity": {
+      "type": "string",
+      "pattern": "mu1-[0-9a-f]{64}"
+    },
+    "magnitude": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "unit"
+          ],
+          "properties": {
+            "value": {
+              "type": [
+                "integer",
+                "number"
+              ]
+            },
+            "unit": {
+              "type": "string",
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instance_id",
+        "operator",
+        "operator_version",
+        "seam",
+        "magnitude",
+        "configuration",
+        "sham"
+      ],
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "operator": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "operator_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "seam": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "magnitude": {
+          "$ref": "#/$defs/magnitude"
+        },
+        "configuration": {
+          "type": "object"
+        },
+        "sham": {
+          "type": "boolean"
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "instance_id",
+        "seam",
+        "status",
+        "order",
+        "sham",
+        "detail"
+      ],
+      "properties": {
+        "instance_id": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "seam": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "status": {
+          "enum": [
+            "applied",
+            "ineffective",
+            "errored",
+            "refused"
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sham": {
+          "type": "boolean"
+        },
+        "detail": {
+          "type": "object"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "fault-matrix-entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fault",
+        "operator",
+        "seam",
+        "downstream",
+        "expected_refusal",
+        "observed_refusal",
+        "tripped",
+        "control_accepted"
+      ],
+      "properties": {
+        "fault": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "operator": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "seam": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "downstream": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "expected_refusal": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "observed_refusal": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tripped": {
+          "type": "boolean"
+        },
+        "control_accepted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence-envelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "envelope_id",
+        "plan_id",
+        "source_binding",
+        "events_summary",
+        "artifacts",
+        "controls",
+        "fault_matrix",
+        "runtime_scope",
+        "not_run"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "mutation-evidence-v1"
+        },
+        "envelope_id": {
+          "$ref": "#/$defs/mu1-identity"
+        },
+        "plan_id": {
+          "$ref": "#/$defs/mp1-identity"
+        },
+        "source_binding": {
+          "$ref": "#/properties/source_binding"
+        },
+        "events_summary": {
+          "type": "object"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact"
+          }
+        },
+        "controls": {
+          "type": "object"
+        },
+        "fault_matrix": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fault-matrix-entry"
+          }
+        },
+        "runtime_scope": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "not_run": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        }
+      }
+    }
+  }
+}

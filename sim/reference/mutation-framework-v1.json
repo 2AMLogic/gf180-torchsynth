@@ -1,0 +1,229 @@
+{
+  "controls": {
+    "attempt_artifact_identity_distinct_from_render_identity": true,
+    "cleanup_after_producer_crash": true,
+    "empty_plan_events_complete": true,
+    "global_rng_untouched_by_attempts": true,
+    "no_errored_events_in_controls": true,
+    "plain_rerun_deterministic": true,
+    "plain_vs_empty_plan_bytes_identical": true,
+    "plain_vs_sham_bytes_identical": true,
+    "sham_events_marked_and_ineffective": true,
+    "sham_plan_identity_distinct": true
+  },
+  "counts": {
+    "controls_passed": 10,
+    "faults": 7,
+    "tripped": 7
+  },
+  "envelope": {
+    "artifacts": [
+      {
+        "path": "attempt/payload.bin",
+        "sha256": "f99faf0b3028b834117710c8daf9e7dd409701e213c932c80a15047340e4abc9",
+        "size_bytes": 256
+      }
+    ],
+    "controls": {
+      "attempt_artifact_identity_distinct_from_render_identity": true,
+      "cleanup_after_producer_crash": true,
+      "empty_plan_events_complete": true,
+      "global_rng_untouched_by_attempts": true,
+      "no_errored_events_in_controls": true,
+      "plain_rerun_deterministic": true,
+      "plain_vs_empty_plan_bytes_identical": true,
+      "plain_vs_sham_bytes_identical": true,
+      "sham_events_marked_and_ineffective": true,
+      "sham_plan_identity_distinct": true
+    },
+    "envelope_id": "mu1-98a1704aa084bcb27dcf7aa46054ca7ecc1fdf2cf2a3f4c9f08efb420efa49b7",
+    "events_summary": {
+      "applied": 0,
+      "complete": true,
+      "errored": 0,
+      "expected": 1,
+      "ineffective": 1,
+      "observed": 1,
+      "refused": 0
+    },
+    "fault_matrix": [
+      {
+        "control_accepted": true,
+        "downstream": "artifacts.verify_sha256",
+        "expected_refusal": "file SHA-256 mismatch",
+        "fault": "partial-write",
+        "observed_refusal": "file SHA-256 mismatch",
+        "operator": "truncate.payload",
+        "seam": "apparatus.artifact_write",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "artifacts.verify_sha256",
+        "expected_refusal": "file SHA-256 mismatch",
+        "fault": "corrupt-artifact",
+        "observed_refusal": "file SHA-256 mismatch",
+        "operator": "corrupt.byte",
+        "seam": "apparatus.artifact_write",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "artifacts.verify_sha256",
+        "expected_refusal": "file SHA-256 mismatch",
+        "fault": "corrupt-receipt",
+        "observed_refusal": "file SHA-256 mismatch",
+        "operator": "corrupt.digest",
+        "seam": "apparatus.receipt_append",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "mutations.require_complete_inventory",
+        "expected_refusal": "incomplete attempt inventory for receipts",
+        "fault": "dropped-receipt",
+        "observed_refusal": "incomplete attempt inventory for receipts: expected 1, observed 0",
+        "operator": "drop.receipt",
+        "seam": "apparatus.receipt_append",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "case_registry.row_outcome",
+        "expected_refusal": "NO VERDICT",
+        "fault": "producer-crash",
+        "observed_refusal": "NO VERDICT",
+        "operator": "crash.producer",
+        "seam": "apparatus.producer_call",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "trace_capture.validate_selected_capture",
+        "expected_refusal": "capture inventory mismatch",
+        "fault": "swapped-capture",
+        "observed_refusal": "capture inventory mismatch: missing, extra, swapped or reordered trace",
+        "operator": "swap.capture",
+        "seam": "capture.inventory",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "case_registry.evaluate holdout gate",
+        "expected_refusal": "holdout refused",
+        "fault": "spoofed-partition",
+        "observed_refusal": "holdout refused: explicit authorization/audit reason required",
+        "operator": "spoof.partition",
+        "seam": "board.partition_access",
+        "tripped": true
+      }
+    ],
+    "kind": "mutation-evidence-v1",
+    "not_run": [
+      "actual Voice runtime fault injection at #23 capture seams (requires the Torch release-era runtime; synthetic apparatus proofs never count as runtime evidence)",
+      "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here)",
+      "detector qualification #34 matrix publication"
+    ],
+    "plan_id": "mp1-fb22508d5dad5566e8ecb350fb863e2ee692a23abada04109bbdd604ce9c7379",
+    "runtime_scope": "stdlib-apparatus-only",
+    "schema_version": 1,
+    "source_binding": {
+      "case_id": "directed:mutation-harness-0",
+      "fixture_identity": "f99faf0b3028b834117710c8daf9e7dd409701e213c932c80a15047340e4abc9",
+      "partition": "development"
+    }
+  },
+  "fault_matrix": [
+    {
+      "control_accepted": true,
+      "downstream": "artifacts.verify_sha256",
+      "expected_refusal": "file SHA-256 mismatch",
+      "fault": "partial-write",
+      "observed_refusal": "file SHA-256 mismatch",
+      "operator": "truncate.payload",
+      "seam": "apparatus.artifact_write",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "artifacts.verify_sha256",
+      "expected_refusal": "file SHA-256 mismatch",
+      "fault": "corrupt-artifact",
+      "observed_refusal": "file SHA-256 mismatch",
+      "operator": "corrupt.byte",
+      "seam": "apparatus.artifact_write",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "artifacts.verify_sha256",
+      "expected_refusal": "file SHA-256 mismatch",
+      "fault": "corrupt-receipt",
+      "observed_refusal": "file SHA-256 mismatch",
+      "operator": "corrupt.digest",
+      "seam": "apparatus.receipt_append",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "mutations.require_complete_inventory",
+      "expected_refusal": "incomplete attempt inventory for receipts",
+      "fault": "dropped-receipt",
+      "observed_refusal": "incomplete attempt inventory for receipts: expected 1, observed 0",
+      "operator": "drop.receipt",
+      "seam": "apparatus.receipt_append",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "case_registry.row_outcome",
+      "expected_refusal": "NO VERDICT",
+      "fault": "producer-crash",
+      "observed_refusal": "NO VERDICT",
+      "operator": "crash.producer",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "trace_capture.validate_selected_capture",
+      "expected_refusal": "capture inventory mismatch",
+      "fault": "swapped-capture",
+      "observed_refusal": "capture inventory mismatch: missing, extra, swapped or reordered trace",
+      "operator": "swap.capture",
+      "seam": "capture.inventory",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "case_registry.evaluate holdout gate",
+      "expected_refusal": "holdout refused",
+      "fault": "spoofed-partition",
+      "observed_refusal": "holdout refused: explicit authorization/audit reason required",
+      "operator": "spoof.partition",
+      "seam": "board.partition_access",
+      "tripped": true
+    }
+  ],
+  "inputs": {
+    "spec/reference/mutation-seams-v1.json": "5136981f6d4a6763b5b40b141d310c00de006a85cc58972f515bc8dae4bd16bb",
+    "spec/schemas/mutation-v1.schema.json": "1cf1df64b81bcefbd95dadc5d8e17cba65394d600384e92143692bf2f0bd087e",
+    "src/torchsynth_voice/artifacts.py": "66326d0dea68ba770c8424e5776a0846fbd3ad3391ac46fdf732530d2939673b",
+    "src/torchsynth_voice/case_registry.py": "a4e54a7587c14500b80ee18379519c6382ccdcb1a7b70b72a80e91a41e0b2077",
+    "src/torchsynth_voice/mutation_runtime.py": "3c64c880b03e9380459b2ce5395b5f05773925d9b15872c61b4a3817d3649498",
+    "src/torchsynth_voice/mutations.py": "c65a089b81efd6321b51d59a4193d5816c21a62b00e5e7b08975c8c56db74240",
+    "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
+    "src/torchsynth_voice/trace_capture.py": "276c462ea09e46c61d14eb407a0c1629779a36ba8eee96133abc4e97427a5b54",
+    "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
+  },
+  "kind": "mutation-framework-v1",
+  "mutation_contract": "mutation-v1",
+  "not_run": [
+    "actual Voice runtime fault injection at #23 capture seams (requires the Torch release-era runtime; synthetic apparatus proofs never count as runtime evidence)",
+    "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here)",
+    "detector qualification #34 matrix publication"
+  ],
+  "schema_version": 1,
+  "status": "PASS",
+  "trace_registry_sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c"
+}
