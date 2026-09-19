@@ -209,6 +209,16 @@ the same binary64/libm results; it is checked by exact record bytes, not merely
 schema agreement. There are no optional numerical dependencies or skipped
 numerical suites in this implementation.
 
+The checked-in record was generated with **Python 3.14.7**. Use that interpreter
+for byte-for-byte `analytic --check` reproduction (for example,
+`python3.14 -S tools/qualify_preparation.py analytic --check
+sim/qualification/preparation-v1.json`). Its runtime field and the underlying
+paired diagnostic retain the actual Python version. An initial clean-clone
+check using Python 3.11.5 therefore refused the byte comparison; selecting the
+recorded interpreter reproduced the bytes exactly. The clean clone also passed
+all 186 stdlib tests and the pinned-source contract check. Functional tests
+also run on other supported Python versions.
+
 Actual #12/#88 integration is explicitly **pending** in this analytic artifact.
 A correct missing-report refusal does not complete the original TorchSynth
 runtime acceptance criterion. Root coordinates committed actual evidence and
