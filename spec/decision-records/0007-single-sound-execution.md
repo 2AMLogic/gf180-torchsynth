@@ -1,6 +1,6 @@
 # DR-0007: Separate resolved single-sound execution from corpus identity
 
-- Status: Scoped diagnostic decision; chosen-runtime reconciliation pending #12
+- Status: Scoped diagnostic decision; reconciled with DR-0006 (2026-09-19)
 - Date: 2026-09-19
 - Decision owners: 2AM Logic
 - Evidence: [scalar-execution.json](../../sim/reference/scalar-execution.json)
@@ -164,3 +164,25 @@ that reconciliation is complete. Float-to-fixed comparisons still use
 declared error metrics; fixed-to-RTL comparison remains sample-exact.
 This decision establishes no sound fidelity, physical validation,
 gf180mcu synthesis/layout/signoff, hardware playback or holdout result.
+
+## Reconciliation with DR-0006 (2026-09-19)
+
+On 2026-09-19 this record was reconciled against DR-0006, whose
+ratification event was the reviewed merge of PR #106 (merge commit
+`fc04e340ffd2081c1322fb1060bd3b243f4b6b12`). The runtime settings agree
+exactly. DR-0006 preregisters the canonical profile with
+"`MKL_CBWR=COMPATIBLE` and `ATEN_CPU_CAPABILITY` explicitly unset"
+(`spec/decision-records/0006-canonical-runtime.md:17-18`); this record's
+revised diagnostic profile "explicitly sets `MKL_CBWR=COMPATIBLE` before
+Python starts and leaves `ATEN_CPU_CAPABILITY` unset"
+(`spec/decision-records/0007-single-sound-execution.md:44-46`). The
+integration-gate cross-check required above is therefore complete with no
+divergence to resolve: issue #12 is closed with DR-0006 as the selected
+canonical runtime, and no additional scalar measurement is triggered by
+this gate.
+
+The diagnostic scope of this record is unchanged by the reconciliation.
+Batch-1 scalar execution remains a diagnostic oracle under the measured
+release-era runtime and explicitly recorded math environment; it is not
+the normative corpus identity generator and not a ratified single-lane
+float/fixed bridge.
