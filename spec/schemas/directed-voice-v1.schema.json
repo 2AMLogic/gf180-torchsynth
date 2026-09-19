@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Preregistered directed default Voice patches v1",
+  "description": "Structural schema; directed.validate_manifest additionally checks inventory identity, all 78 names, exact conversions, content version, case coverage and supporting graph gates. This document conveys no measured audio evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "upstream_commit", "inventory_sha256", "fixture_protocol", "identity", "conversion", "base", "cases"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "profile": {"const": "torchsynth-1-voice-default"},
+    "upstream_commit": {"const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"},
+    "inventory_sha256": {"$ref": "#/$defs/hash"},
+    "fixture_protocol": {
+      "const": {
+        "sample_rate": 44100, "control_rate": 441, "duration_seconds": 4.0,
+        "output_samples": 176400, "device": "cpu", "dtype": "float32",
+        "noise_seed": 13, "noise_slot": 0, "qualification_batch_size": 32,
+        "hardware_execution_width": 1, "scalar_batched_equivalence": "unqualified"
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "version"],
+      "properties": {
+        "sha256": {"$ref": "#/$defs/hash"},
+        "version": {"type": "string", "pattern": "^directed-voice-v1-sha256:[0-9a-f]{64}(?![\\s\\S])"}
+      }
+    },
+    "conversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "normalized", "physical", "bounds", "check", "runtime_obligation"],
+      "properties": {
+        "id": {"const": "pinned-equations-rational-v1"},
+        "normalized": {"$ref": "#/$defs/text"},
+        "physical": {"$ref": "#/$defs/text"},
+        "bounds": {"$ref": "#/$defs/text"},
+        "check": {"$ref": "#/$defs/text"},
+        "runtime_obligation": {"$ref": "#/$defs/text"}
+      }
+    },
+    "base": {"$ref": "#/$defs/patch", "minProperties": 78, "maxProperties": 78},
+    "cases": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/case"}}
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nonblank under Python str.strip() whitespace rules; meaningful multiline and whitespace-surrounded text is preserved. The explicit class avoids ECMAScript/Python \\s differences.",
+      "pattern": "^[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][\\s\\S]*(?![\\s\\S])"
+    },
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
+    "value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normalized", "physical"],
+      "properties": {
+        "normalized": {"type": "number", "minimum": 0, "maximum": 1},
+        "physical": {"type": "number"}
+      }
+    },
+    "patch": {"type": "object", "additionalProperties": {"$ref": "#/$defs/value"}},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "target", "variant", "purpose", "overrides"],
+      "properties": {
+        "id": {"$ref": "#/$defs/text"},
+        "kind": {"enum": ["boundary", "route", "source", "waveform", "envelope", "special", "normalization"]},
+        "target": {"$ref": "#/$defs/text"},
+        "variant": {"$ref": "#/$defs/text"},
+        "purpose": {"$ref": "#/$defs/text"},
+        "overrides": {"$ref": "#/$defs/patch"},
+        "normalization_target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["target_peak", "relation", "peak_status", "render_obligation"],
+          "properties": {
+            "target_peak": {"type": "number"},
+            "relation": {"enum": ["below", "tie", "above"]},
+            "peak_status": {"const": "unmeasured"},
+            "render_obligation": {"$ref": "#/$defs/text"}
+          }
+        }
+      },
+      "if": {"properties": {"kind": {"const": "normalization"}}},
+      "then": {"required": ["normalization_target"]},
+      "else": {"not": {"required": ["normalization_target"]}}
+    }
+  }
+}
