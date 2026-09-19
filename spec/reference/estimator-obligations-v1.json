@@ -1,0 +1,163 @@
+{
+  "artifacts": {
+    "envelope": "38ec07a269824fbc57c63c6a224b29f9829e2ff6855769b347ec536e3a909815",
+    "periodic": "686f9423fc03d7f284527f87b1800a5f8fc7a640e93d40ef4e5f65383050b158",
+    "preparation": "c01546d42cf457180cc1cd99681954571b719b197a11576c84e7a16f435edd81",
+    "spectral": "a2827fe97996b360d7d4922e1b2db02f6364c839f9ed0c8344e613f88f0fcc31"
+  },
+  "basis": "Reviewed consumer obligation inventory for issue #29, recomputed from the landed producer artifacts' raw rows (never from producer self-reported summaries) and pinned for exact set/multiplicity comparison. Regeneration is reproduction, not authority: any drift from these reviewed values is an error to reconcile, not a count to update silently.",
+  "families": {
+    "envelope": {
+      "algorithm_version": "envelope-routes-qualification-v1",
+      "coverage": {
+        "missing": 0,
+        "present": 2407,
+        "qualified": 1158,
+        "refused": 79,
+        "requested": 387
+      },
+      "floor_limited": 304,
+      "floors": {
+        "count": 18,
+        "unit_bound": "per-domain empirical statistics; see artifact"
+      },
+      "grid": {
+        "cases": 387,
+        "obligations": 1380,
+        "shared_preparation_cases": 13
+      },
+      "module_sha256": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
+      "refusals": {
+        "floor_limited_cases": 304,
+        "obligations_expected_no_verdict": 79
+      },
+      "verdicts": {
+        "FAIL": 164,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 508,
+        "PASS": 1735
+      }
+    },
+    "paired": {
+      "algorithm_version": "paired-metrics-v1",
+      "coverage": {
+        "missing": 0,
+        "present": 510,
+        "qualified": 2,
+        "refused": 506,
+        "requested": 510
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "cases": 2,
+        "sentinel_rows": 510
+      },
+      "module_sha256": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
+      "refusals": {
+        "framing": "count/rate mismatches remain producer-side refusals",
+        "rows": null
+      },
+      "verdicts": {
+        "FAIL": 2,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 506,
+        "PASS": 2
+      }
+    },
+    "periodic": {
+      "algorithm_version": "periodic-v2",
+      "coverage": {
+        "missing": 0,
+        "present": 1605,
+        "qualified": 202,
+        "refused": 119,
+        "requested": 321
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "cap_failures": 0,
+        "cases": 321,
+        "qualified_cells": 35,
+        "range_cells": 41,
+        "sentinel_cases": 2
+      },
+      "module_sha256": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
+      "refusals": {
+        "cases": 119,
+        "rows": 665
+      },
+      "verdicts": {
+        "FAIL": 6,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 665,
+        "PASS": 934
+      }
+    },
+    "preparation": {
+      "algorithm_version": "preparation-qualification",
+      "coverage": {
+        "missing": 0,
+        "present": 70,
+        "qualified": 70,
+        "refused": 0,
+        "requested": 70
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "actual_integrations": 4,
+        "cases": 70
+      },
+      "module_sha256": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+      "refusals": {
+        "production_no_verdict_receipts": 4,
+        "reason": "diagnostic oracle cannot qualify normative production rows"
+      },
+      "verdicts": {
+        "FAIL": 0,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 0,
+        "PASS": 70
+      }
+    },
+    "spectral": {
+      "algorithm_version": "spectral-noise-mix-v1",
+      "coverage": {
+        "missing": 26,
+        "present": 2396,
+        "qualified": 879,
+        "refused": 1484,
+        "requested": 150
+      },
+      "floor_limited": 1484,
+      "floors": {
+        "count": 67,
+        "exceeding_preregistered_bound": 0
+      },
+      "grid": {
+        "cases": 150,
+        "controls": 4,
+        "ensemble_seeds": 16,
+        "mutation_detector_obligations": 21
+      },
+      "module_sha256": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
+      "refusals": {
+        "reasons": 20,
+        "rows": 1484
+      },
+      "verdicts": {
+        "FAIL": 33,
+        "MISSING EVIDENCE": 26,
+        "NO VERDICT": 1458,
+        "PASS": 879
+      }
+    }
+  },
+  "inventory": "estimator-obligations",
+  "inventory_version": "1",
+  "schema_version": 1,
+  "scope": "analytic development qualification of estimator validity, floors, and refusals over landed producer grids; holdout sealed; no fixed-point, runtime, Voice, fidelity, or hardware claim; no tolerance derived from holdout or future RTL data",
+  "source_target": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+}

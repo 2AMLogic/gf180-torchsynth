@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gf180-torchsynth:estimator-qualification:v1",
+  "title": "Estimator qualification ledger v1",
+  "description": "Versioned consumer publication of estimator validity, floors, and refusals over the landed producer family artifacts. validate_ledger additionally re-derives counts, digest pins, and preparation bindings; JSON Schema alone cannot establish these relationships. Refusals serialize as NO VERDICT (DR-0004); coverage and floor-limited cases are counted separately from PASS/FAIL.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "ledger", "ledger_version", "scope", "source_target", "preparation", "families", "totals", "artifacts", "provenance"],
+  "properties": {
+    "schema_version": {"type": "integer", "const": 1},
+    "ledger": {"type": "string", "const": "estimator-qualification"},
+    "ledger_version": {"type": "string", "const": "1"},
+    "scope": {"type": "string", "minLength": 1},
+    "source_target": {"type": "string", "const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"},
+    "preparation": {"$ref": "#/$defs/preparation"},
+    "families": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["paired", "periodic", "envelope", "spectral", "preparation"],
+      "properties": {
+        "paired": {"$ref": "#/$defs/family"},
+        "periodic": {"$ref": "#/$defs/family"},
+        "envelope": {"$ref": "#/$defs/family"},
+        "spectral": {"$ref": "#/$defs/family"},
+        "preparation": {"$ref": "#/$defs/family"}
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "verdicts", "floor_limited"],
+      "properties": {
+        "rows": {"$ref": "#/$defs/count"},
+        "verdicts": {"$ref": "#/$defs/verdicts"},
+        "floor_limited": {"$ref": "#/$defs/count"}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "required": ["periodic", "envelope", "spectral", "preparation"]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shared_preparation"],
+      "properties": {
+        "shared_preparation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["recomputed_sha256", "status", "historical_snapshot_sha256", "note"],
+          "properties": {
+            "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "status": {"enum": ["consistent", "mismatch"]},
+            "historical_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "note": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0},
+    "verdicts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PASS", "FAIL", "NO VERDICT", "MISSING EVIDENCE"],
+      "properties": {
+        "PASS": {"$ref": "#/$defs/count"},
+        "FAIL": {"$ref": "#/$defs/count"},
+        "NO VERDICT": {"$ref": "#/$defs/count"},
+        "MISSING EVIDENCE": {"$ref": "#/$defs/count"}
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "present", "qualified", "refused", "missing"],
+      "properties": {
+        "requested": {"$ref": "#/$defs/count"},
+        "present": {"$ref": "#/$defs/count"},
+        "qualified": {"$ref": "#/$defs/count"},
+        "refused": {"$ref": "#/$defs/count"},
+        "missing": {"$ref": "#/$defs/count"}
+      }
+    },
+    "estimator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "module", "module_sha256", "algorithm_version"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "module": {"type": "string", "minLength": 1},
+        "module_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "algorithm_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["estimator", "artifact", "artifact_sha256", "validity_predicate", "grid", "coverage", "verdicts", "floors", "floor_limited", "refusals", "limitations", "preparation_dependent"],
+      "properties": {
+        "estimator": {"$ref": "#/$defs/estimator"},
+        "artifact": {"type": "string", "minLength": 1},
+        "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "validity_predicate": {"type": "string", "minLength": 1},
+        "grid": {"type": "object", "minProperties": 1},
+        "coverage": {"$ref": "#/$defs/coverage"},
+        "verdicts": {"$ref": "#/$defs/verdicts"},
+        "floors": {},
+        "floor_limited": {"$ref": "#/$defs/count"},
+        "refusals": {"type": "object"},
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "preparation_dependent": {"type": "boolean"}
+      }
+    }
+  }
+}

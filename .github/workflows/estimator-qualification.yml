@@ -1,0 +1,41 @@
+name: Estimator qualification ledger
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  stored-evidence:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile source
+        run: python -m compileall -q src tests tools
+      - name: Ledger contract tests (stdlib; unrun is not PASS)
+        run: python -m unittest discover -s tests -p test_estimator_qualification.py -v
+      - name: Three-way stored-evidence check
+        run: python3 tools/qualify_estimators.py check
+
+  replay:
+    # Explicit numerical execution: regenerate every landed family grid from
+    # this checkout and compare recomputed case/row/obligation identity.
+    # Missing NumPy refuses; it never silently skips.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install locked numerical environment
+        run: uv sync --locked --extra metrics --python '3.13'
+      - name: Execute the landed grids and reconcile the ledger
+        run: uv run --no-sync python tools/qualify_estimators.py replay
