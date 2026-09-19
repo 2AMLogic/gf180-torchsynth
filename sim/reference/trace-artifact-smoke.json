@@ -1,0 +1,1613 @@
+{
+  "audio_identity_linkage": {
+    "distinct_artifact_ids": true,
+    "same_audio_bytes_across_variants": true
+  },
+  "cases": {
+    "audio_only": {
+      "global-0": {
+        "artifact": {
+          "artifact_id": "ra1-d391ce19ae67d4a99155a6bb8bce36a5451a706ab671482e54a59012cb8cb686",
+          "ref": "artifacts/ra1-d391ce19ae67d4a99155a6bb8bce36a5451a706ab671482e54a59012cb8cb686/metadata.json",
+          "sha256": "b58eddb712137ad36d5e78bd75985fe8f0f0de7c607b1ad415df68b1f5e2f11b"
+        },
+        "audio_sha256": "acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463",
+        "requested_traces": []
+      },
+      "global-1": {
+        "artifact": {
+          "artifact_id": "ra1-85d705f31da90647701b054e71cc0081fc0a3567c51dbc22cf50112ad33e4d1e",
+          "ref": "artifacts/ra1-85d705f31da90647701b054e71cc0081fc0a3567c51dbc22cf50112ad33e4d1e/metadata.json",
+          "sha256": "aedae66fed98c3b5c55109ec57d2dcccc68d11f0bba8c8d3f585067719b1654b"
+        },
+        "audio_sha256": "6fc07a9f83789f321fa31b230611b721c93bd587e4d8b1b396dcd74f1036b095",
+        "requested_traces": []
+      }
+    },
+    "traced": {
+      "global-0": {
+        "artifact": {
+          "artifact_id": "ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf",
+          "ref": "artifacts/ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf/metadata.json",
+          "sha256": "a5f147ae181e6950ea015c01868de241b32f1de4192902af3a66848c86aa1110"
+        },
+        "audio_sha256": "acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463",
+        "requested_traces": [
+          "keyboard.midi_f0",
+          "keyboard.duration",
+          "lfo_1_rate_adsr.output",
+          "lfo_2_rate_adsr.output",
+          "lfo_1_amp_adsr.output",
+          "lfo_2_amp_adsr.output",
+          "lfo_1.raw",
+          "lfo_1.post_control_vca",
+          "lfo_2.raw",
+          "lfo_2.post_control_vca",
+          "adsr_1.output",
+          "adsr_2.output",
+          "mod_matrix.vco_1_pitch",
+          "mod_matrix.vco_1_amp",
+          "mod_matrix.vco_2_pitch",
+          "mod_matrix.vco_2_amp",
+          "mod_matrix.noise_amp",
+          "control_upsample.vco_1_pitch",
+          "vco_1.raw",
+          "control_upsample.vco_1_amp",
+          "vco_1.post_vca",
+          "control_upsample.vco_2_pitch",
+          "vco_2.raw",
+          "control_upsample.vco_2_amp",
+          "vco_2.post_vca",
+          "noise.raw",
+          "control_upsample.noise_amp",
+          "noise.post_vca",
+          "mixer.output"
+        ]
+      },
+      "global-1": {
+        "artifact": {
+          "artifact_id": "ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060",
+          "ref": "artifacts/ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060/metadata.json",
+          "sha256": "9abb3f46b4d52cce09a9dd5f244f1b8f47160605d032e1afc2632d331c666311"
+        },
+        "audio_sha256": "6fc07a9f83789f321fa31b230611b721c93bd587e4d8b1b396dcd74f1036b095",
+        "requested_traces": [
+          "keyboard.midi_f0",
+          "keyboard.duration",
+          "lfo_1_rate_adsr.output",
+          "lfo_2_rate_adsr.output",
+          "lfo_1_amp_adsr.output",
+          "lfo_2_amp_adsr.output",
+          "lfo_1.raw",
+          "lfo_1.post_control_vca",
+          "lfo_2.raw",
+          "lfo_2.post_control_vca",
+          "adsr_1.output",
+          "adsr_2.output",
+          "mod_matrix.vco_1_pitch",
+          "mod_matrix.vco_1_amp",
+          "mod_matrix.vco_2_pitch",
+          "mod_matrix.vco_2_amp",
+          "mod_matrix.noise_amp",
+          "control_upsample.vco_1_pitch",
+          "vco_1.raw",
+          "control_upsample.vco_1_amp",
+          "vco_1.post_vca",
+          "control_upsample.vco_2_pitch",
+          "vco_2.raw",
+          "control_upsample.vco_2_amp",
+          "vco_2.post_vca",
+          "noise.raw",
+          "control_upsample.noise_amp",
+          "noise.post_vca",
+          "mixer.output"
+        ]
+      }
+    }
+  },
+  "companion": {
+    "ref": "trace-companions/bfacbfc7a1ebeaa3a447cae938251eac4c0b008205bc5baf597aea3b5a372e8c.json",
+    "sha256": "bfacbfc7a1ebeaa3a447cae938251eac4c0b008205bc5baf597aea3b5a372e8c",
+    "size_bytes": 2648
+  },
+  "documents": {
+    "audio_only_index": {
+      "cases": [
+        {
+          "artifact": {
+            "artifact_id": "ra1-d391ce19ae67d4a99155a6bb8bce36a5451a706ab671482e54a59012cb8cb686",
+            "ref": "artifacts/ra1-d391ce19ae67d4a99155a6bb8bce36a5451a706ab671482e54a59012cb8cb686/metadata.json",
+            "sha256": "b58eddb712137ad36d5e78bd75985fe8f0f0de7c607b1ad415df68b1f5e2f11b"
+          },
+          "case_id": "global-0",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 0,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-0",
+            "upstream_slot": 0
+          },
+          "split": "development",
+          "status": "complete",
+          "warnings": []
+        },
+        {
+          "artifact": {
+            "artifact_id": "ra1-85d705f31da90647701b054e71cc0081fc0a3567c51dbc22cf50112ad33e4d1e",
+            "ref": "artifacts/ra1-85d705f31da90647701b054e71cc0081fc0a3567c51dbc22cf50112ad33e4d1e/metadata.json",
+            "sha256": "aedae66fed98c3b5c55109ec57d2dcccc68d11f0bba8c8d3f585067719b1654b"
+          },
+          "case_id": "global-1",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 1,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-1",
+            "upstream_slot": 1
+          },
+          "split": "development",
+          "status": "complete",
+          "warnings": []
+        }
+      ],
+      "corpus_id": "ci1-8b32d4c9c1a420b69a3f883b115eca64240cef62c48f7a547a761d625fee1c22",
+      "corpus_manifest_sha256": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+      "expected_case_count": 2,
+      "failures": [],
+      "observed_case_count": 2,
+      "profile": "torchsynth-1-voice-default",
+      "runtime_lock_sha256": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
+      "schema": "torchsynth-corpus-index",
+      "schema_version": 1,
+      "status": "complete",
+      "warnings": []
+    },
+    "bundles": [
+      {
+        "artifact": {
+          "artifact_id": "ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf",
+          "ref": "artifacts/ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf/metadata.json",
+          "sha256": "a5f147ae181e6950ea015c01868de241b32f1de4192902af3a66848c86aa1110"
+        },
+        "failures": [],
+        "fixture": {
+          "is_train": true,
+          "sound_index": 0,
+          "upstream_batch_index": 0,
+          "upstream_name": "synth1B1-0-0",
+          "upstream_slot": 0
+        },
+        "registry": {
+          "ref": "spec/reference/trace-registry-v1.json",
+          "sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+          "token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259"
+        },
+        "requested_traces": [
+          "keyboard.midi_f0",
+          "keyboard.duration",
+          "lfo_1_rate_adsr.output",
+          "lfo_2_rate_adsr.output",
+          "lfo_1_amp_adsr.output",
+          "lfo_2_amp_adsr.output",
+          "lfo_1.raw",
+          "lfo_1.post_control_vca",
+          "lfo_2.raw",
+          "lfo_2.post_control_vca",
+          "adsr_1.output",
+          "adsr_2.output",
+          "mod_matrix.vco_1_pitch",
+          "mod_matrix.vco_1_amp",
+          "mod_matrix.vco_2_pitch",
+          "mod_matrix.vco_2_amp",
+          "mod_matrix.noise_amp",
+          "control_upsample.vco_1_pitch",
+          "vco_1.raw",
+          "control_upsample.vco_1_amp",
+          "vco_1.post_vca",
+          "control_upsample.vco_2_pitch",
+          "vco_2.raw",
+          "control_upsample.vco_2_amp",
+          "vco_2.post_vca",
+          "noise.raw",
+          "control_upsample.noise_amp",
+          "noise.post_vca",
+          "mixer.output"
+        ],
+        "schema": "torchsynth-trace-bundle",
+        "schema_version": 1,
+        "status": "complete",
+        "storage": {
+          "compression": "none"
+        },
+        "traces": {
+          "adsr_1.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "4a220bfef72f72dc3963c2e87f901e873c3419bed5ff290098659c59bfa77b01",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-10.bin",
+              "sha256": "4a220bfef72f72dc3963c2e87f901e873c3419bed5ff290098659c59bfa77b01",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "adsr_2.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "34614db3872f2746863343121a450482fe97d118fb6fa9830295216e38d8adf4",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-11.bin",
+              "sha256": "34614db3872f2746863343121a450482fe97d118fb6fa9830295216e38d8adf4",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "control_upsample.noise_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "5fa084eac9ad42d2131f00b5f5a5e7d720065010e64ac99bda7fc757a2578ed4",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-26.bin",
+              "sha256": "5fa084eac9ad42d2131f00b5f5a5e7d720065010e64ac99bda7fc757a2578ed4",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_1_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "c65e6bb269ba206fc49186bc6b0ba687919b133941cce11ec644b44acd7fb304",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-19.bin",
+              "sha256": "c65e6bb269ba206fc49186bc6b0ba687919b133941cce11ec644b44acd7fb304",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_1_pitch": {
+            "boundary": "pre-vco-depth-and-midi-clamp",
+            "capture_sha256": "90339da623379c771407376020b00a59da62e7814817f3f139692f3375cc3a2f",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-17.bin",
+              "sha256": "90339da623379c771407376020b00a59da62e7814817f3f139692f3375cc3a2f",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_2_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "f86b140da4428fdf4a7ddfcb71e95120ce337d692d318b6a70400705e94c489e",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-23.bin",
+              "sha256": "f86b140da4428fdf4a7ddfcb71e95120ce337d692d318b6a70400705e94c489e",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_2_pitch": {
+            "boundary": "pre-vco-depth-and-midi-clamp",
+            "capture_sha256": "b94160b26973c39632d7ba5e37b67993db32d14bd0ba5b440f64c35b17d58f75",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-21.bin",
+              "sha256": "b94160b26973c39632d7ba5e37b67993db32d14bd0ba5b440f64c35b17d58f75",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "keyboard.duration": {
+            "boundary": "physical-keyboard-output",
+            "capture_sha256": "7a9d4e89f862c8a1e77897ed6703b0db6589f46e4d171cfac14a07c5c35520a1",
+            "classification": "scalar",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-1.bin",
+              "sha256": "7a9d4e89f862c8a1e77897ed6703b0db6589f46e4d171cfac14a07c5c35520a1",
+              "size_bytes": 4
+            },
+            "observation": "observed",
+            "rate_hz": null,
+            "sample_count": null,
+            "shape": []
+          },
+          "keyboard.midi_f0": {
+            "boundary": "physical-keyboard-output",
+            "capture_sha256": "a03c12340759b6d574a30b605ddaa7e687bd9698e534ba96030237060d365afb",
+            "classification": "scalar",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-0.bin",
+              "sha256": "a03c12340759b6d574a30b605ddaa7e687bd9698e534ba96030237060d365afb",
+              "size_bytes": 4
+            },
+            "observation": "observed",
+            "rate_hz": null,
+            "sample_count": null,
+            "shape": []
+          },
+          "lfo_1.post_control_vca": {
+            "boundary": "post-control-vca",
+            "capture_sha256": "0c3582cdf46a26f545dcaf82a63fbe56e77f9d074798bc62f2c617f780cf19c8",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-7.bin",
+              "sha256": "0c3582cdf46a26f545dcaf82a63fbe56e77f9d074798bc62f2c617f780cf19c8",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1.raw": {
+            "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+            "capture_sha256": "523b914fe1b098faac36d3fc72fe8c160930cf199fead28f64efc4e8a491111e",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-6.bin",
+              "sha256": "523b914fe1b098faac36d3fc72fe8c160930cf199fead28f64efc4e8a491111e",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1_amp_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "5d3159d53603a1d1b7fa0cb284ce982dd437cef473fdbb88f3fbc25746f3780c",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-4.bin",
+              "sha256": "5d3159d53603a1d1b7fa0cb284ce982dd437cef473fdbb88f3fbc25746f3780c",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1_rate_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "c8ef156af0c244abe5744d2d9a2e1076a6083d011c38ca95e9022c94b7227077",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-2.bin",
+              "sha256": "c8ef156af0c244abe5744d2d9a2e1076a6083d011c38ca95e9022c94b7227077",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2.post_control_vca": {
+            "boundary": "post-control-vca",
+            "capture_sha256": "53f694eade49a00f759f2a6754c5dc772ea169f2bf021dcd74ac858007228461",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-9.bin",
+              "sha256": "53f694eade49a00f759f2a6754c5dc772ea169f2bf021dcd74ac858007228461",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2.raw": {
+            "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+            "capture_sha256": "d9d0a11b6ddc5109a5cc95050901630b6f2b411039db6401c69eeb3d368d1dbd",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-8.bin",
+              "sha256": "d9d0a11b6ddc5109a5cc95050901630b6f2b411039db6401c69eeb3d368d1dbd",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2_amp_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "c6edbfa98baf0a60105be949a64f2d1ce64192389e20c84fa215bbead440d683",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-5.bin",
+              "sha256": "c6edbfa98baf0a60105be949a64f2d1ce64192389e20c84fa215bbead440d683",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2_rate_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "baeadc0d70888b3003d63f9a64a132a1992035f84fa994ea10f6f0120a627a1c",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-3.bin",
+              "sha256": "baeadc0d70888b3003d63f9a64a132a1992035f84fa994ea10f6f0120a627a1c",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mixer.output": {
+            "boundary": "post-conditional-normalization",
+            "capture_sha256": "acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-28.bin",
+              "sha256": "acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "mod_matrix.noise_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "7db4649e174f4640bbbe30d3105b08881212f9b82aefdab498ff631cbd32f3d0",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-16.bin",
+              "sha256": "7db4649e174f4640bbbe30d3105b08881212f9b82aefdab498ff631cbd32f3d0",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_1_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "30167bcba9d00b78f7100ff4d52e03ad734b1d9f687e9ab7a6d7ac94255e56bb",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-13.bin",
+              "sha256": "30167bcba9d00b78f7100ff4d52e03ad734b1d9f687e9ab7a6d7ac94255e56bb",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_1_pitch": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "c4cf1edbea6309c364f61533e1e318fd007fd620cc62f7e12b24eb0049b65a6c",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-12.bin",
+              "sha256": "c4cf1edbea6309c364f61533e1e318fd007fd620cc62f7e12b24eb0049b65a6c",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_2_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "f10240861c2471e64ddb91bcd4869f6d1d082cb9961e879063ba1a34830e33c2",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-15.bin",
+              "sha256": "f10240861c2471e64ddb91bcd4869f6d1d082cb9961e879063ba1a34830e33c2",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_2_pitch": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "d56112b3ec16e6c7ba8fb6c14080bb78b86a131f44ca1fd5a483140898b9ed6c",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-14.bin",
+              "sha256": "d56112b3ec16e6c7ba8fb6c14080bb78b86a131f44ca1fd5a483140898b9ed6c",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "noise.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "9e2c51f11747ba2934b3e4b553718393cbba58063ce7f25117dad9375ee0f73e",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-27.bin",
+              "sha256": "9e2c51f11747ba2934b3e4b553718393cbba58063ce7f25117dad9375ee0f73e",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "noise.raw": {
+            "boundary": "seed13-noise-pre-audio-vca",
+            "capture_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-25.bin",
+              "sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_1.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "17c449c8b2f62cd9c89b346689db386634d45713a1bf6d9c7b7627b71dca019a",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-20.bin",
+              "sha256": "17c449c8b2f62cd9c89b346689db386634d45713a1bf6d9c7b7627b71dca019a",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_1.raw": {
+            "boundary": "post-pitch-clamp-pre-audio-vca",
+            "capture_sha256": "9898f4ef6aaabd3cc0f43882032884e6bb6822780499348714da12bafb1f6416",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-18.bin",
+              "sha256": "9898f4ef6aaabd3cc0f43882032884e6bb6822780499348714da12bafb1f6416",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_2.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "7477a48182352f8fe0b5f3e61021faf3a74535c293e087826572c65a3da8a427",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-24.bin",
+              "sha256": "7477a48182352f8fe0b5f3e61021faf3a74535c293e087826572c65a3da8a427",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_2.raw": {
+            "boundary": "post-pitch-clamp-pre-audio-vca",
+            "capture_sha256": "49735d96e15372830220b4e38a8139ee211cee30677886d44efeeaf53a06bfd2",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-22.bin",
+              "sha256": "49735d96e15372830220b4e38a8139ee211cee30677886d44efeeaf53a06bfd2",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          }
+        },
+        "warnings": []
+      },
+      {
+        "artifact": {
+          "artifact_id": "ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060",
+          "ref": "artifacts/ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060/metadata.json",
+          "sha256": "9abb3f46b4d52cce09a9dd5f244f1b8f47160605d032e1afc2632d331c666311"
+        },
+        "failures": [],
+        "fixture": {
+          "is_train": true,
+          "sound_index": 1,
+          "upstream_batch_index": 0,
+          "upstream_name": "synth1B1-0-1",
+          "upstream_slot": 1
+        },
+        "registry": {
+          "ref": "spec/reference/trace-registry-v1.json",
+          "sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+          "token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259"
+        },
+        "requested_traces": [
+          "keyboard.midi_f0",
+          "keyboard.duration",
+          "lfo_1_rate_adsr.output",
+          "lfo_2_rate_adsr.output",
+          "lfo_1_amp_adsr.output",
+          "lfo_2_amp_adsr.output",
+          "lfo_1.raw",
+          "lfo_1.post_control_vca",
+          "lfo_2.raw",
+          "lfo_2.post_control_vca",
+          "adsr_1.output",
+          "adsr_2.output",
+          "mod_matrix.vco_1_pitch",
+          "mod_matrix.vco_1_amp",
+          "mod_matrix.vco_2_pitch",
+          "mod_matrix.vco_2_amp",
+          "mod_matrix.noise_amp",
+          "control_upsample.vco_1_pitch",
+          "vco_1.raw",
+          "control_upsample.vco_1_amp",
+          "vco_1.post_vca",
+          "control_upsample.vco_2_pitch",
+          "vco_2.raw",
+          "control_upsample.vco_2_amp",
+          "vco_2.post_vca",
+          "noise.raw",
+          "control_upsample.noise_amp",
+          "noise.post_vca",
+          "mixer.output"
+        ],
+        "schema": "torchsynth-trace-bundle",
+        "schema_version": 1,
+        "status": "complete",
+        "storage": {
+          "compression": "none"
+        },
+        "traces": {
+          "adsr_1.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "180eaa9947e1be6f702c087a661936e66a53592b8d5ac459a353cf1d223a1e4b",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-10.bin",
+              "sha256": "180eaa9947e1be6f702c087a661936e66a53592b8d5ac459a353cf1d223a1e4b",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "adsr_2.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "bc41fd6c55feb6b7e5ea924836f84065aec79004e8eb1d3957e40362826187a3",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-11.bin",
+              "sha256": "bc41fd6c55feb6b7e5ea924836f84065aec79004e8eb1d3957e40362826187a3",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "control_upsample.noise_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "62a70b57a6b0e1ae0e324d78099158f2f87d606d8994f0167b3e31819ffcecb2",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-26.bin",
+              "sha256": "62a70b57a6b0e1ae0e324d78099158f2f87d606d8994f0167b3e31819ffcecb2",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_1_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "13d1846807522a636a5e30de04b8209f0676e4f0c5549caa2bb5bb87c06d8e92",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-19.bin",
+              "sha256": "13d1846807522a636a5e30de04b8209f0676e4f0c5549caa2bb5bb87c06d8e92",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_1_pitch": {
+            "boundary": "pre-vco-depth-and-midi-clamp",
+            "capture_sha256": "2533a6b6bd2ac667c88e86b6fde2d5616fb27589eace1f081a59cc118b4e8a35",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-17.bin",
+              "sha256": "2533a6b6bd2ac667c88e86b6fde2d5616fb27589eace1f081a59cc118b4e8a35",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_2_amp": {
+            "boundary": "pre-audio-vca",
+            "capture_sha256": "0b4401f976d0c50dc1abd86b8c6db39b402c26889d62a9e45426abd4b023abbf",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-23.bin",
+              "sha256": "0b4401f976d0c50dc1abd86b8c6db39b402c26889d62a9e45426abd4b023abbf",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "control_upsample.vco_2_pitch": {
+            "boundary": "pre-vco-depth-and-midi-clamp",
+            "capture_sha256": "0915fb20d2bb4ae62d40e3e06e6ebfb6bd3a064f4f2d8627d2beb5e72c42839a",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-21.bin",
+              "sha256": "0915fb20d2bb4ae62d40e3e06e6ebfb6bd3a064f4f2d8627d2beb5e72c42839a",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "keyboard.duration": {
+            "boundary": "physical-keyboard-output",
+            "capture_sha256": "92e7f7e367cc67ede5e84af97283afecc645899a8dbe15487278f7503986be9b",
+            "classification": "scalar",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-1.bin",
+              "sha256": "92e7f7e367cc67ede5e84af97283afecc645899a8dbe15487278f7503986be9b",
+              "size_bytes": 4
+            },
+            "observation": "observed",
+            "rate_hz": null,
+            "sample_count": null,
+            "shape": []
+          },
+          "keyboard.midi_f0": {
+            "boundary": "physical-keyboard-output",
+            "capture_sha256": "b102cdfece286dfe9404bba6a2d83dee7332e0e5f3c04cffbedc3907f74f2bca",
+            "classification": "scalar",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-0.bin",
+              "sha256": "b102cdfece286dfe9404bba6a2d83dee7332e0e5f3c04cffbedc3907f74f2bca",
+              "size_bytes": 4
+            },
+            "observation": "observed",
+            "rate_hz": null,
+            "sample_count": null,
+            "shape": []
+          },
+          "lfo_1.post_control_vca": {
+            "boundary": "post-control-vca",
+            "capture_sha256": "904c5c015736a26ce0b672ff7f4abbdd64e4573e3078ae45ee72b3acef3d5aff",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-7.bin",
+              "sha256": "904c5c015736a26ce0b672ff7f4abbdd64e4573e3078ae45ee72b3acef3d5aff",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1.raw": {
+            "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+            "capture_sha256": "24281c5185b4b51a2742ff186a8c3835693773a6d58682659081db2b70ecc222",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-6.bin",
+              "sha256": "24281c5185b4b51a2742ff186a8c3835693773a6d58682659081db2b70ecc222",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1_amp_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "2c1f22a364356716c01bfed3248a8e0d30e5292ebc6bfd634e7be3a2087cb315",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-4.bin",
+              "sha256": "2c1f22a364356716c01bfed3248a8e0d30e5292ebc6bfd634e7be3a2087cb315",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_1_rate_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "6246d9e2236543480badf9be1bff5e84574421fa5ddd96b70078d8cd9257132b",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-2.bin",
+              "sha256": "6246d9e2236543480badf9be1bff5e84574421fa5ddd96b70078d8cd9257132b",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2.post_control_vca": {
+            "boundary": "post-control-vca",
+            "capture_sha256": "abb0d684575555d0abc937b3fe9ce24f3e4b978b902a1037ebcee7070e8e77fc",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-9.bin",
+              "sha256": "abb0d684575555d0abc937b3fe9ce24f3e4b978b902a1037ebcee7070e8e77fc",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2.raw": {
+            "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+            "capture_sha256": "482860db79e57f7a5cc6e2966d22e465ac77cc227e09c10fcba34195fdae5234",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-8.bin",
+              "sha256": "482860db79e57f7a5cc6e2966d22e465ac77cc227e09c10fcba34195fdae5234",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2_amp_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "ae354d37969839e7271f8f696c39d63dd32ef3fdb032170debb33a75de4fa996",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-5.bin",
+              "sha256": "ae354d37969839e7271f8f696c39d63dd32ef3fdb032170debb33a75de4fa996",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "lfo_2_rate_adsr.output": {
+            "boundary": "post-envelope-ramp-limits",
+            "capture_sha256": "89a5eb1204187517e1cc085f3bed161dae616010af63587a7cf1175f90d4f75b",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-3.bin",
+              "sha256": "89a5eb1204187517e1cc085f3bed161dae616010af63587a7cf1175f90d4f75b",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mixer.output": {
+            "boundary": "post-conditional-normalization",
+            "capture_sha256": "6fc07a9f83789f321fa31b230611b721c93bd587e4d8b1b396dcd74f1036b095",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-28.bin",
+              "sha256": "6fc07a9f83789f321fa31b230611b721c93bd587e4d8b1b396dcd74f1036b095",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "mod_matrix.noise_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "ce23b81dde983335d20b632453f341b4a6bba738fa3151be288374da8c401fdb",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-16.bin",
+              "sha256": "ce23b81dde983335d20b632453f341b4a6bba738fa3151be288374da8c401fdb",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_1_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "8cdf9aaa3a50ef200b6203623110540ec0f918cf9d4cd726525b7e24edc0c317",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-13.bin",
+              "sha256": "8cdf9aaa3a50ef200b6203623110540ec0f918cf9d4cd726525b7e24edc0c317",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_1_pitch": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "7a338ba14dffcd3703f84b73659a0c946204d213d1110727e7c35f6e93fd7532",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-12.bin",
+              "sha256": "7a338ba14dffcd3703f84b73659a0c946204d213d1110727e7c35f6e93fd7532",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_2_amp": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "1c8e182bbcd57c2b20683f6f535af3a6aa92fd5f808a29a8fcd529bb9800c536",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-15.bin",
+              "sha256": "1c8e182bbcd57c2b20683f6f535af3a6aa92fd5f808a29a8fcd529bb9800c536",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "mod_matrix.vco_2_pitch": {
+            "boundary": "post-matrix-pre-upsample",
+            "capture_sha256": "664883c05e51e48e4b702c4a6f07e244e3b23021d5cbaf73ad0f0766c949a5fc",
+            "classification": "control",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-14.bin",
+              "sha256": "664883c05e51e48e4b702c4a6f07e244e3b23021d5cbaf73ad0f0766c949a5fc",
+              "size_bytes": 7056
+            },
+            "observation": "observed",
+            "rate_hz": 441,
+            "sample_count": 1764,
+            "shape": [
+              1764
+            ]
+          },
+          "noise.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "d7b9b2f5098404d848ebd91c1ed181f53c4c9194012494691965cd8fbc856f23",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-27.bin",
+              "sha256": "d7b9b2f5098404d848ebd91c1ed181f53c4c9194012494691965cd8fbc856f23",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "noise.raw": {
+            "boundary": "seed13-noise-pre-audio-vca",
+            "capture_sha256": "f1abff3c52bd878013585eb765bf4e7fd2b1990b0288c75dda834726730413e5",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-25.bin",
+              "sha256": "f1abff3c52bd878013585eb765bf4e7fd2b1990b0288c75dda834726730413e5",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_1.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "3389cef9e76e1ded04c3883137ed72fa7236af7667e8c0caa0f258f5b92d49c3",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-20.bin",
+              "sha256": "3389cef9e76e1ded04c3883137ed72fa7236af7667e8c0caa0f258f5b92d49c3",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_1.raw": {
+            "boundary": "post-pitch-clamp-pre-audio-vca",
+            "capture_sha256": "3f3207fce9f271cd886b22518cec8b2f0282b901875b2582f3f74bd43bcb3ad3",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-18.bin",
+              "sha256": "3f3207fce9f271cd886b22518cec8b2f0282b901875b2582f3f74bd43bcb3ad3",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_2.post_vca": {
+            "boundary": "post-audio-vca-pre-mixer-level",
+            "capture_sha256": "850aa12fe2add4d8ee9943a5a5d473b343e6940aeefdfe2a03be5dc4ecbaf490",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-24.bin",
+              "sha256": "850aa12fe2add4d8ee9943a5a5d473b343e6940aeefdfe2a03be5dc4ecbaf490",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          },
+          "vco_2.raw": {
+            "boundary": "post-pitch-clamp-pre-audio-vca",
+            "capture_sha256": "c6a03d884b03cf74a84680a7f307303824801a960254851c2f6ca1df927e79aa",
+            "classification": "audio",
+            "dtype": "float32",
+            "encoding": "f32le",
+            "file": {
+              "ref": "traces/trace-22.bin",
+              "sha256": "c6a03d884b03cf74a84680a7f307303824801a960254851c2f6ca1df927e79aa",
+              "size_bytes": 705600
+            },
+            "observation": "observed",
+            "rate_hz": 44100,
+            "sample_count": 176400,
+            "shape": [
+              176400
+            ]
+          }
+        },
+        "warnings": []
+      }
+    ],
+    "companion": {
+      "cases": [
+        {
+          "artifact": {
+            "artifact_id": "ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf",
+            "ref": "artifacts/ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf/metadata.json",
+            "sha256": "a5f147ae181e6950ea015c01868de241b32f1de4192902af3a66848c86aa1110"
+          },
+          "bundle": {
+            "ref": "trace-bundles/ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf.json",
+            "sha256": "df6f7a970845f419bca3fb4bcb21efeb4971ce1788aa6c976f3a490ff193d827",
+            "size_bytes": 17906
+          },
+          "case_id": "global-0",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 0,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-0",
+            "upstream_slot": 0
+          },
+          "sound_index": 0,
+          "status": "complete",
+          "warnings": []
+        },
+        {
+          "artifact": {
+            "artifact_id": "ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060",
+            "ref": "artifacts/ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060/metadata.json",
+            "sha256": "9abb3f46b4d52cce09a9dd5f244f1b8f47160605d032e1afc2632d331c666311"
+          },
+          "bundle": {
+            "ref": "trace-bundles/ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060.json",
+            "sha256": "51666edaf2d9c8b54506e343bf1a80121436871612b5c2bdb6b6d27d63828156",
+            "size_bytes": 17906
+          },
+          "case_id": "global-1",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 1,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-1",
+            "upstream_slot": 1
+          },
+          "sound_index": 1,
+          "status": "complete",
+          "warnings": []
+        }
+      ],
+      "failures": [],
+      "index": {
+        "ref": "indexes/c0e29ed4a93fb4491a6ab7bf6e6717cfe4afdc9db19b3e89541ade44c621d7f1.json",
+        "sha256": "c0e29ed4a93fb4491a6ab7bf6e6717cfe4afdc9db19b3e89541ade44c621d7f1",
+        "size_bytes": 1809
+      },
+      "registry": {
+        "ref": "spec/reference/trace-registry-v1.json",
+        "sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+        "token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259"
+      },
+      "schema": "torchsynth-trace-companion-index",
+      "schema_version": 1,
+      "status": "complete",
+      "storage": {
+        "compression": "none"
+      },
+      "variant_index": {
+        "ref": "indexes/13679ee0f45e779158a8fc6417591bfd74cc84fe5cf0beba664d578485f560e9.json",
+        "sha256": "13679ee0f45e779158a8fc6417591bfd74cc84fe5cf0beba664d578485f560e9",
+        "size_bytes": 1809
+      },
+      "warnings": []
+    },
+    "traced_index": {
+      "cases": [
+        {
+          "artifact": {
+            "artifact_id": "ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf",
+            "ref": "artifacts/ra1-bdefd6553d1e1fa4a071abf9c7b9e5dded60acd19b870a8dc87c60449845fbcf/metadata.json",
+            "sha256": "a5f147ae181e6950ea015c01868de241b32f1de4192902af3a66848c86aa1110"
+          },
+          "case_id": "global-0",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 0,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-0",
+            "upstream_slot": 0
+          },
+          "split": "development",
+          "status": "complete",
+          "warnings": []
+        },
+        {
+          "artifact": {
+            "artifact_id": "ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060",
+            "ref": "artifacts/ra1-bcb02e6518c36ac0740dc93afabbd67d6b98f2b15049f3290e50397300096060/metadata.json",
+            "sha256": "9abb3f46b4d52cce09a9dd5f244f1b8f47160605d032e1afc2632d331c666311"
+          },
+          "case_id": "global-1",
+          "failures": [],
+          "fixture": {
+            "is_train": true,
+            "sound_index": 1,
+            "upstream_batch_index": 0,
+            "upstream_name": "synth1B1-0-1",
+            "upstream_slot": 1
+          },
+          "split": "development",
+          "status": "complete",
+          "warnings": []
+        }
+      ],
+      "corpus_id": "ci1-881b9dcf517b8cd7553855b5aa7875ad28f2644c4bb6d70811d96d8db1c6477c",
+      "corpus_manifest_sha256": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+      "expected_case_count": 2,
+      "failures": [],
+      "observed_case_count": 2,
+      "profile": "torchsynth-1-voice-default",
+      "runtime_lock_sha256": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
+      "schema": "torchsynth-corpus-index",
+      "schema_version": 1,
+      "status": "complete",
+      "warnings": []
+    }
+  },
+  "generated_utc": "2026-09-19T22:54:32Z",
+  "host": {
+    "docker_server": "linux/arm64 29.7.2",
+    "host_architecture": "arm64",
+    "host_cpu": "Apple M5",
+    "host_os_version": "26.5.1",
+    "host_platform": "macOS-26.5.1-arm64-arm-64bit-Mach-O"
+  },
+  "image": "sha256:b601c37179dba973b0a9b83b26e1d4d648f0695138fe7e5d4069cef9f521d58f",
+  "limits": [
+    "Two development identities (global-0, global-1) only; no holdout access.",
+    "The three normalization seams are observed by the landed worker's boundary profiler within the same render; they are recorded in each run receipt, not double-captured as artifact trace files.",
+    "Traces are original uncompressed little-endian binary32 bytes; no codec, resampling, padding or casting was applied.",
+    "The raw store lives under an ignored out/ path; the receipt authenticates metadata and recorded digests, not absent raw bytes.",
+    "Verification-only recheck ran stdlib-only without TorchSynth, NumPy or rendering; store-dependent rehashing requires the retained raw store (--store).",
+    "Bounded software evidence only: no full-corpus, scalar, fidelity, synthesis, layout, signoff or hardware playback claim."
+  ],
+  "producer": {
+    "commit": "9226d0220806ec0c87059c6e38fcf4ee54d25bd5",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "spec/reference/trace-registry-v1.json",
+    "sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+    "token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259"
+  },
+  "resume_evidence": {
+    "additional_render_attempts": {
+      "plain": 0,
+      "traced": 0
+    },
+    "every_referenced_byte_rehashed": true
+  },
+  "runs": {
+    "audio_only": {
+      "counts": {
+        "attempt": 2,
+        "expected": 2,
+        "failure": 0,
+        "observed": 2,
+        "resume": 0,
+        "retry": 0,
+        "success": 2
+      },
+      "index": {
+        "ref": "indexes/13679ee0f45e779158a8fc6417591bfd74cc84fe5cf0beba664d578485f560e9.json",
+        "sha256": "13679ee0f45e779158a8fc6417591bfd74cc84fe5cf0beba664d578485f560e9",
+        "size_bytes": 1809
+      },
+      "resume_counts": {
+        "attempt": 2,
+        "expected": 2,
+        "failure": 0,
+        "observed": 2,
+        "resume": 2,
+        "retry": 0,
+        "success": 2
+      },
+      "run_id": "55c52d64bd7244a0bafae9a79b07f588"
+    },
+    "traced": {
+      "counts": {
+        "attempt": 2,
+        "expected": 2,
+        "failure": 0,
+        "observed": 2,
+        "resume": 0,
+        "retry": 0,
+        "success": 2
+      },
+      "index": {
+        "ref": "indexes/c0e29ed4a93fb4491a6ab7bf6e6717cfe4afdc9db19b3e89541ade44c621d7f1.json",
+        "sha256": "c0e29ed4a93fb4491a6ab7bf6e6717cfe4afdc9db19b3e89541ade44c621d7f1",
+        "size_bytes": 1809
+      },
+      "resume_counts": {
+        "attempt": 2,
+        "expected": 2,
+        "failure": 0,
+        "observed": 2,
+        "resume": 2,
+        "retry": 0,
+        "success": 2
+      },
+      "run_id": "e7e6ecd64fde4274bc8d099b60282b88"
+    }
+  },
+  "schema": "torchsynth-trace-artifact-smoke",
+  "schema_version": 1,
+  "selection": {
+    "excluded_normalization_seams": [
+      "mixer.pre_normalization",
+      "mixer.peak",
+      "mixer.gain"
+    ],
+    "requested_traces": [
+      "keyboard.midi_f0",
+      "keyboard.duration",
+      "lfo_1_rate_adsr.output",
+      "lfo_2_rate_adsr.output",
+      "lfo_1_amp_adsr.output",
+      "lfo_2_amp_adsr.output",
+      "lfo_1.raw",
+      "lfo_1.post_control_vca",
+      "lfo_2.raw",
+      "lfo_2.post_control_vca",
+      "adsr_1.output",
+      "adsr_2.output",
+      "mod_matrix.vco_1_pitch",
+      "mod_matrix.vco_1_amp",
+      "mod_matrix.vco_2_pitch",
+      "mod_matrix.vco_2_amp",
+      "mod_matrix.noise_amp",
+      "control_upsample.vco_1_pitch",
+      "vco_1.raw",
+      "control_upsample.vco_1_amp",
+      "vco_1.post_vca",
+      "control_upsample.vco_2_pitch",
+      "vco_2.raw",
+      "control_upsample.vco_2_amp",
+      "vco_2.post_vca",
+      "noise.raw",
+      "control_upsample.noise_amp",
+      "noise.post_vca",
+      "mixer.output"
+    ],
+    "selection_sha256": "6d6b822a714d70b9226f5fc4e37d093f80be9cc8497fed67d4000e5ffd695e89"
+  },
+  "storage": {
+    "audio_bytes_per_case": 705600,
+    "companion_surface": {
+      "aggregate": {
+        "bundle_bytes": 35812,
+        "bundle_count": 2,
+        "companion_bytes": 2648,
+        "trace_payload_bytes": 17146096
+      },
+      "per_case": {
+        "global-0": {
+          "bundle_bytes": 17906,
+          "trace_payload_bytes": 8573048
+        },
+        "global-1": {
+          "bundle_bytes": 17906,
+          "trace_payload_bytes": 8573048
+        }
+      }
+    },
+    "compression": "none",
+    "rehash_stats": {
+      "audio_bytes_rehashed": 1411200,
+      "bundle_bytes": 35812,
+      "bundles": 2,
+      "cases": 2,
+      "trace_bytes": 17146096,
+      "trace_payloads": 58
+    }
+  },
+  "warnings": []
+}
