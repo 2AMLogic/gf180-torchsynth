@@ -1,0 +1,36 @@
+name: Trace capture
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  stdlib:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile capture surfaces
+        run: python -m compileall -q src/torchsynth_voice/trace_capture.py tests/test_trace_capture.py tools/qualify_trace_capture.py env/release-era/capture_traces.py
+      - name: Test capture contract on the fake graph
+        run: python -m unittest discover -s tests -p test_trace_capture.py -v
+      - name: Check preregistered capture inputs and negative controls
+        run: python tools/qualify_trace_capture.py --check-inputs
+      - name: Validate committed publication when present
+        run: |
+          if [ -f sim/reference/trace-capture.json ]; then
+            python tools/qualify_trace_capture.py --check-publication
+          else
+            echo "publication: ABSENT — requires the host-gated qualified"
+            echo "release-era run (tools/qualify_trace_capture.py); absence"
+            echo "is not treated as a pass."
+          fi
