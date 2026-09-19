@@ -13,6 +13,7 @@ authors = [{ name = "2AM Logic" }]
 dependencies = []
 
 [project.optional-dependencies]
+metrics = ["numpy>=1.26,<3"]
 reference = [
   "lightning>=2.4,<3",
   "numpy>=1.26,<3",
