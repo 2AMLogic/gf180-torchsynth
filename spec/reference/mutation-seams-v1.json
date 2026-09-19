@@ -1,0 +1,48 @@
+{
+  "schema": "torchsynth-mutation-seams",
+  "schema_version": 1,
+  "identity": "mutation-seams-v1",
+  "summary": "Capability overlay naming apparatus seams where a declared, registered mutation may replace values. This is not a second trace registry: it never redefines #22 trace meanings, order or schemas, and it grants nothing to producers. Adding a writable seam requires a producer handoff that names the landed downstream refusal.",
+  "registry_binding": {
+    "trace_registry": "spec/reference/trace-registry-v1.json",
+    "trace_ownership": "#22/#23 remain the sole owners of trace meaning and passive capture; observers stay passive"
+  },
+  "seams": {
+    "apparatus.producer_call": {
+      "phase": "producer",
+      "writable": true,
+      "summary": "The apparatus fixture producer invocation that yields attempt payload bytes. A declared mutation may raise the identified ProducerCrash or return a replacement value; the Voice graph is never invoked here.",
+      "downstream": "injection session in-band errored event; scorecard.make_report / case_registry.row_outcome refuse any PASS from an errored attempt"
+    },
+    "apparatus.artifact_write": {
+      "phase": "persistence",
+      "writable": true,
+      "summary": "The apparatus write step that persists attempt payload bytes and returns the stored path/size/digest binding. A declared mutation may truncate or bit-flip the stored bytes so they diverge from the declared binding.",
+      "downstream": "artifacts.verify_sha256 refuses the stored bytes against the declared receipt digest"
+    },
+    "apparatus.receipt_append": {
+      "phase": "persistence",
+      "writable": true,
+      "summary": "The apparatus step that emits the scorecard-shaped attempt receipt. A declared mutation may rebind the receipt digest to foreign bytes or drop the receipt from the attempt inventory.",
+      "downstream": "scorecard.validate_row refuses malformed receipts; mutations.require_complete_inventory refuses a shrunken denominator; artifacts.verify_sha256 refuses rebound digests"
+    },
+    "apparatus.evidence_digest": {
+      "phase": "persistence",
+      "writable": false,
+      "summary": "Derived digest binding over already-produced bytes. This is a passive, derived observation and therefore not an executable injection seam; a plan declaring a mutation here must fail closed at registration.",
+      "downstream": "mutations.validate_plan refuses any operator at a non-writable seam"
+    },
+    "board.partition_access": {
+      "phase": "access",
+      "writable": true,
+      "summary": "The partition claim presented to the case registry access gate. A declared mutation may relabel the claim so the holdout refusal path is exercised as a test, never to actually read sealed payloads.",
+      "downstream": "case_registry._access refuses before any stat/read of holdout payloads; evaluate refuses unassigned partitions"
+    },
+    "capture.inventory": {
+      "phase": "capture",
+      "writable": true,
+      "summary": "The capture descriptor inventory presented to the landed capture validator. A declared mutation may swap or drop names so the capture refusal path is exercised against the #22 registry; passive observers themselves stay passive.",
+      "downstream": "trace_capture.validate_selected_capture refuses missing, extra, swapped or reordered capture inventories"
+    }
+  }
+}
