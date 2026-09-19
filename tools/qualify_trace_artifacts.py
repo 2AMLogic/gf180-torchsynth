@@ -72,6 +72,7 @@ import warnings
 from pathlib import Path
 
 sys.path.insert(0, "/repo/env/release-era")
+sys.path.insert(0, "/repo/src")
 sys.path.insert(0, "/repo/src/torchsynth_voice")
 
 import render_artifact as worker
