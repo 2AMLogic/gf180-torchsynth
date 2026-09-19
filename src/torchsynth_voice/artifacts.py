@@ -17,7 +17,11 @@ from typing import Any, Mapping
 from .contract import UpstreamContract, repository_root, sha256_file
 from .identity import SoundIdentity
 
-_SCHEMA_FILES = ("render-artifact-v1.schema.json", "corpus-index-v1.schema.json")
+_SCHEMA_FILES = (
+    "render-artifact-v1.schema.json",
+    "corpus-index-v1.schema.json",
+    "favorite-v1.schema.json",
+)
 
 
 class ValidationError(ValueError):
@@ -226,6 +230,17 @@ def _structure(
 def _validate_structure(value: Any, filename: str) -> None:
     _json_value(value)
     _structure(value, _schema_document(filename), filename)
+
+
+def validate_document(value: Any, filename: str) -> None:
+    """Structural validation against one committed schema document.
+
+    The filename must be in the committed `_SCHEMA_FILES` allowlist. Semantic
+    rules (cross-field presence, name-set coverage, identity recomputation)
+    belong to the feature validators built on top of this check.
+    """
+    _require(filename in _SCHEMA_FILES, "unsupported schema reference")
+    _validate_structure(value, filename)
 
 
 def _fixture(value: dict[str, Any]) -> None:
