@@ -12,8 +12,24 @@ jobs:
   sentinel:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    env:
+      ATEN_CPU_CAPABILITY: AVX2
+      MKL_CBWR: COMPATIBLE
+      ONEDNN_MAX_CPU_ISA: AVX2
+      MKL_ENABLE_INSTRUCTIONS: AVX2
     steps:
       - uses: actions/checkout@v4
+      - name: Fail fast if host-dispatch env is not pinned (issue #117)
+        run: |
+          fail() {
+            echo "FATAL: $1" >&2
+            exit 1
+          }
+          [ "${ATEN_CPU_CAPABILITY-}" = "AVX2" ] || fail "ATEN_CPU_CAPABILITY is '${ATEN_CPU_CAPABILITY-<unset>}', must be pinned to AVX2 (canonical dispatch tier, DR-0006 release-mkl-compatible-v1; issue #117)"
+          [ "${MKL_CBWR-}" = "COMPATIBLE" ] || fail "MKL_CBWR is '${MKL_CBWR-}', must be pinned to COMPATIBLE (DR-0006 release-mkl-compatible-v1; issue #117)"
+          [ "${ONEDNN_MAX_CPU_ISA-}" = "AVX2" ] || fail "ONEDNN_MAX_CPU_ISA is '${ONEDNN_MAX_CPU_ISA-<unset>}', must be pinned to AVX2 (#124 oneDNN ISA layer; issue #117)"
+          [ "${MKL_ENABLE_INSTRUCTIONS-}" = "AVX2" ] || fail "MKL_ENABLE_INSTRUCTIONS is '${MKL_ENABLE_INSTRUCTIONS-<unset>}', must be pinned to AVX2 (#124 MKL ISA layer; issue #117)"
+          echo "Host-dispatch env pinned: ATEN_CPU_CAPABILITY=$ATEN_CPU_CAPABILITY MKL_CBWR=$MKL_CBWR ONEDNN_MAX_CPU_ISA=$ONEDNN_MAX_CPU_ISA MKL_ENABLE_INSTRUCTIONS=$MKL_ENABLE_INSTRUCTIONS"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
