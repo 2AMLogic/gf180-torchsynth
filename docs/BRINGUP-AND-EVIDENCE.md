@@ -2,51 +2,27 @@
 
 ## Outcome
 
-This project will have both a scorecard and a directed capability graph, but
+This project has both a generated scorecard and a directed capability graph, but
 they answer different questions from the Loom issue graph:
 
-| Surface | Question | Source of truth | Planned implementation |
+| Surface | Question | Source of truth | View / implementation |
 | --- | --- | --- | --- |
 | Loom issue DAG | What work is unblocked? | GitHub issue `Depends on` edges | Epics [#1](https://github.com/2AMLogic/gf180-torchsynth/issues/1) and [#2](https://github.com/2AMLogic/gf180-torchsynth/issues/2) |
-| Capability DAG | What has actually been demonstrated, and what evidence has gone stale? | Machine-readable nodes plus evidence records | [#85](https://github.com/2AMLogic/gf180-torchsynth/issues/85) |
-| Scorecard | Which cases, traces, and properties pass, fail, lack a verdict, have not run, or are stale? | Case registry plus one result per case | [#87](https://github.com/2AMLogic/gf180-torchsynth/issues/87) |
+| Capability DAG | What has actually been demonstrated, and what evidence has gone stale? | [Canonical nodes](../spec/capabilities-v1.json) plus evidence records | [Generated DAG and exclusions](CAPABILITIES.md), [#85](https://github.com/2AMLogic/gf180-torchsynth/issues/85) |
+| Scorecard | Which cases, traces, and properties pass, fail, lack a verdict, have not run, or are stale? | Case registry plus one result per case | [Generated board](SCORECARD.md), [#87](https://github.com/2AMLogic/gf180-torchsynth/issues/87) |
 
 Closing an issue will never make a capability green. Likewise, one green final
 waveform will not make every internal module green. Status must be derived from
 current evidence, not copied into prose.
 
-## Proposed capability graph
+## Evidence-derived capability graph
 
-Issue #85 will freeze the node IDs and schema. The dependency shape is already
-clear enough to prevent accidental big-bang integration:
-
-```mermaid
-graph TD
-  SRC[Source, nebula, runtime identity] --> REP[Repeatable named reference cases]
-  SRC --> PARAM[Name-keyed parameter contract]
-  REP --> TRACE[Non-perturbing upstream traces]
-  PARAM --> TRACE
-
-  APP[Qualified preparation and estimators] --> RUBRIC[Frozen rubric]
-  TRACE --> FLOAT[Independent float modules]
-  APP --> FLOAT
-  FLOAT --> RUBRIC
-  MUT[Live negative-control matrix] --> RUBRIC
-
-  RUBRIC --> FIXED[Fixed numeric model]
-  FLOAT --> FIXED
-  FIXED --> RTL_MOD[Bit-exact RTL modules]
-  RTL_MOD --> RTL_CLIP[Bit-exact integrated one-shot clip]
-
-  RTL_CLIP --> FPGA[FPGA digital demonstration]
-  RTL_CLIP --> SYN[gf180 synthesis]
-  SYN --> ROUTE[gf180 routed implementation]
-  RTL_CLIP --> EXPLORER[Sound-explorer integration]
-
-  FIXED --> AUD[Auditory-transparency evidence]
-  APP --> AUD
-  AUD -.does not replace identity.-> RTL_CLIP
-```
+Node IDs, dependencies and claim scopes are defined in
+[`spec/capabilities-v1.json`](../spec/capabilities-v1.json), validated against
+the dedicated graph schema. The [generated graph](CAPABILITIES.md) and
+[README summary](../README.md#evidence-derived-capability-status) use the same
+resolver; this document deliberately keeps no independent Mermaid/status copy.
+See [compiler and automatic refresh policy](CAPABILITY-WORKFLOW.md).
 
 The graph separates implementation identity, auditory transparency,
 distribution preservation, FPGA operation, synthesis, routing, and eventual
@@ -157,8 +133,9 @@ help choose numeric formats, but the fitted objective cannot be the only judge
 of the candidate it optimized.
 
 The board itself is not evidence. Its input records, provenance, current
-covered hashes, and live controls are evidence. Until #87 lands, the repository
-must continue to say that no scorecard result exists.
+covered hashes, and live controls are evidence. The generated board retains
+missing attempts as NOT RUN and never treats the existence of its renderer,
+prepared fixtures, or a separately scoped probe as a measured case result.
 
 ## Apparatus is its own failure surface
 

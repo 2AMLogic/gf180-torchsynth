@@ -1,0 +1,77 @@
+name: Capability evidence views
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - README.md
+      - docs/CAPABILITIES.md
+      - docs/capabilities.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Graph, evidence, renderer and fail-closed controls
+        run: python3 -S -m unittest discover -s tests -p 'test_capabilit*.py' -v
+      - name: Lightweight graph and all-view agreement
+        run: python3 -S tools/compile_capabilities.py --check
+      - name: Strict declared-evidence health (unrun is not PASS)
+        run: python3 -S tools/compile_capabilities.py --strict
+
+  refresh:
+    if: >-
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      github.repository == '2AMLogic/gf180-torchsynth'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: capability-refresh-main
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # A queued refresh derives from current main, not an obsolete event SHA.
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Regenerate without executing measurement commands
+        run: python3 -S tools/compile_capabilities.py
+      - name: Validate generated views and controls
+        run: |
+          python3 -S -m unittest discover -s tests -p 'test_capabilit*.py' -v
+          python3 -S tools/compile_capabilities.py --check
+      - name: Retain evidence-health failure while publishing honest states
+        id: health
+        continue-on-error: true
+        run: python3 -S tools/compile_capabilities.py --strict
+      - name: Commit only changed generated views
+        run: |
+          git add -- README.md docs/CAPABILITIES.md docs/capabilities.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'docs: refresh evidence-derived capability views'
+          # Ordinary push fails safely if main advanced or branch policy refuses it.
+          git push origin HEAD:main
+      - name: Fail visibly for unhealthy declared evidence
+        if: steps.health.outcome == 'failure'
+        run: exit 1

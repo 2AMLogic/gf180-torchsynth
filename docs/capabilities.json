@@ -1,0 +1,697 @@
+{
+  "counts": {
+    "BLOCKED": 16,
+    "FAIL": 0,
+    "NO VERDICT": 0,
+    "NOT RUN": 1,
+    "PASS": 0,
+    "READY": 1,
+    "STALE": 0
+  },
+  "evidence_healthy": true,
+  "kind": "generated-capability-view",
+  "nodes": [
+    {
+      "cheaper_predecessor": null,
+      "check": "apparatus-qualification-v1",
+      "claim": "Qualified signal preparation and estimators",
+      "claim_class": "measurement-apparatus",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [],
+      "engine": "measurement",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Synth correctness",
+        "Fidelity verdict for invalid measurements",
+        "Automatic alignment for exact paired rows"
+      ],
+      "expensive": false,
+      "id": "apparatus",
+      "layer": "verification",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "asymmetric-filter": "invariance-failure",
+        "invalid-window": "invalid-preparation"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached"
+      ],
+      "scope": "property-specific-preparation",
+      "state": "NOT RUN"
+    },
+    {
+      "cheaper_predecessor": null,
+      "check": "contract-tests-v1",
+      "claim": "Pinned manifest consistency and missing/changed-file rejection",
+      "claim_class": "source-contract",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [],
+      "engine": "stdlib",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Executing the pinned upstream source",
+        "Runtime qualification",
+        "DSP correctness",
+        "Hardware"
+      ],
+      "expensive": false,
+      "id": "contract",
+      "layer": "reference-contract",
+      "local_state": "READY",
+      "negative_controls": {
+        "missing-and-changed-files": "hash-mismatch"
+      },
+      "reasons": [
+        "registered check available; no evidence attached"
+      ],
+      "scope": "manifest-consistency",
+      "state": "READY"
+    },
+    {
+      "cheaper_predecessor": null,
+      "check": "parameter-qualification-v1",
+      "claim": "Name-keyed normalized and physical parameter contract",
+      "claim_class": "parameter-identity",
+      "coverage": {
+        "inputs": [
+          "spec/reference/parameter-inventory-v1.json",
+          "src/torchsynth_voice/inventory.py"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "contract"
+      ],
+      "engine": "stdlib",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Sound fidelity",
+        "Runtime qualification",
+        "Parameter array ordering as identity"
+      ],
+      "expensive": false,
+      "id": "parameters",
+      "layer": "reference",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "renamed-parameter": "name-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: contract=READY"
+      ],
+      "scope": "named-parameters",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": null,
+      "check": "runtime-qualification-v1",
+      "claim": "Source, default nebula and CPU float32 runtime qualification",
+      "claim_class": "runtime-identity",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json",
+          "env/release-era/requirements.lock",
+          "env/release-era/probe.py",
+          "env/release-era/test_probe.py"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "contract"
+      ],
+      "engine": "pinned-upstream",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Cross-runtime byte identity",
+        "Scalar/batched equality",
+        "Hardware"
+      ],
+      "expensive": false,
+      "id": "runtime",
+      "layer": "reference",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "changed-runtime": "runtime-mismatch",
+        "changed-source": "hash-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: contract=READY"
+      ],
+      "scope": "cpu-float32",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "parameters",
+      "check": "reference-repeatability-v1",
+      "claim": "Repeatable named canonical batched reference cases",
+      "claim_class": "reference-repeatability",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "parameters",
+        "runtime"
+      ],
+      "engine": "pinned-upstream",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Hardware batching",
+        "DSP correctness from self-comparison",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "id": "reference",
+      "layer": "reference",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "changed-noise-slot": "noise-mismatch",
+        "fresh-process-drift": "repeatability-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: parameters=BLOCKED, runtime=BLOCKED"
+      ],
+      "scope": "canonical-batch-fixtures",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "parameters",
+      "check": "trace-qualification-v1",
+      "claim": "Non-perturbing named upstream seam captures",
+      "claim_class": "trace-identity",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "parameters",
+        "reference"
+      ],
+      "engine": "pinned-upstream",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Independent implementation correctness",
+        "Auditory transparency"
+      ],
+      "expensive": true,
+      "id": "traces",
+      "layer": "reference",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "omitted-seam": "trace-missing",
+        "perturbed-capture": "final-audio-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: parameters=BLOCKED, reference=BLOCKED"
+      ],
+      "scope": "named-seams",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "apparatus",
+      "check": "float-module-qualification-v1",
+      "claim": "Independent floating modules match qualified upstream seams",
+      "claim_class": "implementation-fidelity",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "apparatus",
+        "traces"
+      ],
+      "engine": "independent-float",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Fixed-point sample identity",
+        "Auditory transparency",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "id": "float-modules",
+      "layer": "model",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "wrong-route-sign": "seam-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: apparatus=NOT RUN, traces=BLOCKED"
+      ],
+      "scope": "seam-metrics",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": null,
+      "check": "rubric-qualification-v1",
+      "claim": "Frozen property rubric with live negative-control matrix",
+      "claim_class": "measurement-rubric",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "apparatus",
+        "float-modules"
+      ],
+      "engine": "measurement",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Averaging unlike units into a quality score",
+        "Holdout tuning",
+        "Hardware"
+      ],
+      "expensive": false,
+      "id": "rubric",
+      "layer": "verification",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "undetected-mutation": "control-failure"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: apparatus=NOT RUN, float-modules=BLOCKED"
+      ],
+      "scope": "frozen-rubric",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "reference",
+      "check": "scalar-qualification-v1",
+      "claim": "Resolved one-sound execution and measured scalar/batched divergence",
+      "claim_class": "scalar-execution",
+      "coverage": {
+        "inputs": [
+          "src/torchsynth_voice/render.py",
+          "spec/reference/corpus-v0.json",
+          "docs/BRINGUP-AND-EVIDENCE.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "reference"
+      ],
+      "engine": "pinned-upstream",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Assumed scalar/batched bit identity",
+        "Changing normalization or the default nebula",
+        "Hardware qualification"
+      ],
+      "expensive": true,
+      "id": "scalar",
+      "layer": "reference",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "wrong-noise-stream": "noise-mismatch",
+        "wrong-resolved-parameter": "parameter-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: reference=BLOCKED"
+      ],
+      "scope": "resolved-scalar",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "rubric",
+      "check": "fixed-model-qualification-v1",
+      "claim": "Fixed numeric model satisfies declared float-to-fixed metrics",
+      "claim_class": "numeric-fidelity",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "float-modules",
+        "rubric",
+        "scalar"
+      ],
+      "engine": "fixed-model",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "RTL identity",
+        "Auditory transparency",
+        "Distribution preservation"
+      ],
+      "expensive": true,
+      "id": "fixed-model",
+      "layer": "model",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "numeric-mutation": "metric-failure"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: float-modules=BLOCKED, rubric=BLOCKED, scalar=BLOCKED"
+      ],
+      "scope": "default-one-shot",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "apparatus",
+      "check": "auditory-qualification-v1",
+      "claim": "Auditory transparency under a separately frozen listening protocol",
+      "claim_class": "auditory-transparency",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "apparatus",
+        "fixed-model"
+      ],
+      "engine": "listening-study",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Sample identity",
+        "Distribution preservation",
+        "FPGA or silicon operation"
+      ],
+      "expensive": true,
+      "id": "auditory",
+      "layer": "perception",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "audible-anchor": "anchor-not-detected"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: apparatus=NOT RUN, fixed-model=BLOCKED"
+      ],
+      "scope": "preregistered-listening",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "apparatus",
+      "check": "distribution-qualification-v1",
+      "claim": "Distribution preservation over a declared corpus and statistical protocol",
+      "claim_class": "distribution-preservation",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md",
+          "spec/reference/corpus-v0.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "apparatus",
+        "fixed-model"
+      ],
+      "engine": "statistical-study",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Auditory transparency",
+        "Per-sound identity",
+        "Hardware"
+      ],
+      "expensive": true,
+      "id": "distribution",
+      "layer": "distribution",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "biased-corpus": "distribution-shift"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: apparatus=NOT RUN, fixed-model=BLOCKED"
+      ],
+      "scope": "preregistered-corpus",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "fixed-model",
+      "check": "rtl-module-qualification-v1",
+      "claim": "RTL modules are sample-exact with the fixed model",
+      "claim_class": "implementation-identity",
+      "coverage": {
+        "inputs": [
+          "docs/MEASUREMENT-PLAN.md",
+          "spec/decision-records/0004-verification-claims.md"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "fixed-model"
+      ],
+      "engine": "rtl-simulation",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Physical timing",
+        "Sound fidelity beyond fixed model"
+      ],
+      "expensive": true,
+      "id": "rtl-modules",
+      "layer": "rtl",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "one-bit-mutation": "sample-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: fixed-model=BLOCKED"
+      ],
+      "scope": "module-sample-exact",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "rtl-modules",
+      "check": "rtl-clip-qualification-v1",
+      "claim": "Integrated four-second RTL clip is sample-exact with the fixed model",
+      "claim_class": "implementation-identity",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "rtl-modules"
+      ],
+      "engine": "rtl-simulation",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Live notes",
+        "Drum nebula",
+        "FPGA or silicon execution",
+        "Auditory transparency"
+      ],
+      "expensive": true,
+      "id": "rtl-clip",
+      "layer": "rtl",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "normalization-mutation": "gain-mismatch",
+        "sample-slip": "sample-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: rtl-modules=BLOCKED"
+      ],
+      "scope": "default-one-shot",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "rtl-clip",
+      "check": "fpga-qualification-v1",
+      "claim": "FPGA digital captures match the integrated one-shot model",
+      "claim_class": "fpga-operation",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "rtl-clip"
+      ],
+      "engine": "fpga-capture",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Analog audio",
+        "gf180 synthesis or routing",
+        "Silicon"
+      ],
+      "expensive": true,
+      "id": "fpga",
+      "layer": "hardware",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "capture-bit-flip": "sample-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: rtl-clip=BLOCKED"
+      ],
+      "scope": "digital-one-shot",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "rtl-clip",
+      "check": "gf180-synthesis-qualification-v1",
+      "claim": "gf180mcu synthesis with committed mapped-flow evidence",
+      "claim_class": "gf180-synthesis",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "rtl-clip"
+      ],
+      "engine": "klt",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Routing",
+        "Timing signoff",
+        "Hardware playback",
+        "Sound fidelity from cell counts"
+      ],
+      "expensive": true,
+      "id": "synthesized",
+      "layer": "synthesis",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "wrong-library": "library-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: rtl-clip=BLOCKED"
+      ],
+      "scope": "gf180-default-one-shot",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "synthesized",
+      "check": "gf180-routing-qualification-v1",
+      "claim": "gf180mcu routed implementation with declared physical checks",
+      "claim_class": "gf180-routing",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "synthesized"
+      ],
+      "engine": "klt",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Silicon fabrication",
+        "Board audio",
+        "Unmeasured signoff corners"
+      ],
+      "expensive": true,
+      "id": "routed",
+      "layer": "physical",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "physical-violation": "physical-check-failure"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: synthesized=BLOCKED"
+      ],
+      "scope": "gf180-default-one-shot",
+      "state": "BLOCKED"
+    },
+    {
+      "cheaper_predecessor": "routed",
+      "check": "silicon-qualification-v1",
+      "claim": "Fabricated silicon operates as the declared one-shot digital engine",
+      "claim_class": "silicon-operation",
+      "coverage": {
+        "inputs": [
+          "spec/VOICE-CONTRACT.md",
+          "spec/reference/upstream.json"
+        ],
+        "references": []
+      },
+      "dependencies": [
+        "routed",
+        "rtl-clip"
+      ],
+      "engine": "silicon-capture",
+      "evidence": null,
+      "evidence_healthy": true,
+      "exclusions": [
+        "Analog auditory transparency",
+        "Distribution preservation",
+        "Unmeasured operating conditions"
+      ],
+      "expensive": true,
+      "id": "silicon",
+      "layer": "hardware",
+      "local_state": "NOT RUN",
+      "negative_controls": {
+        "capture-corruption": "sample-mismatch"
+      },
+      "reasons": [
+        "planned check is not registered; no evidence attached",
+        "prerequisites not demonstrated: routed=BLOCKED, rtl-clip=BLOCKED"
+      ],
+      "scope": "digital-one-shot",
+      "state": "BLOCKED"
+    }
+  ],
+  "schema_version": 1
+}

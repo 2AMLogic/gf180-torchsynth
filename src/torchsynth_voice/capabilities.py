@@ -82,6 +82,7 @@ CHECKS = {
         (
             "tests/test_capabilities.py",
             "tools/compile_capabilities.py",
+            "src/torchsynth_voice/capability_views.py",
             "tests/fixtures/artifacts/complete.json",
         ),
         {"stale-input": "hash-mismatch"},
@@ -535,6 +536,20 @@ def evaluate(graph: dict, root: Path) -> dict[str, Result]:
     return results
 
 
+def render_mermaid(graph: dict, results: dict[str, Result]) -> str:
+    """One deterministic dependency/status graph shared by both Markdown views."""
+    nodes = _ordered(graph)
+    lines = ["```mermaid", "graph TD"]
+    for i, node in enumerate(nodes):
+        lines.append(f'  n{i}["{node["id"]}: {results[node["id"]].state}"]')
+    indices = {node["id"]: i for i, node in enumerate(nodes)}
+    for node in nodes:
+        for dependency in sorted(node["dependencies"]):
+            lines.append(f"  n{indices[dependency]} --> n{indices[node['id']]}")
+    lines.append("```")
+    return "\n".join(lines)
+
+
 def render_markdown(graph: dict, results: dict[str, Result]) -> str:
     """Deterministic views only; no independent prose status source."""
 
@@ -561,7 +576,8 @@ def render_markdown(graph: dict, results: dict[str, Result]) -> str:
         "batch_size=1/reproducible=False; scalar/batched equality needs its own measurement. "
         "The normative TorchSynth commit remains `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`.",
         "",
-        "Run `python3 tools/compile_capabilities.py` to regenerate; `--check` checks graph/view agreement; "
+        "Run `python3 tools/compile_capabilities.py` to regenerate this document, the root README block "
+        "and `docs/capabilities.json`; `--check` checks all three views for agreement; "
         "`--strict` additionally fails on unhealthy declared evidence (including blocked attempted claims). "
         "Planned nodes without evidence are allowed, explicitly unrun, and never counted as passes. "
         "Neither mode executes checks or evidence commands. No Torch installation is required.",
@@ -627,14 +643,7 @@ def render_markdown(graph: dict, results: dict[str, Result]) -> str:
             )
             + " |"
         )
-    lines += ["", "```mermaid", "graph TD"]
-    for i, node in enumerate(nodes):
-        lines.append(f'  n{i}["{node["id"]}: {results[node["id"]].state}"]')
-    indices = {node["id"]: i for i, node in enumerate(nodes)}
-    for node in nodes:
-        for dependency in sorted(node["dependencies"]):
-            lines.append(f"  n{indices[dependency]} --> n{indices[node['id']]}")
-    lines += ["```", ""]
+    lines += ["", render_mermaid(graph, results), ""]
     for node in nodes:
         check = CHECKS.get(node["check"])
         lines += [

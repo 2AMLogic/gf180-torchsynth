@@ -561,6 +561,9 @@ class CapabilityTests(unittest.TestCase):
         )
 
     def test_cli_lightweight_and_strict_modes(self):
+        (self.root / "README.md").write_text(
+            "<!-- CAPABILITIES:BEGIN -->\n<!-- CAPABILITIES:END -->\n"
+        )
         self.evidence()
         self.write_json("spec/capabilities-v1.json", self.graph)
         command = [
@@ -671,11 +674,15 @@ class CapabilityTests(unittest.TestCase):
 class CapabilityRepositoryTests(unittest.TestCase):
     """Repository agreement is not part of a synthetic compiler attestation."""
 
-    def test_committed_view_and_real_claims_remain_unrun(self):
+    def test_committed_view_and_unattempted_claims_remain_unrun(self):
         graph = load_graph(ROOT / "spec/capabilities-v1.json")
         results = evaluate(graph, ROOT)
-        self.assertFalse(any(result.state == "PASS" for result in results.values()))
-        self.assertTrue(all(result.healthy for result in results.values()))
+        for node in graph["nodes"]:
+            if node["evidence"] is None:
+                self.assertIn(results[node["id"]].local_state, {"READY", "NOT RUN"})
+                self.assertNotEqual(results[node["id"]].state, "PASS")
+        # Agreement tests permit correctly displayed red evidence. Strict health
+        # is a separate gate; future valid records may also produce PASS.
         self.assertEqual(
             (ROOT / "docs/CAPABILITIES.md").read_text(), render_markdown(graph, results)
         )

@@ -8,11 +8,17 @@ and [Epic #2](https://github.com/2AMLogic/gf180-torchsynth/issues/2). This
 document explains the gates; the issues own builder-sized deliverables and
 dependencies.
 
-The scheduling DAG is not the evidence graph. The planned capability DAG
+The scheduling DAG is not the evidence graph. The [generated capability DAG](CAPABILITIES.md)
 derives claim status from current checks, artifacts, controls, and covered-input
-hashes; the scorecard reports case-level coverage and agreement. Their design
+hashes; the [scorecard](SCORECARD.md) reports case-level coverage and agreement. Their design
 and the module-by-module debug order are in
 [piecewise bring-up and evidence architecture](BRINGUP-AND-EVIDENCE.md).
+
+The sketch and milestones below explain design order, not current status or a
+second canonical graph. Current nodes/edges come only from
+[`spec/capabilities-v1.json`](../spec/capabilities-v1.json); the
+[README status](../README.md#evidence-derived-capability-status) is generated
+from the same resolver. See [refresh policy](CAPABILITY-WORKFLOW.md).
 
 ```text
 version/profile contract
