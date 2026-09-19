@@ -385,7 +385,7 @@ def validate_run(envelope, plan, index, *, root=None):
     )
     valid_cases = {"global-" + str(c["sound_index"]): c for c in selection}
     require(len(valid_cases) == len(selection), "duplicate planned identity")
-    completed = set()
+    completed = {}
     artifacts = {}
     for event in events:
         require(event["case_id"] in valid_cases, "out-of-manifest attempt")
@@ -400,12 +400,16 @@ def validate_run(envelope, plan, index, *, root=None):
                 complete and event["case_id"] in completed,
                 "resume without a completed render",
             )
+            require(
+                event["artifact"] == completed[event["case_id"]],
+                "resume changed the exact artifact reference",
+            )
         else:
             require(
                 event["case_id"] not in completed, "recomputation of completed case"
             )
         if complete:
-            completed.add(event["case_id"])
+            completed[event["case_id"]] = event["artifact"]
             if root is not None:
                 record = _verify_artifact(
                     root,

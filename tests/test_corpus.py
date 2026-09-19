@@ -114,6 +114,14 @@ class CorpusTests(unittest.TestCase):
         self.assertEqual(
             stats, {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in stats}
         )
+        bad = copy.deepcopy(again)
+        bad["attempts"][-1]["artifact"] = dict(
+            bad["attempts"][-1]["artifact"], sha256="a" * 64
+        )
+        plan, index = self.documents(again)
+        index["cases"][-1]["artifact"]["sha256"] = "a" * 64
+        with self.assertRaisesRegex(ValidationError, "exact artifact reference"):
+            validate_run(bad, plan, index)
 
     def test_failed_case_denominator_and_retry_history(self):
         def fail_second(request, store):
