@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "preregistered_utc": "2026-09-19T01:59:29Z",
+  "source_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "batch_sizes": [32, 64, 128, 256],
+  "repeats": [1, 2],
+  "cases": [
+    {"name": "global-0", "index": 0, "physical_overrides": {}},
+    {"name": "global-31", "index": 31, "physical_overrides": {}},
+    {"name": "global-32", "index": 32, "physical_overrides": {}},
+    {"name": "global-9215", "index": 9215, "physical_overrides": {}},
+    {"name": "global-9216", "index": 9216, "physical_overrides": {}},
+    {"name": "global-39942", "index": 39942, "physical_overrides": {}},
+    {"name": "normalization-off", "index": 0, "physical_overrides": {"mixer.vco_1": 0.2, "mixer.vco_2": 0.2, "mixer.noise": 0.2}},
+    {"name": "normalization-on", "index": 0, "physical_overrides": {"mixer.vco_1": 1.0, "mixer.vco_2": 1.0, "mixer.noise": 1.0}}
+  ],
+  "configuration": {"sample_rate": 44100, "control_rate": 441, "buffer_size_seconds": 4.0, "reproducible": true, "no_grad": true},
+  "sample_count": 176400,
+  "control_sample_count": 1764,
+  "nebula": "default",
+  "noise_seed": 13,
+  "threads": 1,
+  "device": "cpu",
+  "dtype": "float32",
+  "seams": ["adsr_1", "adsr_2", "lfo_1", "lfo_2", "vco_1", "vco_2", "noise", "pre_normalization", "audio"],
+  "encoding": "C-contiguous little-endian IEEE754 float32; parameters are 78 sorted canonical names with separate normalized and physical f32 arrays; label is one byte 0 or 1",
+  "comparison": "original bytes plus unaligned first/max/mean-absolute/RMS differences in binary64; no trimming, resampling or level normalization",
+  "process_policy": "Each runtime/batch/repeat is a new process; each case constructs a fresh Voice. No cached render may qualify a repeat.",
+  "passive_control": "global-0 at batch 32 in each runtime/repeat: remove hooks and profile, construct a second Voice and compare unhooked audio bytes",
+  "failure_policy": "Every requested cell retained; error, timeout (1800 s per process), OOM or unavailable runtime is NO_VERDICT, never PASS. Measured byte disagreement is FAIL. Cross-runtime drift is reported without an equality requirement.",
+  "runtime_definitions": {
+    "release": {"lock": "env/release-era/requirements.lock", "lock_sha256": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25", "dockerfile_sha256": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73", "python": "3.9.13", "torch": "1.12.1+cpu", "numpy": "1.23.2", "lightning": "1.8.6", "platform": "linux/amd64 (Docker Desktop emulation on Apple M5); native linux/amd64 CI is an additional sentinel host, not full-matrix qualified"},
+    "current": {"lock": "uv.lock", "lock_sha256": "66ce66150ccdffb328908e3e88455c0d9e8f9671a449c4c43fe3738f1fb7a95c", "python": "3.13.2", "torch": "2.14.0", "numpy": "2.5.3", "lightning": "2.6.6", "platform": "macOS 26.5.1 arm64, Apple M5"}
+  }
+}
