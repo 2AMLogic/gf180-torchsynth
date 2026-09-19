@@ -234,6 +234,74 @@ class PairedMetricsTests(unittest.TestCase):
             next(r for r in produced if r["property"] == "snr_db")["observed"]
         )
 
+    def assert_limit_verdict(self, observed, expected, tolerance, verdict):
+        result = compare([0], [observed])
+        limit = Limit(expected, tolerance, "V", "exact numeric boundary fixture")
+        produced, data = rows(
+            result, Rubric("numeric-boundary", "1", {"mean_error": limit})
+        )
+        row = next(r for r in produced if r["property"] == "mean_error")
+        self.assertEqual(row["verdict"], verdict)
+        self.assertEqual(row["observed"], observed)
+        self.assertEqual(row["expected"]["value"], expected)
+        self.assertEqual(row["tolerance"]["value"], tolerance)
+        saved = json.loads(data)
+        self.assertEqual(saved["comparison"], result)
+        self.assertEqual(saved["rubric"]["limits"]["mean_error"]["expected"], expected)
+        self.assertEqual(
+            saved["rubric"]["limits"]["mean_error"]["tolerance"], tolerance
+        )
+        self.assertEqual(row["artifact"]["sha256"], hashlib.sha256(data).hexdigest())
+        report = make_report(produced, partition="development", rubric=row["rubric"])
+        self.assertEqual(report_from_json(report_to_json(report)), report)
+
+    def test_rubric_integer_representability_boundaries(self):
+        for sign in (-1, 1):
+            for magnitude in (2**53 - 1, 2**53, 2**53 + 2):
+                observed = float(sign * magnitude)
+                for offset in (-1, 0, 1):
+                    expected = sign * magnitude + offset
+                    with self.subTest(observed=observed, expected=expected):
+                        self.assert_limit_verdict(
+                            observed, expected, 0, "PASS" if offset == 0 else "FAIL"
+                        )
+
+    def test_rubric_tolerance_boundaries_do_not_round_the_interval(self):
+        for sign in (-1, 1):
+            for observed, expected, tolerance, verdict in (
+                (2**53, 2**53 + 1, math.nextafter(1.0, 0.0), "FAIL"),
+                (2**53, 2**53 + 1, 1, "PASS"),
+                (2**53, 2**53 + 1, math.nextafter(1.0, 2.0), "PASS"),
+                (2**54, 1, 2**54 - 1, "PASS"),
+                (2**54, -1, 2**54, "FAIL"),
+                (2**54, -1, 2**54 + 1, "PASS"),
+                (1.0, -5e-324, 1, "FAIL"),
+                (5e-324, 0, 5e-324, "PASS"),
+                (5e-324, 0, 0, "FAIL"),
+            ):
+                with self.subTest(sign=sign, expected=expected, tolerance=tolerance):
+                    self.assert_limit_verdict(
+                        float(sign * observed), sign * expected, tolerance, verdict
+                    )
+
+    def test_rubric_maximum_finite_domain_and_overflowing_difference(self):
+        largest = sys.float_info.max
+        for sign in (-1, 1):
+            for expected, tolerance, verdict in (
+                (int(largest), 0, "PASS"),
+                (int(largest) - 1, 0, "FAIL"),
+                (int(largest) - 1, 1, "PASS"),
+                (-largest, largest, "FAIL"),
+            ):
+                with self.subTest(sign=sign, expected=expected, tolerance=tolerance):
+                    self.assert_limit_verdict(
+                        sign * largest, sign * expected, tolerance, verdict
+                    )
+            with self.assertRaises(MetricsError):
+                Limit(sign * (int(largest) + 1), 0, "V", "outside finite domain")
+        with self.assertRaises(MetricsError):
+            Limit(0, int(largest) + 1, "V", "outside finite domain")
+
     def test_artifact_id_adapter_hashes_actual_bytes(self):
         self.assertEqual(
             artifact_reference(artifact_id="ra1-test", record_bytes=b"record"),

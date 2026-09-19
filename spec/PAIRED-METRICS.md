@@ -173,7 +173,15 @@ Frequency bands are diagnostic definitions, not hardware acceptance tolerances.
 
 `Limit(expected, tolerance, unit, source)` defines an explicit inclusive
 absolute interval: `abs(observed - expected) <= tolerance`. Expected and
-nonnegative tolerance must be finite; units must match the named metric.
+nonnegative tolerance must be Python integers or finite binary64 floats (not
+bools), with magnitudes at most `sys.float_info.max`; units must match the named
+metric. Unlike sample conversion, rubric integers need not be representable in
+binary64: the interval decision uses exact rational arithmetic on the recorded
+integer values and exact numeric values of the binary64 floats. It neither
+rounds integers to floats nor rounds the difference before comparing it with
+the tolerance. This preserves inclusive boundaries and zero-tolerance equality,
+including beyond `2^53`, without changing the binary64 measurement computation.
+The supplied values remain unchanged in the diagnostic and scorecard.
 `Rubric(id, version, limits)` supplies limits keyed by exact metric names;
 unknown names fail rather than silently omitting a check. `source` documents
 the origin of both values. One-sided/lower-bound rules are not inferred.

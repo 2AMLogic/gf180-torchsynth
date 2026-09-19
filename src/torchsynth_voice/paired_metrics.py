@@ -14,6 +14,7 @@ import struct
 import sys
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+from fractions import Fraction
 from numbers import Integral, Real
 
 from .scorecard import validate_row
@@ -48,7 +49,7 @@ def _finite(value, name):
 
 @dataclass(frozen=True)
 class Limit:
-    """An explicit absolute interval: abs(observed - expected) <= tolerance."""
+    """An absolute interval evaluated exactly on supplied int/binary64 values."""
 
     expected: float
     tolerance: float
@@ -547,9 +548,12 @@ def scorecard_rows(
             and limit is not None
         )
         if measured:
+            # Preserve integer limits and the exact values of binary64 inputs;
+            # rounded subtraction can change a verdict at an interval boundary.
             verdict = (
                 "PASS"
-                if abs(metric["value"] - limit.expected) <= limit.tolerance
+                if abs(Fraction(metric["value"]) - Fraction(limit.expected))
+                <= Fraction(limit.tolerance)
                 else "FAIL"
             )
             validity = {
