@@ -1,6 +1,6 @@
 # DR-0006: Canonical release-era CPU reference runtime
 
-- Status: Conditional acceptance; effective on reviewed merge
+- Status: Accepted
 - Date: 2026-09-19
 - Decision owners: 2AM Logic
 - Scope: Runtime qualification; supersedes only DR-0001's unresolved runtime choice
@@ -210,3 +210,8 @@ The implementation and measured decision are submitted together for Loom
 review. Reviewed merge ratifies this record; the Builder does not approve or
 merge its own PR. Until then the canonical-runtime choice is proposed, and
 consumers must not describe the PR's decision as already ratified.
+
+Ratified 2026-09-19: the ratification event named above was the reviewed
+merge of PR #106 (merge commit
+`fc04e340ffd2081c1322fb1060bd3b243f4b6b12`, merged 2026-09-19T14:16:48Z).
+The `release-mkl-compatible-v1` profile is canonical as of that merge.
