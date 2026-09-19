@@ -19,6 +19,59 @@ jobs:
         run: python3 -S -m unittest discover -s env/release-era -p test_qualify_scalar.py -v
       - name: Actual pinned-runtime scalar sentinel
         run: ./env/release-era/qualify_scalar.sh --sentinel out/scalar-ci
+      - name: Bounded LFO CPU reduction diagnostic (not runtime qualification)
+        run: |
+          image=$(cat out/scalar-ci/image.id)
+          for variant in baseline compatible; do
+            options=()
+            if [[ "$variant" == compatible ]]; then
+              options=(-e MKL_CBWR=COMPATIBLE)
+            fi
+            docker run --rm -i --platform linux/amd64 --network none --read-only \
+              --tmpfs /tmp:size=32m --cpus 1 --memory 512m \
+              -e PYTHONDONTWRITEBYTECODE=1 -e OMP_NUM_THREADS=1 -e MKL_NUM_THREADS=1 \
+              "${options[@]}" --mount "type=bind,src=$PWD,dst=/workspace,readonly" \
+              --entrypoint python "$image" -B - >"out/scalar-ci/lfo-$variant.json" <<'PY'
+          import os, sys, json, pathlib, hashlib
+          root = pathlib.Path('/workspace')
+          up = pathlib.Path('/opt/torchsynth')
+          manifest = json.loads((root / 'spec/reference/upstream.json').read_text())
+          for group in ('files', 'source_checkout_only_files'):
+              for name, expected in manifest.get(group, {}).items():
+                  assert hashlib.sha256((up / name).read_bytes()).hexdigest() == expected, name
+          sys.path.insert(0, str(up))
+          import numpy as np, torch
+          from torchsynth.config import SynthConfig
+          from torchsynth.synth import Voice
+          torch.set_num_threads(1)
+          torch.set_num_interop_threads(1)
+          report = json.loads((root / 'sim/reference/scalar-execution.json').read_text())
+          case = next(c['scalar'] for c in report['comparisons'] if c['id'] == 'global-6')
+          voice = Voice(SynthConfig(batch_size=1, reproducible=False)).cpu().eval()
+          for name, value in case['normalized_by_name'].items():
+              module, param = name.split('.', 1)
+              getattr(voice, module).set_parameter_0to1(param, torch.tensor([value], dtype=torch.float32))
+          rate_bytes = (root / 'out/scalar-ci/run-1/scalar/global-6.lfo_1_rate_adsr.output.f32le').read_bytes()
+          rate = torch.tensor(np.frombuffer(rate_bytes, dtype='<f4').copy()).unsqueeze(0)
+          captured = {}
+          def profile(frame, event, arg):
+              if event == 'return' and frame.f_code is voice.lfo_1.output.__func__.__code__:
+                  for key in ('frequency', 'argument', 'shapes', 'mode'):
+                      captured[key] = frame.f_locals[key].detach().clone()
+                  captured['output'] = arg.detach().clone()
+          sys.setprofile(profile)
+          try:
+              with torch.inference_mode():
+                  voice.lfo_1(rate)
+          finally:
+              sys.setprofile(None)
+          def encode(t):
+              a = t.numpy().astype('<f4', copy=False)
+              return {'shape': list(a.shape), 'sha256': hashlib.sha256(a.tobytes()).hexdigest(), 'first': a.reshape(-1)[:8].tolist()}
+          print(json.dumps({'environment': {k: os.environ.get(k) for k in ('ATEN_CPU_CAPABILITY', 'MKL_CBWR')}, 'rate_sha256': hashlib.sha256(rate_bytes).hexdigest(), 'capture': {k: encode(v) for k, v in captured.items()}}, sort_keys=True))
+          PY
+            cat "out/scalar-ci/lfo-$variant.json"
+          done
       - name: Compare with committed seam bytes
         run: python3 -S env/release-era/qualify_scalar.py verify --output out/scalar-ci
       - name: Retain measured results and failures
