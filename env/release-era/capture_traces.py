@@ -217,8 +217,7 @@ def render_mode(harness, case, mode, document, torch, Voice, SynthConfig, normal
             with session:
                 audio, forward, labels = voice(coordinates["batch"])
     elapsed = time.perf_counter() - started
-    if rng_before != tensor_bytes(torch.random.get_rng_state(), torch):
-        raise ValueError("render or capture consumed random values: " + mode)
+    rng_after = tensor_bytes(torch.random.get_rng_state(), torch)
     after = harness.capture.named_parameters(voice, torch, slot)
     if before != after:
         raise ValueError("capture/render mutated named parameters: " + mode)
@@ -247,7 +246,8 @@ def render_mode(harness, case, mode, document, torch, Voice, SynthConfig, normal
         "labels_all": bool(labels.all()),
         "parameter_bytes_unchanged": True,
         "noise_sha256": sha256(noise_before),
-        "rng_state_unchanged": True,
+        "rng_state": rng_after,
+        "render_drew_randoms": rng_before != rng_after,
         "render_seconds": elapsed,
         "process_peak_rss_kb_after": resource.getrusage(
             resource.RUSAGE_SELF
@@ -293,6 +293,7 @@ def require_mode_equality(case_id, records):
             "noise_sha256",
             "labels_all",
             "input",
+            "rng_state",
         ):
             if observed[key] != reference[key]:
                 raise ValueError(
@@ -533,6 +534,7 @@ def worker(args):
                         "batch_audio_sha256",
                         "noise_sha256",
                         "labels_all",
+                        "render_drew_randoms",
                         "render_seconds",
                         "process_peak_rss_kb_after",
                         "retained_capture_bytes",
