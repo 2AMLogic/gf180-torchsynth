@@ -1,0 +1,29 @@
+name: Envelope and route estimators
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analytic:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test estimator behavior without optional dependencies
+        run: python -S -m unittest discover -s tests -p test_envelope_estimators.py -v
+      - name: Replay analytic measurements and validate diagnostic bytes
+        run: python -S tools/qualify_envelope_estimators.py --check
