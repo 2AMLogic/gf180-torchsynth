@@ -1,0 +1,1784 @@
+{
+  "schema": "torchsynth-trace-registry",
+  "schema_version": 1,
+  "semantic_version": "voice-traces-v1",
+  "schema_sha256": "ca95f8bd36f42cc619deb35775185946739aef9c6cfa4fa1ba00119fbb987525",
+  "source_manifest_sha256": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+  "source_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "requested_order": "trace-array-order",
+  "alias_version": "probe-aliases-v1",
+  "aliases": {
+    "scalar-capture-v1": {
+      "keyboard.midi_f0": {
+        "target": "keyboard.midi_f0",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "keyboard.duration": {
+        "target": "keyboard.duration",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_1_rate_adsr.output": {
+        "target": "lfo_1_rate_adsr.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_2_rate_adsr.output": {
+        "target": "lfo_2_rate_adsr.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_1_amp_adsr.output": {
+        "target": "lfo_1_amp_adsr.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_2_amp_adsr.output": {
+        "target": "lfo_2_amp_adsr.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_1.raw": {
+        "target": "lfo_1.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_1.post_control_vca": {
+        "target": "lfo_1.post_control_vca",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_2.raw": {
+        "target": "lfo_2.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_2.post_control_vca": {
+        "target": "lfo_2.post_control_vca",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "adsr_1.output": {
+        "target": "adsr_1.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "adsr_2.output": {
+        "target": "adsr_2.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mod_matrix.vco_1_pitch": {
+        "target": "mod_matrix.vco_1_pitch",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mod_matrix.vco_1_amp": {
+        "target": "mod_matrix.vco_1_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mod_matrix.vco_2_pitch": {
+        "target": "mod_matrix.vco_2_pitch",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mod_matrix.vco_2_amp": {
+        "target": "mod_matrix.vco_2_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mod_matrix.noise_amp": {
+        "target": "mod_matrix.noise_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "control_upsample.vco_1_pitch": {
+        "target": "control_upsample.vco_1_pitch",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_1.raw": {
+        "target": "vco_1.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "control_upsample.vco_1_amp": {
+        "target": "control_upsample.vco_1_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_1.post_vca": {
+        "target": "vco_1.post_vca",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "control_upsample.vco_2_pitch": {
+        "target": "control_upsample.vco_2_pitch",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_2.raw": {
+        "target": "vco_2.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "control_upsample.vco_2_amp": {
+        "target": "control_upsample.vco_2_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_2.post_vca": {
+        "target": "vco_2.post_vca",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "noise.raw": {
+        "target": "noise.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "control_upsample.noise_amp": {
+        "target": "control_upsample.noise_amp",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "noise.post_vca": {
+        "target": "noise.post_vca",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mixer.pre_normalization": {
+        "target": "mixer.pre_normalization",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mixer.peak": {
+        "target": "mixer.peak",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mixer.gain": {
+        "target": "mixer.gain",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "mixer.output": {
+        "target": "mixer.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "input.normalized": {
+        "target": "input.normalized",
+        "kind": "input-checkpoint",
+        "note": "Name-keyed normalized parameter bytes, before physical conversion and DSP."
+      },
+      "input.noise": {
+        "target": "input.noise",
+        "kind": "input-checkpoint",
+        "note": "Resolved selected stream; noise.raw is its later graph observation."
+      },
+      "physical.parameters": {
+        "target": "physical.parameters",
+        "kind": "input-checkpoint",
+        "note": "Actual name-keyed runtime conversion, not analytic fixture values."
+      },
+      "audio.final": {
+        "target": "mixer.output",
+        "kind": "trace",
+        "note": "Voice return aliases original mixer output; no additional DSP."
+      }
+    },
+    "repeatability-v1": {
+      "adsr_1": {
+        "target": "adsr_1.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "adsr_2": {
+        "target": "adsr_2.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_1": {
+        "target": "lfo_1.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "lfo_2": {
+        "target": "lfo_2.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_1": {
+        "target": "vco_1.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "vco_2": {
+        "target": "vco_2.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "noise": {
+        "target": "noise.raw",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "pre_normalization": {
+        "target": "mixer.pre_normalization",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "audio": {
+        "target": "mixer.output",
+        "kind": "trace",
+        "note": "Same boundary; existing producer evidence is unchanged."
+      },
+      "normalized": {
+        "target": "input.normalized",
+        "kind": "input-checkpoint",
+        "note": "Name-keyed normalized parameter bytes, before physical conversion and DSP."
+      },
+      "physical": {
+        "target": "physical.parameters",
+        "kind": "input-checkpoint",
+        "note": "Actual name-keyed runtime conversion, not analytic fixture values."
+      }
+    }
+  },
+  "traces": [
+    {
+      "name": "keyboard.midi_f0",
+      "producer": {
+        "module": "keyboard",
+        "occurrence": 1,
+        "output_index": 0,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vco_1#1.arg0",
+        "vco_2#1.arg0"
+      ],
+      "meaning": "Physical keyboard base pitch before VCO tuning, depth and MIDI clamp.",
+      "unit": "MIDI-semitones",
+      "range": {
+        "minimum": 0,
+        "maximum": 127,
+        "basis": "source-parameter",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "scalar",
+      "rate_hz": null,
+      "sample_count": null,
+      "shape": [],
+      "batch_shape": [
+        "B"
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "physical-keyboard-output",
+      "time": null,
+      "interpolation": null
+    },
+    {
+      "name": "keyboard.duration",
+      "producer": {
+        "module": "keyboard",
+        "occurrence": 1,
+        "output_index": 1,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "lfo_1_rate_adsr#1.arg0",
+        "lfo_2_rate_adsr#1.arg0",
+        "lfo_1_amp_adsr#1.arg0",
+        "lfo_2_amp_adsr#1.arg0",
+        "adsr_1#1.arg0",
+        "adsr_2#1.arg0"
+      ],
+      "meaning": "Physical note-on duration, shared unchanged by all six envelopes.",
+      "unit": "seconds",
+      "range": {
+        "minimum": 0.01,
+        "maximum": 4,
+        "basis": "source-parameter",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "scalar",
+      "rate_hz": null,
+      "sample_count": null,
+      "shape": [],
+      "batch_shape": [
+        "B"
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "physical-keyboard-output",
+      "time": null,
+      "interpolation": null
+    },
+    {
+      "name": "lfo_1_rate_adsr.output",
+      "producer": {
+        "module": "lfo_1_rate_adsr",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "lfo_1#1.arg0"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_2_rate_adsr.output",
+      "producer": {
+        "module": "lfo_2_rate_adsr",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "lfo_2#1.arg0"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_1_amp_adsr.output",
+      "producer": {
+        "module": "lfo_1_amp_adsr",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_vca#1.arg1"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_2_amp_adsr.output",
+      "producer": {
+        "module": "lfo_2_amp_adsr",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_vca#2.arg1"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_1.raw",
+      "producer": {
+        "module": "lfo_1",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_vca#1.arg0"
+      ],
+      "meaning": "Unipolar waveform blend after internal nonnegative frequency clamp, before amplitude envelope.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_1.post_control_vca",
+      "producer": {
+        "module": "control_vca",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mod_matrix#1.arg2"
+      ],
+      "meaning": "LFO multiplied by its amplitude envelope, before modulation matrix.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-control-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_2.raw",
+      "producer": {
+        "module": "lfo_2",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_vca#2.arg0"
+      ],
+      "meaning": "Unipolar waveform blend after internal nonnegative frequency clamp, before amplitude envelope.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-lfo-frequency-clamp-pre-control-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "lfo_2.post_control_vca",
+      "producer": {
+        "module": "control_vca",
+        "occurrence": 2,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mod_matrix#1.arg3"
+      ],
+      "meaning": "LFO multiplied by its amplitude envelope, before modulation matrix.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-control-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "adsr_1.output",
+      "producer": {
+        "module": "adsr_1",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mod_matrix#1.arg0"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "adsr_2.output",
+      "producer": {
+        "module": "adsr_2",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mod_matrix#1.arg1"
+      ],
+      "meaning": "Envelope after attack, decay and release product, before modulation or control VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-envelope-ramp-limits",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mod_matrix.vco_1_pitch",
+      "producer": {
+        "module": "mod_matrix",
+        "occurrence": 1,
+        "output_index": 0,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_upsample#1.arg0"
+      ],
+      "meaning": "One modulation-matrix column sum before upsampling; no matrix clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-matrix-pre-upsample",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mod_matrix.vco_1_amp",
+      "producer": {
+        "module": "mod_matrix",
+        "occurrence": 1,
+        "output_index": 1,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_upsample#2.arg0"
+      ],
+      "meaning": "One modulation-matrix column sum before upsampling; no matrix clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-matrix-pre-upsample",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mod_matrix.vco_2_pitch",
+      "producer": {
+        "module": "mod_matrix",
+        "occurrence": 1,
+        "output_index": 2,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_upsample#3.arg0"
+      ],
+      "meaning": "One modulation-matrix column sum before upsampling; no matrix clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-matrix-pre-upsample",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mod_matrix.vco_2_amp",
+      "producer": {
+        "module": "mod_matrix",
+        "occurrence": 1,
+        "output_index": 3,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_upsample#4.arg0"
+      ],
+      "meaning": "One modulation-matrix column sum before upsampling; no matrix clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-matrix-pre-upsample",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mod_matrix.noise_amp",
+      "producer": {
+        "module": "mod_matrix",
+        "occurrence": 1,
+        "output_index": 4,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "control_upsample#5.arg0"
+      ],
+      "meaning": "One modulation-matrix column sum before upsampling; no matrix clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "control",
+      "rate_hz": 441,
+      "sample_count": 1764,
+      "shape": [
+        1764
+      ],
+      "batch_shape": [
+        "B",
+        1764
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-matrix-pre-upsample",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          1763,
+          441
+        ],
+        "index_time": "i/441"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "control_upsample.vco_1_pitch",
+      "producer": {
+        "module": "control_upsample",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vco_1#1.arg1"
+      ],
+      "meaning": "Endpoint-aligned interpolation of one matrix output on the audio grid; no clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "pre-vco-depth-and-midi-clamp",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": {
+        "mode": "linear",
+        "align_corners": true,
+        "input_count": 1764,
+        "output_count": 176400,
+        "input_coordinate": "i*1763/176399",
+        "input_first_time": [
+          0,
+          1
+        ],
+        "input_last_time": [
+          1763,
+          441
+        ]
+      }
+    },
+    {
+      "name": "vco_1.raw",
+      "producer": {
+        "module": "vco_1",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#1.arg0"
+      ],
+      "meaning": "Pitch-modulated oscillator waveform, after internal tuning/depth/MIDI clamp and before amplitude VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -1,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-pitch-clamp-pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "control_upsample.vco_1_amp",
+      "producer": {
+        "module": "control_upsample",
+        "occurrence": 2,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#1.arg1"
+      ],
+      "meaning": "Endpoint-aligned interpolation of one matrix output on the audio grid; no clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": {
+        "mode": "linear",
+        "align_corners": true,
+        "input_count": 1764,
+        "output_count": 176400,
+        "input_coordinate": "i*1763/176399",
+        "input_first_time": [
+          0,
+          1
+        ],
+        "input_last_time": [
+          1763,
+          441
+        ]
+      }
+    },
+    {
+      "name": "vco_1.post_vca",
+      "producer": {
+        "module": "vca",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mixer#1.arg0"
+      ],
+      "meaning": "Source multiplied by its upsampled amplitude control, before mixer level.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -4,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-audio-vca-pre-mixer-level",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "control_upsample.vco_2_pitch",
+      "producer": {
+        "module": "control_upsample",
+        "occurrence": 3,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vco_2#1.arg1"
+      ],
+      "meaning": "Endpoint-aligned interpolation of one matrix output on the audio grid; no clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "pre-vco-depth-and-midi-clamp",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": {
+        "mode": "linear",
+        "align_corners": true,
+        "input_count": 1764,
+        "output_count": 176400,
+        "input_coordinate": "i*1763/176399",
+        "input_first_time": [
+          0,
+          1
+        ],
+        "input_last_time": [
+          1763,
+          441
+        ]
+      }
+    },
+    {
+      "name": "vco_2.raw",
+      "producer": {
+        "module": "vco_2",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#2.arg0"
+      ],
+      "meaning": "Pitch-modulated oscillator waveform, after internal tuning/depth/MIDI clamp and before amplitude VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -1.25,
+        "maximum": 1.25,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-pitch-clamp-pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "control_upsample.vco_2_amp",
+      "producer": {
+        "module": "control_upsample",
+        "occurrence": 4,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#2.arg1"
+      ],
+      "meaning": "Endpoint-aligned interpolation of one matrix output on the audio grid; no clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": {
+        "mode": "linear",
+        "align_corners": true,
+        "input_count": 1764,
+        "output_count": 176400,
+        "input_coordinate": "i*1763/176399",
+        "input_first_time": [
+          0,
+          1
+        ],
+        "input_last_time": [
+          1763,
+          441
+        ]
+      }
+    },
+    {
+      "name": "vco_2.post_vca",
+      "producer": {
+        "module": "vca",
+        "occurrence": 2,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mixer#1.arg1"
+      ],
+      "meaning": "Source multiplied by its upsampled amplitude control, before mixer level.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -5,
+        "maximum": 5,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-audio-vca-pre-mixer-level",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "noise.raw",
+      "producer": {
+        "module": "noise",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#3.arg0"
+      ],
+      "meaning": "Seed-13 selected noise stream before amplitude VCA.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -1,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "seed13-noise-pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "control_upsample.noise_amp",
+      "producer": {
+        "module": "control_upsample",
+        "occurrence": 5,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "vca#3.arg1"
+      ],
+      "meaning": "Endpoint-aligned interpolation of one matrix output on the audio grid; no clamp.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "pre-audio-vca",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": {
+        "mode": "linear",
+        "align_corners": true,
+        "input_count": 1764,
+        "output_count": 176400,
+        "input_coordinate": "i*1763/176399",
+        "input_first_time": [
+          0,
+          1
+        ],
+        "input_last_time": [
+          1763,
+          441
+        ]
+      }
+    },
+    {
+      "name": "noise.post_vca",
+      "producer": {
+        "module": "vca",
+        "occurrence": 3,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "mixer#1.arg2"
+      ],
+      "meaning": "Source multiplied by its upsampled amplitude control, before mixer level.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -4,
+        "maximum": 4,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-audio-vca-pre-mixer-level",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mixer.pre_normalization",
+      "producer": {
+        "module": "normalize_if_clipping",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "python-call"
+      },
+      "consumers": [
+        "normalize_if_clipping.signal"
+      ],
+      "meaning": "Original normalize_if_clipping input after weighted mixing; not reconstructed.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -13,
+        "maximum": 13,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-weighted-mix-pre-normalization",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    },
+    {
+      "name": "mixer.peak",
+      "producer": {
+        "module": "normalize_if_clipping",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "python-return-local"
+      },
+      "consumers": [
+        "normalize_if_clipping.divisor-and-condition",
+        "mixer.gain"
+      ],
+      "meaning": "Original max_sample return-frame local from the upstream absolute-maximum reduction.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 13,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "scalar",
+      "rate_hz": null,
+      "sample_count": null,
+      "shape": [
+        1
+      ],
+      "batch_shape": [
+        "B",
+        1
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "original-whole-clip-peak",
+      "time": null,
+      "interpolation": null
+    },
+    {
+      "name": "mixer.gain",
+      "producer": {
+        "module": "normalize_if_clipping",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "derived-from-observed-peak"
+      },
+      "consumers": [
+        "diagnostics-only"
+      ],
+      "meaning": "Derived reciprocal for peak > 1, else 1; upstream divides directly by peak.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": 0,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "scalar",
+      "rate_hz": null,
+      "sample_count": null,
+      "shape": [
+        1
+      ],
+      "batch_shape": [
+        "B",
+        1
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "derived",
+      "boundary": "derived-reciprocal-not-applied",
+      "time": null,
+      "interpolation": null
+    },
+    {
+      "name": "mixer.output",
+      "producer": {
+        "module": "mixer",
+        "occurrence": 1,
+        "output_index": null,
+        "mechanism": "forward-hook"
+      },
+      "consumers": [
+        "Voice.output.return"
+      ],
+      "meaning": "Original AudioMixer return and final Voice.output return; unchanged samples.",
+      "unit": "linear-amplitude",
+      "range": {
+        "minimum": -1,
+        "maximum": 1,
+        "basis": "analytic-bound",
+        "note": "Analytical bound for valid finite default-nebula inputs; not a measured coverage or rounding tolerance."
+      },
+      "kind": "audio",
+      "rate_hz": 44100,
+      "sample_count": 176400,
+      "shape": [
+        176400
+      ],
+      "batch_shape": [
+        "B",
+        176400
+      ],
+      "dtype": "float32",
+      "encoding": "f32le",
+      "observation": "observed",
+      "boundary": "post-conditional-normalization",
+      "time": {
+        "origin": "trigger",
+        "first": [
+          0,
+          1
+        ],
+        "last": [
+          176399,
+          44100
+        ],
+        "index_time": "i/44100"
+      },
+      "interpolation": null
+    }
+  ]
+}

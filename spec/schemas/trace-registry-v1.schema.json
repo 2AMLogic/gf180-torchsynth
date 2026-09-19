@@ -1,0 +1,363 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/2AMLogic/gf180-torchsynth/spec/schemas/trace-registry-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "semantic_version",
+    "schema_sha256",
+    "source_manifest_sha256",
+    "source_commit",
+    "requested_order",
+    "alias_version",
+    "aliases",
+    "traces"
+  ],
+  "properties": {
+    "schema": {
+      "const": "torchsynth-trace-registry"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "semantic_version": {
+      "const": "voice-traces-v1"
+    },
+    "schema_sha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "source_manifest_sha256": {
+      "$ref": "#/$defs/hash"
+    },
+    "source_commit": {
+      "const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+    },
+    "requested_order": {
+      "const": "trace-array-order"
+    },
+    "alias_version": {
+      "const": "probe-aliases-v1"
+    },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scalar-capture-v1",
+        "repeatability-v1"
+      ],
+      "properties": {
+        "scalar-capture-v1": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/alias"
+          }
+        },
+        "repeatability-v1": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/alias"
+          }
+        }
+      }
+    },
+    "traces": {
+      "type": "array",
+      "minItems": 32,
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/trace"
+      }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "alias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "kind",
+        "note"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "trace",
+            "input-checkpoint"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "producer",
+        "consumers",
+        "meaning",
+        "unit",
+        "range",
+        "kind",
+        "rate_hz",
+        "sample_count",
+        "shape",
+        "batch_shape",
+        "dtype",
+        "encoding",
+        "observation",
+        "boundary",
+        "time",
+        "interpolation"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.]*(?![\\s\\S])"
+        },
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "module",
+            "occurrence",
+            "output_index",
+            "mechanism"
+          ],
+          "properties": {
+            "module": {
+              "type": "string",
+              "minLength": 1
+            },
+            "occurrence": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "output_index": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "mechanism": {
+              "enum": [
+                "forward-hook",
+                "python-call",
+                "python-return-local",
+                "derived-from-observed-peak"
+              ]
+            }
+          }
+        },
+        "consumers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "meaning": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimum",
+            "maximum",
+            "basis",
+            "note"
+          ],
+          "properties": {
+            "minimum": {
+              "type": "number"
+            },
+            "maximum": {
+              "type": "number"
+            },
+            "basis": {
+              "enum": [
+                "source-parameter",
+                "analytic-bound"
+              ]
+            },
+            "note": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "kind": {
+          "enum": [
+            "scalar",
+            "control",
+            "audio"
+          ]
+        },
+        "rate_hz": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "sample_count": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxItems": 1
+        },
+        "batch_shape": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": {
+            "type": [
+              "string",
+              "integer"
+            ]
+          }
+        },
+        "dtype": {
+          "const": "float32"
+        },
+        "encoding": {
+          "const": "f32le"
+        },
+        "observation": {
+          "enum": [
+            "observed",
+            "derived"
+          ]
+        },
+        "boundary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "time": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "origin",
+                "first",
+                "last",
+                "index_time"
+              ],
+              "properties": {
+                "origin": {
+                  "const": "trigger"
+                },
+                "first": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "last": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "index_time": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        },
+        "interpolation": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "align_corners",
+                "input_count",
+                "output_count",
+                "input_coordinate",
+                "input_first_time",
+                "input_last_time"
+              ],
+              "properties": {
+                "mode": {
+                  "const": "linear"
+                },
+                "align_corners": {
+                  "const": true
+                },
+                "input_count": {
+                  "const": 1764
+                },
+                "output_count": {
+                  "const": 176400
+                },
+                "input_coordinate": {
+                  "const": "i*1763/176399"
+                },
+                "input_first_time": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "input_last_time": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
