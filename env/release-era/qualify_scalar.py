@@ -455,6 +455,15 @@ def require_render(report, side):
         require_provenance(
             identity(expected["sound_index"]), case["corpus_coordinates"]
         )
+        require_trace(case["traces"])
+        final_audio = next(t for t in case["traces"] if t["name"] == "audio.final")
+        if (
+            case.get("passive_capture_invariant") is not True
+            or case.get("no_hook_audio_sha256") != final_audio["sha256"]
+        ):
+            raise ValueError(
+                "passive capture evidence missing, false or unbound: " + case["id"]
+            )
     if not seen:
         raise ValueError("missing render cases")
 
@@ -750,7 +759,13 @@ def require_control(report, name, definition, canonical, canonical_dir, control_
         if struct.pack("<f", expected[key]) != struct.pack("<f", actual[key])
     ]
     original_noise = read_artifact(canonical_dir, case["traces"][1])
+    if (
+        observed["actual_noise"].get("shape") != [176400]
+        or type(observed["actual_noise"]["shape"][0]) is not int
+    ):
+        raise ValueError("control noise must contain exactly 176400 float32 samples")
     actual_noise = read_artifact(control_dir, observed["actual_noise"])
+    differences(actual_noise, actual_noise)  # validate every retained float32 is finite
     if (
         observed.get("expected_noise_sha256") != sha256(original_noise)
         or observed.get("actual_noise_sha256") != sha256(actual_noise)
@@ -760,6 +775,19 @@ def require_control(report, name, definition, canonical, canonical_dir, control_
         raise ValueError("control noise provenance mismatch")
     if name == "wrong-noise":
         require_named(expected, actual)
+        wrong_slot = next(
+            c
+            for c in canonical["cases"]
+            if c["id"] == definition["actual_noise_reference_case"]
+        )
+        if wrong_slot["corpus_coordinates"]["noise_slot"] != 0:
+            raise ValueError("control wrong-noise reference is not canonical slot 0")
+        require_noise(
+            read_artifact(canonical_dir, wrong_slot["traces"][1]),
+            actual_noise,
+            0,
+            observed.get("actual_noise_slot"),
+        )
         if actual_noise == original_noise or observed.get("actual_noise_slot") != 0:
             raise ValueError("control noise mutation was not observed")
     else:
@@ -780,7 +808,7 @@ def require_control(report, name, definition, canonical, canonical_dir, control_
             raise ValueError("control fresh-randomization mutation was not observed")
 
 
-def aggregate(output, sentinel):
+def aggregate(output, sentinel, *, write=True):
     plan, cases = load_plan(sentinel)
     runs = [
         compare_run(output / f"run-{n}" / "canonical", output / f"run-{n}" / "scalar")
@@ -891,10 +919,12 @@ def aggregate(output, sentinel):
         p.name: {"sha256": sha256(p.read_bytes()), "text": p.read_text()}
         for p in sorted(output.glob("*.stderr"))
     }
-    (output / "scalar-execution.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    )
-    print("Apparatus PASS; scalar byte equivalence " + report["byte_equivalence"])
+    if write:
+        (output / "scalar-execution.json").write_text(
+            json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        )
+        print("Apparatus PASS; scalar byte equivalence " + report["byte_equivalence"])
+    return report
 
 
 def verify_expected(observed, expected, case_ids):
@@ -962,6 +992,24 @@ def main():
         plan, _ = load_plan(True)
         observed = json.loads((args.output / "scalar-execution.json").read_text())
         expected = json.loads(args.expected.read_text())
+        if observed.get("scope") not in ("sentinel", "full-preregistered-cases"):
+            raise ValueError("unknown aggregate scope")
+        replayed = aggregate(args.output, observed["scope"] == "sentinel", write=False)
+        for key in (
+            "scope",
+            "status",
+            "byte_equivalence",
+            "fresh_render_processes",
+            "fresh_process_repeats_equal",
+            "provenance",
+            "runtime",
+            "execution_records",
+            "campaign_id",
+            "comparisons",
+            "negative_controls",
+            "run_report_sha256",
+        ):
+            require_provenance(replayed[key], observed[key])
         verify_expected(observed, expected, plan["sentinel"])
         print("Committed sentinel seam bytes reproduced")
         return 0

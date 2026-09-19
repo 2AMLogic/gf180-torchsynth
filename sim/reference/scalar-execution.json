@@ -1,9 +1,9 @@
 {
   "batch_1_oracle": "diagnostic",
-  "build_log_sha256": "b728667aedd7fc5da66a99b55b431179d1d020afd2158375a84365b976accdc6",
+  "build_log_sha256": "42c2f8c7d00388a970516d678cb50b6569695486c2fb694349b3acf220cf6aca",
   "build_warnings": [],
   "byte_equivalence": "PASS",
-  "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+  "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
   "capture_manifest": [
     {
       "name": "input.normalized",
@@ -17660,72 +17660,83 @@
     }
   ],
   "docker_server": "linux/arm64 29.7.2",
+  "evidence_refresh": {
+    "all_prior_compatible_case_records_unchanged": true,
+    "local_full_raw_path": "out/doctor100-grace-full",
+    "local_full_report_sha256": "b35d70d93d7a095ca727a956296add4e4428cf13dd0328c4ae0fdc654a6e0c92",
+    "local_sentinel_raw_path": "out/doctor100-grace-sentinel",
+    "local_sentinel_report_sha256": "4cb0be45876d73f3d0ba1a7e8437b8e39b393c23121ab1b0fc5dde96c964b689",
+    "native_current_protocol_gate": "The reference-scalar workflow must execute and verify a fresh three-case native sentinel on the final PR head.",
+    "prior_profile_validation_interpretation": "Historical native/local compatible-profile measurements retained unchanged with their original provenance; not executions of this refreshed validator.",
+    "reason": "Fresh measurements under strengthened exact slot-0 control and every-case passive-capture validation; no prior raw render retagged.",
+    "reviewed_head": "51ff30f14ba70744497e701e116f59810a81d68f"
+  },
   "execution_records": [
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "path": "run-1/canonical",
       "pid": 1,
       "repeat": 1,
       "side": "canonical",
-      "started_utc": "2026-09-19T02:44:36.228269+00:00",
-      "uuid": "b245d20f-8e32-4610-b18e-a59adeb979e3"
+      "started_utc": "2026-09-19T03:27:50.038656+00:00",
+      "uuid": "30f8b98d-4da2-4b09-84e0-1054076c72a4"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "path": "run-1/scalar",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-19T02:45:06.896225+00:00",
-      "uuid": "c74f8cff-7a74-4075-a286-d300ccc93a8c"
+      "started_utc": "2026-09-19T03:28:29.489931+00:00",
+      "uuid": "b8b96729-c75c-4307-8af2-03a3556ef535"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "path": "run-2/canonical",
       "pid": 1,
       "repeat": 2,
       "side": "canonical",
-      "started_utc": "2026-09-19T02:45:20.997508+00:00",
-      "uuid": "162b940c-e352-408e-8a66-bfc839442404"
+      "started_utc": "2026-09-19T03:28:43.925907+00:00",
+      "uuid": "02830516-f8bd-4675-885c-e82c2857a642"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "path": "run-2/scalar",
       "pid": 1,
       "repeat": 2,
       "side": "scalar",
-      "started_utc": "2026-09-19T02:45:49.465595+00:00",
-      "uuid": "804b53cc-af41-414d-ae32-a32cd6e9b99b"
+      "started_utc": "2026-09-19T03:29:12.068562+00:00",
+      "uuid": "36257af0-a6c9-4d62-889d-2f0c4270820c"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "mutation": "wrong-parameter",
       "path": "controls/wrong-parameter",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-19T02:46:01.922563+00:00",
-      "uuid": "f5ad749b-954c-4a21-9e55-7526b935cd30"
+      "started_utc": "2026-09-19T03:29:25.821370+00:00",
+      "uuid": "d8370f76-27fa-4055-b0e3-8494557fd290"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "mutation": "wrong-noise",
       "path": "controls/wrong-noise",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-19T02:46:11.873658+00:00",
-      "uuid": "385b719c-c8a8-427e-b233-4939b53fb924"
+      "started_utc": "2026-09-19T03:29:36.785970+00:00",
+      "uuid": "db216a7a-7f22-4e41-9362-9693bdcbb3b8"
     },
     {
-      "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+      "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
       "mutation": "fresh-randomization",
       "path": "controls/fresh-randomization",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-19T02:46:22.317940+00:00",
-      "uuid": "c1c18db6-1576-456c-8b9e-2377e4a2b4ab"
+      "started_utc": "2026-09-19T03:29:48.800846+00:00",
+      "uuid": "01cc9ead-c48d-4109-9abb-c02912cbe18b"
     }
   ],
   "fresh_process_repeats_equal": true,
@@ -36547,7 +36558,7 @@
     "machine": "arm64",
     "system": "Darwin"
   },
-  "image_id": "sha256:947b29aad7ba8e17b072ae71d54e47189004d8aa93f2255498b99ca1b0472241",
+  "image_id": "sha256:c5c090b0553fcee76d6fb5077bb28055d6712d93c4b5e473b150c0a51f2f86c1",
   "limitations": [
     "Development probes only. Directed variants retain corpus noise coordinates but are not unmodified corpus sounds. No holdout access. Runtime selection belongs to issue 12.",
     "Derived diagnostic 1/peak if peak>1, else 1. Upstream divides by peak; this is not a captured reciprocal multiplier.",
@@ -36561,8 +36572,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.normalized",
       "observed": {
-        "canonical_execution_uuid": "b245d20f-8e32-4610-b18e-a59adeb979e3",
-        "canonical_report_sha256": "edaf19b3a343d579fbd3a8077346f52c2a430968f21d10ce802e8bd5184b0ffb",
+        "canonical_execution_uuid": "30f8b98d-4da2-4b09-84e0-1054076c72a4",
+        "canonical_report_sha256": "e0b31d0a5dd59094e9bca46f452ad9d540bdedeb1d355ec4fd58a0de63d4c931",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -36740,10 +36751,10 @@
             "definition_sha256": {
               "env/release-era/Dockerfile": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73",
               "env/release-era/probe.py": "6d54c488e802eff859862bba532ce1ee3bb367342c4c9ebbd3e3c208d3161fa6",
-              "env/release-era/qualify_scalar.py": "08460d1fdd35fa477c8f3d044812a16213e7e40a7436b02865a3384543401214",
+              "env/release-era/qualify_scalar.py": "f9c7189a8b242394c64f4d17347c178ac37409fbfd0ee03dd4875e2abbdfd277",
               "env/release-era/qualify_scalar.sh": "28767e560c79c2aa6240073ac5a5f19b72901d7d976457862c90e87495de26fc",
               "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
-              "env/release-era/scalar-cases.json": "a04b37c574b8d2bee2defd581c7cd2a6976ab74d8a94b849bc798d13eb76f958",
+              "env/release-era/scalar-cases.json": "b1c522c31f778b11df6184e9092b40c4630a6e37b70a7651761b878d6df7fdc6",
               "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
               "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
@@ -36873,11 +36884,11 @@
         },
         "error": "ValueError: input.normalized: changed value adsr_1.alpha",
         "execution": {
-          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-19T02:46:22.317940+00:00",
-          "uuid": "c1c18db6-1576-456c-8b9e-2377e4a2b4ab"
+          "started_utc": "2026-09-19T03:29:48.800846+00:00",
+          "uuid": "01cc9ead-c48d-4109-9abb-c02912cbe18b"
         },
         "mutation": "fresh-randomization",
         "side": "scalar",
@@ -36885,7 +36896,7 @@
         "stderr": "",
         "stdout": "",
         "torchsynth_imported": true,
-        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 998, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 594, in run_render\n    require_named(normalized, named_values(voice, slot))\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 54, in require_named\n    raise ValueError(\"input.normalized: changed value \" + name)\nValueError: input.normalized: changed value adsr_1.alpha\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 1046, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 603, in run_render\n    require_named(normalized, named_values(voice, slot))\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 54, in require_named\n    raise ValueError(\"input.normalized: changed value \" + name)\nValueError: input.normalized: changed value adsr_1.alpha\n",
         "warnings": []
       }
     },
@@ -36894,8 +36905,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.noise",
       "observed": {
-        "canonical_execution_uuid": "b245d20f-8e32-4610-b18e-a59adeb979e3",
-        "canonical_report_sha256": "edaf19b3a343d579fbd3a8077346f52c2a430968f21d10ce802e8bd5184b0ffb",
+        "canonical_execution_uuid": "30f8b98d-4da2-4b09-84e0-1054076c72a4",
+        "canonical_report_sha256": "e0b31d0a5dd59094e9bca46f452ad9d540bdedeb1d355ec4fd58a0de63d4c931",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -37073,10 +37084,10 @@
             "definition_sha256": {
               "env/release-era/Dockerfile": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73",
               "env/release-era/probe.py": "6d54c488e802eff859862bba532ce1ee3bb367342c4c9ebbd3e3c208d3161fa6",
-              "env/release-era/qualify_scalar.py": "08460d1fdd35fa477c8f3d044812a16213e7e40a7436b02865a3384543401214",
+              "env/release-era/qualify_scalar.py": "f9c7189a8b242394c64f4d17347c178ac37409fbfd0ee03dd4875e2abbdfd277",
               "env/release-era/qualify_scalar.sh": "28767e560c79c2aa6240073ac5a5f19b72901d7d976457862c90e87495de26fc",
               "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
-              "env/release-era/scalar-cases.json": "a04b37c574b8d2bee2defd581c7cd2a6976ab74d8a94b849bc798d13eb76f958",
+              "env/release-era/scalar-cases.json": "b1c522c31f778b11df6184e9092b40c4630a6e37b70a7651761b878d6df7fdc6",
               "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
               "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
@@ -37206,11 +37217,11 @@
         },
         "error": "ValueError: input.noise: selected slot, bytes or sample count mismatch",
         "execution": {
-          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-19T02:46:11.873658+00:00",
-          "uuid": "385b719c-c8a8-427e-b233-4939b53fb924"
+          "started_utc": "2026-09-19T03:29:36.785970+00:00",
+          "uuid": "db216a7a-7f22-4e41-9362-9693bdcbb3b8"
         },
         "mutation": "wrong-noise",
         "side": "scalar",
@@ -37218,7 +37229,7 @@
         "stderr": "",
         "stdout": "",
         "torchsynth_imported": true,
-        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 998, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 596, in run_render\n    require_noise(\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 64, in require_noise\n    raise ValueError(\"input.noise: selected slot, bytes or sample count mismatch\")\nValueError: input.noise: selected slot, bytes or sample count mismatch\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 1046, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 605, in run_render\n    require_noise(\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 64, in require_noise\n    raise ValueError(\"input.noise: selected slot, bytes or sample count mismatch\")\nValueError: input.noise: selected slot, bytes or sample count mismatch\n",
         "warnings": []
       }
     },
@@ -37227,8 +37238,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.normalized",
       "observed": {
-        "canonical_execution_uuid": "b245d20f-8e32-4610-b18e-a59adeb979e3",
-        "canonical_report_sha256": "edaf19b3a343d579fbd3a8077346f52c2a430968f21d10ce802e8bd5184b0ffb",
+        "canonical_execution_uuid": "30f8b98d-4da2-4b09-84e0-1054076c72a4",
+        "canonical_report_sha256": "e0b31d0a5dd59094e9bca46f452ad9d540bdedeb1d355ec4fd58a0de63d4c931",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -37406,10 +37417,10 @@
             "definition_sha256": {
               "env/release-era/Dockerfile": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73",
               "env/release-era/probe.py": "6d54c488e802eff859862bba532ce1ee3bb367342c4c9ebbd3e3c208d3161fa6",
-              "env/release-era/qualify_scalar.py": "08460d1fdd35fa477c8f3d044812a16213e7e40a7436b02865a3384543401214",
+              "env/release-era/qualify_scalar.py": "f9c7189a8b242394c64f4d17347c178ac37409fbfd0ee03dd4875e2abbdfd277",
               "env/release-era/qualify_scalar.sh": "28767e560c79c2aa6240073ac5a5f19b72901d7d976457862c90e87495de26fc",
               "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
-              "env/release-era/scalar-cases.json": "a04b37c574b8d2bee2defd581c7cd2a6976ab74d8a94b849bc798d13eb76f958",
+              "env/release-era/scalar-cases.json": "b1c522c31f778b11df6184e9092b40c4630a6e37b70a7651761b878d6df7fdc6",
               "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
               "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
@@ -37539,11 +37550,11 @@
         },
         "error": "ValueError: input.normalized: changed value keyboard.midi_f0",
         "execution": {
-          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "campaign_id": "8138af63-eced-4863-83d3-ea1a42f464b8",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-19T02:46:01.922563+00:00",
-          "uuid": "f5ad749b-954c-4a21-9e55-7526b935cd30"
+          "started_utc": "2026-09-19T03:29:25.821370+00:00",
+          "uuid": "d8370f76-27fa-4055-b0e3-8494557fd290"
         },
         "mutation": "wrong-parameter",
         "side": "scalar",
@@ -37551,7 +37562,7 @@
         "stderr": "",
         "stdout": "",
         "torchsynth_imported": true,
-        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 998, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 594, in run_render\n    require_named(normalized, named_values(voice, slot))\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 54, in require_named\n    raise ValueError(\"input.normalized: changed value \" + name)\nValueError: input.normalized: changed value keyboard.midi_f0\n",
+        "traceback": "Traceback (most recent call last):\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 1046, in main\n    report = run_render(args)\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 603, in run_render\n    require_named(normalized, named_values(voice, slot))\n  File \"/workspace/env/release-era/qualify_scalar.py\", line 54, in require_named\n    raise ValueError(\"input.normalized: changed value \" + name)\nValueError: input.normalized: changed value keyboard.midi_f0\n",
         "warnings": []
       }
     }
@@ -37842,10 +37853,10 @@
     "definition_sha256": {
       "env/release-era/Dockerfile": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73",
       "env/release-era/probe.py": "6d54c488e802eff859862bba532ce1ee3bb367342c4c9ebbd3e3c208d3161fa6",
-      "env/release-era/qualify_scalar.py": "08460d1fdd35fa477c8f3d044812a16213e7e40a7436b02865a3384543401214",
+      "env/release-era/qualify_scalar.py": "f9c7189a8b242394c64f4d17347c178ac37409fbfd0ee03dd4875e2abbdfd277",
       "env/release-era/qualify_scalar.sh": "28767e560c79c2aa6240073ac5a5f19b72901d7d976457862c90e87495de26fc",
       "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
-      "env/release-era/scalar-cases.json": "a04b37c574b8d2bee2defd581c7cd2a6976ab74d8a94b849bc798d13eb76f958",
+      "env/release-era/scalar-cases.json": "b1c522c31f778b11df6184e9092b40c4630a6e37b70a7651761b878d6df7fdc6",
       "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
       "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
       "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
@@ -37876,12 +37887,12 @@
       "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
     }
   },
-  "recorded_utc": "2026-09-19T02:46:39.207762+00:00",
+  "recorded_utc": "2026-09-19T03:30:05.945341+00:00",
   "run_report_sha256": {
-    "run-1/canonical/report.json": "edaf19b3a343d579fbd3a8077346f52c2a430968f21d10ce802e8bd5184b0ffb",
-    "run-1/scalar/report.json": "e2553263491f0eca424ba95ac748fe93b1bfc93ce0ec4b6c49eb2ecefc80258b",
-    "run-2/canonical/report.json": "bb9cfabfc1cb8e520938581542541d871de6a39b593470cbe10285a17551d1b6",
-    "run-2/scalar/report.json": "ec8b4a6e3eb0fb87bfc8e6480fb6eb41d20730c06f682576d4f6e023139b2be8"
+    "run-1/canonical/report.json": "e0b31d0a5dd59094e9bca46f452ad9d540bdedeb1d355ec4fd58a0de63d4c931",
+    "run-1/scalar/report.json": "fccaea2b4d45b29374383fe8597769e8910b39dceebfca4d5e02b5baf9acfded",
+    "run-2/canonical/report.json": "a1187d6d7456c173cdbc17f6aac7a2df054734581e98f6785b3d2788aa010295",
+    "run-2/scalar/report.json": "a079cce1633c4cbe6227c4d302dd1b2e58d0f2f71c90f7bb079933d801d92540"
   },
   "runtime": {
     "device": "cpu",

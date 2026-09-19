@@ -1,8 +1,11 @@
 """Stdlib controls for the scalar probe; real renders live in qualify_scalar.sh."""
 
+import contextlib
 import copy
+import io
 import json
 import struct
+import sys
 import tempfile
 import unittest
 import uuid
@@ -16,15 +19,22 @@ class AggregateRefusalTests(unittest.TestCase):
     """Exercise the public aggregator with complete, synthetic raw artifacts."""
 
     def setUp(self):
+        self.make_fixture(True)
+
+    def make_fixture(self, sentinel):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.plan, self.cases = probe.load_plan(True)
+        self.plan, self.cases = probe.load_plan(sentinel)
         self.campaign = str(uuid.uuid4())
         (self.root / "campaign.id").write_text(self.campaign)
         for name in ("image.id", "docker-server.txt", "build.log"):
             (self.root / name).write_text("synthetic unit fixture")
-        manifest = [("input.normalized", [78]), ("input.noise", [176400])]
+        manifest = [
+            ("input.normalized", [78]),
+            ("input.noise", [176400]),
+            ("audio.final", [2]),
+        ]
         self.addCleanup(patch.stopall)
         patch.object(probe, "capture_manifest", return_value=manifest).start()
         names = sorted(
@@ -51,7 +61,21 @@ class AggregateRefusalTests(unittest.TestCase):
                     "mutation": None,
                     "execution": execution,
                     "provenance": {"definition_sha256": {}},
-                    "runtime": {"name": "synthetic"},
+                    "runtime": dict.fromkeys(
+                        (
+                            "name",
+                            "python",
+                            "machine",
+                            "packages",
+                            "torch_build",
+                            "device",
+                            "dtype",
+                            "threads",
+                            "interop_threads",
+                            "math_environment",
+                        ),
+                        "synthetic",
+                    ),
                     "cases": [],
                     "capture_version": self.plan["capture_version"],
                     "rng_sentinel": "PASS",
@@ -59,6 +83,10 @@ class AggregateRefusalTests(unittest.TestCase):
                     "warnings": [],
                     "stdout": "",
                     "stderr": "",
+                }
+                report["runtime"]["math_environment"] = {
+                    "MKL_CBWR": None,
+                    "ATEN_CPU_CAPABILITY": None,
                 }
                 if side == "scalar":
                     canonical = path.parent / "canonical" / "report.json"
@@ -71,7 +99,12 @@ class AggregateRefusalTests(unittest.TestCase):
                 for case in self.cases:
                     records = []
                     for name, shape in manifest:
-                        data = struct.pack("<f", 0.25) * shape[0]
+                        value = (
+                            0.5
+                            if name == "input.noise" and case["sound_index"] == 0
+                            else 0.25
+                        )
+                        data = struct.pack("<f", value) * shape[0]
                         filename = case["id"] + "." + name + ".f32le"
                         (path / filename).write_bytes(data)
                         records.append(
@@ -93,6 +126,8 @@ class AggregateRefusalTests(unittest.TestCase):
                             "normalized_by_name": values,
                             "parameter_order": names,
                             "traces": records,
+                            "passive_capture_invariant": True,
+                            "no_hook_audio_sha256": records[-1]["sha256"],
                         }
                     )
                 self.write(path / "report.json", report)
@@ -167,7 +202,10 @@ class AggregateRefusalTests(unittest.TestCase):
         for key, value in (("execution_width", 32), ("reproducible", True)):
             path = self.root / "run-1/scalar/report.json"
             original = json.loads(path.read_text())
-            self.mutate("run-1/scalar", lambda r: r["cases"][0].update({key: value}))
+            self.mutate(
+                "run-1/scalar",
+                lambda r, key=key, value=value: r["cases"][0].update({key: value}),
+            )
             with self.assertRaisesRegex(ValueError, "configuration"):
                 probe.aggregate(self.root, True)
             self.write(path, original)
@@ -220,7 +258,9 @@ class AggregateRefusalTests(unittest.TestCase):
             )
             self.mutate(
                 "controls/" + name,
-                lambda r: r.update(control_observation=wrong["control_observation"]),
+                lambda r, wrong=wrong: r.update(
+                    control_observation=wrong["control_observation"]
+                ),
             )
             with self.assertRaises(ValueError):
                 probe.aggregate(self.root, True)
@@ -260,6 +300,103 @@ class AggregateRefusalTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "noise"):
             probe.aggregate(self.root, True)
+
+    def public(self, action, *, sentinel=True):
+        arguments = ["qualify_scalar.py", action, "--output", str(self.root)]
+        if sentinel:
+            arguments.append("--sentinel")
+        if action == "verify":
+            arguments.extend(["--expected", str(self.root / "expected.json")])
+        with (
+            patch.object(sys, "argv", arguments),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            return probe.main()
+
+    def save_expected(self, *, sentinel=True):
+        self.public("aggregate", sentinel=sentinel)
+        report = json.loads((self.root / "scalar-execution.json").read_text())
+        self.write(self.root / "expected.json", report)
+
+    def test_public_verify_replays_valid_evidence_without_rewriting_it(self):
+        for sentinel in (True, False):
+            if not sentinel:
+                self.make_fixture(False)
+            self.save_expected(sentinel=sentinel)
+            path = self.root / "scalar-execution.json"
+            before = path.read_bytes()
+            with self.subTest(sentinel=sentinel):
+                self.assertEqual(self.public("verify", sentinel=sentinel), 0)
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_public_noise_control_rejects_short_other_slot_and_nonfinite(self):
+        self.save_expected()
+        path = self.root / "controls/wrong-noise/report.json"
+        original = json.loads(path.read_text())
+        for values in ((0.5,), (0.75,) * 176400, (float("nan"),) * 176400):
+            raw = struct.pack("<" + str(len(values)) + "f", *values)
+            (path.parent / "mutated-noise.f32le").write_bytes(raw)
+            report = copy.deepcopy(original)
+            observed = report["control_observation"]
+            observed["actual_noise"] = {
+                "file": "mutated-noise.f32le",
+                "shape": [len(values)],
+                "sha256": probe.sha256(raw),
+            }
+            observed["actual_noise_sha256"] = probe.sha256(raw)
+            self.write(path, report)
+            for action in ("aggregate", "verify"):
+                with (
+                    self.subTest(samples=len(values), action=action),
+                    self.assertRaises(ValueError),
+                ):
+                    self.public(action)
+
+    def test_public_passivity_is_required_for_every_case_and_role(self):
+        for sentinel in (True, False):
+            if not sentinel:
+                self.make_fixture(False)
+            self.save_expected(sentinel=sentinel)
+            for side in ("canonical", "scalar"):
+                path = self.root / "run-1" / side / "report.json"
+                original = json.loads(path.read_text())
+                for index in range(len(original["cases"])):
+                    report = copy.deepcopy(original)
+                    report["cases"][index]["passive_capture_invariant"] = False
+                    self.write(path, report)
+                    for action in ("aggregate", "verify"):
+                        with (
+                            self.subTest(
+                                sentinel=sentinel, side=side, case=index, action=action
+                            ),
+                            self.assertRaisesRegex(ValueError, "passive"),
+                        ):
+                            self.public(action, sentinel=sentinel)
+                self.write(path, original)
+
+    def test_public_passivity_rejects_missing_truthy_and_unbound_audio(self):
+        self.save_expected()
+        path = self.root / "run-1/scalar/report.json"
+        original = json.loads(path.read_text())
+        for key, value in (
+            ("passive_capture_invariant", None),
+            ("passive_capture_invariant", 1),
+            ("passive_capture_invariant", "true"),
+            ("no_hook_audio_sha256", None),
+            ("no_hook_audio_sha256", "0" * 64),
+        ):
+            report = copy.deepcopy(original)
+            if value is None:
+                report["cases"][0].pop(key)
+            else:
+                report["cases"][0][key] = value
+            self.write(path, report)
+            for action in ("aggregate", "verify"):
+                with (
+                    self.subTest(key=key, value=value, action=action),
+                    self.assertRaisesRegex(ValueError, "passive"),
+                ):
+                    self.public(action)
 
 
 class ScalarProtocolTests(unittest.TestCase):

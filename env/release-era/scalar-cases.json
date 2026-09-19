@@ -39,7 +39,7 @@
   "sentinel": ["global-6", "sine-bypass", "noise-applied"],
   "controls": {
     "wrong-parameter": {"case": "global-6", "expected_seam": "input.normalized", "mutation": "Replace keyboard.midi_f0 with its opposite endpoint before exact readback."},
-    "wrong-noise": {"case": "global-6", "expected_seam": "input.noise", "mutation": "Retain constructor seed-13 batch-1 noise (slot 0), instead of injecting selected slot 6."},
+    "wrong-noise": {"case": "global-6", "expected_seam": "input.noise", "actual_noise_reference_case": "sine-bypass", "mutation": "Retain constructor seed-13 batch-1 noise (slot 0), instead of injecting selected slot 6; require exact equality with the observed sine-bypass canonical slot-0 noise."},
     "fresh-randomization": {"case": "global-6", "expected_seam": "input.normalized", "mutation": "Call scalar randomize(seed=0) after loading resolved inputs."}
   },
   "comparison": "Original float32 bytes, no alignment/rescaling; numeric differences use float64. No closeness tolerance constitutes equivalence.",

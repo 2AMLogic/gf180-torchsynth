@@ -60,6 +60,10 @@ mix, peak and final audio. Forward hooks only read tensors and return
 `None`. A Python return profiler observes the original normalization
 function's local input and peak. Every case compares hooked audio to a
 second unhooked render on each execution width.
+Aggregation requires boolean `true` (not a truthy substitute) for every
+case's `passive_capture_invariant`, and binds `no_hook_audio_sha256` to
+the retained `audio.final` artifact. Missing or false evidence refuses in
+both roles, both repetitions and both full/sentinel scopes.
 
 `mixer.gain` is explicitly a **derived diagnostic reciprocal**, computed
 as `1 / peak` when the peak exceeds one and unity otherwise. Upstream
@@ -82,6 +86,11 @@ while changing the stream to slot 0; parameter controls must keep the
 selected noise exact. Wrong-parameter must change only `keyboard.midi_f0`
 to its opposite endpoint; fresh randomization must change multiple named
 values. An expected-looking error string alone is insufficient evidence.
+Every actual control stream must contain exactly 176400 finite binary32
+samples. Wrong-noise additionally requires exact bytes from the canonical
+`sine-bypass` slot-0 observation, preregistered as its reference case; a
+different stream labeled slot 0 cannot pass. The observed slot-0 SHA-256 is
+`dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2`.
 
 The aggregate `scalar-execution.json` retains each original-byte comparison,
 first divergent seam/sample/values, maximum and mean absolute error, RMS
@@ -126,6 +135,16 @@ that CI run. The intermediate run intentionally stayed red for its preserved
 baseline failure. Final CI selects the compatible profile explicitly and
 requires its committed seam bytes; no tolerance or automatic refresh exists.
 
+After strengthening the slot-0 and passive-capture validators, both full
+twelve-case and three-case sentinel measurements were executed afresh in
+`out/doctor100-grace-full` and `out/doctor100-grace-sentinel`. All case records
+remain exactly equal to the prior valid compatible measurements. The report's
+top-level evidence now describes the fresh full execution; `evidence_refresh`
+binds both new aggregate hashes. `profile_validation` remains the historical
+native/local profile experiment with its original provenance, not a retagged
+execution of the new validator. Final-head CI independently reruns the native
+three-case sentinel through the strengthened raw-evidence verifier.
+
 The scoped decision is [DR-0007](../../spec/decision-records/0007-single-sound-execution.md).
 Issue #12 owns runtime ratification and DR-0006. Root must reconcile the
 measured runtime here with that selection before integration; this probe
@@ -139,3 +158,7 @@ host that produces different bytes fails the sentinel and needs explicit
 runtime-scope reconciliation. No record is updated automatically. Historical
 uncontrolled bytes are preserved when a separately named, explicitly
 measured profile is recorded; they are not reinterpreted as compatible bytes.
+The public `verify` command first replays aggregation from the retained raw
+reports and artifacts, without rewriting the measured aggregate, and binds
+the replayed evidence fields to that aggregate. A saved PASS cannot bypass
+newly invalid control or passivity evidence.

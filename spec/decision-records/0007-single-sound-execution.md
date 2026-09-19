@@ -125,6 +125,18 @@ repetition identities, scalar-to-canonical UUID/report hashes, and the actual
 UUIDs must differ. Control provenance/runtime and retained changed inputs
 must match their associated canonical run and independent mutation; a
 stale report or matching error-string prefix alone cannot pass aggregation.
+Actual control noise must contain exactly 176400 finite binary32 samples.
+The wrong-noise stream must equal the independently observed canonical
+`sine-bypass` slot-0 bytes and differ from the selected slot-6 bytes, with
+normalized parameters unchanged. Every case in both roles/repetitions must
+retain boolean-true passive capture evidence and matching unhooked/final
+audio hashes, including non-sentinel cases. Public verification replays
+these raw-evidence gates read-only before accepting a saved aggregate.
+The top-level committed report was refreshed by actual full twelve-case and
+three-case local executions after these gates changed, with all prior valid
+compatible case records unchanged. `evidence_refresh` binds the new reports;
+the historical baseline and native `profile_validation` retain their original
+provenance and are not represented as fresh executions of the new validator.
 
 The issue's earlier nonzero drift observations used a different current
 runtime and remain exploratory. The release-era measurement does not
