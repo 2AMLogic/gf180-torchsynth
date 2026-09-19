@@ -1,0 +1,38 @@
+name: Spectral estimators
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v6
+      - name: Install the locked numerical environment
+        run: uv sync --locked --extra metrics --python '${{ matrix.python }}'
+      - name: Execute numerical and contract tests
+        run: uv run --no-sync python tests/test_spectral_estimators.py --numerical -v
+      - name: Regenerate actual analytic grids and sentinels
+        run: uv run --no-sync python tools/qualify_spectral_estimators.py --output '${{ runner.temp }}/spectral-qualification.json'
+      - name: Verify committed diagnostic bytes and rows
+        run: uv run --no-sync python tools/qualify_spectral_estimators.py --verify sim/qualification/spectral-noise-mix-v1.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spectral-qualification-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/spectral-qualification.json
