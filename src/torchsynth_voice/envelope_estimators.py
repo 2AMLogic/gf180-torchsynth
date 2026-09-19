@@ -6,6 +6,7 @@ or route weight is an estimator input. No signal preparation is performed.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import math
 import struct
@@ -33,7 +34,7 @@ PREPARATION = {
 
 def _number(value, name, *, positive=False):
     if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be real")
+        raise ValueError(f"{name} must be real")  # noqa: TRY004 -- public invalid-input contract
     value = float(value)
     if not math.isfinite(value) or abs(value) > 1e20 or (positive and value <= 0):
         raise ValueError(f"{name} outside finite supported range")
@@ -44,8 +45,12 @@ def _trace(samples):
     if isinstance(samples, (str, bytes, Mapping)) or not hasattr(samples, "__len__"):
         raise ValueError("trace must be a one-dimensional finite sequence")
     values = [_number(x, "sample") for x in samples]
-    digest = hashlib.sha256(b"".join(struct.pack("<d", x) for x in values)).hexdigest()
-    return values, {"samples": len(values), "binary64_le_sha256": digest}
+    data = b"".join(struct.pack("<d", x) for x in values)
+    return values, {
+        "samples": len(values),
+        "binary64_le_sha256": hashlib.sha256(data).hexdigest(),
+        "binary64_le_base64": base64.b64encode(data).decode("ascii"),
+    }
 
 
 def _metric(value, unit, reason="measured in declared analytic domain"):

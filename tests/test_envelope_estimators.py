@@ -1,30 +1,35 @@
 from __future__ import annotations
 
-import math
+import base64
 import copy
 import hashlib
 import json
+import math
 import random
+import struct
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from torchsynth_voice.envelope_estimators import (  # noqa: E402
+from torchsynth_voice.envelope_estimators import (
     DESTINATIONS,
+    broadband_amplitude,
     estimate_envelope,
     estimate_routes,
-    broadband_amplitude,
     qualification_rows,
     tone_amplitude,
 )
-from torchsynth_voice.paired_metrics import Limit  # noqa: E402
+from torchsynth_voice.paired_metrics import Limit
 
 sys.path.insert(0, str(ROOT / "tools"))
-from qualify_envelope_estimators import (  # noqa: E402
+from qualify_envelope_estimators import (
     constructed_envelope,
+    floor_table,
     run_grid,
     validate_evidence,
 )
@@ -32,15 +37,15 @@ from qualify_envelope_estimators import (  # noqa: E402
 
 class EnvelopeEstimatorTests(unittest.TestCase):
     def envelope(self, **changes):
-        params = dict(
-            attack=20.25,
-            decay=25.5,
-            release=30.75,
-            sustain=0.4,
-            alpha=1,
-            note=90.5,
-            count=150,
-        )
+        params = {
+            "attack": 20.25,
+            "decay": 25.5,
+            "release": 30.75,
+            "sustain": 0.4,
+            "alpha": 1,
+            "note": 90.5,
+            "count": 150,
+        }
         params.update(changes)
         samples, truth = constructed_envelope(**params)
         result = estimate_envelope(
@@ -361,6 +366,126 @@ class QualificationTests(unittest.TestCase):
         self.assertLess(
             self.evidence["floors"]["tone.amplitude"]["maximum_absolute_error"], 1e-7
         )
+
+    def replay(self, evidence):
+        from torchsynth_voice.scorecard import make_report
+
+        evidence["report"] = make_report(
+            [row for record in evidence["records"] for row in record["rows"]],
+            partition="development",
+            rubric={"id": "envelope-routes-analytic", "version": "1"},
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "evidence.json"
+            output.write_text(json.dumps(evidence))
+            return subprocess.run(
+                [
+                    sys.executable,
+                    "-S",
+                    str(ROOT / "tools/qualify_envelope_estimators.py"),
+                    "--check",
+                    "--output",
+                    str(output),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+            )
+
+    def rederive(self, record, diagnostic):
+        rows, data = qualification_rows(
+            diagnostic["comparison"],
+            case_id=record["case_id"],
+            limits={
+                name: Limit(**limit)
+                for name, limit in diagnostic["rubric"]["limits"].items()
+            },
+        )
+        record.update(rows=rows, diagnostic_utf8=data.decode())
+
+    def test_public_replay_rejects_missing_row_even_without_its_obligation(self):
+        evidence = copy.deepcopy(self.evidence)
+        record = evidence["records"][-1]
+        diagnostic = json.loads(record["diagnostic_utf8"])
+        missing = max(diagnostic["comparison"]["metrics"])
+        del diagnostic["comparison"]["metrics"][missing]
+        del diagnostic["rubric"]["limits"][missing]
+        self.rederive(record, diagnostic)
+        evidence["obligations"] = [
+            o
+            for o in evidence["obligations"]
+            if (o["case_id"], o["property"]) != (record["case_id"], missing)
+        ]
+        self.assertNotEqual(self.replay(evidence).returncode, 0)
+
+    def test_public_replay_rejects_cleared_obligations_and_falsified_floors(self):
+        for field in (
+            "obligations",
+            "maximum_absolute_error",
+            "minimum_tested_stage_samples",
+        ):
+            evidence = copy.deepcopy(self.evidence)
+            if field == "obligations":
+                evidence[field] = []
+            else:
+                evidence["floors"]["direct.attack_end"][field] = 0
+            with self.subTest(field=field):
+                self.assertNotEqual(self.replay(evidence).returncode, 0)
+
+    def test_public_replay_binds_rehashed_input_fixture_and_configuration(self):
+        for field in ("input", "patch_sha256", "manifest_file_sha256", "rate_hz"):
+            evidence = copy.deepcopy(self.evidence)
+            record = next(r for r in evidence["records"] if r["domain"] == "route")
+            diagnostic = json.loads(record["diagnostic_utf8"])
+            comparison = diagnostic["comparison"]
+            if field == "input":
+                comparison["inputs"]["source"]["binary64_le_sha256"] = "0" * 64
+            elif field == "rate_hz":
+                comparison["settings"][field] = 999
+            else:
+                comparison["fixture"][field] = "0" * 64
+            self.rederive(record, diagnostic)
+            with self.subTest(field=field):
+                self.assertNotEqual(self.replay(evidence).returncode, 0)
+
+    def test_public_replay_truth_precision_is_separate_from_estimator_limits(self):
+        for delta, accepted in ((1e-12, True), (1e-6, False)):
+            evidence = copy.deepcopy(self.evidence)
+            record = evidence["records"][0]
+            diagnostic = json.loads(record["diagnostic_utf8"])
+            diagnostic["rubric"]["limits"]["peak_amplitude"]["expected"] += delta
+            self.rederive(record, diagnostic)
+            evidence["floors"] = floor_table(evidence["records"])
+            result = self.replay(evidence)
+            with self.subTest(delta=delta):
+                self.assertEqual(result.returncode == 0, accepted, result.stderr)
+
+    def test_public_replay_binds_input_bytes_even_after_rehash(self):
+        evidence = copy.deepcopy(self.evidence)
+        record = next(r for r in evidence["records"] if r["domain"] == "route")
+        diagnostic = json.loads(record["diagnostic_utf8"])
+        source = diagnostic["comparison"]["inputs"]["source"]
+        data = base64.b64decode(source["binary64_le_base64"])
+        data = struct.pack("<d", 0.01) + data[8:]
+        source["binary64_le_base64"] = base64.b64encode(data).decode()
+        source["binary64_le_sha256"] = hashlib.sha256(data).hexdigest()
+        self.rederive(record, diagnostic)
+        self.assertNotEqual(self.replay(evidence).returncode, 0)
+
+    def test_public_replay_rejects_extra_case_and_property(self):
+        evidence = copy.deepcopy(self.evidence)
+        evidence["records"].append(copy.deepcopy(evidence["records"][-1]))
+        self.assertNotEqual(self.replay(evidence).returncode, 0)
+        evidence = copy.deepcopy(self.evidence)
+        record = evidence["records"][-1]
+        diagnostic = json.loads(record["diagnostic_utf8"])
+        diagnostic["comparison"]["metrics"]["invented"] = copy.deepcopy(
+            next(iter(diagnostic["comparison"]["metrics"].values()))
+        )
+        self.rederive(record, diagnostic)
+        evidence["floors"] = floor_table(evidence["records"])
+        self.assertNotEqual(self.replay(evidence).returncode, 0)
 
 
 if __name__ == "__main__":

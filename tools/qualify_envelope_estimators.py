@@ -1,23 +1,24 @@
-#!/usr/bin/env python3
 """Execute the preregistered development grid; never render Voice or open holdout."""
 
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import itertools
 import json
 import math
 import platform
 import random
+import struct
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from torchsynth_voice.directed import resolve_patch, validate_manifest  # noqa: E402
-from torchsynth_voice.envelope_estimators import (  # noqa: E402
+from torchsynth_voice.directed import resolve_patch, validate_manifest
+from torchsynth_voice.envelope_estimators import (
     DESTINATIONS,
     UNITS,
     broadband_amplitude,
@@ -27,11 +28,20 @@ from torchsynth_voice.envelope_estimators import (  # noqa: E402
     qualification_rows,
     tone_amplitude,
 )
-from torchsynth_voice.paired_metrics import Limit  # noqa: E402
-from torchsynth_voice.scorecard import make_report, validate_report  # noqa: E402
+from torchsynth_voice.paired_metrics import Limit
+from torchsynth_voice.scorecard import make_report, validate_report
 
 SOURCE = "spec/ENVELOPE-ESTIMATORS.md: preregistered experiment v1; independent constructed truth"
 OUTPUT = ROOT / "sim/qualification/envelope-routes-v1.json"
+REPLAY_PRECISION = 1e-9
+INPUT_REPLAY_PRECISION = 1e-12
+REPLAY_POLICY = {
+    "version": "2",
+    "analytic_truth_and_observation_abs_rel": REPLAY_PRECISION,
+    "generated_input_abs_rel": INPUT_REPLAY_PRECISION,
+    "input_encoding": "base64 of original little-endian binary64 bytes; exact SHA-256 and count",
+    "identity": "exact fixture/configuration/case/property/obligation identity; estimator limits unchanged",
+}
 
 
 def encoded(value):
@@ -102,17 +112,17 @@ def envelope_limits(truth):
 
 
 def envelope_cases():
-    base = dict(
-        attack=20.25,
-        decay=25.5,
-        release=30.75,
-        sustain=0.4,
-        alpha=1,
-        note=90.5,
-        gain=1,
-        count=150,
-        origin=0,
-    )
+    base = {
+        "attack": 20.25,
+        "decay": 25.5,
+        "release": 30.75,
+        "sustain": 0.4,
+        "alpha": 1,
+        "note": 90.5,
+        "gain": 1,
+        "count": 150,
+        "origin": 0,
+    }
     for rate, alpha, gain, sustain in itertools.product(
         (100, 441, 1000), (0.1, 0.5, 1, 2, 6), (0.25, 1), (0.2, 0.8)
     ):
@@ -434,6 +444,40 @@ def run_grid():
                 required=required,
             )
 
+    floors = floor_table(records)
+    report = make_report(
+        all_rows,
+        partition="development",
+        rubric={"id": "envelope-routes-analytic", "version": "1"},
+    )
+    result = {
+        "schema": "envelope-routes-qualification-v1",
+        "scope": "constructed development only; holdout sealed; no Voice/hardware fidelity",
+        "runtime": {
+            "python": platform.python_version(),
+            "implementation": platform.python_implementation(),
+        },
+        "preregistration": SOURCE,
+        "replay_policy": REPLAY_POLICY,
+        "records": records,
+        "report": report,
+        "floors": floors,
+        "obligations": obligations,
+        "upstream_sentinel": {"status": "not_run"},
+        "shared_preparation": {"status": "not_run"},
+    }
+    result["source_sha256"] = {
+        path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
+        for path in (
+            "src/torchsynth_voice/envelope_estimators.py",
+            "tools/qualify_envelope_estimators.py",
+            "spec/ENVELOPE-ESTIMATORS.md",
+        )
+    }
+    return result
+
+
+def floor_table(records):
     floors = {}
     for record in records:
         for row in record["rows"]:
@@ -474,38 +518,10 @@ def run_grid():
                         table["minimum_tested_stage_samples"] = (
                             length if old is None else min(old, length)
                         )
-    report = make_report(
-        all_rows,
-        partition="development",
-        rubric={"id": "envelope-routes-analytic", "version": "1"},
-    )
-    result = {
-        "schema": "envelope-routes-qualification-v1",
-        "scope": "constructed development only; holdout sealed; no Voice/hardware fidelity",
-        "runtime": {
-            "python": platform.python_version(),
-            "implementation": platform.python_implementation(),
-        },
-        "preregistration": SOURCE,
-        "records": records,
-        "report": report,
-        "floors": floors,
-        "obligations": obligations,
-        "upstream_sentinel": {"status": "not_run"},
-        "shared_preparation": {"status": "not_run"},
-    }
-    result["source_sha256"] = {
-        path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
-        for path in (
-            "src/torchsynth_voice/envelope_estimators.py",
-            "tools/qualify_envelope_estimators.py",
-            "spec/ENVELOPE-ESTIMATORS.md",
-        )
-    }
-    return result
+    return floors
 
 
-def validate_evidence(evidence):
+def validate_evidence(evidence, *, reference=None):
     validate_report(evidence["report"])
     rows = []
     seen = set()
@@ -548,6 +564,112 @@ def validate_evidence(evidence):
         raise ValueError(
             f"{len(failed)} qualification obligations failed: {failed[:5]}"
         )
+    if evidence["floors"] != floor_table(evidence["records"]):
+        raise ValueError("saved floor tables differ from retained observations")
+    reference = run_grid() if reference is None else reference
+    for key in (
+        "schema",
+        "scope",
+        "preregistration",
+        "replay_policy",
+        "source_sha256",
+        "obligations",
+    ):
+        if evidence.get(key) != reference[key]:
+            raise ValueError("saved qualification identity differs: " + key)
+    if [(r["case_id"], r["domain"]) for r in evidence["records"]] != [
+        (r["case_id"], r["domain"]) for r in reference["records"]
+    ]:
+        raise ValueError("saved case inventory differs")
+    for saved, fresh in zip(evidence["records"], reference["records"], strict=True):
+        if [r["property"] for r in saved["rows"]] != [
+            r["property"] for r in fresh["rows"]
+        ]:
+            raise ValueError("saved property inventory differs: " + saved["case_id"])
+        old = json.loads(saved["diagnostic_utf8"])["comparison"]
+        new = json.loads(fresh["diagnostic_utf8"])["comparison"]
+        for key in ("fixture", "settings", "estimator", "implementation"):
+            if old[key] != new[key]:
+                raise ValueError("saved fixture/configuration identity differs: " + key)
+        if old["inputs"].keys() != new["inputs"].keys():
+            raise ValueError("saved input inventory differs")
+        for name, record in old["inputs"].items():
+            actual = retained_input(record)
+            expected = retained_input(new["inputs"][name])
+            require_replay_value(
+                actual, expected, "input." + name, precision=INPUT_REPLAY_PRECISION
+            )
+        require_replay_value(old["metrics"], new["metrics"], "raw metrics")
+        require_replay_value(old["diagnostics"], new["diagnostics"], "diagnostics")
+        for left, right in zip(saved["rows"], fresh["rows"], strict=True):
+            for key in set(left) | set(right):
+                if key == "artifact":
+                    continue  # independently checked against retained original bytes above
+                if key == "observed":
+                    require_replay_value(left[key], right[key], key)
+                elif key == "expected":
+                    if (
+                        left[key].keys() != right[key].keys()
+                        or left[key]["source"] != right[key]["source"]
+                    ):
+                        raise ValueError("saved expected truth identity differs")
+                    require_replay_value(
+                        left[key]["value"], right[key]["value"], "expected truth"
+                    )
+                elif left.get(key) != right.get(key):
+                    raise ValueError("saved qualification state differs: " + key)
+    require_replay_value(evidence["floors"], reference["floors"], "replayed floors")
+
+
+def retained_input(record):
+    """Provenance hashes bind original bytes; host regeneration compares values."""
+    if set(record) != {"samples", "binary64_le_sha256", "binary64_le_base64"}:
+        raise ValueError("missing or extra retained input provenance")
+    data = base64.b64decode(record["binary64_le_base64"], validate=True)
+    if (
+        type(record["samples"]) is not int
+        or record["samples"] < 0
+        or len(data) != record["samples"] * 8
+        or hashlib.sha256(data).hexdigest() != record["binary64_le_sha256"]
+    ):
+        raise ValueError("retained input hash/count mismatch")
+    values = [value[0] for value in struct.iter_unpack("<d", data)]
+    if not all(math.isfinite(value) for value in values):
+        raise ValueError("nonfinite retained input")
+    return values
+
+
+def require_replay_value(saved, fresh, context, *, precision=REPLAY_PRECISION):
+    if (
+        isinstance(saved, dict)
+        and isinstance(fresh, dict)
+        and saved.keys() == fresh.keys()
+    ):
+        for key in saved:
+            require_replay_value(
+                saved[key], fresh[key], context + "." + key, precision=precision
+            )
+        return
+    if isinstance(saved, list) and isinstance(fresh, list) and len(saved) == len(fresh):
+        for left, right in zip(saved, fresh, strict=True):
+            require_replay_value(left, right, context, precision=precision)
+        return
+    if type(saved) in (int, float) and type(fresh) in (int, float):
+        if (
+            math.isfinite(saved)
+            and math.isfinite(fresh)
+            and (
+                saved == fresh
+                if type(saved) is type(fresh) is int
+                else math.isclose(saved, fresh, abs_tol=precision, rel_tol=precision)
+            )
+        ):
+            return
+    elif type(saved) is type(fresh) and saved == fresh:
+        return
+    raise ValueError(
+        "saved numerical value differs beyond replay precision or shape: " + context
+    )
 
 
 def upstream_sentinel(root):
@@ -560,7 +682,7 @@ def upstream_sentinel(root):
         raise ValueError(errors)
     sys.path.insert(0, str(root))
     import torch
-    import torchsynth.module as module
+    from torchsynth import module
     from torchsynth.config import SynthConfig
 
     if Path(module.__file__).resolve() != root.resolve() / "torchsynth/module.py":
@@ -635,6 +757,7 @@ def upstream_sentinel(root):
 
 def shared_preparation_sentinel(root):
     import importlib
+
     import torchsynth_voice
 
     # Read-only peer package extension; only the shared preparation module is
@@ -763,30 +886,11 @@ def main():
         evidence["shared_preparation"] = shared_preparation_sentinel(
             args.preparation_root
         )
-    validate_evidence(evidence)
+    validate_evidence(evidence, reference=evidence)
     if args.check:
         saved = json.loads(args.output.read_text())
-        validate_evidence(saved)
-        if [r["case_id"] for r in saved["records"]] != [
-            r["case_id"] for r in evidence["records"]
-        ]:
-            raise ValueError("saved case inventory differs")
-        for left, right in zip(saved["report"]["rows"], evidence["report"]["rows"]):
-            if any(
-                left[key] != right[key]
-                for key in ("verdict", "property", "unit", "expected", "tolerance")
-            ):
-                raise ValueError("saved qualification state differs")
-            if left["observed"] is not None and not math.isclose(
-                left["observed"], right["observed"], rel_tol=1e-9, abs_tol=1e-9
-            ):
-                raise ValueError(
-                    "saved numerical observation differs beyond replay precision"
-                )
-        if saved["source_sha256"] != evidence["source_sha256"]:
-            raise ValueError(
-                "qualification implementation or preregistration changed; regenerate evidence"
-            )
+        validate_evidence(saved, reference=evidence)
+        evidence = saved
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_bytes(encoded(evidence))
