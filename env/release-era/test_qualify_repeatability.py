@@ -2,11 +2,14 @@
 
 import copy
 import json
+import re
 import struct
 import tempfile
 import unittest
 import uuid
+from argparse import Namespace
 from pathlib import Path
+from unittest.mock import patch
 
 import qualify_repeatability as q
 
@@ -53,17 +56,21 @@ class RepeatabilityTests(unittest.TestCase):
         return cell
 
     def receipt(self, cell):
+        image = "sha256:" + "1" * 64
         q.write_json(
             self.root / "provenance.json",
             {
                 "run_id": cell["run_id"],
                 "plan_sha256": q.plan_hash(self.plan),
                 "runner_sha256": q.sha256(Path(q.__file__).read_bytes()),
+                "image": {"Id": image},
             },
         )
         worker = {
             "run_id": cell["run_id"],
             "execution_id": cell["execution_id"],
+            "process_id": 1,
+            "started_utc": "2026-09-19T03:00:00+00:00",
             "plan_sha256": q.plan_hash(self.plan),
             "source_sha256": q.expected_source_hashes(),
             "source_validated_before_import": True,
@@ -75,6 +82,18 @@ class RepeatabilityTests(unittest.TestCase):
                 interop_threads=1,
                 thread_environment=q.THREAD_ENV,
                 math_environment=self.plan["profile_environment"]["release"],
+                machine="x86_64",
+                platform="Linux-synthetic-test-only",
+                cpu="synthetic test CPU, not measured evidence",
+                torch_build="synthetic test build, not measured evidence",
+                packages=dict(
+                    re.findall(
+                        r"^([\w-]+)(?:\[[^]]+\])?==([^\s]+)",
+                        (q.HERE / "requirements.lock").read_text(),
+                        re.MULTILINE,
+                    ),
+                    torch=self.plan["runtime_definitions"]["release"]["torch"],
+                ),
             ),
             "cells": [{k: v for k, v in cell.items() if k != "directory"}],
         }
@@ -87,8 +106,217 @@ class RepeatabilityTests(unittest.TestCase):
                 "exit_code": 0,
                 "directory": cell["directory"],
                 "stdout_sha256": q.sha256((directory / "stdout.json").read_bytes()),
+                "worker": {k: v for k, v in worker.items() if k != "cells"},
+                "command": q.command_for(
+                    Namespace(mode="sentinel", image=image),
+                    cell["runtime"],
+                    cell["batch_size"],
+                    cell["repeat"],
+                    directory,
+                    cell["run_id"],
+                ),
             },
         )
+
+    def mutate_receipt(self, cell, mutate):
+        """Keep raw stdout, digest and duplicated metadata synchronized."""
+        directory = self.root / cell["directory"]
+        worker = json.loads((directory / "result.json").read_text())
+        receipt = json.loads((directory / "execution.json").read_text())
+        provenance = json.loads((self.root / "provenance.json").read_text())
+        mutate(worker, receipt, provenance)
+        q.write_json(directory / "result.json", worker)
+        q.write_json(directory / "stdout.json", worker)
+        receipt["stdout_sha256"] = q.sha256((directory / "stdout.json").read_bytes())
+        receipt["worker"] = {k: v for k, v in worker.items() if k != "cells"}
+        q.write_json(directory / "execution.json", receipt)
+        q.write_json(self.root / "provenance.json", provenance)
+
+    def test_synchronized_semantically_invalid_render_receipts_refused(self):
+        cell = self.cell()
+        mutations = {
+            "runner identity": lambda w, r, p: (
+                w.update(runner_sha256="0" * 64),
+                p.update(runner_sha256="0" * 64),
+            ),
+            "negative role": lambda w, r, p: r["command"].__setitem__(
+                r["command"].index("worker"), "negative"
+            ),
+            "missing command": lambda w, r, p: r.pop("command"),
+            "missing process": lambda w, r, p: (
+                w.pop("process_id"),
+                w.pop("started_utc"),
+            ),
+            "missing runtime identity": lambda w, r, p: [
+                w["runtime"].pop(k)
+                for k in ("machine", "platform", "cpu", "torch_build", "packages")
+            ],
+        }
+        for name, mutate in mutations.items():
+            self.receipt(cell)
+            q.check_sentinel(cell, self.expected(cell), self.root)
+            self.mutate_receipt(cell, mutate)
+            cells = self.refused_matrix()
+            cells[0] = cell
+            for gate in (
+                lambda: q.check_sentinel(cell, self.expected(cell), self.root),
+                lambda: q.pair(cell, cell, self.root),
+                lambda cells=cells: q.summarize(self.plan, cells, self.root),
+            ):
+                with self.subTest(mutation=name), self.assertRaises(ValueError):
+                    gate()
+
+    def test_render_arguments_bind_cell_and_cannot_be_preflight(self):
+        cell = self.cell()
+        for option, value in (
+            ("--runtime", "current"),
+            ("--batch-size", "128"),
+            ("--repeat", "2"),
+            ("--run-id", "another-run"),
+            ("--source-root", "/other-source"),
+            ("--output", "/other-output"),
+        ):
+            self.receipt(cell)
+            self.mutate_receipt(
+                cell,
+                lambda w, r, p, option=option, value=value: r["command"].__setitem__(
+                    r["command"].index(option) + 1, value
+                ),
+            )
+            with (
+                self.subTest(option=option),
+                self.assertRaisesRegex(ValueError, "render command"),
+            ):
+                q.pair(cell, cell, self.root)
+        self.receipt(cell)
+        self.mutate_receipt(
+            cell, lambda w, r, p: r["command"].append("--preflight-only")
+        )
+        with self.assertRaisesRegex(ValueError, "render command"):
+            q.check_sentinel(cell, self.expected(cell), self.root)
+
+    def test_process_runtime_fields_are_required_individually_and_cross_checked(self):
+        cell = self.cell()
+        for section, key, values in (
+            (None, "process_id", [None, 0, -1, True, "1"]),
+            (
+                None,
+                "started_utc",
+                [
+                    None,
+                    "",
+                    "invalid",
+                    "2026-09-19T03:00:00",
+                    "2000-01-01T00:00:00+00:00",
+                ],
+            ),
+            ("runtime", "machine", [None, "", "arm64"]),
+            ("runtime", "platform", [None, "", "Darwin-test"]),
+            ("runtime", "cpu", [None, ""]),
+            ("runtime", "torch_build", [None, ""]),
+            ("runtime", "packages", [None, {}, {"torch": "wrong"}]),
+        ):
+            for value in values:
+                self.receipt(cell)
+                self.mutate_receipt(
+                    cell,
+                    lambda w, r, p, section=section, key=key, value=value: (
+                        w if section is None else w[section]
+                    ).__setitem__(key, value),
+                )
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    q.check_sentinel(cell, self.expected(cell), self.root)
+        self.receipt(cell)
+        self.mutate_receipt(
+            cell, lambda w, r, p: w["runtime"]["packages"].update(numpy="wrong")
+        )
+        with self.assertRaisesRegex(ValueError, "package/runtime"):
+            q.pair(cell, cell, self.root)
+        self.receipt(cell)
+        path = self.root / cell["directory"] / "execution.json"
+        receipt = json.loads(path.read_text())
+        receipt["worker"]["process_id"] += 1
+        q.write_json(path, receipt)
+        with self.assertRaisesRegex(ValueError, "duplicated worker"):
+            q.pair(cell, cell, self.root)
+
+    def test_historical_runner_requires_explicit_verified_object_and_same_gates(self):
+        cell = self.cell()
+        historical_bytes = b"synthetic reviewed historical runner for unit test"
+        digest = q.sha256(historical_bytes)
+        q.historical_runner_hash.cache_clear()
+        self.addCleanup(q.historical_runner_hash.cache_clear)
+        self.mutate_receipt(
+            cell,
+            lambda w, r, p: (
+                w.update(runner_sha256=digest),
+                p.update(runner_sha256=digest),
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "runner identity"):
+            q.pair(cell, cell, self.root)
+        with (
+            patch.object(q, "HISTORICAL_RUNNER_SHA256", digest),
+            patch.object(
+                q.subprocess,
+                "run",
+                return_value=q.subprocess.CompletedProcess([], 0, historical_bytes),
+            ) as run,
+        ):
+            args = {"historical_runner": q.HISTORICAL_RUNNER}
+            self.assertEqual(q.pair(cell, cell, self.root, **args)["status"], "PASS")
+            self.assertIn(
+                q.HISTORICAL_RUNNER + ":env/release-era/qualify_repeatability.py",
+                run.call_args.args[0],
+            )
+            q.check_sentinel(cell, self.expected(cell), self.root, **args)
+            originals = [
+                lambda w, r, p: (
+                    w.update(runner_sha256="0" * 64),
+                    p.update(runner_sha256="0" * 64),
+                ),
+                lambda w, r, p: r["command"].__setitem__(
+                    r["command"].index("worker"), "negative"
+                ),
+                lambda w, r, p: r.pop("command"),
+                lambda w, r, p: (w.pop("process_id"), w.pop("started_utc")),
+                lambda w, r, p: w["runtime"].pop("packages"),
+            ]
+            for mutate in originals:
+                self.receipt(cell)
+                self.mutate_receipt(
+                    cell,
+                    lambda w, r, p: (
+                        w.update(runner_sha256=digest),
+                        p.update(runner_sha256=digest),
+                    ),
+                )
+                q.check_sentinel(cell, self.expected(cell), self.root, **args)
+                self.mutate_receipt(cell, mutate)
+                with self.assertRaises(ValueError):
+                    q.check_sentinel(cell, self.expected(cell), self.root, **args)
+                with self.assertRaises(ValueError):
+                    q.pair(cell, cell, self.root, **args)
+
+    def test_historical_runner_missing_wrong_or_unreviewed_object_fails_closed(self):
+        q.historical_runner_hash.cache_clear()
+        self.addCleanup(q.historical_runner_hash.cache_clear)
+        with self.assertRaisesRegex(ValueError, "unreviewed"):
+            q.historical_runner_hash("0" * 40)
+        for code, data, message in (
+            (1, b"", "explicitly acquire"),
+            (0, b"wrong", "Git-object hash"),
+        ):
+            with (
+                patch.object(
+                    q.subprocess,
+                    "run",
+                    return_value=q.subprocess.CompletedProcess([], code, data),
+                ),
+                self.subTest(code=code),
+                self.assertRaisesRegex(ValueError, message),
+            ):
+                q.historical_runner_hash(q.HISTORICAL_RUNNER)
 
     def expected(self, cell):
         return {

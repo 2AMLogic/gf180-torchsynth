@@ -144,6 +144,18 @@ CPU/profile/source/process identities, run/artifact IDs and hashes. This
 observation establishes only the stated native sentinel case. Final-head CI
 is checked again after committing this receipt; it does not expand host scope.
 
+The subsequent semantic-receipt repair preserves this entire measured
+publication and its raw files unchanged. Revalidation of these retained
+measurements explicitly selects reviewed runner revision `2182bc9` and
+verifies that revision's complete Git-object bytes against the fixed runner
+digest documented in `REPEATABILITY.md`. The strengthened gates still require
+the actual render role/arguments, process PID/UTC start, host/build/package
+identities, duplicate receipt agreement and all original raw-byte checks.
+Default qualification accepts only the current runner's bytes; new sentinel
+runs use that path. Historical replay is not relabeled as fresh measurement.
+This repair changes neither the numerical profile nor its host scope or
+committed expectations, and does not require or imply producer attestation.
+
 This measured transition resolves the uncontrolled numerical dispatch that
 made the original native sentinel fail. The new profile is proposed because
 it is explicit and reproduces the bounded native observations while retaining

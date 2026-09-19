@@ -22,6 +22,7 @@ import tempfile
 import time
 import uuid
 import warnings
+from functools import lru_cache
 from pathlib import Path
 
 from probe import json_bytes, sha256, validate_source
@@ -29,6 +30,12 @@ from probe import json_bytes, sha256, validate_source
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 PLAN = HERE / "repeatability-matrix.json"
+# Explicit replay only: this reviewed revision generated the retained COMPATIBLE
+# matrix. Never infer trust from a receipt or accept a caller-provided digest.
+HISTORICAL_RUNNER = "2182bc9524016476f9a538d11fe2e3035fe0ae45"
+HISTORICAL_RUNNER_SHA256 = (
+    "1ad50da4cde6e72ea25327dc828016337dc6cf0cb926fd3488bc92d6188c98b9"
+)
 THREAD_ENV = {
     name: "1"
     for name in (
@@ -122,7 +129,7 @@ def cell_key(cell):
     return tuple(cell[k] for k in ("runtime", "batch_size", "repeat", "case"))
 
 
-def validate_results(plan, cells, root=None):
+def validate_results(plan, cells, root=None, *, historical_runner=None):
     keys = [cell_key(c) for c in cells]
     if len(set(keys)) != len(keys):
         raise ValueError("duplicate matrix cells")
@@ -136,7 +143,7 @@ def validate_results(plan, cells, root=None):
         if cell["status"] != "PASS" and not cell.get("error"):
             raise ValueError("refusal/failure requires a reason")
         if cell["status"] == "PASS":
-            validate_cell(plan, cell, root)
+            validate_cell(plan, cell, root, historical_runner=historical_runner)
     passed = [c for c in cells if c["status"] == "PASS"]
     if len({c["run_id"] for c in passed}) > 1:
         raise ValueError("mixed experiment run IDs")
@@ -174,7 +181,220 @@ def expected_source_hashes():
     }
 
 
-def validate_cell(plan, cell, root=None):
+@lru_cache(maxsize=1)
+def historical_runner_hash(revision):
+    if revision != HISTORICAL_RUNNER:
+        raise ValueError("unreviewed historical runner revision")
+    result = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(REPO),
+            "show",
+            revision + ":env/release-era/qualify_repeatability.py",
+        ],
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise ValueError(
+            "historical runner Git object unavailable; explicitly acquire "
+            + revision
+            + " (see REPEATABILITY.md); qualification never downloads it"
+        )
+    if sha256(result.stdout) != HISTORICAL_RUNNER_SHA256:
+        raise ValueError("historical runner Git-object hash mismatch")
+    return HISTORICAL_RUNNER_SHA256
+
+
+def validate_runtime_identity(plan, runtime, observed):
+    """Check mandatory recorded scope, not execution attestation/portability."""
+    machine, prefix = (
+        ("x86_64", "Linux-") if runtime == "release" else ("arm64", "macOS-")
+    )
+    if (
+        any(
+            not isinstance(observed.get(k), str) or not observed[k].strip()
+            for k in ("machine", "platform", "cpu", "torch_build")
+        )
+        or observed["machine"] != machine
+        or not observed["platform"].startswith(prefix)
+    ):
+        raise ValueError("worker runtime identity missing or outside recorded platform")
+    packages = observed.get("packages")
+    if (
+        not isinstance(packages, dict)
+        or not packages
+        or any(
+            not isinstance(k, str) or not k or not isinstance(v, str) or not v
+            for k, v in packages.items()
+        )
+    ):
+        raise ValueError("worker package identity missing or malformed")
+    definition = plan["runtime_definitions"][runtime]
+    lock = (REPO / definition["lock"]).read_bytes()
+    if sha256(lock) != definition["lock_sha256"]:
+        raise ValueError("runtime lock hash mismatch")
+    if any(packages.get(k) != definition[k] for k in ("torch", "numpy", "lightning")):
+        raise ValueError("worker package/runtime identity mismatch")
+    if runtime == "release":
+        required = dict(
+            re.findall(
+                r"^([\w-]+)(?:\[[^]]+\])?==([^\s]+)", lock.decode(), re.MULTILINE
+            )
+        )
+        if any(packages.get(k) != v for k, v in required.items()):
+            raise ValueError("worker package/lock identity mismatch")
+    else:
+        # This fixed, hash-checked uv.lock shape can be read by Python 3.9 too.
+        permitted = set(
+            re.findall(
+                r'\[\[package\]\]\nname = "([^"]+)"\nversion = "([^"]+)"', lock.decode()
+            )
+        )
+        if not permitted or any((k, v) not in permitted for k, v in packages.items()):
+            raise ValueError("worker package/lock identity mismatch")
+
+
+def validate_render_command(cell, worker, receipt, provenance):
+    command = receipt.get("command")
+    if (
+        not isinstance(command, list)
+        or len(command) < 2
+        or any(not isinstance(arg, str) or not arg for arg in command)
+    ):
+        raise ValueError("render command missing or malformed")
+    runtime = cell["runtime"]
+    script = (
+        "/repo/env/release-era/qualify_repeatability.py"
+        if runtime == "release"
+        else command[1]
+    )
+    if (
+        not script.endswith("/env/release-era/qualify_repeatability.py")
+        or command.count(script) != 1
+    ):
+        raise ValueError("render command runner mismatch")
+    start = command.index(script)
+    suffix = [
+        "worker",
+        "--runtime",
+        runtime,
+        "--batch-size",
+        str(cell["batch_size"]),
+        "--repeat",
+        str(cell["repeat"]),
+        "--run-id",
+        cell["run_id"],
+    ]
+    sentinel = "--sentinel" in command[start + 1 :]
+    if sentinel:
+        suffix.append("--sentinel")
+    expected_cases = (
+        ["global-0"] if sentinel else [c["name"] for c in load_plan()["cases"]]
+    )
+    if [c["case"] for c in worker["cells"]] != expected_cases or any(
+        cell_key(c)[:3] != cell_key(cell)[:3]
+        or c.get("run_id") != cell["run_id"]
+        or c.get("execution_id") != worker["execution_id"]
+        for c in worker["cells"]
+    ):
+        raise ValueError("render command worker case/group mismatch")
+    tail = command[start + 1 :]
+    if (
+        len(tail) != len(suffix) + 4
+        or tail[: len(suffix)] != suffix
+        or tail[-4] != "--source-root"
+        or tail[-2] != "--output"
+    ):
+        raise ValueError("render command role/arguments mismatch")
+    source, output = tail[-3], tail[-1]
+    if runtime == "current":
+        if (
+            start != 1
+            or not re.fullmatch(
+                r"python(?:[0-9]+(?:\.[0-9]+)*)?", Path(command[0]).name
+            )
+            or not Path(source).is_absolute()
+            or not Path(output).is_absolute()
+            or Path(output).name != cell["directory"]
+        ):
+            raise ValueError("render command current paths mismatch")
+        return
+    if (source, output) != ("/opt/torchsynth", "/output"):
+        raise ValueError("render command container paths mismatch")
+    image = provenance.get("image", {}).get("Id")
+    if not isinstance(image, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+        raise ValueError("render command image identity missing")
+    mounts = [command[i + 1] for i, v in enumerate(command[:-1]) if v == "--mount"]
+    if (
+        len(mounts) != 2
+        or not mounts[0].startswith("type=bind,src=/")
+        or not mounts[0].endswith(",dst=/repo,readonly")
+        or not mounts[1].startswith("type=bind,src=/")
+        or not mounts[1].endswith(",dst=/output")
+    ):
+        raise ValueError("render command mount mismatch")
+    output_path = Path(mounts[1][len("type=bind,src=") : -len(",dst=/output")])
+    if output_path.name != cell["directory"]:
+        raise ValueError("render command output binding mismatch")
+    expected = command_for(
+        argparse.Namespace(mode="sentinel" if sentinel else "matrix", image=image),
+        runtime,
+        cell["batch_size"],
+        cell["repeat"],
+        output_path,
+        cell["run_id"],
+    )
+    # Container names and absolute host locators vary, including after relocation.
+    # All executable, role, image, isolation, profile and worker arguments do not.
+    if "--name" not in command or command.index("--name") + 1 >= len(command):
+        raise ValueError("render command container identity missing")
+    expected[expected.index("--name") + 1] = command[command.index("--name") + 1]
+    expected[expected.index("--mount") + 1] = mounts[0]
+    if command != expected:
+        raise ValueError("render command launch/profile binding mismatch")
+
+
+def validate_process_receipt(
+    plan, cell, worker, receipt, provenance, historical_runner
+):
+    trusted = (
+        sha256(Path(__file__).read_bytes())
+        if historical_runner is None
+        else historical_runner_hash(historical_runner)
+    )
+    if (
+        worker.get("runner_sha256") != trusted
+        or provenance.get("runner_sha256") != trusted
+    ):
+        raise ValueError("worker runner identity differs from reviewed code")
+    if type(worker.get("process_id")) is not int or worker["process_id"] <= 0:
+        raise ValueError("worker process metadata requires a positive PID")
+    try:
+        started = datetime.datetime.fromisoformat(worker["started_utc"])
+        execution = uuid.UUID(worker["execution_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("worker process metadata missing or malformed") from exc
+    if (
+        started.utcoffset() != datetime.timedelta(0)
+        or str(execution) != worker["execution_id"]
+        or execution.version != 4
+    ):
+        raise ValueError("worker process metadata requires UTC/UUID identity")
+    preregistered = datetime.datetime.fromisoformat(
+        plan["preregistered_utc"].replace("Z", "+00:00")  # noqa: FURB162 -- Python 3.9 cannot parse Z.
+    )
+    if started < preregistered:
+        raise ValueError("worker process start predates preregistration")
+    if receipt.get("worker") != {k: v for k, v in worker.items() if k != "cells"}:
+        raise ValueError("duplicated worker receipt mismatch")
+    validate_runtime_identity(plan, cell["runtime"], worker["runtime"])
+    validate_render_command(cell, worker, receipt, provenance)
+
+
+def validate_cell(plan, cell, root=None, *, historical_runner=None):
     """Refuse incomplete observations before any aggregate or byte credit."""
     if cell.get("status") != "PASS":
         raise ValueError("render unavailable")
@@ -260,6 +480,7 @@ def validate_cell(plan, cell, root=None):
         or observed.get("interop_threads") != 1
     ):
         raise ValueError("worker source/runtime/process binding mismatch")
+    validate_process_receipt(plan, cell, worker, receipt, provenance, historical_runner)
     artifacts = {
         name: read_artifact(root / directory, cell["artifacts"][name])
         for name in plan["artifacts"]
@@ -637,15 +858,15 @@ def worker(args):
     return report
 
 
-def pair(left, right, root, plan=None):
+def pair(left, right, root, plan=None, *, historical_runner=None):
     if left["status"] != "PASS" or right["status"] != "PASS":
         return {
             "status": "NO_VERDICT",
             "reason": "one or both render cells unavailable",
         }
     plan = load_plan() if plan is None else plan
-    a = validate_cell(plan, left, root)
-    b = validate_cell(plan, right, root)
+    a = validate_cell(plan, left, root, historical_runner=historical_runner)
+    b = validate_cell(plan, right, root, historical_runner=historical_runner)
     compared = {name: compare_bytes(a[name], b[name]) for name in plan["artifacts"]}
     inputs_equal = (
         left["input_sha256"] == right["input_sha256"]
@@ -661,8 +882,8 @@ def pair(left, right, root, plan=None):
     }
 
 
-def summarize(plan, cells, root):
-    validate_results(plan, cells, root)
+def summarize(plan, cells, root, *, historical_runner=None):
+    validate_results(plan, cells, root, historical_runner=historical_runner)
     lookup = {cell_key(c): c for c in cells}
     comparisons = []
     for runtime in plan["runtime_definitions"]:
@@ -688,19 +909,25 @@ def summarize(plan, cells, root):
                             kind=kind,
                             left=list(a),
                             right=list(b),
-                            **pair(lookup[a], lookup[b], root, plan),
+                            **pair(
+                                lookup[a],
+                                lookup[b],
+                                root,
+                                plan,
+                                historical_runner=historical_runner,
+                            ),
                         )
                     )
     return comparisons
 
 
-def check_sentinel(cell, expected, root):
+def check_sentinel(cell, expected, root, *, historical_runner=None):
     if root is None:
         raise ValueError("sentinel requires verified raw files")
     if cell["status"] != "PASS":
         raise ValueError("sentinel render unavailable: " + cell.get("error", "unknown"))
     plan = load_plan()
-    validate_cell(plan, cell, root)
+    validate_cell(plan, cell, root, historical_runner=historical_runner)
     if cell_key(cell) != ("release", 32, 1, "global-0"):
         raise ValueError("sentinel coordinates mismatch")
     if cell["input_sha256"] != expected["input_sha256"]:
@@ -995,7 +1222,7 @@ def run(args):
     return 0 if report["status"] == "PASS" else 1
 
 
-def baseline_drift(plan, cells, root, baseline):
+def baseline_drift(plan, cells, root, baseline, *, historical_runner=None):
     """Audit historical schema-1 receipts without inventing missing profile fields.
 
     This is a drift comparison, never a legacy path to current qualification.
@@ -1063,7 +1290,7 @@ def baseline_drift(plan, cells, root, baseline):
         if cell["status"] != "PASS":
             comparisons.append({"cell": list(cell_key(cell)), "status": "NO_VERDICT"})
             continue
-        actual = validate_cell(plan, cell, root)
+        actual = validate_cell(plan, cell, root, historical_runner=historical_runner)
         metrics = {
             name: compare_bytes(historical[name], actual[name])
             for name in plan["artifacts"]
