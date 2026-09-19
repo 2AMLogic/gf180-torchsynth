@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import re
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,50 @@ from torchsynth_voice.directed import (  # noqa: E402
     validate_manifest,
 )
 from torchsynth_voice.inventory import load_json  # noqa: E402
+
+
+def lexical_probes(manifest):
+    """Whole-document probes shared with independent JSON Schema checks."""
+    endings = ("\n", "\r", "\r\n", "\u2028", "\u2029")
+    for path, definition in (
+        (("identity", "sha256"), "hash"),
+        (("identity", "version"), "version"),
+        (("inventory_sha256",), "hash"),
+    ):
+        original = manifest
+        for key in path:
+            original = original[key]
+        for ending in endings:
+            for value in (ending + original, original + ending):
+                document = copy.deepcopy(manifest)
+                target = document
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                # Preserve identity mutations; reseal inventory mutations so
+                # a stale identity cannot hide the actual inventory rejection.
+                if path[0] != "identity":
+                    seal(document)
+                yield ".".join(path), document, definition, value, False
+
+    # Python str.strip() whitespace, explicitly including the characters where
+    # ECMAScript \s differs (C0 separators, NEL, and not the BOM).
+    whitespace = (
+        "\t\n\v\f\r\x1c\x1d\x1e\x1f \x85\xa0\u1680"
+        "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007"
+        "\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000"
+    )
+    values = ["", " \t\n", whitespace, *whitespace]
+    values += ["description", "\u200b", "\ufeff"]
+    for ending in endings:
+        values += [ending + "description", "description" + ending]
+        values += ["first" + ending + "second"]
+    values += [whitespace + "description" + whitespace]
+    for value in values:
+        document = copy.deepcopy(manifest)
+        document["cases"][0]["purpose"] = value
+        seal(document)
+        yield "case.purpose", document, "text", value, bool(value.strip())
 
 
 class DirectedTests(unittest.TestCase):
@@ -188,6 +233,35 @@ class DirectedTests(unittest.TestCase):
             self.reject(doc, "case|coverage|fields|purpose")
         self.manifest["inventory_sha256"] = "0" * 64
         self.reject(self.manifest, "inventory")
+
+    def test_lexical_native_validation(self):
+        for label, document, _, value, accepted in lexical_probes(self.manifest):
+            with self.subTest(field=label, value=value):
+                if accepted:
+                    validate_manifest(document)
+                else:
+                    with self.assertRaises(ValueError):
+                        validate_manifest(document)
+
+    def test_schema_lexemes_use_search_semantics_and_preserve_meaningful_text(self):
+        schema = load_json(ROOT / "spec/schemas/directed-voice-v1.schema.json")
+        definitions = schema["$defs"].copy()
+        definitions["version"] = schema["properties"]["identity"]["properties"][
+            "version"
+        ]
+        for label, _, definition, value, accepted in lexical_probes(self.manifest):
+            with self.subTest(field=label, value=value):
+                # JSON Schema pattern is a search, not Python fullmatch.
+                self.assertEqual(
+                    bool(re.search(definitions[definition]["pattern"], value)),
+                    accepted,
+                )
+        for definition, value in (
+            ("hash", self.manifest["inventory_sha256"]),
+            ("hash", self.manifest["identity"]["sha256"]),
+            ("version", self.manifest["identity"]["version"]),
+        ):
+            self.assertIsNotNone(re.search(definitions[definition]["pattern"], value))
 
     def test_fixture_protocol_preserves_clip_and_separates_hardware_width(self):
         protocol = self.manifest["fixture_protocol"]

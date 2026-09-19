@@ -24,7 +24,7 @@
       "required": ["sha256", "version"],
       "properties": {
         "sha256": {"$ref": "#/$defs/hash"},
-        "version": {"type": "string", "pattern": "^directed-voice-v1-sha256:[0-9a-f]{64}$"}
+        "version": {"type": "string", "pattern": "^directed-voice-v1-sha256:[0-9a-f]{64}(?![\\s\\S])"}
       }
     },
     "conversion": {
@@ -44,8 +44,13 @@
     "cases": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/case"}}
   },
   "$defs": {
-    "text": {"type": "string", "minLength": 1},
-    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nonblank under Python str.strip() whitespace rules; meaningful multiline and whitespace-surrounded text is preserved. The explicit class avoids ECMAScript/Python \\s differences.",
+      "pattern": "^[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][\\s\\S]*(?![\\s\\S])"
+    },
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
     "value": {
       "type": "object",
       "additionalProperties": false,

@@ -53,6 +53,13 @@ contract; `validate_manifest` supplies the cross-field semantic checks.
 Coverage is regenerated only from a validated manifest; editing coverage text
 alone fails `--check`.
 
+Digest and content-version tokens must match in full, without leading or
+trailing line terminators. Descriptive text must contain a character outside
+Python's `str.strip()` whitespace set. Meaningful text may retain surrounding
+whitespace and multiple lines; it is not trimmed or rewritten. The schema uses
+strict end assertions and an explicit whitespace set so Python JSON Schema
+and ECMAScript regex engines agree, including on Unicode line separators.
+
 ## Conversion truth
 
 `normalized` is the authoritative, exactly representable binary32 input.
