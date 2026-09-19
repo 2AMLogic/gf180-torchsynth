@@ -14,36 +14,36 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "claim": {
             "type": "string",
-            "pattern": "^.*\\S.*$"
+            "pattern": "^[^\\r\\n\\u2028\\u2029]*\\S[^\\r\\n\\u2028\\u2029]*(?![\\s\\S])"
           },
           "claim_class": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "dependencies": {
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9-]*$"
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
             },
             "minItems": 0,
             "uniqueItems": true
           },
           "engine": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "layer": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "scope": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "coverage": {
             "type": "object",
@@ -52,7 +52,7 @@
                 "type": "array",
                 "items": {
                   "type": "string",
-                  "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+                  "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
                 },
                 "minItems": 1,
                 "uniqueItems": true
@@ -64,7 +64,7 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "pattern": "^[a-z][a-z0-9-]*$"
+                      "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
                     },
                     "kind": {
                       "enum": [
@@ -74,7 +74,7 @@
                     },
                     "path": {
                       "type": "string",
-                      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+                      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
                     }
                   },
                   "required": [
@@ -96,17 +96,17 @@
           },
           "check": {
             "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
           },
           "negative_controls": {
             "type": "object",
             "propertyNames": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9-]*$"
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
             },
             "additionalProperties": {
               "type": "string",
-              "pattern": "^[a-z][a-z0-9-]*$"
+              "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
             },
             "minProperties": 1
           },
@@ -114,7 +114,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^.*\\S.*$"
+              "pattern": "^[^\\r\\n\\u2028\\u2029]*\\S[^\\r\\n\\u2028\\u2029]*(?![\\s\\S])"
             },
             "minItems": 1,
             "uniqueItems": true
@@ -126,7 +126,7 @@
             "oneOf": [
               {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9-]*$"
+                "pattern": "^[a-z][a-z0-9-]*(?![\\s\\S])"
               },
               {
                 "type": "null"
@@ -140,11 +140,11 @@
                 "properties": {
                   "path": {
                     "type": "string",
-                    "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+                    "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*(?![\\s\\S])"
                   },
                   "sha256": {
                     "type": "string",
-                    "pattern": "^[a-f0-9]{64}$"
+                    "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
                   }
                 },
                 "required": [

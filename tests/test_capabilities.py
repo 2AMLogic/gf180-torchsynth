@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,49 @@ from torchsynth_voice.capabilities import (  # noqa: E402
     node_digest,
     render_markdown,
     validate_graph,
+    _structure,
+    _validate,
 )
+
+LINE_TERMINATORS = ("\n", "\r", "\r\n", "\u2028", "\u2029")
+
+
+def line_terminated_documents(graph, evidence):
+    """Shared whole-document probes for native and independent schema checks."""
+    for kind, original, paths in (
+        (
+            "graph",
+            graph,
+            (
+                ("nodes", 0, "id"),
+                ("nodes", 0, "claim"),
+                ("nodes", 0, "exclusions", 0),
+                ("nodes", 0, "coverage", "inputs", 0),
+            ),
+        ),
+        (
+            "evidence",
+            evidence,
+            (
+                ("node_id",),
+                ("node_sha256",),
+                ("provenance", "project_commit"),
+                ("provenance", "recorded_at"),
+                ("provenance", "runtime_lock"),
+                ("execution", "command", 0),
+                ("execution", "log", "path"),
+                ("result", "reason"),
+            ),
+        ),
+    ):
+        for path in paths:
+            for ending in LINE_TERMINATORS:
+                bad = copy.deepcopy(original)
+                target = bad
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] += ending
+                yield kind, path, ending, bad
 
 
 def digest(data):
@@ -541,28 +584,6 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(strict.returncode, 1)
         self.assertIn("STALE", strict.stderr)
 
-    def test_committed_view_and_real_claims_remain_unrun(self):
-        graph = load_graph(ROOT / "spec/capabilities-v1.json")
-        results = evaluate(graph, ROOT)
-        self.assertFalse(any(result.state == "PASS" for result in results.values()))
-        self.assertTrue(all(result.healthy for result in results.values()))
-        self.assertEqual(
-            (ROOT / "docs/CAPABILITIES.md").read_text(), render_markdown(graph, results)
-        )
-        classes = {item["claim_class"] for item in graph["nodes"]}
-        self.assertTrue(
-            {
-                "implementation-identity",
-                "auditory-transparency",
-                "distribution-preservation",
-                "fpga-operation",
-                "gf180-synthesis",
-                "gf180-routing",
-                "silicon-operation",
-            }
-            <= classes
-        )
-
     def test_schema_vocabulary_cannot_silently_outgrow_validator(self):
         supported = {
             "$schema",
@@ -601,6 +622,77 @@ class CapabilityTests(unittest.TestCase):
                 )
             )
 
+    def test_line_terminated_graph_and_evidence_lexemes_are_rejected(self):
+        record = self.evidence()
+        for kind, path, ending, bad in line_terminated_documents(self.graph, record):
+            with self.subTest(kind=kind, path=path, ending=ending):
+                with self.assertRaises(CapabilityError):
+                    _validate(bad, kind)
+
+    def test_every_schema_pattern_enforces_full_string_search_semantics(self):
+        examples = (
+            "identifier",
+            "a" * 64,
+            "b" * 40,
+            "relative/path.json",
+            "Meaningful text with spaces",
+            "2026-09-18T00:00:00Z",
+        )
+
+        def check(schema):
+            if isinstance(schema, dict):
+                if "pattern" in schema:
+                    pattern = schema["pattern"]
+                    accepted = [x for x in examples if re.search(pattern, x)]
+                    self.assertTrue(accepted, pattern)
+                    for text in accepted:
+                        _structure(text, schema)
+                        for ending in LINE_TERMINATORS:
+                            with self.subTest(pattern=pattern, ending=ending):
+                                self.assertIsNone(re.search(pattern, text + ending))
+                                with self.assertRaises(CapabilityError):
+                                    _structure(text + ending, schema)
+                for child in schema.values():
+                    check(child)
+            elif isinstance(schema, list):
+                for child in schema:
+                    check(child)
+
+        for kind in ("graph", "evidence"):
+            check(
+                json.loads(
+                    (
+                        ROOT / f"spec/schemas/capability-{kind}-v1.schema.json"
+                    ).read_text()
+                )
+            )
+
+
+class CapabilityRepositoryTests(unittest.TestCase):
+    """Repository agreement is not part of a synthetic compiler attestation."""
+
+    def test_committed_view_and_real_claims_remain_unrun(self):
+        graph = load_graph(ROOT / "spec/capabilities-v1.json")
+        results = evaluate(graph, ROOT)
+        self.assertFalse(any(result.state == "PASS" for result in results.values()))
+        self.assertTrue(all(result.healthy for result in results.values()))
+        self.assertEqual(
+            (ROOT / "docs/CAPABILITIES.md").read_text(), render_markdown(graph, results)
+        )
+        classes = {item["claim_class"] for item in graph["nodes"]}
+        self.assertTrue(
+            {
+                "implementation-identity",
+                "auditory-transparency",
+                "distribution-preservation",
+                "fpga-operation",
+                "gf180-synthesis",
+                "gf180-routing",
+                "silicon-operation",
+            }
+            <= classes
+        )
+
     def test_import_and_real_graph_check_need_only_stdlib(self):
         command = (
             "import sys; from pathlib import Path; "
@@ -610,6 +702,78 @@ class CapabilityTests(unittest.TestCase):
             "assert not {'torch','torchsynth','numpy','lightning','jsonschema'} & sys.modules.keys()"
         )
         subprocess.run([sys.executable, "-S", "-c", command], check=True)
+
+
+class CapabilityRegistrationTests(unittest.TestCase):
+    def test_registered_checks_run_with_only_their_covered_inputs(self):
+        for check in CHECKS.values():
+            with (
+                self.subTest(command=check.command),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                for relative in EVALUATOR_INPUTS + check.inputs:
+                    target = root / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(ROOT / relative, target)
+                completed = subprocess.run(
+                    check.command, cwd=root, capture_output=True, text=True, timeout=30
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+
+    def test_check_specific_fixture_invalidation_and_repository_view_independence(self):
+        case = CapabilityTests()
+        case.setUp()
+        self.addCleanup(case.doCleanups)
+        # Complete a disposable repository even before the coverage fix, so the
+        # regression tests stale evidence rather than just a missing test input.
+        for relative in (
+            "tests/fixtures/artifacts/complete.json",
+            "spec/capabilities-v1.json",
+            "docs/CAPABILITIES.md",
+        ) + CHECKS["contract-tests-v1"].inputs:
+            target = case.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / relative, target)
+        unrelated = node("contract")
+        unrelated["check"] = "contract-tests-v1"
+        check = CHECKS[unrelated["check"]]
+        for field in ("claim_class", "engine", "layer", "scope"):
+            unrelated[field] = getattr(check, field)
+        unrelated["negative_controls"] = dict(check.controls)
+        case.graph["nodes"].append(unrelated)
+        case.evidence(unrelated)
+        record = case.evidence()
+        fixture = case.root / "tests/fixtures/artifacts/complete.json"
+        original = fixture.read_bytes()
+        fixture.write_text("{}\n")
+        self.assertEqual(case.state(), "STALE")
+        self.assertEqual(case.state("contract"), "PASS")
+        failed = subprocess.run(
+            CHECKS["capability-compiler-v1"].command,
+            cwd=case.root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertNotEqual(failed.returncode, 0)
+        fixture.write_bytes(original)
+        self.assertEqual(case.state(), "PASS")
+        # Canonical graph/view checking is a separate normal-suite responsibility;
+        # these changing outputs must not enter a compiler evidence hash cycle.
+        for relative in ("spec/capabilities-v1.json", "docs/CAPABILITIES.md"):
+            self.assertNotIn(relative, record["inputs"])
+            (case.root / relative).write_text("deliberately invalid repository view\n")
+        completed = subprocess.run(
+            CHECKS["capability-compiler-v1"].command,
+            cwd=case.root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(case.state(), "PASS")
+        self.assertEqual(case.state("contract"), "PASS")
 
 
 if __name__ == "__main__":

@@ -71,13 +71,19 @@ CHECKS = {
             "tests",
             "-p",
             "test_capabilities.py",
+            "-k",
+            "CapabilityTests",
             "-v",
         ),
         "compiler-behavior",
         "stdlib",
         "verification",
         "synthetic-only",
-        ("tests/test_capabilities.py", "tools/compile_capabilities.py"),
+        (
+            "tests/test_capabilities.py",
+            "tools/compile_capabilities.py",
+            "tests/fixtures/artifacts/complete.json",
+        ),
         {"stale-input": "hash-mismatch"},
     ),
 }
@@ -86,6 +92,7 @@ CHECKS = {
 # The graph's own node declaration is covered separately, excluding its evidence
 # pointer to avoid a circular digest. Unrelated node edits do not stale siblings.
 EVALUATOR_INPUTS = (
+    "src/torchsynth_voice/__init__.py",
     "src/torchsynth_voice/capabilities.py",
     "src/torchsynth_voice/artifacts.py",
     "src/torchsynth_voice/scorecard.py",
@@ -569,7 +576,11 @@ def render_markdown(graph: dict, results: dict[str, Result]) -> str:
         "Coverage hashes current stored bytes, including dirty and untracked covered files. Directory "
         "coverage hashes a sorted relative-file/digest map, without ignoring files. Symlinks and path "
         "escapes are refused. Compiler, validators, their schemas and the pinned profile/manifest are "
-        "implicit covered inputs; registered checks add their implementation files. The node digest "
+        "implicit covered inputs; registered checks add their implementation and required fixture files. "
+        "The capability-compiler-v1 check runs only synthetic CapabilityTests; canonical graph/view "
+        "agreement is checked separately by the normal repository suite and compiler --check/--strict "
+        "modes. Keeping graph/view bytes outside that check avoids circular evidence/view hashes. "
+        "The node digest "
         "covers its declaration except the evidence pointer, so changing an unrelated node does not "
         "invalidate its siblings. Evidence and log digests cover exact stored bytes.",
         "",
