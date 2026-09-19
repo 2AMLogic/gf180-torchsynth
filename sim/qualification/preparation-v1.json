@@ -1,4 +1,371 @@
 {
+  "actual_integrations": [
+    {
+      "aggregate_replay": {
+        "compared_fields": [
+          "batch_1_oracle",
+          "build_log_sha256",
+          "build_warnings",
+          "byte_equivalence",
+          "campaign_id",
+          "capture_manifest",
+          "command",
+          "comparisons",
+          "docker_server",
+          "execution_records",
+          "fresh_process_repeats_equal",
+          "fresh_render_processes",
+          "image_id",
+          "limitations",
+          "negative_controls",
+          "process_stderr",
+          "provenance",
+          "run_report_sha256",
+          "runtime",
+          "runtime_reconciliation",
+          "runtime_sha256",
+          "schema_version",
+          "scope",
+          "status",
+          "warnings"
+        ],
+        "status": "PASS"
+      },
+      "byte_equivalence": "PASS",
+      "cases_per_run": 12,
+      "closure": "Root must reconcile runtime/scalar decisions before issue closure; this command never ratifies a DR.",
+      "comparison_count": 12,
+      "comparison_outcomes": {
+        "scalar/PASS": 12
+      },
+      "comparison_records_sha256": "0e5aecb596e6cafc541dabe8335625fc8dcfbfd15c577cb3bead89703f834b50",
+      "consumer_sha256": {
+        "src/torchsynth_voice/preparation.py": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+        "tools/qualify_preparation.py": "ac2bbf3bbb5dce72e1b327d9466f1a45aabe18ec9d90d752ab65cbe636272728"
+      },
+      "evidence_category": "actual",
+      "evidence_status": "VALIDATED",
+      "execution_records": [
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "path": "run-1/canonical",
+          "pid": 1,
+          "repeat": 1,
+          "side": "canonical",
+          "started_utc": "2026-09-19T02:44:36.228269+00:00",
+          "uuid": "b245d20f-8e32-4610-b18e-a59adeb979e3"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "path": "run-1/scalar",
+          "pid": 1,
+          "repeat": 1,
+          "side": "scalar",
+          "started_utc": "2026-09-19T02:45:06.896225+00:00",
+          "uuid": "c74f8cff-7a74-4075-a286-d300ccc93a8c"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "path": "run-2/canonical",
+          "pid": 1,
+          "repeat": 2,
+          "side": "canonical",
+          "started_utc": "2026-09-19T02:45:20.997508+00:00",
+          "uuid": "162b940c-e352-408e-8a66-bfc839442404"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "path": "run-2/scalar",
+          "pid": 1,
+          "repeat": 2,
+          "side": "scalar",
+          "started_utc": "2026-09-19T02:45:49.465595+00:00",
+          "uuid": "804b53cc-af41-414d-ae32-a32cd6e9b99b"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "mutation": "wrong-parameter",
+          "path": "controls/wrong-parameter",
+          "pid": 1,
+          "repeat": 1,
+          "side": "scalar",
+          "started_utc": "2026-09-19T02:46:01.922563+00:00",
+          "uuid": "f5ad749b-954c-4a21-9e55-7526b935cd30"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "mutation": "wrong-noise",
+          "path": "controls/wrong-noise",
+          "pid": 1,
+          "repeat": 1,
+          "side": "scalar",
+          "started_utc": "2026-09-19T02:46:11.873658+00:00",
+          "uuid": "385b719c-c8a8-427e-b233-4939b53fb924"
+        },
+        {
+          "campaign_id": "432c2c4a-a1fe-4dce-b4c8-68a0c1476058",
+          "mutation": "fresh-randomization",
+          "path": "controls/fresh-randomization",
+          "pid": 1,
+          "repeat": 1,
+          "side": "scalar",
+          "started_utc": "2026-09-19T02:46:22.317940+00:00",
+          "uuid": "c1c18db6-1576-456c-8b9e-2377e4a2b4ab"
+        }
+      ],
+      "math_environment": {
+        "ATEN_CPU_CAPABILITY": null,
+        "MKL_CBWR": "COMPATIBLE"
+      },
+      "measured_host": {
+        "machine": "arm64",
+        "system": "Darwin"
+      },
+      "normative_oracle": false,
+      "producer": {
+        "commit": "51ff30f14ba70744497e701e116f59810a81d68f",
+        "decision_record": {
+          "path": "spec/decision-records/0007-single-sound-execution.md",
+          "sha256": "7acd1a86cef0c17979d1b3745fdc8eb30f6cac67bc91816ab1f49abf43528db8"
+        },
+        "report_path": "sim/reference/scalar-execution.json",
+        "report_sha256": "c5bda01a3b77727e0f38cd2df5726d7ad244aed3abb61ab8267fa42c99546f10",
+        "runner_sha256": "08460d1fdd35fa477c8f3d044812a16213e7e40a7436b02865a3384543401214"
+      },
+      "raw_aggregate_sha256": "175b3f0531523c78212ba09c23f97cc0c156a2ebaff12affc93ff2cb37e21584",
+      "raw_artifact_count": 1731,
+      "raw_artifact_manifest_sha256": "23e91e63239160047557fd45b3baf6be6b2f357dc0c02e5a62a6823cbb88ddfa",
+      "raw_report_sha256": {
+        "controls/fresh-randomization/report.json": "63d1934f77c7a787b1ee67616ddd4426c70c6e344f4b81754d197274eca8673f",
+        "controls/wrong-noise/report.json": "8772b4292f4d8e2af4383eea398761a320ff7c698f96660f5e17891d67888ba0",
+        "controls/wrong-parameter/report.json": "fc17acd1fb2531d657d8a090185d26288b72baa6fac7dde5599915d7ad06e599",
+        "run-1/canonical/report.json": "edaf19b3a343d579fbd3a8077346f52c2a430968f21d10ce802e8bd5184b0ffb",
+        "run-1/scalar/report.json": "e2553263491f0eca424ba95ac748fe93b1bfc93ce0ec4b6c49eb2ecefc80258b",
+        "run-2/canonical/report.json": "bb9cfabfc1cb8e520938581542541d871de6a39b593470cbe10285a17551d1b6",
+        "run-2/scalar/report.json": "ec8b4a6e3eb0fb87bfc8e6480fb6eb41d20730c06f682576d4f6e023139b2be8"
+      },
+      "reason": "diagnostic oracle cannot qualify normative production rows",
+      "schema": "preparation-runtime-receipt",
+      "schema_version": 1,
+      "scope": "full twelve-case local scalar diagnostic only; no native raw revalidation or production oracle",
+      "seams_per_case": 36,
+      "status": "NO_VERDICT"
+    },
+    {
+      "aggregate_replay": null,
+      "byte_equivalence": null,
+      "cases_per_run": null,
+      "closure": "Root must reconcile runtime/scalar decisions before issue closure; this command never ratifies a DR.",
+      "comparison_count": 144,
+      "comparison_outcomes": {
+        "batch/PASS": 48,
+        "cross_runtime/FAIL": 32,
+        "repeat/PASS": 64
+      },
+      "comparison_records_sha256": "caa62d5e655e02cc6a8362db389439a96efdceb4b67f2ab101916ce17c6f96c6",
+      "consumer_sha256": {
+        "src/torchsynth_voice/preparation.py": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+        "tools/qualify_preparation.py": "ac2bbf3bbb5dce72e1b327d9466f1a45aabe18ec9d90d752ab65cbe636272728"
+      },
+      "evidence_category": "actual",
+      "evidence_status": "VALIDATED",
+      "execution_records": [
+        {
+          "directory": "release-32-1",
+          "execution_id": "6d29425e-1447-45ac-8e69-7b24eb19c375",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T02:58:47.120971+00:00"
+        },
+        {
+          "directory": "release-32-2",
+          "execution_id": "bbee7194-124c-4688-b416-96385375134d",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T02:59:08.789526+00:00"
+        },
+        {
+          "directory": "release-64-1",
+          "execution_id": "ba72faeb-3f45-40dc-8668-b0140686d68f",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T02:59:29.504013+00:00"
+        },
+        {
+          "directory": "release-64-2",
+          "execution_id": "791e2c42-1e57-4281-a227-e0ff842281b7",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T02:59:56.583240+00:00"
+        },
+        {
+          "directory": "release-128-1",
+          "execution_id": "c47d2f04-468a-4ae6-94dc-33628bde3060",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:00:22.092507+00:00"
+        },
+        {
+          "directory": "release-128-2",
+          "execution_id": "084239b7-d4bb-4d4f-8cfb-8339716b0ede",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:00:59.575371+00:00"
+        },
+        {
+          "directory": "release-256-1",
+          "execution_id": "d582b862-2788-4079-b43e-bfb7b8c27754",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:01:41.461847+00:00"
+        },
+        {
+          "directory": "release-256-2",
+          "execution_id": "94f7028c-4974-4a0e-9d70-8a7325c9ebb5",
+          "process_id": 1,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:02:57.879198+00:00"
+        },
+        {
+          "directory": "current-32-1",
+          "execution_id": "aaec41a1-f636-455e-99ff-5646707d6c9a",
+          "process_id": 2474,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:03:42.484229+00:00"
+        },
+        {
+          "directory": "current-32-2",
+          "execution_id": "91ffbc97-9adc-41d8-8728-7096fee1b64f",
+          "process_id": 2933,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:03:50.152675+00:00"
+        },
+        {
+          "directory": "current-64-1",
+          "execution_id": "65b6a450-577e-4d81-98e4-4945ac222a40",
+          "process_id": 3354,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:03:57.520400+00:00"
+        },
+        {
+          "directory": "current-64-2",
+          "execution_id": "93efcd34-0e47-4d5f-9a30-65d55e25c1f7",
+          "process_id": 4043,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:04:06.702623+00:00"
+        },
+        {
+          "directory": "current-128-1",
+          "execution_id": "fed791b1-b6ad-450e-a5e3-5192ddb81790",
+          "process_id": 4652,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:04:15.758849+00:00"
+        },
+        {
+          "directory": "current-128-2",
+          "execution_id": "81118c85-cd59-44d0-9d6a-0dda4008ce5d",
+          "process_id": 6420,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:04:33.256965+00:00"
+        },
+        {
+          "directory": "current-256-1",
+          "execution_id": "73f56e17-538a-44e7-ae03-c0576526e56a",
+          "process_id": 7342,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:04:49.139409+00:00"
+        },
+        {
+          "directory": "current-256-2",
+          "execution_id": "13dcfaa2-1520-422c-b4bc-9485e07d0fe8",
+          "process_id": 9741,
+          "run_id": "5800956f-fd3b-4c99-b5f8-cb458e3604e5",
+          "started_utc": "2026-09-19T03:05:19.182338+00:00"
+        }
+      ],
+      "math_environment": {
+        "current": {
+          "ATEN_CPU_CAPABILITY": null,
+          "MKL_CBWR": null
+        },
+        "release": {
+          "ATEN_CPU_CAPABILITY": null,
+          "MKL_CBWR": "COMPATIBLE"
+        }
+      },
+      "measured_host": null,
+      "normative_oracle": false,
+      "producer": {
+        "commit": "2182bc9524016476f9a538d11fe2e3035fe0ae45",
+        "decision_record": {
+          "path": "spec/decision-records/0006-canonical-runtime.md",
+          "sha256": "51df70bf3744f82189fa58e6dd22a855c9c61e38d69ca4033aa0166b5afdc0a8"
+        },
+        "report_path": "sim/reference/repeatability-runtime.json",
+        "report_sha256": "5904089505c05c30a456cb5e162bde89e40218ec0d0151ffb27053ec1ac4cbe4",
+        "runner_sha256": "1ad50da4cde6e72ea25327dc828016337dc6cf0cb926fd3488bc92d6188c98b9"
+      },
+      "raw_aggregate_sha256": "7f98029916f75dcb26df28cd96af7a0c466a56c10687a6aca31bcf8c412e02b5",
+      "raw_artifact_count": 1408,
+      "raw_artifact_manifest_sha256": "beeb2ccfd8529754b1793df84e47c4d8836961b7055eaf0aadff92cf3dcc6e60",
+      "raw_report_sha256": {
+        "current-128-1/execution.json": "641dd6e1741fb8afa144b7c9ebccea3e1fc31e0b6525f69b75c7e1491f8a1163",
+        "current-128-1/result.json": "0c434530d77295e0a55c0f162a6cd968a275e39b9e4a5ac8dfc27b15df409064",
+        "current-128-1/stdout.json": "2d36517a79b6bd3258f44ce48560e23c635500db25b71fc4680372341dafe78b",
+        "current-128-2/execution.json": "7d09bf75a8229c0c64de5af7eb1981d7201a2a9749f2f84d171fa9e7a5b3fe3e",
+        "current-128-2/result.json": "f418ed5e8b871dc72a224712aeedf4e5f00b9739eb32d3ca8aa61b99e48d7e82",
+        "current-128-2/stdout.json": "da926a80d74546899f18ede26b96b8b30d40686833666a0eb3a62d6b2f1d0f34",
+        "current-256-1/execution.json": "f9449309bdc47565e611bd0be70c057ff6666526c5ebf0d79c149d3843e5bc58",
+        "current-256-1/result.json": "3d503b6b9bb2da106fdc58d4aa7d8c1bfcb86e3a00003f57ca0f588579c8d145",
+        "current-256-1/stdout.json": "e1b083140b24f85de417d1c679f110d1319330e4ea1e9e8231d6db93c764c656",
+        "current-256-2/execution.json": "4afe2a90d56f443c57f647cc1d87e6eae1ccfee3179659e30d4e2e1dcb687505",
+        "current-256-2/result.json": "a81b18ced1a3b2bcc63e1cb4a370822794e29480b2fb7c180feb258a9ff28811",
+        "current-256-2/stdout.json": "b34a9872b73e76d1f4e13c38672f1d3cb5d120bc463d2f6d954f60e262b9ea73",
+        "current-32-1/execution.json": "7a656587ba0c7ffcf612d2eb2be3fc2a06d93d349a788bef5da9f62cd6c0ab54",
+        "current-32-1/result.json": "8075ab00ec761579acb7e816e04306f79d3a2b8e3bc805d78706ed59b3457a51",
+        "current-32-1/stdout.json": "5260bdf5c47110b90596a53d60cc35c155636b15b8d45a37114b9a0abcb59569",
+        "current-32-2/execution.json": "c616a71a867d0a5ce6ce26638571b0e222792fcd240a9964b469367a1ffd10bc",
+        "current-32-2/result.json": "059680bff4028ef7a85464933ccd300df3c0b882c70a900e20dc1e42a23c54a4",
+        "current-32-2/stdout.json": "6dee308d013eaa0cd2247c0a65bc9d34b47dd95127e5d219bde87a5ed07f5f3f",
+        "current-64-1/execution.json": "0f59e7a23edc2eaecedc7f3b9c3078bc3d2aeee9f2015b7bf0b52e3717da66d8",
+        "current-64-1/result.json": "c4ee968d23a6e89e4a8735496edda5a50f46dbc195dc5f5c9eb4431d3bb5d717",
+        "current-64-1/stdout.json": "746eac6647399944ed4f97e6332929260100fa6c68fbb1046e0c77ec820c6f99",
+        "current-64-2/execution.json": "be00b46985d84bedbdc6787311d24bb5c059d4ccc62f83c387ae92ef76fafc47",
+        "current-64-2/result.json": "d8bd81ab1fa62dd39c49dca03c5039027a3b860154a7c041d57d88b9b71a91fe",
+        "current-64-2/stdout.json": "78d74d4fc1b9f1a581a87c7236a324a6d0c022b3144ee57d711d8598a5fea16e",
+        "release-128-1/execution.json": "7904b4d16349ba531d80cd0aa9e885a473ca883027f99abb4a5ee3ed1d30c960",
+        "release-128-1/result.json": "72e0e29c127a48c068d108ff2799d4940c7936f5f107ef8f65910126ef93c385",
+        "release-128-1/stdout.json": "40a63959a94ac51493d321ac569f44c6c5898d8355066b720f147b116fbfaa51",
+        "release-128-2/execution.json": "566f80a98ea238ad96ddb9805660672db1c28afbe566b7779cb6747cf8e35ed7",
+        "release-128-2/result.json": "4811e630359b8d55ee7eecd61a6e3819dc8810c2a8d2bfbe413877c4625e9c26",
+        "release-128-2/stdout.json": "5b41e73f67a32e301f2c631218dc5e663837cc022257897e517cee1c8585e68f",
+        "release-256-1/execution.json": "af6093474a2affbfa89b953a26c37ca378ce4a02cff2015ee9705ada9c3585de",
+        "release-256-1/result.json": "f65e616c5b9ac3dff8e44aa0baa3e7d9708cfad409fe25edbdb3c4060458daa8",
+        "release-256-1/stdout.json": "b3b35e9decafa3ffbe0d3f77167a1a7c98f3f7e937b50bb1f2c4f6939a976f18",
+        "release-256-2/execution.json": "30564fd9be003daa30be0e1e891a54896a0545aa2364985df17899aa66f730af",
+        "release-256-2/result.json": "ce8f69e7926d17cc22d558bbb2b73f1c3ce6cf301c0e528e466a9da51ac9bd14",
+        "release-256-2/stdout.json": "07acc119410adc4b5e2bea1d32daaf251a5438bf88e1324e6f1c9eb1b59da40a",
+        "release-32-1/execution.json": "7f0724524095ab3d4d00f90049c920eb2733e4a16685bf75c8e8dfc973b8002a",
+        "release-32-1/result.json": "bd03d78629e9e494032442d626bc6714c2b8f37db6a6696f43af8078806326f4",
+        "release-32-1/stdout.json": "580ee90c8836b472b25d96ec887cd5b39aeb576a171410ab16754aa0de8c25b7",
+        "release-32-2/execution.json": "85899629d83ac1de61ef35e4f590297565db7a2b329e6fdf009e90c01fc71c44",
+        "release-32-2/result.json": "c66a4016f38365bcb29db4970265f587001a022a61a943880eaed63d64c9d09d",
+        "release-32-2/stdout.json": "aec18f1411cad1896b73ce83d3bd3304d531934268b996927567d45b1de91bf7",
+        "release-64-1/execution.json": "12f8a057a177f72d2dd72f8d348ceceff66d4878a7ce1ba7f6f50a8b8701e7be",
+        "release-64-1/result.json": "a187facf0755092d0d3495afc7c85ab730679dcf711c368890a8d41514b30a8b",
+        "release-64-1/stdout.json": "068ce15d53a4bff41ab609b6fc9f3fedcb303c5a4af8546ffa29c9981effd127",
+        "release-64-2/execution.json": "08028266b36bfbd98901b222a9aaf1b9866bb47302cdcd19929c064dabe38628",
+        "release-64-2/result.json": "69ce5a2df482525aea07d3235381586a963c8b71ac3dabdd8d622e1e417e933b",
+        "release-64-2/stdout.json": "ff88621f5a5cc713b8e2b803668535f7e0156fe2c3b4241a25642f63e7fdfde7"
+      },
+      "reason": "diagnostic oracle cannot qualify normative production rows",
+      "schema": "preparation-runtime-receipt",
+      "schema_version": 1,
+      "scope": "preregistered 128-cell local matrix; runtime decision reconciliation pending",
+      "seams_per_case": null,
+      "status": "NO_VERDICT"
+    }
+  ],
   "artifacts": {
     "01ab3d98d0cd323a93605430d2b14b97a76766d416536560ee5e3ab8b42d4d45": {
       "absolute_tolerance": 0.0,
@@ -11201,7 +11568,7 @@
   "evidence_category": "analytic-only",
   "implementation_sha256": {
     "src/torchsynth_voice/preparation.py": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
-    "tools/qualify_preparation.py": "6cd7baceeae6a8076b8b4fa991337dc0745cafca5417589cc394c46a711dd775"
+    "tools/qualify_preparation.py": "ac2bbf3bbb5dce72e1b327d9466f1a45aabe18ec9d90d752ab65cbe636272728"
   },
   "partition": "development",
   "runtime": {

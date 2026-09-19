@@ -7,23 +7,32 @@ No Torch import/render, network access, holdout access, or producer writes.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import datetime
 import hashlib
 import importlib.util
+import io
 import json
 import math
 import platform
-from pathlib import Path
+import re
 import struct
 import subprocess
 import sys
+import tempfile
+import uuid
 from dataclasses import replace
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from torchsynth_voice.identity import SoundIdentity  # noqa: E402
-from torchsynth_voice.paired_metrics import analytic_exactness_rubric, scorecard_rows  # noqa: E402
-from torchsynth_voice.preparation import (  # noqa: E402
+from torchsynth_voice.identity import SoundIdentity
+from torchsynth_voice.paired_metrics import (
+    analytic_exactness_rubric,
+    scorecard_rows,
+)
+from torchsynth_voice.preparation import (
     TRANSFORMS,
     Preparation,
     Signal,
@@ -292,6 +301,17 @@ def load_producer(root, commit, kind):
     name = f"env/release-era/qualify_{kind}.py"
     runner = committed_bytes(root, commit, name)
     committed_bytes(root, commit, "env/release-era/probe.py")
+    if kind == "repeatability":
+        committed_bytes(root, commit, "env/release-era/source-comparison.json")
+        for input_name in (
+            "spec/reference/upstream.json",
+            "spec/reference/parameter-inventory-v1.json",
+        ):
+            require(
+                committed_bytes(root, commit, input_name)
+                == (ROOT / input_name).read_bytes(),
+                "producer differs from consumer source/input identity: " + input_name,
+            )
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(root / "env/release-era"))
     spec = importlib.util.spec_from_file_location(
@@ -305,6 +325,306 @@ def load_producer(root, commit, kind):
 def require(condition, reason):
     if not condition:
         raise ValueError(reason)
+
+
+SCALAR_MATH_PROFILE = {"ATEN_CPU_CAPABILITY": None, "MKL_CBWR": "COMPATIBLE"}
+
+
+def named_bytes(values, names):
+    require(
+        isinstance(values, dict) and sorted(values) == names, "missing named inputs"
+    )
+    require(
+        all(
+            type(v) in (int, float) and math.isfinite(v) and 0 <= v <= 1
+            for v in values.values()
+        ),
+        "invalid named normalized inputs",
+    )
+    return struct.pack("<" + "f" * len(names), *[values[n] for n in names])
+
+
+def validate_scalar_records(report, plan, raw_root, names):
+    """Independent input/role/process gates, before executing producer validators.
+
+    Source bytes and normalized/noise inputs are identities. Physical conversion
+    and subsequent DSP seams are observations, never substituted input values.
+    """
+    require(
+        report["runtime"].get("math_environment") == SCALAR_MATH_PROFILE,
+        "scalar math profile differs from explicit compatible diagnostic profile",
+    )
+    campaign = safe_read(raw_root, "campaign.id").decode().strip()
+    require(campaign == report["campaign_id"], "scalar campaign mismatch")
+    executions, hashes, runs, artifacts = [], {}, {}, {}
+
+    def execution(run, side, repeat, directory, mutation=None):
+        require(run.get("side") == side, "scalar execution role mismatch")
+        value = run.get("execution", {})
+        for key in ("uuid", "campaign_id"):
+            require(
+                str(uuid.UUID(value[key], version=4)) == value[key],
+                "invalid scalar execution UUID",
+            )
+        started = datetime.datetime.fromisoformat(value["started_utc"])
+        require(
+            started.tzinfo is not None
+            and started.utcoffset() == datetime.timedelta(0)
+            and type(value["pid"]) is int
+            and value["pid"] > 0,
+            "invalid scalar process identity",
+        )
+        require(
+            type(value["repeat"]) is int
+            and value["repeat"] == repeat
+            and value["campaign_id"] == campaign,
+            "scalar execution association mismatch",
+        )
+        require(
+            value["uuid"] not in {v["uuid"] for v in executions},
+            "reused scalar execution identity",
+        )
+        require(run.get("mutation") == mutation, "scalar mutation association mismatch")
+        record = dict(value, path=directory, side=side)
+        if mutation:
+            record["mutation"] = mutation
+        executions.append(record)
+        if side == "scalar":
+            canonical_dir = f"run-{repeat}/canonical"
+            require(
+                run.get("canonical_execution_uuid")
+                == runs[canonical_dir]["execution"]["uuid"]
+                and run.get("canonical_report_sha256")
+                == hashes[canonical_dir + "/report.json"],
+                "scalar canonical report/UUID association mismatch",
+            )
+
+    def read_report(directory):
+        data = safe_read(raw_root, directory + "/report.json")
+        hashes[directory + "/report.json"] = sha(data)
+        return strict_json(data)
+
+    def read_trace(directory, trace, count):
+        locator = directory + "/" + trace["file"]
+        data = safe_read(raw_root, locator)
+        require(
+            len(data) == count * 4 and sha(data) == trace["sha256"],
+            "scalar artifact hash/count mismatch",
+        )
+        require(
+            all(math.isfinite(v[0]) for v in struct.iter_unpack("<f", data)),
+            "nonfinite scalar artifact",
+        )
+        artifacts[locator] = sha(data)
+        return data
+
+    for repeat in (1, 2):
+        for side in ("canonical", "scalar"):
+            directory = f"run-{repeat}/{side}"
+            run = read_report(directory)
+            require(
+                hashes[directory + "/report.json"]
+                == report["run_report_sha256"][directory + "/report.json"],
+                "scalar raw report hash mismatch",
+            )
+            execution(run, side, repeat, directory)
+            for key in ("runtime", "provenance"):
+                require(run.get(key) == report[key], "scalar run " + key + " mismatch")
+            require(
+                run.get("status") == "PASS"
+                and run.get("rng_sentinel") == "PASS"
+                and run.get("source_unchanged_after_render") is True
+                and run.get("capture_version") == plan["capture_version"],
+                "scalar render gates failed",
+            )
+            require(
+                [c["id"] for c in run["cases"]] == [c["id"] for c in plan["cases"]],
+                "scalar required case set mismatch",
+            )
+            for case, definition in zip(run["cases"], plan["cases"]):
+                require(
+                    case["case_definition"] == definition
+                    and case["configuration"] == plan["configuration"]
+                    and case["corpus_coordinates"]
+                    == SoundIdentity(definition["sound_index"]).to_dict(32),
+                    "scalar case/configuration/identity mismatch",
+                )
+                require(
+                    type(case["execution_width"]) is int
+                    and case["execution_width"] == (32 if side == "canonical" else 1)
+                    and case["reproducible"] is (side == "canonical"),
+                    "scalar execution configuration mismatch",
+                )
+                require(
+                    case["parameter_order"] == names,
+                    "scalar named parameter order mismatch",
+                )
+                require(
+                    [{"name": t["name"], "shape": t["shape"]} for t in case["traces"]]
+                    == report["capture_manifest"],
+                    "scalar required trace/shape mismatch",
+                )
+                data = {
+                    t["name"]: read_trace(directory, t, math.prod(t["shape"]))
+                    for t in case["traces"]
+                }
+                require(
+                    case.get("passive_capture_invariant") is True
+                    and case.get("no_hook_audio_sha256") == sha(data["audio.final"]),
+                    "scalar passive capture mismatch",
+                )
+                require(
+                    data["input.normalized"]
+                    == named_bytes(case["normalized_by_name"], names),
+                    "scalar named input bytes mismatch",
+                )
+                if side == "scalar":
+                    canonical = next(
+                        c
+                        for c in runs[f"run-{repeat}/canonical"]["cases"]
+                        if c["id"] == case["id"]
+                    )
+                    require(
+                        named_bytes(canonical["normalized_by_name"], names)
+                        == data["input.normalized"],
+                        "scalar normalized input mismatch",
+                    )
+                    noise = next(
+                        t for t in canonical["traces"] if t["name"] == "input.noise"
+                    )
+                    require(
+                        noise["sha256"] == sha(data["input.noise"]),
+                        "scalar selected noise mismatch",
+                    )
+            runs[directory] = run
+    require(set(report["run_report_sha256"]) == set(hashes), "extra scalar run reports")
+    canonical_dir = "run-1/canonical"
+    canonical = runs[canonical_dir]
+    require(
+        set(report["negative_controls"]) == set(plan["controls"]),
+        "missing scalar controls",
+    )
+    for name, definition in plan["controls"].items():
+        directory = "controls/" + name
+        control = read_report(directory)
+        execution(control, "scalar", 1, directory, name)
+        recorded = report["negative_controls"][name]
+        require(
+            recorded["observed"] == control
+            and recorded["detected"] is True
+            and control["status"] == "NO_VERDICT"
+            and control["error"].startswith(
+                "ValueError: " + definition["expected_seam"] + ":"
+            ),
+            "scalar control outcome mismatch",
+        )
+        observed = control["control_observation"]
+        for key in ("runtime", "provenance"):
+            require(
+                observed.get(key) == canonical[key],
+                "scalar control " + key + " mismatch",
+            )
+        require(observed["case"] == definition["case"], "scalar control case mismatch")
+        case = next(c for c in canonical["cases"] if c["id"] == definition["case"])
+        expected = case["normalized_by_name"]
+        require(
+            named_bytes(observed["expected_normalized"], names)
+            == named_bytes(expected, names),
+            "scalar control expected named inputs mismatch",
+        )
+        actual = observed.get("actual_normalized", {})
+        named_bytes(actual, names)
+        changed = [
+            n
+            for n in names
+            if struct.pack("<f", expected[n]) != struct.pack("<f", actual[n])
+        ]
+        noise = next(t for t in case["traces"] if t["name"] == "input.noise")
+        original_noise = read_trace(canonical_dir, noise, math.prod(noise["shape"]))
+        actual_noise = read_trace(
+            directory, observed["actual_noise"], math.prod(noise["shape"])
+        )
+        slot = case["corpus_coordinates"]["noise_slot"]
+        require(
+            observed["expected_noise_sha256"] == sha(original_noise)
+            and observed["actual_noise_sha256"] == sha(actual_noise)
+            and observed["expected_noise_slot"] == slot,
+            "scalar control noise binding mismatch",
+        )
+        if name == "wrong-noise":
+            require(
+                not changed
+                and actual_noise != original_noise
+                and observed["actual_noise_slot"] == 0
+                and slot != 0,
+                "scalar wrong-noise mutation not observed",
+            )
+            slot_zero = {
+                t["sha256"]
+                for c in canonical["cases"]
+                if c["corpus_coordinates"]["noise_slot"] == 0
+                for t in c["traces"]
+                if t["name"] == "input.noise"
+            }
+            require(
+                len(slot_zero) == 1 and sha(actual_noise) in slot_zero,
+                "scalar control lacks actual canonical slot-zero noise identity",
+            )
+        else:
+            require(
+                actual_noise == original_noise
+                and observed["actual_noise_slot"] == slot,
+                "scalar control unchanged noise mismatch",
+            )
+            if name == "wrong-parameter":
+                require(
+                    changed == ["keyboard.midi_f0"]
+                    and actual["keyboard.midi_f0"]
+                    == (0.0 if expected["keyboard.midi_f0"] != 0 else 1.0),
+                    "scalar wrong-parameter mutation not observed",
+                )
+            else:
+                require(
+                    name == "fresh-randomization" and len(changed) >= 2,
+                    "scalar fresh-randomization mutation not observed",
+                )
+    require(
+        executions == report["execution_records"],
+        "scalar execution record bindings mismatch",
+    )
+    return {
+        "execution_records": executions,
+        "raw_report_sha256": hashes,
+        "raw_artifact_sha256": artifacts,
+    }
+
+
+def replay_scalar_aggregate(runner, raw_root, report):
+    """Producer aggregate writes only to a disposable consumer-owned directory."""
+    with tempfile.TemporaryDirectory(prefix="preparation-scalar-") as name:
+        stage = Path(name)
+        for child in raw_root.iterdir():
+            if child.name != "scalar-execution.json":
+                require(
+                    child.resolve().is_relative_to(raw_root.resolve()),
+                    "nonlocal scalar aggregate input",
+                )
+                (stage / child.name).symlink_to(
+                    child.resolve(), target_is_directory=child.is_dir()
+                )
+        with contextlib.redirect_stdout(io.StringIO()):
+            runner.aggregate(stage, False)
+        replayed = strict_json((stage / "scalar-execution.json").read_bytes())
+    # These two fields describe the replay invocation, not the measured process.
+    for key, value in replayed.items():
+        if key not in ("recorded_utc", "host"):
+            require(
+                report.get(key) == value, "scalar aggregate does not reproduce: " + key
+            )
+    return {
+        "status": "PASS",
+        "compared_fields": sorted(set(replayed) - {"recorded_utc", "host"}),
+    }
 
 
 def integration_report(root, commit, kind, raw_root):
@@ -369,6 +689,14 @@ def integration_report(root, commit, kind, raw_root):
             "equality_groups": [],
         }
         if kind == "repeatability":
+            for definition in plan["runtime_definitions"].values():
+                name = definition["lock"]
+                require(
+                    sha(committed_bytes(root, commit, name))
+                    == definition["lock_sha256"]
+                    == sha((ROOT / name).read_bytes()),
+                    "repeatability lock identity mismatch",
+                )
             cells, oracle, diagnostics = repeatability_projection(
                 report, plan, runner, runner_hash, raw_root, expected, manifest
             )
@@ -395,12 +723,25 @@ def integration_report(root, commit, kind, raw_root):
             "producer": producer,
             "control": result,
             "status": "PASS" if result["status"] == "pass" else "NO_VERDICT",
+            "evidence_status": "VALIDATED"
+            if not [
+                failure
+                for failure in result.get("failures", [])
+                if failure["key"] != "oracle_status"
+            ]
+            and "failures" in result
+            else "REFUSED",
             "closure": "Root must reconcile runtime/scalar decisions before issue closure; this command never ratifies a DR.",
         }
     except (
         ValueError,
         KeyError,
         TypeError,
+        AttributeError,
+        IndexError,
+        StopIteration,
+        OverflowError,
+        struct.error,
         OSError,
         subprocess.CalledProcessError,
     ) as error:
@@ -408,6 +749,7 @@ def integration_report(root, commit, kind, raw_root):
             "schema": "preparation-runtime-integration",
             "schema_version": 1,
             "status": "NO_VERDICT",
+            "evidence_status": "REFUSED",
             "producer_commit": commit,
             "kind": kind,
             "reason": str(error),
@@ -418,8 +760,38 @@ def integration_report(root, commit, kind, raw_root):
 def repeatability_projection(
     report, plan, runner, runner_hash, raw_root, expected, manifest
 ):
+    require(
+        plan.get("schema_version") == 2
+        and plan.get("profile") == "release-mkl-compatible-v1"
+        and plan.get("profile_environment")
+        == {
+            "release": SCALAR_MATH_PROFILE,
+            "current": {"ATEN_CPU_CAPABILITY": None, "MKL_CBWR": None},
+        },
+        "repeatability math profile is missing, historical or mismatched",
+    )
+    raw_data = safe_read(raw_root, "repeatability-runtime.json")
+    require(
+        sha(raw_data) == report["raw_report_sha256"],
+        "repeatability raw report hash mismatch",
+    )
+    native_report = strict_json(raw_data)
+    # The producer publication omits bulky name maps. Rehydrate only from the
+    # digest-bound actual report, and check the entire published cell projection.
+    for key, value in native_report.items():
+        if key == "cells":
+            value = [
+                {
+                    k: v
+                    for k, v in c.items()
+                    if k not in ("normalized", "physical", "parameter_names", "inputs")
+                }
+                for c in value
+            ]
+        require(report.get(key) == value, "repeatability publication mismatch: " + key)
+    report = native_report
+    require(report["status"] == "PASS", "repeatability apparatus failed or refused")
     runner.validate_plan(plan)
-    runner.validate_results(plan, report["cells"])
     require(
         plan["sample_count"] == 176400
         and plan["control_sample_count"] == 1764
@@ -442,6 +814,15 @@ def repeatability_projection(
                 .is_relative_to(raw_root.resolve()),
                 "nonlocal producer artifact",
             )
+    runner.validate_results(plan, report["cells"], raw_root)
+    require(
+        strict_json(safe_read(raw_root, "provenance.json")) == report["provenance"],
+        "repeatability controller provenance mismatch",
+    )
+    require(
+        strict_json(safe_read(raw_root, "preregistered-plan.json")) == plan,
+        "repeatability raw preregistration mismatch",
+    )
     # Hash/count-check and replay every original-byte comparison, including drift.
     require(
         runner.summarize(plan, report["cells"], raw_root) == report["comparisons"],
@@ -450,6 +831,7 @@ def repeatability_projection(
     records = {r["directory"]: r for r in report["records"]}
     require(
         len(records)
+        == len(report["records"])
         == len(plan["runtime_definitions"])
         * len(plan["batch_sizes"])
         * len(plan["repeats"]),
@@ -461,6 +843,36 @@ def repeatability_projection(
         if r.get("worker", {}).get("execution_id")
     ]
     require(len(set(executions)) == len(executions), "worker execution identity reused")
+    raw_reports = {}
+    for directory, record in records.items():
+        data = safe_read(raw_root, directory + "/execution.json")
+        require(
+            strict_json(data) == record,
+            "repeatability controller execution receipt mismatch",
+        )
+        for filename in ("execution.json", "result.json", "stdout.json"):
+            raw_reports[directory + "/" + filename] = sha(
+                safe_read(raw_root, directory + "/" + filename)
+            )
+    require(
+        set(report["controls"]) == set(plan["runtime_definitions"]),
+        "repeatability source controls missing",
+    )
+    for runtime, control in report["controls"].items():
+        result = control["result"]
+        rejection = result["rejection"]
+        command = control["command"]
+        require(
+            result["status"] == "PASS"
+            and rejection["status"] == "NO_VERDICT"
+            and rejection["torch_imported"] is False
+            and rejection["error"]
+            == "ValueError: source hash mismatch: torchsynth/config.py"
+            and "negative" in command
+            and command[command.index("--runtime") + 1] == runtime
+            and command[command.index("--run-id") + 1] == report["run_id"],
+            "repeatability source control association mismatch",
+        )
     expected["artifacts"] = {
         name: plan["control_sample_count"]
         if name.startswith(("adsr", "lfo"))
@@ -480,19 +892,41 @@ def repeatability_projection(
             k: definition[k]
             for k in ("python", "torch", "numpy", "lightning", "lock_sha256")
         }
-        wanted = dict(
-            key=key,
-            runtime=runtime,
-            execution_width=request["batch_size"],
-            reproducible=True,
-            case_definition=case,
-            sound_index=case["index"],
-            identity_batch_size=request["batch_size"],
-        )
+        runtime["math_environment"] = plan["profile_environment"][request["runtime"]]
+        wanted = {
+            "key": key,
+            "runtime": runtime,
+            "execution_width": request["batch_size"],
+            "reproducible": True,
+            "case_definition": case,
+            "sound_index": case["index"],
+            "identity_batch_size": request["batch_size"],
+        }
         expected["cells"].append(wanted)
         cell = dict(wanted, status=raw["status"], reason=raw.get("error", "rendered"))
         if raw["status"] == "PASS":
             worker = records[raw["directory"]]["worker"]
+            actual_worker = strict_json(
+                safe_read(raw_root, raw["directory"] + "/result.json")
+            )
+            require(
+                worker == {k: v for k, v in actual_worker.items() if k != "cells"},
+                "repeatability committed worker receipt mismatch",
+            )
+            require(
+                worker["execution_id"] == raw["execution_id"]
+                and worker["runner_sha256"] == runner_hash,
+                "repeatability process/source association mismatch",
+            )
+            require(
+                str(uuid.UUID(worker["execution_id"], version=4))
+                == worker["execution_id"]
+                and type(worker["process_id"]) is int
+                and worker["process_id"] > 0
+                and datetime.datetime.fromisoformat(worker["started_utc"]).tzinfo
+                is not None,
+                "repeatability process identity invalid",
+            )
             require(worker["run_id"] == report["run_id"], "stale fresh-process worker")
             require(
                 all(
@@ -526,13 +960,13 @@ def repeatability_projection(
                 raw["label_byte_hex"] == bytes([int(identity["is_train"])]).hex(),
                 "incorrect train/test label",
             )
-            inputs = dict(
-                index=case["index"],
-                physical_overrides=case["physical_overrides"],
-                configuration=plan["configuration"],
-                nebula=plan["nebula"],
-                noise_seed=plan["noise_seed"],
-            )
+            inputs = {
+                "index": case["index"],
+                "physical_overrides": case["physical_overrides"],
+                "configuration": plan["configuration"],
+                "nebula": plan["nebula"],
+                "noise_seed": plan["noise_seed"],
+            }
             require(
                 raw["inputs"] == inputs
                 and raw["input_sha256"] == runner.sha256(runner.json_bytes(inputs)),
@@ -566,11 +1000,37 @@ def repeatability_projection(
     # This checks invariance only, not ratification of canonical runtime/host scope.
     return (
         cells,
-        "normative",
+        "diagnostic",
         {
             "native_status": report["status"],
+            "scope": "preregistered 128-cell local matrix; runtime decision reconciliation pending",
             "comparisons": report["comparisons"],
-            "runtime_ratification": "separate DR-0006 operator decision",
+            "raw_aggregate_sha256": sha(raw_data),
+            "profile_environment": plan["profile_environment"],
+            "bindings": {
+                "raw_report_sha256": raw_reports,
+                "raw_artifact_sha256": {
+                    a["locator"]: a["sha256"]
+                    for c in cells
+                    for a in c.get("artifacts", {}).values()
+                },
+                "execution_records": [
+                    {
+                        "directory": directory,
+                        **{
+                            k: record["worker"].get(k)
+                            for k in (
+                                "execution_id",
+                                "run_id",
+                                "process_id",
+                                "started_utc",
+                            )
+                        },
+                    }
+                    for directory, record in records.items()
+                ],
+            },
+            "runtime_ratification": "pending reviewed producers and root DR-0006 reconciliation; no production oracle",
         },
     )
 
@@ -579,6 +1039,10 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
     require(
         report["status"] == "PASS" and report["scope"] == "full-preregistered-cases",
         "scalar report failed or sentinel-only",
+    )
+    require(
+        report["batch_1_oracle"] == "diagnostic",
+        "scalar diagnostic scope cannot promote a production oracle",
     )
     require(
         report["provenance"]["source_commit"] == manifest["target_commit"],
@@ -598,7 +1062,9 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
         )
     for name, digest in plan["input_sha256"].items():
         require(
-            report["provenance"]["definition_sha256"].get(name) == digest,
+            report["provenance"]["definition_sha256"].get(name)
+            == digest
+            == sha((ROOT / name).read_bytes()),
             "scalar preregistered input mismatch",
         )
     for name in (
@@ -606,6 +1072,8 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
         "qualify_scalar.sh",
         "scalar-cases.json",
         "requirements.lock",
+        "probe.py",
+        "Dockerfile",
     ):
         require(
             "env/release-era/" + name in report["provenance"]["definition_sha256"],
@@ -636,6 +1104,69 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
     require(
         runtime["packages"]["torch"] == "1.12.1+cpu", "scalar Torch runtime mismatch"
     )
+    lock = committed_bytes(root, commit, "env/release-era/requirements.lock").decode()
+    packages = {
+        k.lower().replace("_", "-"): v
+        for k, v in re.findall(
+            r"^([\w-]+)(?:\[[^\]]+\])?==([^\s\\]+)", lock, re.MULTILINE
+        )
+    }
+    packages["torch"] = "1.12.1+cpu"
+    require(
+        all(runtime["packages"].get(k) == v for k, v in packages.items()),
+        "scalar package lock mismatch",
+    )
+    require(
+        sha(json.dumps(runtime, sort_keys=True).encode()) == report["runtime_sha256"],
+        "scalar runtime digest mismatch",
+    )
+    require(
+        runtime["thread_environment"]
+        == dict.fromkeys(
+            (
+                "OMP_NUM_THREADS",
+                "MKL_NUM_THREADS",
+                "OPENBLAS_NUM_THREADS",
+                "VECLIB_MAXIMUM_THREADS",
+            ),
+            "1",
+        ),
+        "scalar thread environment mismatch",
+    )
+    require(
+        sha(runner.json_bytes(report["provenance"]["package_sha256"]))
+        == plan["package_tree_sha256"],
+        "scalar source package byte identity mismatch",
+    )
+    require(
+        "uv.lock" in report["provenance"]["definition_sha256"],
+        "missing scalar lock identity",
+    )
+    for name in (
+        "uv.lock",
+        "env/release-era/requirements.lock",
+        "env/release-era/Dockerfile",
+        "env/release-era/probe.py",
+    ):
+        require(
+            report["provenance"]["definition_sha256"][name]
+            == sha((ROOT / name).read_bytes()),
+            "scalar consumer source/lock mismatch: " + name,
+        )
+    raw_data = safe_read(raw_root, "scalar-execution.json")
+    require(
+        sha(raw_data) == report["profile_validation"]["local_full_report_sha256"],
+        "scalar actual aggregate hash mismatch",
+    )
+    raw_aggregate = strict_json(raw_data)
+    require(
+        all(report.get(k) == v for k, v in raw_aggregate.items()),
+        "scalar committed/current aggregate mismatch",
+    )
+    bindings = validate_scalar_records(
+        report, plan, raw_root, expected["parameter_names"]
+    )
+    aggregate = replay_scalar_aggregate(runner, raw_root, report)
     runs = [
         runner.compare_run(
             raw_root / f"run-{n}/canonical", raw_root / f"run-{n}/scalar"
@@ -682,15 +1213,15 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
             )
             for raw, case in zip(run["cases"], plan["cases"]):
                 key = f"{repeat}/{side}/{case['id']}"
-                wanted = dict(
-                    key=key,
-                    runtime=runtime,
-                    execution_width=32 if side == "canonical" else 1,
-                    reproducible=side == "canonical",
-                    case_definition=case,
-                    sound_index=case["sound_index"],
-                    identity_batch_size=32,
-                )
+                wanted = {
+                    "key": key,
+                    "runtime": runtime,
+                    "execution_width": 32 if side == "canonical" else 1,
+                    "reproducible": side == "canonical",
+                    "case_definition": case,
+                    "sound_index": case["sound_index"],
+                    "identity_batch_size": 32,
+                }
                 expected["cells"].append(wanted)
                 require(
                     raw["configuration"] == plan["configuration"],
@@ -718,7 +1249,7 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
                     "scalar selected noise mismatch",
                 )
                 require(
-                    raw["passive_capture_invariant"]
+                    raw["passive_capture_invariant"] is True
                     and raw["no_hook_audio_sha256"] == artifacts["audio"]["sha256"],
                     "scalar passive capture mismatch",
                 )
@@ -733,7 +1264,7 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
                         normalized=raw["normalized_by_name"],
                         physical=dict(zip(raw["parameter_order"], physical)),
                         artifacts=artifacts,
-                        process_identity=run.get("execution_id"),
+                        process_identity=run["execution"]["uuid"],
                     )
                 )
     for case in plan["cases"]:
@@ -745,23 +1276,17 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
             expected["equality_groups"].append(
                 [f"{n}/{side}/{case['id']}" for side in ("canonical", "scalar")]
             )
-    for name, definition in plan["controls"].items():
-        control = strict_json(safe_read(raw_root, f"controls/{name}/report.json"))
-        recorded = report["negative_controls"][name]
-        require(
-            control == recorded["observed"]
-            and recorded["detected"] is True
-            and control["status"] == "NO_VERDICT"
-            and control["error"].startswith(
-                "ValueError: " + definition["expected_seam"] + ":"
-            ),
-            "scalar negative control does not reproduce: " + name,
-        )
     return (
         cells,
         report["batch_1_oracle"],
         {
             "raw_comparisons_reproduced": True,
+            "scope": "full twelve-case local scalar diagnostic only; no native raw revalidation or production oracle",
+            "measured_host": report["host"],
+            "aggregate_replay": aggregate,
+            "bindings": bindings,
+            "raw_aggregate_sha256": sha(raw_data),
+            "math_environment": runtime["math_environment"],
             "cases_per_run": len(plan["cases"]),
             "seams_per_case": len(runner.capture_manifest()),
             "fresh_process_identity_present": all(c["process_identity"] for c in cells),
@@ -771,6 +1296,63 @@ def scalar_projection(report, plan, runner, root, commit, raw_root, expected, ma
             "runtime_reconciliation": report["runtime_reconciliation"],
         },
     )
+
+
+def integration_receipt(result):
+    """Bounded receipt; hashes bind the complete observations retained in raw data."""
+    control = result.get("control", {})
+    diagnostics = control.get("diagnostics", {})
+    bindings = diagnostics.get("bindings", {})
+    counts = {}
+    for comparison in diagnostics.get("comparisons", []):
+        key = (
+            comparison.get("kind", "scalar")
+            + "/"
+            + comparison.get("status", comparison.get("byte_equivalence", "UNKNOWN"))
+        )
+        counts[key] = counts.get(key, 0) + 1
+    return {
+        "schema": "preparation-runtime-receipt",
+        "schema_version": 1,
+        "status": result["status"],
+        "evidence_status": result["evidence_status"],
+        "evidence_category": control.get("evidence_category", "unavailable"),
+        "normative_oracle": control.get("normative_oracle", False),
+        "reason": result.get("reason", control.get("reason")),
+        "producer": result.get(
+            "producer",
+            {"commit": result.get("producer_commit"), "kind": result.get("kind")},
+        ),
+        "consumer_sha256": {
+            name: sha((ROOT / name).read_bytes())
+            for name in (
+                "tools/qualify_preparation.py",
+                "src/torchsynth_voice/preparation.py",
+            )
+        },
+        "raw_aggregate_sha256": diagnostics.get("raw_aggregate_sha256"),
+        "raw_report_sha256": bindings.get("raw_report_sha256", {}),
+        "raw_artifact_count": len(bindings.get("raw_artifact_sha256", {})),
+        "raw_artifact_manifest_sha256": sha(
+            record_bytes(bindings.get("raw_artifact_sha256", {}))
+        ),
+        "execution_records": bindings.get("execution_records", []),
+        "cases_per_run": diagnostics.get("cases_per_run"),
+        "scope": diagnostics.get("scope", "unavailable evidence"),
+        "measured_host": diagnostics.get("measured_host"),
+        "comparison_count": len(diagnostics.get("comparisons", [])),
+        "comparison_outcomes": counts,
+        "seams_per_case": diagnostics.get("seams_per_case"),
+        "byte_equivalence": diagnostics.get("byte_equivalence"),
+        "math_environment": diagnostics.get(
+            "math_environment", diagnostics.get("profile_environment")
+        ),
+        "aggregate_replay": diagnostics.get("aggregate_replay"),
+        "comparison_records_sha256": sha(
+            record_bytes(diagnostics.get("comparisons", []))
+        ),
+        "closure": result["closure"],
+    }
 
 
 def main(argv=None):
@@ -786,6 +1368,16 @@ def main(argv=None):
         "--kind", choices=("repeatability", "scalar"), required=True
     )
     integration.add_argument("--raw-root", type=Path, required=True)
+    integration.add_argument(
+        "--record",
+        type=Path,
+        help="append a bounded actual receipt to an existing analytic qualification",
+    )
+    integration.add_argument(
+        "--summary",
+        action="store_true",
+        help="print the bounded receipt instead of full comparisons",
+    )
     args = parser.parse_args(argv)
     if args.command == "integrate":
         result = integration_report(
@@ -794,11 +1386,26 @@ def main(argv=None):
             args.kind,
             args.raw_root.resolve(),
         )
-        print(record_bytes(result).decode(), end="")
+        receipt = integration_receipt(result)
+        if args.record:
+            qualification = strict_json(args.record.read_bytes())
+            require(
+                qualification.get("schema") == "preparation-qualification"
+                and qualification.get("evidence_category") == "analytic-only",
+                "integration receipt requires an analytic qualification container",
+            )
+            qualification.setdefault("actual_integrations", []).append(receipt)
+            args.record.write_bytes(record_bytes(qualification))
+        print(record_bytes(receipt if args.summary else result).decode(), end="")
         return 0 if result["status"] == "PASS" else 2
     report = analytic_report()
     encoded = record_bytes(report)
-    if args.check and args.check.read_bytes() != encoded:
+    stored = strict_json(args.check.read_bytes()) if args.check else None
+    if stored is not None:
+        stored.pop(
+            "actual_integrations", None
+        )  # Independent evidence, never analytic credit.
+    if stored is not None and record_bytes(stored) != encoded:
         print(
             "FAIL: analytic qualification differs from committed bytes", file=sys.stderr
         )

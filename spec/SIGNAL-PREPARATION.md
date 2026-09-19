@@ -164,7 +164,8 @@ only and can never set `normative_oracle=true`.
 
 The tool's native adapters read #12's repeatability and #88's scalar reports,
 plans and runners only at a supplied exact Git commit. Untracked or dirty
-producer inputs refuse. They invoke the committed producer's read-only byte
+producer inputs refuse. A clean snapshot of the named commit can be used while
+a producer worktree is changing. The adapters invoke committed byte
 comparison functions to reproduce named trace metrics and first divergences,
 then check the consumer projection against independently derived requests.
 The scalar adapter reads both fresh runs on both sides and compares only
@@ -173,6 +174,32 @@ parameters, intermediate traces or final audio are byte-identical. A scalar
 `diagnostic` or `rejected` oracle status always refuses normative production
 promotion. Runtime selection/host scope and scalar DR reconciliation remain
 root's separate operator decision; the tool cannot ratify prose decisions.
+
+The scalar adapter also replays the strengthened producer aggregate in a
+temporary consumer-owned directory. Its output is checked against the committed
+report; original raw reports are never overwritten. Independent consumer gates
+require the four render roles/widths, seven distinct execution UUIDs, positive
+PIDs, UTC starts, campaign/repeat bindings and scalar/control associations to
+the canonical report's exact SHA-256 and UUID. Every control retains its actual
+named-input/noise mutation and matching case, source and runtime provenance.
+An expected error prefix alone cannot pass. Raw trace bytes/counts, the source
+package tree and all locked package versions are checked separately.
+The wrong-noise artifact must have the full expected count and match actual
+canonical slot-zero bytes; a different stream merely labeled zero refuses.
+Every case requires a boolean true passive-capture result and the no-hook
+audio digest must match the captured final-audio artifact.
+
+The supported scalar diagnostic profile explicitly binds
+`math_environment = {"ATEN_CPU_CAPABILITY": null, "MKL_CBWR": "COMPATIBLE"}`.
+The version-2 repeatability preregistration binds that same release profile and
+explicitly unsets both variables for the current-runtime comparator. Unset-profile
+historical matrices cannot replace these current observations. The repeatability
+adapter reconstructs omitted name maps only from the hash-bound complete raw
+report, matches its publication and worker/controller receipts, then invokes the
+producer's strengthened raw-artifact validation and all comparison records.
+Both adapters keep production-oracle credit refused pending reviewed producers
+and root decision reconciliation. Scalar status remains diagnostic regardless
+of apparatus or byte-equivalence PASS.
 
 ```sh
 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
@@ -187,6 +214,21 @@ Exit 0 means the named consumer check passed, not a product/release verdict.
 Exit 2 means `NO_VERDICT`; the report retains the concrete refusal. Producer
 reports and artifacts must be revalidated again on integration. No ad-hoc
 substitute renders are run here.
+
+`evidence_status: VALIDATED` means the actual artifacts and required identity
+comparisons passed the consumer. It is distinct from missing, stale or invalid
+evidence (`REFUSED`), and from a production verdict. Thus a valid diagnostic
+scalar receipt can report byte-equivalence PASS and evidence VALIDATED while
+still returning exit 2 / NO_VERDICT with `normative_oracle: false`.
+
+Use `integrate --summary` for a bounded receipt, and optionally
+`--record sim/qualification/preparation-v1.json` to append it under
+`actual_integrations`. Receipts retain exact producer/report/runner/DR digests,
+raw-report hashes, artifact count and manifest digest, execution identities,
+comparison digest and measured scope. They are separate from the analytic
+qualification: `analytic --check` compares the analytic part only, excluding
+this explicit receipt list. Re-run `integrate` to validate actual receipts;
+analytic reproduction never certifies their contents.
 
 ## Reproduction and evidence limits
 
@@ -225,7 +267,7 @@ runtime acceptance criterion. Root coordinates committed actual evidence and
 DR reconciliation before issue closure. No batch-1 byte identity, fidelity,
 hardware, physical-validation or holdout qualification is claimed.
 
-### Observed producer integration, 2026-09-19
+### Historical producer integration, 2026-09-19
 
 A read-only consumer run used #88 commit
 `707abf541ec916579ee7c69b85e0fe4dfbded35e`, its committed report digest
@@ -246,3 +288,47 @@ batch-1 to a normative oracle. At #12 commit
 `535c25c165f4a63622bf3151a41b7b2d9c88d64c`, the repeatability report was still
 absent, and its integration command returned `NO_VERDICT`. Both producers must
 be revalidated at integration; the original actual-runtime AC remains open.
+
+### Repaired scalar integration, 2026-09-19
+
+The follow-up consumed #88 `51ff30f14ba70744497e701e116f59810a81d68f`
+(the source/evidence-preserving rebase of `6689370470f4f8e13d6eea065c7d9d3774f0c36c`).
+Committed report SHA-256:
+`c5bda01a3b77727e0f38cd2df5726d7ad244aed3abb61ab8267fa42c99546f10`.
+Raw root: `../issue-88/out/doctor100-compatible-full`; raw aggregate SHA-256:
+`175b3f0531523c78212ba09c23f97cc0c156a2ebaff12affc93ff2cb37e21584`.
+
+The strengthened aggregate, two fresh canonical/scalar pairs, twelve cases
+and 36 seams per case revalidate, including 1,728 render artifacts and three
+actual control-noise artifacts. All seven execution identities and control
+mutations validate. The scalar byte-equivalence result is PASS. Evidence is
+VALIDATED, while production remains NO_VERDICT because the oracle is diagnostic.
+This replays existing local measurements; it does not rerender Torch or validate
+the separate native raw sentinel. Historical unset-profile evidence stays history.
+The shared preparation math/API and its source digest remain unchanged.
+
+### Repaired repeatability integration, 2026-09-19
+
+The follow-up revalidated the local matrix from #12's committed
+`fe4a1032a511e948ce0fae8083e82b86df97db39` candidate, then revalidated evidence head
+`2182bc9524016476f9a538d11fe2e3035fe0ae45` independently. The latter adds the
+native sentinel receipt without changing the matrix runner or local raw report.
+Committed report SHA-256:
+`5904089505c05c30a456cb5e162bde89e40218ec0d0151ffb27053ec1ac4cbe4`.
+Raw root: `../issue-12/out/doctor106-compatible-matrix`; raw report SHA-256:
+`7f98029916f75dcb26df28cd96af7a0c466a56c10687a6aca31bcf8c412e02b5`.
+
+The matrix contains 128 cells in sixteen fresh executions, with 1,408 required
+artifacts. Replayed outcomes are 64 repeat PASS, 48 batch PASS and 32
+cross-runtime FAIL. Cross-runtime drift is an observation retained without
+alignment or level fitting, rather than a failure of same-runtime identity.
+The corresponding bounded receipt records the actual consumer outcome.
+This does not independently revalidate the native raw sentinel or historical
+baseline under the new profile.
+
+Both actual integrations remain provisional development evidence. PR #100's
+independent re-review requested additional producer artifact/passivity gates;
+the consumer independently enforces those checks on genuine local artifacts.
+Reviewed and landed producers plus root's DR-0006/0007 reconciliation are still
+required for the original runtime AC. No completion marker or unilateral
+runtime ratification is supplied by this work.

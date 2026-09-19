@@ -6,10 +6,15 @@ import importlib.util
 import json
 import math
 import struct
-from pathlib import Path
+import tempfile
 import unittest
+import uuid
 from dataclasses import replace
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
+from torchsynth_voice.identity import SoundIdentity
 from torchsynth_voice.paired_metrics import analytic_exactness_rubric, scorecard_rows
 from torchsynth_voice.preparation import (
     TRANSFORMS,
@@ -26,7 +31,6 @@ from torchsynth_voice.preparation import (
     symmetry_control,
 )
 from torchsynth_voice.scorecard import validate_row
-from torchsynth_voice.identity import SoundIdentity
 
 
 def ratio(pair):
@@ -484,6 +488,446 @@ class QualificationCommandTests(unittest.TestCase):
         self.assertEqual(result["status"], "NO_VERDICT")
         self.assertIn("exact 40-digit SHA", result["reason"])
         self.assertIn("pending", result["closure"])
+
+    def test_repeatability_old_or_mismatched_profile_refuses_before_replay(self):
+        runner = SimpleNamespace(validate_plan=Mock())
+        for plan in (
+            {},
+            {
+                "schema_version": 2,
+                "profile": "release-mkl-compatible-v1",
+                "profile_environment": {"release": {"MKL_CBWR": None}},
+            },
+        ):
+            with (
+                self.subTest(plan=plan),
+                self.assertRaisesRegex(ValueError, "math profile"),
+            ):
+                self.tool.repeatability_projection(
+                    {}, plan, runner, "a" * 64, Path.cwd(), {}, {}
+                )
+        runner.validate_plan.assert_not_called()
+
+    def test_producer_loader_keeps_runner_path_after_input_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runner_path = root / "env/release-era/qualify_repeatability.py"
+            runner_path.parent.mkdir(parents=True)
+            runner_path.write_text("MARKER = 'synthetic runner'\n")
+
+            def committed(_root, _commit, name):
+                if name.startswith("spec/"):
+                    return (self.tool.ROOT / name).read_bytes()
+                return (
+                    runner_path.read_bytes()
+                    if name.endswith("qualify_repeatability.py")
+                    else b""
+                )
+
+            with patch.object(self.tool, "committed_bytes", side_effect=committed):
+                runner, digest = self.tool.load_producer(
+                    root, "a" * 40, "repeatability"
+                )
+            self.assertEqual(runner.MARKER, "synthetic runner")
+            self.assertEqual(digest, self.tool.sha(runner_path.read_bytes()))
+
+    def test_dirty_producer_source_refuses_before_module_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "env/release-era/qualify_scalar.py"
+            path.parent.mkdir(parents=True)
+            path.write_bytes(b"uncommitted runner bytes")
+            with (
+                patch.object(
+                    self.tool.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(
+                        returncode=0, stdout=b"committed runner bytes"
+                    ),
+                ),
+                patch.object(
+                    self.tool.importlib.util, "spec_from_file_location"
+                ) as loader,
+            ):
+                with self.assertRaisesRegex(ValueError, "uncommitted producer file"):
+                    self.tool.load_producer(root, "a" * 40, "scalar")
+                loader.assert_not_called()
+
+    def test_diagnostic_receipt_keeps_evidence_and_production_verdict_separate(self):
+        result = {
+            "status": "NO_VERDICT",
+            "evidence_status": "VALIDATED",
+            "producer": {"commit": "a" * 40},
+            "closure": "root reconciliation pending",
+            "control": {
+                "evidence_category": "actual",
+                "normative_oracle": False,
+                "reason": "diagnostic oracle",
+                "diagnostics": {
+                    "cases_per_run": 12,
+                    "seams_per_case": 36,
+                    "byte_equivalence": "PASS",
+                    "math_environment": self.tool.SCALAR_MATH_PROFILE,
+                },
+            },
+        }
+        receipt = self.tool.integration_receipt(result)
+        self.assertEqual(receipt["evidence_status"], "VALIDATED")
+        self.assertEqual(receipt["status"], "NO_VERDICT")
+        self.assertEqual(receipt["byte_equivalence"], "PASS")
+        self.assertFalse(receipt["normative_oracle"])
+
+
+class ScalarBindingTests(unittest.TestCase):
+    """Synthetic protocol fixtures, independent of producer implementations."""
+
+    setUpClass = classmethod(QualificationCommandTests.setUpClass.__func__)
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.names = ["keyboard.midi_f0", "other.parameter"]
+        self.case = {"id": "synthetic", "sound_index": 6}
+        self.plan = {
+            "capture_version": "synthetic-v1",
+            "configuration": {"sample_rate": 44100},
+            "cases": [self.case],
+            "controls": {
+                name: {"case": "synthetic", "expected_seam": seam}
+                for name, seam in (
+                    ("wrong-parameter", "input.normalized"),
+                    ("wrong-noise", "input.noise"),
+                    ("fresh-randomization", "input.normalized"),
+                )
+            },
+        }
+        self.plan["cases"].append({"id": "synthetic-slot0", "sound_index": 0})
+        self.report = {
+            "campaign_id": str(uuid.uuid4()),
+            "runtime": {
+                "math_environment": {
+                    "ATEN_CPU_CAPABILITY": None,
+                    "MKL_CBWR": "COMPATIBLE",
+                }
+            },
+            "provenance": {"source_commit": "synthetic"},
+            "capture_manifest": [
+                {"name": name, "shape": [2]}
+                for name in (
+                    "input.normalized",
+                    "input.noise",
+                    "physical.parameters",
+                    "audio.final",
+                )
+            ],
+            "execution_records": [],
+            "run_report_sha256": {},
+            "negative_controls": {},
+        }
+        (self.root / "campaign.id").write_text(self.report["campaign_id"])
+        self.runs = {}
+        for repeat in (1, 2):
+            for side in ("canonical", "scalar"):
+                directory = f"run-{repeat}/{side}"
+                path = self.root / directory
+                path.mkdir(parents=True)
+                artifacts = []
+                for item in self.report["capture_manifest"]:
+                    raw = struct.pack("<2f", 0.25, 0.5)
+                    filename = item["name"] + ".f32le"
+                    (path / filename).write_bytes(raw)
+                    artifacts.append(
+                        dict(item, file=filename, sha256=self.tool.sha(raw))
+                    )
+                run = {
+                    "status": "PASS",
+                    "side": side,
+                    "mutation": None,
+                    "execution": self.execution(repeat),
+                    "runtime": copy.deepcopy(self.report["runtime"]),
+                    "provenance": copy.deepcopy(self.report["provenance"]),
+                    "capture_version": self.plan["capture_version"],
+                    "rng_sentinel": "PASS",
+                    "source_unchanged_after_render": True,
+                    "cases": [
+                        {
+                            "id": "synthetic",
+                            "case_definition": self.case,
+                            "configuration": self.plan["configuration"],
+                            "corpus_coordinates": SoundIdentity(6).to_dict(32),
+                            "execution_width": 32 if side == "canonical" else 1,
+                            "reproducible": side == "canonical",
+                            "parameter_order": self.names,
+                            "normalized_by_name": dict(zip(self.names, (0.25, 0.5))),
+                            "traces": artifacts,
+                        }
+                    ],
+                }
+                if side == "scalar":
+                    self.associate(run, repeat)
+                run["cases"][0].update(
+                    passive_capture_invariant=True,
+                    no_hook_audio_sha256=artifacts[-1]["sha256"],
+                )
+                slot0 = copy.deepcopy(run["cases"][0])
+                slot0.update(
+                    id="synthetic-slot0",
+                    case_definition=self.plan["cases"][1],
+                    corpus_coordinates=SoundIdentity(0).to_dict(32),
+                )
+                noise = slot0["traces"][1]
+                noise["file"] = "slot0-noise.f32le"
+                slot0_bytes = struct.pack("<2f", 0.75, 0.5)
+                (path / noise["file"]).write_bytes(slot0_bytes)
+                noise["sha256"] = self.tool.sha(slot0_bytes)
+                run["cases"].append(slot0)
+                self.runs[directory] = run
+                self.write_run(directory)
+        for name, definition in self.plan["controls"].items():
+            directory = "controls/" + name
+            path = self.root / directory
+            path.mkdir(parents=True)
+            expected = dict(zip(self.names, (0.25, 0.5)))
+            actual = dict(expected)
+            if name == "wrong-parameter":
+                actual[self.names[0]] = 0.0
+            elif name == "fresh-randomization":
+                actual = dict.fromkeys(self.names, 0.75)
+            raw = struct.pack("<2f", 0.75 if name == "wrong-noise" else 0.25, 0.5)
+            (path / "noise.f32le").write_bytes(raw)
+            control = {
+                "side": "scalar",
+                "mutation": name,
+                "status": "NO_VERDICT",
+                "error": "ValueError: " + definition["expected_seam"] + ": synthetic",
+                "execution": self.execution(1),
+                "control_observation": {
+                    "case": "synthetic",
+                    "runtime": copy.deepcopy(self.report["runtime"]),
+                    "provenance": copy.deepcopy(self.report["provenance"]),
+                    "expected_normalized": expected,
+                    "actual_normalized": actual,
+                    "expected_noise_slot": 6,
+                    "actual_noise_slot": 0 if name == "wrong-noise" else 6,
+                    "expected_noise_sha256": self.tool.sha(
+                        struct.pack("<2f", 0.25, 0.5)
+                    ),
+                    "actual_noise_sha256": self.tool.sha(raw),
+                    "actual_noise": {
+                        "file": "noise.f32le",
+                        "sha256": self.tool.sha(raw),
+                        "shape": [2],
+                    },
+                },
+            }
+            self.associate(control, 1)
+            self.runs[directory] = control
+            self.write_run(directory)
+        self.refresh_records()
+
+    def execution(self, repeat):
+        return {
+            "uuid": str(uuid.uuid4()),
+            "campaign_id": self.report["campaign_id"],
+            "repeat": repeat,
+            "pid": 1,
+            "started_utc": "2026-09-19T00:00:00+00:00",
+        }
+
+    def associate(self, run, repeat):
+        directory = f"run-{repeat}/canonical"
+        run.update(
+            canonical_execution_uuid=self.runs[directory]["execution"]["uuid"],
+            canonical_report_sha256=self.tool.sha(
+                (self.root / directory / "report.json").read_bytes()
+            ),
+        )
+
+    def write_run(self, directory):
+        data = self.tool.record_bytes(self.runs[directory])
+        (self.root / directory / "report.json").write_bytes(data)
+        if directory.startswith("run-"):
+            self.report["run_report_sha256"][directory + "/report.json"] = (
+                self.tool.sha(data)
+            )
+        else:
+            self.report["negative_controls"][directory.split("/")[1]] = {
+                "observed": copy.deepcopy(self.runs[directory]),
+                "detected": True,
+            }
+
+    def refresh_records(self):
+        self.report["execution_records"] = [
+            dict(
+                run["execution"],
+                path=path,
+                side=run["side"],
+                **({"mutation": run["mutation"]} if run["mutation"] else {}),
+            )
+            for path, run in self.runs.items()
+        ]
+
+    def validate(self):
+        return self.tool.validate_scalar_records(
+            self.report, self.plan, self.root, self.names
+        )
+
+    def test_complete_diagnostic_records_have_seven_distinct_processes(self):
+        result = self.validate()
+        self.assertEqual(len(result["execution_records"]), 7)
+        self.assertEqual(len(result["raw_report_sha256"]), 7)
+
+    def test_reused_or_canonical_as_scalar_refuses(self):
+        run = self.runs["run-2/scalar"]
+        run["execution"]["uuid"] = self.runs["run-1/scalar"]["execution"]["uuid"]
+        self.write_run("run-2/scalar")
+        self.refresh_records()
+        with self.assertRaisesRegex(ValueError, "reused"):
+            self.validate()
+        run["execution"]["uuid"] = str(uuid.uuid4())
+        run["side"] = "canonical"
+        self.write_run("run-2/scalar")
+        with self.assertRaisesRegex(ValueError, "role"):
+            self.validate()
+
+    def test_self_consistent_old_math_profile_refuses(self):
+        self.report["runtime"]["math_environment"]["MKL_CBWR"] = None
+        with self.assertRaisesRegex(ValueError, "math profile"):
+            self.validate()
+
+    def test_stale_control_missing_inputs_and_unobserved_mutation_refuse(self):
+        directory = "controls/wrong-parameter"
+        original = copy.deepcopy(self.runs[directory])
+        for field, value, reason in (
+            ("provenance", {"source_commit": "stale"}, "provenance"),
+            ("runtime", {}, "runtime"),
+            ("actual_normalized", {}, "named"),
+            (
+                "actual_normalized",
+                original["control_observation"]["expected_normalized"],
+                "mutation",
+            ),
+        ):
+            with self.subTest(field=field, value=value):
+                self.runs[directory] = copy.deepcopy(original)
+                self.runs[directory]["control_observation"][field] = value
+                self.write_run(directory)
+                with self.assertRaisesRegex(ValueError, reason):
+                    self.validate()
+
+    def test_association_case_configuration_and_source_refuse(self):
+        directory = "run-2/scalar"
+        original = copy.deepcopy(self.runs[directory])
+        for field, value in (
+            ("canonical_report_sha256", "0" * 64),
+            ("provenance", {}),
+            ("runtime", {}),
+            ("cases", []),
+        ):
+            with self.subTest(field=field):
+                self.runs[directory] = copy.deepcopy(original)
+                self.runs[directory][field] = value
+                self.write_run(directory)
+                with self.assertRaises(ValueError):
+                    self.validate()
+
+    def test_numeric_physical_difference_is_not_source_or_input_mismatch(self):
+        directory = "run-2/scalar"
+        trace = self.runs[directory]["cases"][0]["traces"][2]
+        raw = struct.pack("<2f", 0.25000003, 0.5)
+        trace["file"] = "changed-physical.f32le"
+        (self.root / directory / trace["file"]).write_bytes(raw)
+        trace["sha256"] = self.tool.sha(raw)
+        self.write_run(directory)
+        self.validate()  # Physical conversion is an observed seam, not an input gate.
+
+    def test_control_uuid_missing_noise_and_escaped_artifacts_refuse(self):
+        directory = "controls/wrong-noise"
+        control = self.runs[directory]
+        control["execution"]["uuid"] = self.runs["run-1/canonical"]["execution"]["uuid"]
+        self.write_run(directory)
+        with self.assertRaisesRegex(ValueError, "reused"):
+            self.validate()
+        control["execution"]["uuid"] = str(uuid.uuid4())
+        control["control_observation"]["actual_noise"]["file"] = "../../../outside"
+        self.write_run(directory)
+        with self.assertRaisesRegex(ValueError, "escapes"):
+            self.validate()
+        control["control_observation"]["actual_noise"]["file"] = "missing.f32le"
+        self.write_run(directory)
+        with self.assertRaises(FileNotFoundError):
+            self.validate()
+
+    def test_wrong_noise_requires_the_actual_preregistered_slot_zero(self):
+        directory = "controls/wrong-noise"
+        observation = self.runs[directory]["control_observation"]
+        raw = struct.pack(
+            "<2f", 0.875, 0.5
+        )  # Another full-length stream mislabeled slot zero.
+        (self.root / directory / "noise.f32le").write_bytes(raw)
+        observation["actual_noise"]["sha256"] = observation["actual_noise_sha256"] = (
+            self.tool.sha(raw)
+        )
+        self.write_run(directory)
+        with self.assertRaisesRegex(ValueError, "slot-zero"):
+            self.validate()
+
+    def test_failed_or_missing_passive_capture_refuses_independently(self):
+        directory = "run-2/scalar"
+        case = self.runs[directory]["cases"][0]
+        for value in (False, None, 1):
+            case["passive_capture_invariant"] = value
+            self.write_run(directory)
+            with (
+                self.subTest(value=value),
+                self.assertRaisesRegex(ValueError, "passive"),
+            ):
+                self.validate()
+
+    def test_wrong_execution_configuration_and_case_refuse(self):
+        directory = "run-2/scalar"
+        original = copy.deepcopy(self.runs[directory])
+        for field, value in (
+            ("execution_width", 32),
+            ("reproducible", True),
+            ("configuration", {}),
+            ("case_definition", {}),
+            ("corpus_coordinates", {}),
+            ("traces", []),
+        ):
+            with self.subTest(field=field):
+                self.runs[directory] = copy.deepcopy(original)
+                self.runs[directory]["cases"][0][field] = value
+                self.write_run(directory)
+                with self.assertRaises(ValueError):
+                    self.validate()
+
+    def test_aggregate_replay_is_mandatory_and_does_not_overwrite_raw_report(self):
+        raw_report = self.root / "scalar-execution.json"
+        raw_report.write_bytes(b"original measurement")
+
+        def aggregate(stage, sentinel):
+            self.assertFalse(sentinel)
+            self.assertNotEqual(stage, self.root)
+            self.assertEqual(
+                (stage / "campaign.id").read_bytes(),
+                (self.root / "campaign.id").read_bytes(),
+            )
+            (stage / "scalar-execution.json").write_bytes(
+                self.tool.record_bytes(self.report)
+            )
+
+        runner = SimpleNamespace(aggregate=Mock(side_effect=aggregate))
+        self.assertEqual(
+            self.tool.replay_scalar_aggregate(runner, self.root, self.report)["status"],
+            "PASS",
+        )
+        runner.aggregate.assert_called_once()
+        self.assertEqual(raw_report.read_bytes(), b"original measurement")
+        runner.aggregate.side_effect = ValueError("stale native control")
+        with self.assertRaisesRegex(ValueError, "stale native control"):
+            self.tool.replay_scalar_aggregate(runner, self.root, self.report)
 
 
 if __name__ == "__main__":
