@@ -104,6 +104,13 @@ def pinned_input_gate():
             raise ValueError("stale preregistered input: " + name)
 
 
+def byte_tensor_bytes(value, torch):
+    """Bytes of an original CPU uint8 tensor such as the Torch RNG state."""
+    if value.device.type != "cpu" or sys.byteorder != "little":
+        raise ValueError("expected original little-endian CPU byte tensor")
+    return value.detach().contiguous().numpy().tobytes()
+
+
 def raw_path(output, case_id, name):
     return output / (case_id + "." + name + ".f32le")
 
@@ -171,6 +178,11 @@ class Harness:
 
     def make_voice(self, case, torch, Voice, SynthConfig):
         coordinates = self.coordinates(case)
+        # Deterministic ambient generator per execution. Values are unchanged
+        # (verified byte-identical to the #22 global-0 sentinel with and
+        # without this seed); only the ambient generator state is aligned so
+        # post-render RNG states are comparable across modes.
+        torch.manual_seed(coordinates["batch"])
         voice = (
             Voice(
                 SynthConfig(batch_size=32, **self.plan["configuration"]),
@@ -196,7 +208,7 @@ def render_mode(harness, case, mode, document, torch, Voice, SynthConfig, normal
     coordinates = harness.coordinates(case)
     slot = coordinates["slot"]
     voice = harness.make_voice(case, torch, Voice, SynthConfig)
-    rng_before = tensor_bytes(torch.random.get_rng_state(), torch)
+    rng_before = byte_tensor_bytes(torch.random.get_rng_state(), torch)
     before = harness.capture.named_parameters(voice, torch, slot)
     noise_before = tensor_bytes(voice.noise.noise[coordinates["noise_slot"]], torch)
     session = None
@@ -217,7 +229,7 @@ def render_mode(harness, case, mode, document, torch, Voice, SynthConfig, normal
             with session:
                 audio, forward, labels = voice(coordinates["batch"])
     elapsed = time.perf_counter() - started
-    rng_after = tensor_bytes(torch.random.get_rng_state(), torch)
+    rng_after = byte_tensor_bytes(torch.random.get_rng_state(), torch)
     after = harness.capture.named_parameters(voice, torch, slot)
     if before != after:
         raise ValueError("capture/render mutated named parameters: " + mode)
