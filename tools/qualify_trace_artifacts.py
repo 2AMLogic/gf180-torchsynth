@@ -162,6 +162,8 @@ def main():
     receipt["warning_categories"] = sorted({w.category.__name__ for w in seen})
     receipt["request_sha256"] = hashlib.sha256(request_bytes).hexdigest()
     observation.pop("traces")
+    for name, data in payloads.items():
+        (output / (name + ".f32le")).write_bytes(data)
     directory = output / "traces"
     directory.mkdir()
     descriptors = []
