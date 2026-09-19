@@ -1,0 +1,36 @@
+name: Trace artifacts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  stdlib:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile trace-artifact surfaces
+        run: python -m compileall -q src/torchsynth_voice/trace_artifacts.py tests/test_trace_artifacts.py tools/qualify_trace_artifacts.py
+      - name: Test trace-bundle and companion contracts
+        run: python -m unittest discover -s tests -p test_trace_artifacts.py -v
+      - name: Check preregistered trace-artifact inputs and negative controls
+        run: python tools/qualify_trace_artifacts.py --check-inputs
+      - name: Validate committed publication when present
+        run: |
+          if [ -f sim/reference/trace-artifact-smoke.json ]; then
+            python tools/qualify_trace_artifacts.py --check-publication
+          else
+            echo "publication: ABSENT — requires the host-gated qualified"
+            echo "run (tools/qualify_trace_artifacts.py --store ...); absence"
+            echo "is not treated as a pass."
+          fi
