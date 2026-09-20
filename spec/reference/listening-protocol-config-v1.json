@@ -1,0 +1,204 @@
+{
+  "schema": "torchsynth-listening-protocol-config",
+  "schema_version": 1,
+  "config_id": "listening-protocol-config-v1",
+  "ratified": true,
+  "ratification": {
+    "status": "adopted",
+    "decided_by": "operator turian, issue 44 comment 5752723656",
+    "decided_utc": "2026-09-20T21:17:24Z",
+    "protocol_version": "listening-protocol-v1",
+    "notes": "Ratified as drafted: the operator adopted the issue 44 listening-protocol draft (comment 5752151406; One Billion Sounds arXiv:2104.12922 section 4.2/section 6 methodology per first-author direction) in issue 44 comment 5752723656 (2026-09-20). Ethics/retention box (AC6) adopted verbatim: 'raw responses retained privately by the operator, no public release of raw responses, anonymized aggregates only, amendment permitted before first collection'; amendable at any time before listening begins. No amendments were made before first collection, so the draft's candidate ladders and trial counts stand as the ratified starting values: selection.cases_per_operator=4 per draft sections 6-7 (the unratified example's 2 existed only to bound the example); 13 candidate ladders + 14 binary trials exactly as drafted; catch_trial_rate 0.2; MUSHRA 2 blocks of 7 items; pilot 2 listeners, main 6 listeners (min 3 non-author musicians); fixed-count stopping."
+  },
+  "method": {
+    "parts": ["abx", "mushra"],
+    "abx": {
+      "format": "3afc-ax",
+      "catch_trial_rate": 0.2,
+      "session_anchor": true
+    },
+    "mushra": {
+      "items_per_block": 7,
+      "scale": [0, 100],
+      "anchor_operator": "clip.round_step",
+      "anchor_magnitude": 0.03125,
+      "bracket_validation": true
+    }
+  },
+  "ladders": {
+    "gain.db": {
+      "render": "corpus-audio",
+      "unit": "dB",
+      "points": [-0.05, -0.2, -0.5, -1.0, -6.0],
+      "note": "Draft-comment candidates; negative sign = attenuation convention."
+    },
+    "gain.dc_offset": {
+      "render": "corpus-audio",
+      "unit": "amplitude",
+      "points": [0.005, 0.02, 0.05, 0.1, 0.4]
+    },
+    "clip.round_step": {
+      "render": "corpus-audio",
+      "unit": "amplitude_step",
+      "points": [0.0001220703125, 0.00048828125, 0.001953125, 0.0078125, 0.03125],
+      "note": "Powers of two 2^-13 .. 2^-5; L5 doubles as the MUSHRA low-quality anchor."
+    },
+    "clip.saturation_ceiling": {
+      "render": "corpus-audio",
+      "unit": "amplitude",
+      "points": [0.98, 0.9, 0.8, 0.6, 0.4],
+      "note": "Severity rises as the ceiling drops; the array position, not the numeric value, is the rank."
+    },
+    "osc.tuning_shift": {
+      "render": "host-run-gated",
+      "unit": "semitone",
+      "points": [0.02, 0.1, 0.3, 0.5, 2.0],
+      "note": "Listen-only evidence: coverage receipt records 96/96 cases without qualified pitch truth; no corpus case may back a pitch-property claim."
+    },
+    "osc.phase_offset": {
+      "render": "host-run-gated",
+      "unit": "radian",
+      "points": [0.19634954084936207, 0.39269908169872414, 0.7853981633974483, 1.5707963267948966, 3.141592653589793],
+      "note": "pi/16, pi/8, pi/4, pi/2, pi."
+    },
+    "osc.shape_scale": {
+      "render": "host-run-gated",
+      "unit": "ratio",
+      "points": [1.02, 1.1, 1.5, 3.0, 10.0]
+    },
+    "envelope.breakpoint_shift": {
+      "render": "host-run-gated",
+      "unit": "control_sample",
+      "points": [0.06, 0.25, 1.0, 4.0, 8.0],
+      "note": "L1 sits just above the qualified estimator resolution (0.02); listening floor and estimator floor meet here."
+    },
+    "modulation.lfo_rate_shift": {
+      "render": "host-run-gated",
+      "unit": "hz",
+      "points": [0.05, 0.2, 0.5, 2.0, 10.0]
+    },
+    "modulation.lfo_depth_shift": {
+      "render": "host-run-gated",
+      "unit": "native",
+      "points": [0.005, 0.02, 0.1, 0.5, 1.0]
+    },
+    "modulation.route_depth_shift": {
+      "render": "host-run-gated",
+      "unit": "ratio",
+      "points": [1.02, 1.2, 2.0, 5.0, 20.0]
+    },
+    "noise.seed_shift": {
+      "render": "host-run-gated",
+      "unit": "seed_offset",
+      "points": [1, 3, 7, 12, 19],
+      "note": "Statistically plausible wrong noise stream: the canonical identity-vs-quality case."
+    },
+    "noise.slot_shift": {
+      "render": "host-run-gated",
+      "unit": "slot",
+      "points": [1, 4, 9, 18, 31]
+    }
+  },
+  "binary_trials": {
+    "gain.polarity": {
+      "render": "corpus-audio",
+      "note": "Single-point polarity flip; binary detectability trial, not a ladder."
+    },
+    "timing.delay_audio_sample": {"render": "host-run-gated"},
+    "timing.delay_control_sample": {"render": "host-run-gated"},
+    "timing.drop_sample": {"render": "host-run-gated"},
+    "timing.duplicate_sample": {"render": "host-run-gated"},
+    "interp.zoh_control": {"render": "host-run-gated"},
+    "interp.off_endpoint": {"render": "host-run-gated"},
+    "osc.mode_substitute": {"render": "host-run-gated"},
+    "modulation.route_sign_flip": {"render": "host-run-gated"},
+    "modulation.route_swap": {"render": "host-run-gated"},
+    "norm.always_on": {"render": "host-run-gated", "note": "Normalization-active cases only (selection.stratification)."},
+    "norm.off": {"render": "host-run-gated", "note": "Normalization-active cases only."},
+    "norm.wrong_peak": {"render": "host-run-gated", "note": "Run only in the applicability cell where the matrix shows the fault effective."},
+    "norm.wrong_reciprocal": {"render": "host-run-gated", "note": "Run only in the applicability cell where the matrix shows the fault effective."}
+  },
+  "selection": {
+    "pool": "development-corpus",
+    "cases_per_operator": 4,
+    "seed": 44,
+    "stratification": {
+      "normalization_active_required_for": [
+        "norm.always_on",
+        "norm.off",
+        "norm.wrong_peak",
+        "norm.wrong_reciprocal"
+      ]
+    },
+    "exclusions": [
+      {
+        "selector": "exact_silence",
+        "source": "sim/reference/development-corpus-coverage.json#families.audio_facts"
+      },
+      {
+        "selector": "near_silence",
+        "source": "sim/reference/development-corpus-coverage.json#families.audio_facts"
+      },
+      {
+        "selector": "normalization_inactive",
+        "applies_to": ["norm.*"],
+        "source": "sim/reference/development-corpus-coverage.json#families.normalization_seam"
+      },
+      {
+        "selector": "unqualified_pitch_property_tag",
+        "applies_to": ["osc.tuning_shift"],
+        "source": "sim/reference/development-corpus-coverage.json#families.pitch_stability"
+      }
+    ]
+  },
+  "blinding": {
+    "condition_map": "sealed",
+    "randomization_seed": 440,
+    "same_ladder_points_per_case": true
+  },
+  "level_conditions": {
+    "C1": {"name": "rms-matched", "rms_matched": true},
+    "C2": {"name": "native", "native": true},
+    "assignment": {
+      "default": "C1",
+      "operators": {
+        "gain.db": "C2"
+      }
+    }
+  },
+  "session": {
+    "pilot": {"listeners": 2, "purpose": "harness-validation-only"},
+    "main": {"listeners": 6, "min_non_author_musicians": 3},
+    "stopping_rule": "fixed_count",
+    "invalidation": {
+      "catch_false_positive_rate_max": 0.2,
+      "anchor_failure_invalidates": true,
+      "replacement_limit": 1
+    }
+  },
+  "analysis": {
+    "ladder_validation": {
+      "statistic": "spearman",
+      "magnitude_axis": "ladder_position_rank",
+      "monotonicity_required": true
+    },
+    "detection": {
+      "interval": "clopper_pearson_exact",
+      "chance_rate": 0.5,
+      "alpha": 0.05
+    },
+    "identity_question": {
+      "required": true,
+      "red_flag_same_patch_rate_below": 0.5
+    },
+    "aggregate_score": false
+  },
+  "ethics": {
+    "consent_text": "Participation is blinded listening under the ratified issue 44 protocol (draft comment 5752151406; ratification comment 5752723656, 2026-09-20): 3AFC AX detectability trials with catch trials and a session anchor, MUSHRA-style impairment blocks, and an independent forced identity (same-patch) question. Raw responses are retained privately by the operator; no public release of raw responses; anonymized aggregates only; participation terms amendable at any time before first collection.",
+    "identity_handling": "Anonymized listener codes only; raw responses retained privately by the operator; anonymized aggregates only (issue 44 comment 5752723656, 2026-09-20).",
+    "raw_response_retention": "Raw responses retained privately by the operator; no public release of raw responses; amendment permitted before first collection (issue 44 comment 5752723656, 2026-09-20).",
+    "access_control": "Raw-response access limited to the operator; no public release of raw responses (issue 44 comment 5752723656, 2026-09-20).",
+    "publication_policy": "No public release of raw responses; anonymized aggregates only; amendment permitted before first collection (issue 44 comment 5752723656, 2026-09-20).",
+    "compensation": "Not addressed by the ratified ethics default; no compensation is promised (issue 44 comment 5752723656, 2026-09-20); amendable at any time before first collection."
+  }
+}
