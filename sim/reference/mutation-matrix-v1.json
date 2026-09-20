@@ -1,0 +1,3187 @@
+{
+  "applicability_surfaces": {
+    "identity": {
+      "directed_cases": 2,
+      "random_receipts": 48,
+      "representative_random_cases": 8
+    },
+    "signal": {
+      "directed_fixture": "directed:signal-family-0",
+      "normalization_cells": 12,
+      "normalization_classes": [
+        "above",
+        "at",
+        "below"
+      ]
+    },
+    "timing": {
+      "coverage_cases": 6,
+      "envelopes": 5,
+      "floor_probes": 2
+    }
+  },
+  "ci_subset": {
+    "all_detected": true,
+    "categories": {
+      "delay": [
+        "composed-zoh-then-audio-delay",
+        "one-audio-sample-delay",
+        "one-control-sample-delay"
+      ],
+      "gain": [
+        "gain.db",
+        "gain.dc_offset",
+        "gain.polarity"
+      ],
+      "identity": [
+        "composed-wrong-slot-then-wrong-seed",
+        "identity-batch-shift-128",
+        "positional-parameter-shuffle",
+        "train-test-designation-flip",
+        "wrong-noise-seed",
+        "wrong-noise-slot",
+        "wrong-normalized-physical-conversion"
+      ],
+      "interpolation": [
+        "composed-zoh-then-audio-delay",
+        "dropped-endpoint-coordinate",
+        "zero-order-hold-control"
+      ],
+      "normalization": [
+        "norm.always_on",
+        "norm.off",
+        "norm.wrong_peak",
+        "norm.wrong_reciprocal",
+        "normalization-decision-replacement"
+      ]
+    },
+    "rows": [
+      "composed-wrong-slot-then-wrong-seed",
+      "composed-zoh-then-audio-delay",
+      "dropped-endpoint-coordinate",
+      "gain.db",
+      "gain.dc_offset",
+      "gain.polarity",
+      "identity-batch-shift-128",
+      "norm.always_on",
+      "norm.off",
+      "norm.wrong_peak",
+      "norm.wrong_reciprocal",
+      "normalization-decision-replacement",
+      "one-audio-sample-delay",
+      "one-control-sample-delay",
+      "positional-parameter-shuffle",
+      "train-test-designation-flip",
+      "wrong-noise-seed",
+      "wrong-noise-slot",
+      "wrong-normalized-physical-conversion",
+      "zero-order-hold-control"
+    ],
+    "rule": "deterministic operator-prefix selection over the faults-to-tests rows: a row joins a category when any of its operators starts with one of the category prefixes; categories identity/delay/interpolation/gain/normalization must all be non-empty and every selected row must be detected with an accepted control"
+  },
+  "composition_coverage": {
+    "cross_family_declared_pairs": [],
+    "declared_pairs": [
+      {
+        "left": "bridge.raise_slot",
+        "left_family": "framework",
+        "right": "bridge.scale_slot",
+        "right_family": "framework"
+      },
+      {
+        "left": "bridge.scale_parameter",
+        "left_family": "framework",
+        "right": "bridge.scale_slot",
+        "right_family": "framework"
+      },
+      {
+        "left": "bridge.scale_slot",
+        "left_family": "framework",
+        "right": "bridge.raise_slot",
+        "right_family": "framework"
+      },
+      {
+        "left": "bridge.scale_slot",
+        "left_family": "framework",
+        "right": "bridge.scale_parameter",
+        "right_family": "framework"
+      },
+      {
+        "left": "clip.round_step",
+        "left_family": "signal",
+        "right": "clip.saturation_ceiling",
+        "right_family": "signal"
+      },
+      {
+        "left": "clip.saturation_ceiling",
+        "left_family": "signal",
+        "right": "clip.round_step",
+        "right_family": "signal"
+      },
+      {
+        "left": "corrupt.byte",
+        "left_family": "framework",
+        "right": "drop.receipt",
+        "right_family": "framework"
+      },
+      {
+        "left": "corrupt.byte",
+        "left_family": "framework",
+        "right": "corrupt.digest",
+        "right_family": "framework"
+      },
+      {
+        "left": "corrupt.digest",
+        "left_family": "framework",
+        "right": "corrupt.byte",
+        "right_family": "framework"
+      },
+      {
+        "left": "drop.receipt",
+        "left_family": "framework",
+        "right": "truncate.payload",
+        "right_family": "framework"
+      },
+      {
+        "left": "drop.receipt",
+        "left_family": "framework",
+        "right": "corrupt.byte",
+        "right_family": "framework"
+      },
+      {
+        "left": "envelope.breakpoint_shift",
+        "left_family": "timing",
+        "right": "modulation.route_depth_shift",
+        "right_family": "timing"
+      },
+      {
+        "left": "gain.db",
+        "left_family": "signal",
+        "right": "osc.tuning_shift",
+        "right_family": "signal"
+      },
+      {
+        "left": "interp.zoh_control",
+        "left_family": "timing",
+        "right": "timing.delay_audio_sample",
+        "right_family": "timing"
+      },
+      {
+        "left": "modulation.route_depth_shift",
+        "left_family": "timing",
+        "right": "envelope.breakpoint_shift",
+        "right_family": "timing"
+      },
+      {
+        "left": "noise.seed_shift",
+        "left_family": "identity",
+        "right": "noise.slot_shift",
+        "right_family": "identity"
+      },
+      {
+        "left": "noise.slot_shift",
+        "left_family": "identity",
+        "right": "noise.seed_shift",
+        "right_family": "identity"
+      },
+      {
+        "left": "osc.tuning_shift",
+        "left_family": "signal",
+        "right": "gain.db",
+        "right_family": "signal"
+      },
+      {
+        "left": "param.conversion_substitute",
+        "left_family": "identity",
+        "right": "param.positional_shuffle",
+        "right_family": "identity"
+      },
+      {
+        "left": "param.positional_shuffle",
+        "left_family": "identity",
+        "right": "param.conversion_substitute",
+        "right_family": "identity"
+      },
+      {
+        "left": "timing.delay_audio_sample",
+        "left_family": "timing",
+        "right": "interp.zoh_control",
+        "right_family": "timing"
+      },
+      {
+        "left": "truncate.payload",
+        "left_family": "framework",
+        "right": "drop.receipt",
+        "right_family": "framework"
+      }
+    ],
+    "executed_composed_rows": [
+      {
+        "declared_order_evidence": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+        "family": "identity",
+        "fault": "composed-wrong-slot-then-wrong-seed",
+        "operators": [
+          "noise.slot_shift",
+          "noise.seed_shift"
+        ],
+        "validity": "detected"
+      },
+      {
+        "declared_order_evidence": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+        "family": "identity",
+        "fault": "composed-wrong-slot-then-wrong-seed",
+        "operators": [
+          "noise.slot_shift",
+          "noise.seed_shift"
+        ],
+        "validity": "detected"
+      },
+      {
+        "declared_order_evidence": "declared-order events applied then applied; the composed fault diverges from the expected trace",
+        "family": "timing",
+        "fault": "composed-zoh-then-audio-delay",
+        "operators": [
+          "interp.zoh_control",
+          "timing.delay_audio_sample"
+        ],
+        "validity": "detected"
+      },
+      {
+        "declared_order_evidence": "events=applied,applied failed rows exact_equal,max_abs_error",
+        "family": "signal",
+        "fault": "composed-round-then-saturate",
+        "operators": [
+          "clip.round_step",
+          "clip.saturation_ceiling"
+        ],
+        "validity": "detected"
+      }
+    ],
+    "gate_proofs": {
+      "right_accepted": {
+        "note": "the declared intra-family pair validates at plan time; plan-time validation only, no fault executed here",
+        "operators": [
+          "noise.slot_shift",
+          "noise.seed_shift"
+        ],
+        "plan_id": "mp1-7b2a84318e4526a9b0d48ecf98e65810d132e0b31f6f90c744bf5a35d1c7b603"
+      },
+      "wrong_refused": [
+        {
+          "left": "identity.batch_shift",
+          "refusal": "undeclared combination: identity.batch_shift + timing.drop_sample",
+          "right": "timing.drop_sample"
+        },
+        {
+          "left": "timing.drop_sample",
+          "refusal": "undeclared combination: timing.drop_sample + gain.db",
+          "right": "gain.db"
+        },
+        {
+          "left": "osc.tuning_shift",
+          "refusal": "undeclared combination: osc.tuning_shift + noise.seed_shift",
+          "right": "noise.seed_shift"
+        }
+      ]
+    }
+  },
+  "consumers": {
+    "issue_44": {
+      "consumes": "selected mutations for the blind-listening protocol",
+      "selection_source": "faults_to_tests rows with validity=detected; audio-domain rows carry their declared magnitudes for selection",
+      "status": "not run here"
+    },
+    "issue_48": {
+      "consumes": "this matrix's coverage for the rubric",
+      "selection_source": "tests_to_faults and ci_subset coverage",
+      "status": "not run here"
+    }
+  },
+  "counts": {
+    "ci_subset_rows": 20,
+    "composition_declared_pairs": 22,
+    "composition_executed_rows": 4,
+    "detected_rows": 44,
+    "family_faults": {
+      "identity": {
+        "detected": 14,
+        "faults": 14
+      },
+      "signal": {
+        "detected": 17,
+        "faults": 17
+      },
+      "timing": {
+        "detected": 13,
+        "faults": 13
+      }
+    },
+    "fault_rows": 44,
+    "mandatory_detectors": 24,
+    "missed_faults": 0,
+    "sensitivity_no_verdict": 13
+  },
+  "family_reruns": {
+    "framework": {
+      "counts": {
+        "faults": 7
+      },
+      "status": "PASS",
+      "tool": "tools/qualify_mutations.py --check"
+    },
+    "identity": {
+      "counts": {
+        "faults": 14
+      },
+      "status": "PASS",
+      "tool": "tools/qualify_mutations_identity.py --check"
+    },
+    "runtime-bridge": {
+      "counts": {
+        "attempts": 8,
+        "cases": 6,
+        "faults": 5
+      },
+      "status": "PASS",
+      "tool": "tools/qualify_mutations_runtime.py --check-publication"
+    },
+    "signal": {
+      "counts": {
+        "faults": 17,
+        "operators": 14,
+        "tripped": 17
+      },
+      "status": "PASS",
+      "tool": "tools/qualify_mutations_signal.py --check"
+    },
+    "timing": {
+      "counts": {
+        "faults": 13
+      },
+      "status": "PASS",
+      "tool": "tools/qualify_mutations_timing.py --check"
+    }
+  },
+  "faults_to_tests": [
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "identity-batch-shift-128",
+      "links": {
+        "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+        "envelope_ids": [
+          "mu1-70eeb6211736bbe62688cb6d1f53d0d939a32dec7742f12ace31e9ae34917113",
+          "mu1-c47c597641bddd4500f568440beaf4358980f653a31fea1aa101636f99272821"
+        ],
+        "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 4096,
+            "minimum": 32,
+            "type": "integer",
+            "unit": "batch_size"
+          },
+          "operator": "identity.batch_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "identity.batch_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "train-test-designation-flip",
+      "links": {
+        "downstream": "identity.SoundIdentity.is_train recomputation",
+        "envelope_ids": [
+          "mu1-115db6d8c1fdd18acb2252245644b25c55f6ea29e49033fe6f9e6bdfeb819eb1",
+          "mu1-b93ed31e774264bbc0eb4fd6f8fd33566264f7d3fe04caff983539a11986006b"
+        ],
+        "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "identity.train_test_flip"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "identity.train_test_flip"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "positional-parameter-shuffle",
+      "links": {
+        "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+        "envelope_ids": [
+          "mu1-bcf9aa67b2f4821ec460e6e789636e395871a8f6f586b2131a270096e9424433",
+          "mu1-ccbb7f9198e225b2e4c56b6f9afbc079d2a2e9065f4eb9d44d4502272e722d3d"
+        ],
+        "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "param.positional_shuffle"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "param.positional_shuffle"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-normalized-physical-conversion",
+      "links": {
+        "downstream": "directed.physical_value pinned-conversion recomputation",
+        "envelope_ids": [
+          "mu1-ede06bf0645a955661093a87bb4f8602d542357f7d140d68f5679a4f12d3912e",
+          "mu1-f98a15bd918b27ecc59d1c1aab7df2b55f6afa828ae8aa721be39a50064e99f3"
+        ],
+        "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "param.conversion_substitute"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "param.conversion_substitute"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-noise-slot",
+      "links": {
+        "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+        "envelope_ids": [
+          "mu1-7e31bdbe72614e457b53fbb57e8da774b75431812ba7c4a27e9e80e9247089ad",
+          "mu1-b13b260cb8052042be33775dd3105586c73d6e7b179e5dc43f1f349843a60ebf"
+        ],
+        "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "slot"
+          },
+          "operator": "noise.slot_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.slot_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-noise-seed",
+      "links": {
+        "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+        "envelope_ids": [
+          "mu1-c1af57c6da8b42ae5da56587f3affcfd414443bd6e86d8d9b8b703bcf652d7a2",
+          "mu1-fe478c112fcbb3c831aa3c4a2b986d07a1f092e0bdda61460b26044f82b255fd"
+        ],
+        "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 19,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "seed_offset"
+          },
+          "operator": "noise.seed_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.seed_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "links": {
+        "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+        "envelope_ids": [
+          "mu1-126b5b1a6827deeaf661c6aba81cd0517907d7a944572cffce1c31e8c4cff0d7",
+          "mu1-6d0ac9ddd7847309a595b17befb692e5836e1dc725f5c6274821bb8f8d9565ce"
+        ],
+        "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "slot"
+          },
+          "operator": "noise.slot_shift"
+        },
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 19,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "seed_offset"
+          },
+          "operator": "noise.seed_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.slot_shift",
+        "noise.seed_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "identity-batch-shift-128",
+      "links": {
+        "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+        "envelope_ids": [
+          "mu1-70eeb6211736bbe62688cb6d1f53d0d939a32dec7742f12ace31e9ae34917113",
+          "mu1-c47c597641bddd4500f568440beaf4358980f653a31fea1aa101636f99272821"
+        ],
+        "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 4096,
+            "minimum": 32,
+            "type": "integer",
+            "unit": "batch_size"
+          },
+          "operator": "identity.batch_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "identity.batch_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "train-test-designation-flip",
+      "links": {
+        "downstream": "identity.SoundIdentity.is_train recomputation",
+        "envelope_ids": [
+          "mu1-115db6d8c1fdd18acb2252245644b25c55f6ea29e49033fe6f9e6bdfeb819eb1",
+          "mu1-b93ed31e774264bbc0eb4fd6f8fd33566264f7d3fe04caff983539a11986006b"
+        ],
+        "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "identity.train_test_flip"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "identity.train_test_flip"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "positional-parameter-shuffle",
+      "links": {
+        "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+        "envelope_ids": [
+          "mu1-bcf9aa67b2f4821ec460e6e789636e395871a8f6f586b2131a270096e9424433",
+          "mu1-ccbb7f9198e225b2e4c56b6f9afbc079d2a2e9065f4eb9d44d4502272e722d3d"
+        ],
+        "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "param.positional_shuffle"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "param.positional_shuffle"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-normalized-physical-conversion",
+      "links": {
+        "downstream": "directed.physical_value pinned-conversion recomputation",
+        "envelope_ids": [
+          "mu1-ede06bf0645a955661093a87bb4f8602d542357f7d140d68f5679a4f12d3912e",
+          "mu1-f98a15bd918b27ecc59d1c1aab7df2b55f6afa828ae8aa721be39a50064e99f3"
+        ],
+        "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "param.conversion_substitute"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "param.conversion_substitute"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-noise-slot",
+      "links": {
+        "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+        "envelope_ids": [
+          "mu1-7e31bdbe72614e457b53fbb57e8da774b75431812ba7c4a27e9e80e9247089ad",
+          "mu1-b13b260cb8052042be33775dd3105586c73d6e7b179e5dc43f1f349843a60ebf"
+        ],
+        "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "slot"
+          },
+          "operator": "noise.slot_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.slot_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "wrong-noise-seed",
+      "links": {
+        "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+        "envelope_ids": [
+          "mu1-c1af57c6da8b42ae5da56587f3affcfd414443bd6e86d8d9b8b703bcf652d7a2",
+          "mu1-fe478c112fcbb3c831aa3c4a2b986d07a1f092e0bdda61460b26044f82b255fd"
+        ],
+        "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 19,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "seed_offset"
+          },
+          "operator": "noise.seed_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.seed_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed-test",
+          "directed-train"
+        ],
+        "representative_random_cases": 48
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+        "family_controls_passed": 13
+      },
+      "family": "identity",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "links": {
+        "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+        "envelope_ids": [
+          "mu1-126b5b1a6827deeaf661c6aba81cd0517907d7a944572cffce1c31e8c4cff0d7",
+          "mu1-6d0ac9ddd7847309a595b17befb692e5836e1dc725f5c6274821bb8f8d9565ce"
+        ],
+        "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+        "publication": "sim/reference/mutation-identity-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 31,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "slot"
+          },
+          "operator": "noise.slot_shift"
+        },
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 19,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "seed_offset"
+          },
+          "operator": "noise.seed_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "noise.slot_shift",
+        "noise.seed_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:adsr-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "attack-breakpoint-shift-plus2",
+      "links": {
+        "downstream": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
+        "envelope_ids": [
+          "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3"
+        ],
+        "observed_refusal": "attack_end measured near 10.0 against declared truth 8.0 (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 8,
+            "minimum": -8,
+            "type": "number",
+            "unit": "control_sample"
+          },
+          "operator": "envelope.breakpoint_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [],
+        "note": "executed on the family's directed lanes without a dedicated per-case mu1- envelope; the family fault-matrix row and its paired detector rows are the raw evidence"
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "one-control-sample-delay",
+      "links": {
+        "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
+        "envelope_ids": [],
+        "observed_refusal": "delayed lane diverges from the unpaired expected lane (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "sample"
+          },
+          "operator": "timing.delay_control_sample"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "timing.delay_control_sample"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [],
+        "note": "executed on the family's directed lanes without a dedicated per-case mu1- envelope; the family fault-matrix row and its paired detector rows are the raw evidence"
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "missing-sample",
+      "links": {
+        "downstream": "mutations_timing.frame_preflight + compare_paired frame gate",
+        "envelope_ids": [],
+        "observed_refusal": "declared frame preflight refusal: analytic.adsr declares 240 samples at 441.0 Hz, observed 239; compare_paired refuses the frame: frame_mismatch",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "sample"
+          },
+          "operator": "timing.drop_sample"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "timing.drop_sample"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [],
+        "note": "executed on the family's directed lanes without a dedicated per-case mu1- envelope; the family fault-matrix row and its paired detector rows are the raw evidence"
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "duplicated-sample",
+      "links": {
+        "downstream": "mutations_timing.frame_preflight + compare_paired frame gate",
+        "envelope_ids": [],
+        "observed_refusal": "declared frame preflight refusal: analytic.adsr declares 240 samples at 441.0 Hz, observed 241; compare_paired refuses the frame: frame_mismatch",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "sample"
+          },
+          "operator": "timing.duplicate_sample"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "timing.duplicate_sample"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:lfo-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "lfo-rate-shift-plus-half-hz",
+      "links": {
+        "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+        "envelope_ids": [
+          "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5"
+        ],
+        "observed_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 20,
+            "minimum": -20,
+            "type": "number",
+            "unit": "hz"
+          },
+          "operator": "modulation.lfo_rate_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "modulation.lfo_rate_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:lfo-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "lfo-depth-shift-plus-0.1",
+      "links": {
+        "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+        "envelope_ids": [
+          "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5"
+        ],
+        "observed_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 2,
+            "minimum": -1,
+            "type": "number",
+            "unit": "native"
+          },
+          "operator": "modulation.lfo_depth_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "modulation.lfo_depth_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:route-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "route-sign-flip",
+      "links": {
+        "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+        "envelope_ids": [
+          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+        ],
+        "observed_refusal": "gain.vco_1_pitch sign flipped (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "modulation.route_sign_flip"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "modulation.route_sign_flip"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:route-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "route-depth-shift-plus25",
+      "links": {
+        "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+        "envelope_ids": [
+          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+        ],
+        "observed_refusal": "gain.vco_1_amp depth scaled (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number",
+            "unit": "ratio"
+          },
+          "operator": "modulation.route_depth_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "modulation.route_depth_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:route-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "route-destination-swap",
+      "links": {
+        "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+        "envelope_ids": [
+          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+        ],
+        "observed_refusal": "each swapped destination carries the other's measured gain; expected route labels unchanged",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "modulation.route_swap"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "modulation.route_swap"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:upsample-audio"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "zero-order-hold-control",
+      "links": {
+        "downstream": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "observed_refusal": "ZOH re-derivation diverges from the landed align_corners=False interpolation (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "interp.zoh_control"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "interp.zoh_control"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:upsample-audio"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "dropped-endpoint-coordinate",
+      "links": {
+        "downstream": "trace_capture.check_endpoint_bytes + paired exactness row",
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "observed_refusal": "trace_capture.check_endpoint_bytes: endpoint loss: upsampled first/last sample bytes differ from control",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "interp.off_endpoint"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "interp.off_endpoint"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:upsample-audio"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "one-audio-sample-delay",
+      "links": {
+        "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "observed_refusal": "one-sample audio delay stays visible in the unaligned row (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "sample"
+          },
+          "operator": "timing.delay_audio_sample"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "timing.delay_audio_sample"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:upsample-audio"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared-order applied events; composed fault FAIL on the unaligned row",
+        "family_controls_passed": 11
+      },
+      "family": "timing",
+      "fault": "composed-zoh-then-audio-delay",
+      "links": {
+        "downstream": "in-band declared-order events + paired exactness row",
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "observed_refusal": "declared-order events applied then applied; the composed fault diverges from the expected trace",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "interp.zoh_control"
+        },
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 1,
+            "type": "integer",
+            "unit": "sample"
+          },
+          "operator": "timing.delay_audio_sample"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "interp.zoh_control",
+        "timing.delay_audio_sample"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "gain.db",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.10981661081314087, affected_samples=176399)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 60,
+            "minimum": -60,
+            "type": "number",
+            "unit": "dB"
+          },
+          "operator": "gain.db"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "gain.db"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "gain.polarity",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.7999995946884155, affected_samples=176399)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "gain.polarity"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "gain.polarity"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "gain.dc_offset",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=0.050000011920928955, affected_samples=176400)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 2,
+            "minimum": -2,
+            "type": "number",
+            "unit": "amplitude"
+          },
+          "operator": "gain.dc_offset"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "gain.dc_offset"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "clip.round_step",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.003903329372406006, affected_samples=176399)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude_step"
+          },
+          "operator": "clip.round_step"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "clip.round_step"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "clip.saturation_ceiling",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.4576394557952881, affected_samples=75840)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 4,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude"
+          },
+          "operator": "clip.saturation_ceiling"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "clip.saturation_ceiling"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.mode_substitute",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.045294627547264, affected_samples=None)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "osc.mode_substitute"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.mode_substitute"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.shape_scale",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.3766823038458824, affected_samples=None)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "number",
+            "unit": "ratio"
+          },
+          "operator": "osc.shape_scale"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.shape_scale"
+      ],
+      "seam": "voice.parameter_value",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.tuning_shift",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=1.7999609112739563, affected_samples=None)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 24,
+            "minimum": -24,
+            "type": "number",
+            "unit": "semitone"
+          },
+          "operator": "osc.tuning_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.tuning_shift"
+      ],
+      "seam": "voice.parameter_value",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.phase_offset",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.6888300776481628, affected_samples=None)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 7,
+            "minimum": -7,
+            "type": "number",
+            "unit": "radian"
+          },
+          "operator": "osc.phase_offset"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.phase_offset"
+      ],
+      "seam": "voice.parameter_value",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.tuning_shift (property)",
+      "links": {
+        "downstream": "periodic.cents analytic property row (identity preparation, no normalization)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "property deviation cents observed=100.00000000000071 declared_offset_match=True",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 24,
+            "minimum": -24,
+            "type": "number",
+            "unit": "semitone"
+          },
+          "operator": "osc.tuning_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.tuning_shift"
+      ],
+      "seam": "voice.parameter_value",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "osc.phase_offset (property)",
+      "links": {
+        "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "property deviation phase_rad observed=0.7853981633974669 declared_offset_match=True",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 7,
+            "minimum": -7,
+            "type": "number",
+            "unit": "radian"
+          },
+          "operator": "osc.phase_offset"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "osc.phase_offset"
+      ],
+      "seam": "voice.parameter_value",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ],
+        "normalization_classes": [
+          "above",
+          "at",
+          "below"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "norm.always_on",
+      "links": {
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "below-one fixture: detected, failed rows decision_match,rule_error_max",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "norm.always_on"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "norm.always_on"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ],
+        "normalization_classes": [
+          "above",
+          "at",
+          "below"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "norm.off",
+      "links": {
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "norm.off"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "norm.off"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ],
+        "normalization_classes": [
+          "above",
+          "at",
+          "below"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on rule_error_max with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "norm.wrong_peak",
+      "links": {
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "norm.wrong_peak"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "norm.wrong_peak"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ],
+        "normalization_classes": [
+          "above",
+          "at",
+          "below"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on reciprocal_error with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "norm.wrong_reciprocal",
+      "links": {
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "above-one fixture: detected, failed rows reciprocal_error",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "norm.wrong_reciprocal"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "norm.wrong_reciprocal"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "Producer handoff required",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "normalization-decision-replacement",
+      "links": {
+        "downstream": "mutations.validate_plan (fail-closed at plan time)",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "seam is not a writable injection seam (producer handoff required): voice.normalization_decision \u2014 The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "type": "null",
+            "unit": "none"
+          },
+          "operator": "norm.always_on"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "norm.always_on"
+      ],
+      "seam": "voice.normalization_decision",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control",
+        "family_controls_passed": 7
+      },
+      "family": "signal",
+      "fault": "composed-round-then-saturate",
+      "links": {
+        "downstream": "paired exactness contract rows over the composed ordered application",
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "observed_refusal": "events=applied,applied failed rows exact_equal,max_abs_error",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude_step"
+          },
+          "operator": "clip.round_step"
+        },
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 4,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude"
+          },
+          "operator": "clip.saturation_ceiling"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "clip.round_step",
+        "clip.saturation_ceiling"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    }
+  ],
+  "inputs": {
+    "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
+    "sim/reference/mutation-signal-v1.json": "a7b23cfa53a806a12ac01bc0f32abc27f379ef435a9b27b4b28b12ab6af58022",
+    "sim/reference/mutation-timing-v1.json": "3c29297da3f739c395f49d17986aee0f9f0296649f91c24ceb60728281d8291d",
+    "spec/MUTATIONS.md": "e98682b28da9fa33df34b161631a1c2b069d15b752c35194774f05d3273c7c8d",
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
+    "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
+    "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
+    "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
+    "src/torchsynth_voice/mutations_signal.py": "170691d10b75f3adacde54e1f5236f380bbe7c9a6999c6c273c00de444c8bed9",
+    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "tools/qualify_mutations_identity.py": "0d814cd0852dede368c053f6f1395035cef9b59fb31f9e9b0df9023a916bcbf7",
+    "tools/qualify_mutations_signal.py": "02ec94fb51792d948605222022931f0606a65f17ec66448cd5ce442446c4188e",
+    "tools/qualify_mutations_timing.py": "206102704a87210e42c9123f236ee8cc055dc2f72a6a26eb0d5b1717aece4a9f"
+  },
+  "kind": "mutation-matrix-v1",
+  "localization_topology": {
+    "row_seam_matches_registry": true,
+    "sibling_invariance_controls": {
+      "identity": true,
+      "timing": true
+    },
+    "signal_trace_records": {
+      "osc.mode_substitute": {
+        "downstream_mix_changed": true,
+        "sibling_traces_unchanged": [
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ],
+        "source_traces_changed": [
+          "vco_1.post_vca"
+        ],
+        "topology_match": true
+      },
+      "osc.phase_offset": {
+        "downstream_mix_changed": true,
+        "sibling_traces_unchanged": [
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ],
+        "source_traces_changed": [
+          "vco_1.post_vca"
+        ],
+        "topology_match": true
+      },
+      "osc.shape_scale": {
+        "downstream_mix_changed": true,
+        "sibling_traces_unchanged": [
+          "vco_1.post_vca",
+          "noise.post_vca"
+        ],
+        "source_traces_changed": [
+          "vco_2.post_vca"
+        ],
+        "topology_match": true
+      },
+      "osc.tuning_shift": {
+        "downstream_mix_changed": true,
+        "sibling_traces_unchanged": [
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ],
+        "source_traces_changed": [
+          "vco_1.post_vca"
+        ],
+        "topology_match": true
+      }
+    }
+  },
+  "mutation_contract": "mutation-v1",
+  "not_run": [
+    "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed runtime bridge stays the #30 test-only proofs)",
+    "holdout partitions (sealed; directed development fixtures only and the case_registry access gate stays untouched)",
+    "#44 blind-listening protocol execution (consumes selected mutations from this matrix; the selection contract is declared, not exercised)",
+    "#48 rubric qualification (consumes this matrix's coverage; the coverage rows are published, the rubric verdict is not)",
+    "numeric-format selection or ratification (declared fault magnitudes are mutation parameters; DR-0008 stays Proposed)",
+    "cross-family composed fault execution (no cross-family pair is declared composable; the executed evidence is the plan-time refusal of undeclared cross-family compositions)"
+  ],
+  "registry": {
+    "families": {
+      "framework": [
+        "bridge.raise_slot",
+        "bridge.scale_parameter",
+        "bridge.scale_slot",
+        "bridge.sham_slot",
+        "corrupt.byte",
+        "corrupt.digest",
+        "crash.producer",
+        "drop.receipt",
+        "noop.sham",
+        "spoof.partition",
+        "swap.capture",
+        "truncate.payload"
+      ],
+      "identity": [
+        "identity.batch_shift",
+        "identity.train_test_flip",
+        "noise.seed_shift",
+        "noise.slot_shift",
+        "param.conversion_substitute",
+        "param.positional_shuffle"
+      ],
+      "signal": [
+        "clip.round_step",
+        "clip.saturation_ceiling",
+        "gain.db",
+        "gain.dc_offset",
+        "gain.polarity",
+        "norm.always_on",
+        "norm.off",
+        "norm.wrong_peak",
+        "norm.wrong_reciprocal",
+        "osc.mode_substitute",
+        "osc.phase_offset",
+        "osc.shape_scale",
+        "osc.tuning_shift",
+        "signal.sham"
+      ],
+      "timing": [
+        "envelope.breakpoint_shift",
+        "interp.off_endpoint",
+        "interp.zoh_control",
+        "modulation.lfo_depth_shift",
+        "modulation.lfo_rate_shift",
+        "modulation.route_depth_shift",
+        "modulation.route_sign_flip",
+        "modulation.route_swap",
+        "timing.delay_audio_sample",
+        "timing.delay_control_sample",
+        "timing.drop_sample",
+        "timing.duplicate_sample"
+      ]
+    },
+    "family_operators": 32,
+    "note": "framework operators are the #30 apparatus proofs and bridge.* are #30 test-only voice-runtime proofs; the matrix rows are the #31/#32/#33 family faults only",
+    "total_registered_operators": 44
+  },
+  "schema_version": 1,
+  "score_policy": "no scalar mutation score replaces rows; the bidirectional rows above are the evidence and all counts are navigation aids",
+  "sensitivity": {
+    "counts": {
+      "detected_inside_applicability": 7,
+      "sensitivity_no_verdict": 13
+    },
+    "policy": "below-floor mutations, degenerate coverage rows and out-of-applicability normalization cells are labeled sensitivity-NO VERDICT; they are never counted as passes and never as detected faults",
+    "signal_normalization_cells": [
+      {
+        "fault": "norm.always_on",
+        "fixture_class": "above",
+        "peak_target": 1.0000001192092896,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.off",
+        "fixture_class": "above",
+        "peak_target": 1.0000001192092896,
+        "status": "detected",
+        "validity": "detected"
+      },
+      {
+        "fault": "norm.wrong_peak",
+        "fixture_class": "above",
+        "peak_target": 1.0000001192092896,
+        "status": "detected",
+        "validity": "detected"
+      },
+      {
+        "fault": "norm.wrong_reciprocal",
+        "fixture_class": "above",
+        "peak_target": 1.0000001192092896,
+        "status": "detected",
+        "validity": "detected"
+      },
+      {
+        "fault": "norm.always_on",
+        "fixture_class": "below",
+        "peak_target": 0.9999999403953552,
+        "status": "detected",
+        "validity": "detected"
+      },
+      {
+        "fault": "norm.off",
+        "fixture_class": "below",
+        "peak_target": 0.9999999403953552,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.wrong_peak",
+        "fixture_class": "below",
+        "peak_target": 0.9999999403953552,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.wrong_reciprocal",
+        "fixture_class": "below",
+        "peak_target": 0.9999999403953552,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.always_on",
+        "fixture_class": "at",
+        "peak_target": 1.0,
+        "status": "detected",
+        "validity": "detected"
+      },
+      {
+        "fault": "norm.off",
+        "fixture_class": "at",
+        "peak_target": 1.0,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.wrong_peak",
+        "fixture_class": "at",
+        "peak_target": 1.0,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "fault": "norm.wrong_reciprocal",
+        "fixture_class": "at",
+        "peak_target": 1.0,
+        "status": "ineffective_not_detected",
+        "validity": "sensitivity-NO VERDICT"
+      }
+    ],
+    "timing_coverage_rows": [
+      {
+        "coverage_case": "attack-one-sample",
+        "domain": "short-degenerate-envelope",
+        "property": "attack_end",
+        "validity": "sensitivity-NO VERDICT",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "silent-sustain",
+        "domain": "short-degenerate-envelope",
+        "property": "sustain_amplitude",
+        "validity": "sensitivity-NO VERDICT",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "flat-sustain",
+        "domain": "short-degenerate-envelope",
+        "property": "decay_end",
+        "validity": "sensitivity-NO VERDICT",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "zero-release",
+        "domain": "short-degenerate-envelope",
+        "property": "release_end",
+        "validity": "sensitivity-NO VERDICT",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "high-rate-lfo-20hz",
+        "domain": "high-rate-control",
+        "property": "frequency_hz",
+        "validity": "sensitivity-NO VERDICT",
+        "verdict": "PASS"
+      },
+      {
+        "coverage_case": "one-audio-sample-delay-visibility",
+        "domain": "high-rate-control",
+        "property": "exact_equal",
+        "validity": "detected",
+        "verdict": "FAIL"
+      }
+    ],
+    "timing_floor_probes": [
+      {
+        "detected": true,
+        "magnitude_control_samples": 0.03,
+        "operator": "envelope.breakpoint_shift",
+        "probe": "attack-breakpoint-shift-0.03",
+        "qualified_resolution_control_samples": 0.02,
+        "validity": "detected"
+      },
+      {
+        "detected": false,
+        "magnitude_control_samples": 0.005,
+        "operator": "envelope.breakpoint_shift",
+        "probe": "attack-breakpoint-shift-0.005",
+        "qualified_resolution_control_samples": 0.02,
+        "validity": "sensitivity-NO VERDICT"
+      }
+    ]
+  },
+  "status": "PASS",
+  "tests_to_faults": [
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "directed.physical_value pinned-conversion recomputation",
+      "expected_faults": [
+        "wrong-normalized-physical-conversion",
+        "wrong-normalized-physical-conversion"
+      ],
+      "expected_refusals": [
+        "first wrong canonical parameter named at the provenance-ordered parameter gate"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-ede06bf0645a955661093a87bb4f8602d542357f7d140d68f5679a4f12d3912e",
+          "mu1-f98a15bd918b27ecc59d1c1aab7df2b55f6afa828ae8aa721be39a50064e99f3"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+      "expected_faults": [
+        "positional-parameter-shuffle",
+        "positional-parameter-shuffle"
+      ],
+      "expected_refusals": [
+        "first wrong canonical parameter named at the provenance-ordered parameter gate"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-bcf9aa67b2f4821ec460e6e789636e395871a8f6f586b2131a270096e9424433",
+          "mu1-ccbb7f9198e225b2e4c56b6f9afbc079d2a2e9065f4eb9d44d4502272e722d3d"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+      "expected_faults": [
+        "wrong-noise-seed",
+        "wrong-noise-seed"
+      ],
+      "expected_refusals": [
+        "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-c1af57c6da8b42ae5da56587f3affcfd414443bd6e86d8d9b8b703bcf652d7a2",
+          "mu1-fe478c112fcbb3c831aa3c4a2b986d07a1f092e0bdda61460b26044f82b255fd"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "identity.SoundIdentity.is_train recomputation",
+      "expected_faults": [
+        "train-test-designation-flip",
+        "train-test-designation-flip"
+      ],
+      "expected_refusals": [
+        "is_train designation mismatch at the provenance gate before perceptual rows"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-115db6d8c1fdd18acb2252245644b25c55f6ea29e49033fe6f9e6bdfeb819eb1",
+          "mu1-b93ed31e774264bbc0eb4fd6f8fd33566264f7d3fe04caff983539a11986006b"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+      "expected_faults": [
+        "identity-batch-shift-128",
+        "identity-batch-shift-128"
+      ],
+      "expected_refusals": [
+        "provenance mismatch at render_batch_index before perceptual rows"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-70eeb6211736bbe62688cb6d1f53d0d939a32dec7742f12ace31e9ae34917113",
+          "mu1-c47c597641bddd4500f568440beaf4358980f653a31fea1aa101636f99272821"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "in-band declared-order events + spectral_estimators.noise_identity",
+      "expected_faults": [
+        "composed-wrong-slot-then-wrong-seed",
+        "composed-wrong-slot-then-wrong-seed"
+      ],
+      "expected_refusals": [
+        "declared-order applied events; composed stream fails noise.identity while statistics stay plausible"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-126b5b1a6827deeaf661c6aba81cd0517907d7a944572cffce1c31e8c4cff0d7",
+          "mu1-6d0ac9ddd7847309a595b17befb692e5836e1dc725f5c6274821bb8f8d9565ce"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+      "expected_faults": [
+        "wrong-noise-slot",
+        "wrong-noise-slot"
+      ],
+      "expected_refusals": [
+        "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 13,
+        "statistical_noise_rows_plausible_under_faults": 24
+      },
+      "family": "identity",
+      "links": {
+        "envelope_ids": [
+          "mu1-7e31bdbe72614e457b53fbb57e8da774b75431812ba7c4a27e9e80e9247089ad",
+          "mu1-b13b260cb8052042be33775dd3105586c73d6e7b179e5dc43f1f349843a60ebf"
+        ],
+        "publications": [
+          "sim/reference/mutation-identity-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "mutations.validate_plan (fail-closed at plan time)",
+      "expected_faults": [
+        "normalization-decision-replacement"
+      ],
+      "expected_refusals": [
+        "Producer handoff required"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_faults": [
+        "clip.round_step",
+        "clip.saturation_ceiling",
+        "gain.db",
+        "gain.dc_offset",
+        "gain.polarity",
+        "osc.mode_substitute",
+        "osc.phase_offset",
+        "osc.shape_scale",
+        "osc.tuning_shift"
+      ],
+      "expected_refusals": [
+        "FAIL on max_abs_error and exact_equal with PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 9,
+        "wrong_observed": 9
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "paired exactness contract rows over the composed ordered application",
+      "expected_faults": [
+        "composed-round-then-saturate"
+      ],
+      "expected_refusals": [
+        "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "periodic.cents analytic property row (identity preparation, no normalization)",
+      "expected_faults": [
+        "osc.tuning_shift (property)"
+      ],
+      "expected_refusals": [
+        "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
+      "expected_faults": [
+        "osc.phase_offset (property)"
+      ],
+      "expected_refusals": [
+        "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
+      "expected_faults": [
+        "norm.wrong_reciprocal"
+      ],
+      "expected_refusals": [
+        "FAIL on reciprocal_error with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
+      "expected_faults": [
+        "norm.off"
+      ],
+      "expected_refusals": [
+        "FAIL on decision_match,rule_error_max with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
+      "expected_faults": [
+        "norm.always_on"
+      ],
+      "expected_refusals": [
+        "FAIL on decision_match,rule_error_max with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
+      "expected_faults": [
+        "norm.wrong_peak"
+      ],
+      "expected_refusals": [
+        "FAIL on rule_error_max with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 7,
+        "tolerant_optional_rows_clean": 9
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
+      "expected_faults": [
+        "attack-breakpoint-shift-plus2"
+      ],
+      "expected_refusals": [
+        "breakpoint coordinate FAIL beyond the 0.02 control-sample bound"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+      "expected_faults": [
+        "route-depth-shift-plus25",
+        "route-destination-swap",
+        "route-sign-flip"
+      ],
+      "expected_refusals": [
+        "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
+        "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
+        "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 3,
+        "wrong_observed": 3
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "in-band declared-order events + paired exactness row",
+      "expected_faults": [
+        "composed-zoh-then-audio-delay"
+      ],
+      "expected_refusals": [
+        "declared-order applied events; composed fault FAIL on the unaligned row"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "mutations_timing.frame_preflight + compare_paired frame gate",
+      "expected_faults": [
+        "duplicated-sample",
+        "missing-sample"
+      ],
+      "expected_refusals": [
+        "declared frame preflight refusal before scoring + landed frame_mismatch refusal"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "paired_metrics time-locked primary row (analytic exactness rubric)",
+      "expected_faults": [
+        "one-audio-sample-delay",
+        "one-control-sample-delay"
+      ],
+      "expected_refusals": [
+        "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
+        "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
+      "expected_faults": [
+        "zero-order-hold-control"
+      ],
+      "expected_refusals": [
+        "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+      "expected_faults": [
+        "lfo-depth-shift-plus-0.1",
+        "lfo-rate-shift-plus-half-hz"
+      ],
+      "expected_refusals": [
+        "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
+        "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5",
+          "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 2,
+        "wrong_observed": 2
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "trace_capture.check_endpoint_bytes + paired exactness row",
+      "expected_faults": [
+        "dropped-endpoint-coordinate"
+      ],
+      "expected_refusals": [
+        "endpoint loss refusal: upsampled first/last sample bytes differ from the control column"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 13,
+        "controls_passed": 11
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    }
+  ]
+}

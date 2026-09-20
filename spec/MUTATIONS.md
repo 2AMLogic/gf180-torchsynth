@@ -178,11 +178,60 @@ byte-identical clean rerun; and the normalization decision seam must refuse
 at plan time naming the producer handoff. `--check-publication` revalidates
 the committed publication with stdlib only.
 
+## Bidirectional coverage matrix (#34)
+
+`tools/qualify_mutations_matrix.py` composes the three landed family
+publications into the single bidirectional mutation-coverage matrix and
+writes the bounded publication
+`sim/reference/mutation-matrix-v1.json`; `tests/test_mutations_matrix.py`
+binds the committed publication to the landed registry, and the
+`matrix-numerical` job of `.github/workflows/mutations.yml` executes the
+composition and `--check` under the locked metrics extra (four family rows
+— two timing periodic, two signal periodic property — need NumPy for their
+full trips; a missing dependency fails the rerun, never a skip).
+
+The matrix is rerun, never grandfathered: default mode re-executes the
+landed verification entry points first (`qualify_mutations.py --check`,
+`qualify_mutations_runtime.py --check-publication`, and each family
+runner's `--check`, which re-trips every fault against a fresh in-memory
+rerun), and only composes the publication after all of them pass. The
+runner itself injects no fault; its own executed evidence is plan-time
+only — three undeclared cross-family compositions must refuse with
+``undeclared combination`` while a declared intra-family pair validates
+(wrong-then-right for the composition gate itself). No cross-family
+composition pair is declared, and editing a family module to declare one
+requires that family's own requalification first.
+
+The publication carries both directions. `faults_to_tests`: one row per
+executed fault (44 rows across the families, including the three executed
+intra-family composed rows) with its registered operator(s), declared
+seam, typed magnitude domain bound into the ``mp1-`` plan identity,
+applicability (the directed cases and family surface it ran over),
+validity, false-positive evidence (accepted clean control plus the
+family's statistical-plausibility and tolerant-optional guards), missed
+faults (must be empty), and raw row links (family publication, downstream
+binding, observed refusal, ``mu1-`` envelope ids). `tests_to_faults`: one
+row per mandatory detector (grouped by downstream binding) naming the
+faults it must catch with wrong-then-right counts — the expected failing
+control observed, then the clean case observed — and its baseline status.
+Below-floor probes, degenerate coverage rows and out-of-applicability
+normalization cells are labeled ``sensitivity-NO VERDICT`` and are never
+counted as passes or detected faults; required faults caught by a
+plan-time fail-closed refusal are recorded against the non-writable
+catalog seam. The deterministic CI subset selects rows by operator
+prefix over five categories — identity, delay, interpolation, gain and
+normalization — and every selected row must be detected with an accepted
+control. Counts are navigation aids only: no scalar mutation score
+replaces the rows. #44 consumes selected mutations from this matrix and
+#48 consumes its coverage; both consumption contracts are declared in the
+publication, neither is executed by it, and holdout stays sealed.
+
 ## Not run here
 
 The #31/#32/#33 fault-operator families (they register through this public
 API in their own issues; `bridge.*` operators are test-only bridge proofs,
-never family operators) and #34's matrix publication. Injection at
+never family operators) and #34's matrix publication, which has its own
+section above. Injection at
 `voice.normalization_decision` is not executable without the named producer
 handoff; its fail-closed refusal is executed host-side instead. Synthetic
 apparatus proofs never count as runtime evidence, and no detector-family

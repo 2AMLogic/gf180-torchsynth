@@ -20,9 +20,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Compile mutation surfaces
-        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py
+        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py tools/qualify_mutations_matrix.py tests/test_mutations_matrix.py
       - name: Test fault-injection seam contract on the apparatus harness
         run: python -m unittest discover -s tests -p test_mutations.py -v
+      - name: Test the committed bidirectional matrix publication structure
+        run: python -m unittest discover -s tests -p test_mutations_matrix.py -v
       - name: Qualify controls and fault matrix, then check the committed publication
         run: |
           python tools/qualify_mutations.py
@@ -76,3 +78,31 @@ jobs:
         run: uv run --no-sync python -c "import numpy"
       - name: Run the signal family tests with NumPy
         run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_signal.py -v
+
+  matrix-numerical:
+    # The #34 matrix reruns the landed family publications, and four family
+    # rows (two timing periodic, two signal periodic property) need NumPy for
+    # their full trips; a missing dependency fails the reruns, never a skip.
+    # This job executes the bidirectional matrix composition and checks the
+    # committed publication with the locked metrics extra and single-threaded
+    # BLAS, mirroring the landed -numerical jobs.
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+      - name: Install locked numerical environment
+        run: uv sync --locked --extra metrics --python '3.13'
+      - name: Require NumPy (a missing dependency must not become a skip)
+        run: uv run --no-sync python -c "import numpy"
+      - name: Compose the bidirectional matrix, then check the committed publication
+        run: |
+          uv run --no-sync python tools/qualify_mutations_matrix.py
+          uv run --no-sync python tools/qualify_mutations_matrix.py --check
