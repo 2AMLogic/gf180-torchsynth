@@ -30,6 +30,7 @@ import argparse
 import json
 import math
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -739,6 +740,91 @@ COMPARABLE_FIELDS = (
     "not_run",
 )
 
+_PROPERTY_REFUSAL_PREFIX = "property deviation "
+_PROPERTY_REFUSAL_SUFFIX = " declared_offset_match=True"
+_TRIP_THRESHOLD = 0.5
+
+
+def _property_refusal_declared(committed_row, row) -> bool:
+    """The periodic deviation is a NumPy binary64 estimator output whose
+    last-ulp repr is ISA dependent; the declared guarantees (row identity,
+    trip verdict, offset agreement, threshold crossing) are not. Landed
+    #135 declared-guarantee pattern, mirrored here from the test surface so
+    the tool check can arbitrate on the numerical hosts too."""
+    if {
+        name: row[name] for name in row if name != "observed_refusal"
+    } != {
+        name: committed_row[name]
+        for name in committed_row
+        if name != "observed_refusal"
+    }:
+        return False
+    refusal = row["observed_refusal"]
+    if not (
+        refusal.startswith(_PROPERTY_REFUSAL_PREFIX)
+        and refusal.endswith(_PROPERTY_REFUSAL_SUFFIX)
+    ):
+        return False
+    try:
+        deviation = float(
+            refusal.split(" observed=", 1)[1].rsplit(" declared_offset_match", 1)[0]
+        )
+    except ValueError:
+        return False
+    return math.isfinite(deviation) and abs(deviation) > _TRIP_THRESHOLD
+
+
+def _matrix_rows_declared(committed_rows, rows) -> bool:
+    if len(committed_rows) != len(rows):
+        return False
+    for committed_row, row in zip(committed_rows, rows):
+        if row["fault"].endswith(" (property)"):
+            if not _property_refusal_declared(committed_row, row):
+                return False
+        elif committed_row != row:
+            return False
+    return True
+
+
+def _optional_observations_declared(committed, fresh) -> bool:
+    """The band rms values are NumPy-FFT demonstration observations
+    (declared tolerant, never a perceptual qualification); their last-ulp
+    rendering is platform dependent while the declared verdict structure is
+    not."""
+    if sorted(committed) != sorted(fresh):
+        return False
+    declared_fields = ("metric", "tolerance", "optional", "tolerant")
+    for fault, row in fresh.items():
+        declared = committed.get(fault)
+        if declared is None:
+            return False
+        if [row.get(name) for name in declared_fields] != [
+            declared.get(name) for name in declared_fields
+        ]:
+            return False
+        if not (math.isfinite(row["observed"]) and row["observed"] <= row["tolerance"]):
+            return False
+    return True
+
+
+def _envelope_declared(committed, fresh) -> bool:
+    committed_envelope = dict(committed)
+    fresh_envelope = dict(fresh)
+    committed_envelope.pop("fault_matrix")
+    fresh_envelope.pop("fault_matrix")
+    committed_envelope.pop("envelope_id")
+    fresh_envelope.pop("envelope_id")
+    # envelope_id digests the matrix renderings above and is therefore
+    # platform dependent; its declared identity format is asserted instead.
+    if not re.fullmatch(r"mu1-[0-9a-f]{64}", fresh["envelope_id"]):
+        return False
+    return (
+        committed_envelope == fresh_envelope
+        and _matrix_rows_declared(
+            committed["fault_matrix"], fresh["fault_matrix"]
+        )
+    )
+
 
 def check_publication():
     if not PUBLICATION_PATH.exists():
@@ -749,7 +835,21 @@ def check_publication():
         raise SystemExit(2)
     committed = json.loads(PUBLICATION_PATH.read_bytes())
     fresh = build_publication()
-    failures = [field for field in COMPARABLE_FIELDS if committed.get(field) != fresh[field]]
+    failures = []
+    for field in COMPARABLE_FIELDS:
+        if field == "fault_matrix":
+            if not _matrix_rows_declared(committed.get(field, []), fresh[field]):
+                failures.append(field)
+        elif field == "optional_observations":
+            if not _optional_observations_declared(
+                committed.get(field, {}), fresh[field]
+            ):
+                failures.append(field)
+        elif field == "envelope":
+            if not _envelope_declared(committed.get(field, {}), fresh[field]):
+                failures.append(field)
+        elif committed.get(field) != fresh[field]:
+            failures.append(field)
     if failures:
         print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
         raise SystemExit(1)

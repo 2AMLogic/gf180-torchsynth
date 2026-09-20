@@ -497,5 +497,73 @@ class MatrixAndEvidenceTests(unittest.TestCase):
         self.assertTrue(all(controls_a.values()))
 
 
+class PublicationTests(unittest.TestCase):
+    """The committed timing publication revalidated against a fresh
+    in-process rebuild (mirrors the landed signal-family publication
+    test, #135 declared-guarantee pattern)."""
+
+    def test_committed_publication_matches_fresh_rebuild(self):
+        import json
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import qualify_mutations_timing
+
+            committed = json.loads(
+                qualify_mutations_timing.PUBLICATION_PATH.read_bytes()
+            )
+            if importlib.util.find_spec("numpy") is None:
+                # The two modulation rows sit on the periodic detectors that
+                # need NumPy; on a stdlib-only host the rebuild must refuse
+                # exactly those trips, never silently pass.
+                with self.assertRaises(SystemExit) as caught:
+                    qualify_mutations_timing.build_publication()
+                message = caught.exception.code
+                self.assertIn(
+                    "family faults did not trip their detectors or lacked a "
+                    "passing control",
+                    message,
+                )
+                untripped = message.split("passing control: ", 1)[1].split(", ")
+                self.assertEqual(
+                    untripped,
+                    ["lfo-rate-shift-plus-half-hz", "lfo-depth-shift-plus-0.1"],
+                )
+                return
+            fresh = qualify_mutations_timing.build_publication()
+            for field in qualify_mutations_timing.COMPARABLE_FIELDS:
+                if field == "envelopes":
+                    # The envelope identity and artifact digests render the
+                    # fixture lane bytes, which are analytic renders through
+                    # libm transcendentals; their binary64 last-ulp bytes are
+                    # platform variable. The declared-guarantee comparison
+                    # (identity formats, artifact path/size invariance,
+                    # everything else byte-exact including trip verdicts) is
+                    # the landed #135 pattern.
+                    self.assertTrue(
+                        qualify_mutations_timing.envelopes_declared(
+                            committed[field], fresh[field]
+                        ),
+                        "envelopes",
+                    )
+                    for committed_envelope, envelope in zip(
+                        committed[field], fresh[field]
+                    ):
+                        with self.subTest(plan=committed_envelope["plan_id"]):
+                            self.assertNotEqual(
+                                committed_envelope["envelope_id"],
+                                "",
+                            )
+                            self.assertEqual(
+                                sorted(committed_envelope),
+                                sorted(envelope),
+                            )
+                else:
+                    self.assertEqual(committed.get(field), fresh[field], field)
+        finally:
+            sys.path.remove(str(ROOT / "tools"))
+            sys.modules.pop("qualify_mutations_timing", None)
+
+
 if __name__ == "__main__":
     unittest.main()
