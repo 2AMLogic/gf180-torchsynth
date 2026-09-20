@@ -379,6 +379,38 @@ class PairingTests(unittest.TestCase):
 
 
 class PublicationTests(unittest.TestCase):
+    TRIP_THRESHOLD = 0.5
+
+    def assert_property_refusal_declared(self, committed_row, row):
+        """The periodic deviation is a NumPy binary64 estimator output whose
+        last-ulp repr is ISA dependent; the declared guarantees (row identity,
+        trip verdict, offset agreement, threshold crossing) are not."""
+        self.assertEqual(
+            {name: row[name] for name in row if name != "observed_refusal"},
+            {
+                name: committed_row[name]
+                for name in committed_row
+                if name != "observed_refusal"
+            },
+        )
+        refusal = row["observed_refusal"]
+        self.assertTrue(refusal.startswith("property deviation "), refusal)
+        self.assertTrue(refusal.endswith(" declared_offset_match=True"), refusal)
+        deviation = float(
+            refusal.split(" observed=", 1)[1].rsplit(" declared_offset_match", 1)[0]
+        )
+        self.assertTrue(math.isfinite(deviation))
+        self.assertGreater(abs(deviation), self.TRIP_THRESHOLD)
+
+    def assert_matrix_rows_declared(self, committed_rows, rows):
+        self.assertEqual(len(committed_rows), len(rows))
+        for committed_row, row in zip(committed_rows, rows):
+            with self.subTest(fault=row["fault"]):
+                if row["fault"].endswith(" (property)"):
+                    self.assert_property_refusal_declared(committed_row, row)
+                else:
+                    self.assertEqual(committed_row, row)
+
     def test_committed_publication_matches_fresh_rebuild(self):
         import json
 
@@ -422,6 +454,23 @@ class PublicationTests(unittest.TestCase):
                             self.assertEqual(row["tolerant"], declared["tolerant"])
                             self.assertTrue(math.isfinite(row["observed"]))
                             self.assertLessEqual(row["observed"], row["tolerance"])
+                elif field == "fault_matrix":
+                    self.assert_matrix_rows_declared(committed[field], fresh[field])
+                elif field == "envelope":
+                    committed_envelope = dict(committed[field])
+                    fresh_envelope = dict(fresh[field])
+                    committed_envelope.pop("fault_matrix")
+                    fresh_envelope.pop("fault_matrix")
+                    committed_envelope.pop("envelope_id")
+                    fresh_envelope.pop("envelope_id")
+                    # envelope_id digests the matrix renderings above and is
+                    # therefore platform dependent; its declared identity
+                    # format is asserted instead.
+                    self.assertRegex(fresh[field]["envelope_id"], r"^mu1-[0-9a-f]{64}$")
+                    self.assertEqual(committed_envelope, fresh_envelope)
+                    self.assert_matrix_rows_declared(
+                        committed[field]["fault_matrix"], fresh[field]["fault_matrix"]
+                    )
                 else:
                     self.assertEqual(committed.get(field), fresh[field], field)
         finally:
