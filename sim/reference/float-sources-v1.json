@@ -1,0 +1,501 @@
+{
+  "calculation_policy": {
+    "calculation_dtype": "float32",
+    "operation_policy": "pinned-upstream-op-order-v1: elementwise binary32 at every site in upstream order; binary64 phase accumulator storing binary32 partials (pinned CPU cumsum acc_type); binary64 transcendentals rounded to binary32 (SLEEF vs libm sites ~1 ulp, declared-metrics comparison); noise stream bit-exact by identity",
+    "version": "float-sources-v1"
+  },
+  "capture": {
+    "case_summaries": {
+      "boundary:vco_1.initial_phase:upper": {
+        "case_id": "boundary:vco_1.initial_phase:upper",
+        "files": {
+          "control_upsample.vco_1_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "control_upsample.vco_2_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "vco_1.raw": {
+            "sha256": "bbc50c4a83836621aac55802989910b7ebb6eb1f87bfedd955e4ac9d24c60fce",
+            "size": 705600
+          },
+          "vco_2.raw": {
+            "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+            "size": 705600
+          }
+        },
+        "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+        "params_sha256": "4ad4e779a97406a3582242feac84c126991839ad126d293d8e9280125e0c2e8e"
+      },
+      "boundary:vco_1.mod_depth:upper": {
+        "case_id": "boundary:vco_1.mod_depth:upper",
+        "files": {
+          "control_upsample.vco_1_pitch": {
+            "sha256": "a7a3abebfde789cc1b19dbe08fa18bcee5af5de2a6271228394e2b3c0abd4ef6",
+            "size": 705600
+          },
+          "control_upsample.vco_2_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "vco_1.raw": {
+            "sha256": "becb03062697d17e9d8279dc218131cc4dd6d229db35d0f39f17b8353cce362f",
+            "size": 705600
+          },
+          "vco_2.raw": {
+            "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+            "size": 705600
+          }
+        },
+        "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+        "params_sha256": "f9f9dc38915fa9158ec749d5853bee3e1a0fecb16647e7859260538eb3dd7647"
+      },
+      "boundary:vco_1.tuning:upper": {
+        "case_id": "boundary:vco_1.tuning:upper",
+        "files": {
+          "control_upsample.vco_1_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "control_upsample.vco_2_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "vco_1.raw": {
+            "sha256": "c3e1ec07f4189d8227e38d1780ea530c20422fc8ef30b538277a44f2aefd9f9b",
+            "size": 705600
+          },
+          "vco_2.raw": {
+            "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+            "size": 705600
+          }
+        },
+        "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+        "params_sha256": "177cc1997b3e6242f4a722dac2caaecbb33748358a0f73f4617dc4e781ac6260"
+      },
+      "boundary:vco_2.mod_depth:upper": {
+        "case_id": "boundary:vco_2.mod_depth:upper",
+        "files": {
+          "control_upsample.vco_1_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "control_upsample.vco_2_pitch": {
+            "sha256": "a7a3abebfde789cc1b19dbe08fa18bcee5af5de2a6271228394e2b3c0abd4ef6",
+            "size": 705600
+          },
+          "vco_1.raw": {
+            "sha256": "e8bfcf8feaf466e2ada8419dab8bb365d9fd44a313547f251025cf6bb815dbcf",
+            "size": 705600
+          },
+          "vco_2.raw": {
+            "sha256": "57c0492cc7c9b35b54ec83a102c3c17479f88baa7e19d374608a71bb57a27959",
+            "size": 705600
+          }
+        },
+        "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+        "params_sha256": "eb7016175b01c0b25a6f31c5d599201d4809cd38de752ac03a4618e94e8bf7e3"
+      },
+      "waveform:vco_2:saw": {
+        "case_id": "waveform:vco_2:saw",
+        "files": {
+          "control_upsample.vco_1_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "control_upsample.vco_2_pitch": {
+            "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+            "size": 705600
+          },
+          "vco_1.raw": {
+            "sha256": "e8bfcf8feaf466e2ada8419dab8bb365d9fd44a313547f251025cf6bb815dbcf",
+            "size": 705600
+          },
+          "vco_2.raw": {
+            "sha256": "aea30bc59d059a723f0b8bc01b770c42b2478fcf7b13fb51b0cfc46c6d8e5014",
+            "size": 705600
+          }
+        },
+        "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+        "params_sha256": "30445b0d166eb2441827d986f60dd0ea74e1ab9540e717c24b5aca9178c28256"
+      }
+    },
+    "cases": [
+      "boundary:vco_1.initial_phase:upper",
+      "waveform:vco_2:saw",
+      "boundary:vco_1.mod_depth:upper",
+      "boundary:vco_2.mod_depth:upper",
+      "boundary:vco_1.tuning:upper"
+    ],
+    "exp2_agreement": {
+      "boundary:vco_1.initial_phase:upper": {
+        "vco_1": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        },
+        "vco_2": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        }
+      },
+      "boundary:vco_1.mod_depth:upper": {
+        "vco_1": {
+          "exp2_mismatches": 7,
+          "max_ulp": 1,
+          "reachable_inputs": 7675
+        },
+        "vco_2": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        }
+      },
+      "boundary:vco_1.tuning:upper": {
+        "vco_1": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        },
+        "vco_2": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        }
+      },
+      "boundary:vco_2.mod_depth:upper": {
+        "vco_1": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        },
+        "vco_2": {
+          "exp2_mismatches": 7,
+          "max_ulp": 1,
+          "reachable_inputs": 7675
+        }
+      },
+      "waveform:vco_2:saw": {
+        "vco_1": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        },
+        "vco_2": {
+          "exp2_mismatches": 0,
+          "max_ulp": 0,
+          "reachable_inputs": 1
+        }
+      }
+    },
+    "noise_slot0_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+    "torch_increment_digests": {
+      "boundary:vco_1.initial_phase:upper": {
+        "vco_1": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        },
+        "vco_2": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        }
+      },
+      "boundary:vco_1.mod_depth:upper": {
+        "vco_1": {
+          "sha256": "d52780d49094d16d8c0878676a67d1f4c2bfea790a62c9ead4677bc9780743ee"
+        },
+        "vco_2": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        }
+      },
+      "boundary:vco_1.tuning:upper": {
+        "vco_1": {
+          "sha256": "6815539d7a54aef7b10d70a7581003c8cd49c93d9745843f00070b001eeb1e65"
+        },
+        "vco_2": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        }
+      },
+      "boundary:vco_2.mod_depth:upper": {
+        "vco_1": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        },
+        "vco_2": {
+          "sha256": "d52780d49094d16d8c0878676a67d1f4c2bfea790a62c9ead4677bc9780743ee"
+        }
+      },
+      "waveform:vco_2:saw": {
+        "vco_1": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        },
+        "vco_2": {
+          "sha256": "c27da8e65cb66423b88aa08f809e1157af45c1da000a75c3de4fd19c8fd05a2a"
+        }
+      }
+    }
+  },
+  "comparison_traces": [
+    "control_upsample.vco_1_pitch",
+    "vco_1.raw",
+    "control_upsample.vco_2_pitch",
+    "vco_2.raw"
+  ],
+  "comparison_unit": "linear-amplitude",
+  "directed_manifest": {
+    "sha256": "7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249",
+    "version": "directed-voice-v1-sha256:7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249"
+  },
+  "execution": {
+    "command": [],
+    "docker_server": "unknown",
+    "image": "assemble-only",
+    "release_record_sha256": "1d6b80dff2976ae5b1fc01fa9ea4edd7bb8b92ae8b7310a78ecb0ea620e6addf"
+  },
+  "fixtures": {
+    "boundary:vco_1.initial_phase:upper": {
+      "files": {
+        "control_upsample.vco_1_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "control_upsample.vco_2_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "vco_1.raw": {
+          "sha256": "bbc50c4a83836621aac55802989910b7ebb6eb1f87bfedd955e4ac9d24c60fce",
+          "size": 705600
+        },
+        "vco_2.raw": {
+          "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+          "size": 705600
+        }
+      },
+      "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+      "params_sha256": "4ad4e779a97406a3582242feac84c126991839ad126d293d8e9280125e0c2e8e"
+    },
+    "boundary:vco_1.mod_depth:upper": {
+      "files": {
+        "control_upsample.vco_1_pitch": {
+          "sha256": "a7a3abebfde789cc1b19dbe08fa18bcee5af5de2a6271228394e2b3c0abd4ef6",
+          "size": 705600
+        },
+        "control_upsample.vco_2_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "vco_1.raw": {
+          "sha256": "becb03062697d17e9d8279dc218131cc4dd6d229db35d0f39f17b8353cce362f",
+          "size": 705600
+        },
+        "vco_2.raw": {
+          "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+          "size": 705600
+        }
+      },
+      "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+      "params_sha256": "f9f9dc38915fa9158ec749d5853bee3e1a0fecb16647e7859260538eb3dd7647"
+    },
+    "boundary:vco_1.tuning:upper": {
+      "files": {
+        "control_upsample.vco_1_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "control_upsample.vco_2_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "vco_1.raw": {
+          "sha256": "c3e1ec07f4189d8227e38d1780ea530c20422fc8ef30b538277a44f2aefd9f9b",
+          "size": 705600
+        },
+        "vco_2.raw": {
+          "sha256": "eeb1c119a8418a01d04adb0bceed0ea83623a486f0884e685136b2c560cbee30",
+          "size": 705600
+        }
+      },
+      "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+      "params_sha256": "177cc1997b3e6242f4a722dac2caaecbb33748358a0f73f4617dc4e781ac6260"
+    },
+    "boundary:vco_2.mod_depth:upper": {
+      "files": {
+        "control_upsample.vco_1_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "control_upsample.vco_2_pitch": {
+          "sha256": "a7a3abebfde789cc1b19dbe08fa18bcee5af5de2a6271228394e2b3c0abd4ef6",
+          "size": 705600
+        },
+        "vco_1.raw": {
+          "sha256": "e8bfcf8feaf466e2ada8419dab8bb365d9fd44a313547f251025cf6bb815dbcf",
+          "size": 705600
+        },
+        "vco_2.raw": {
+          "sha256": "57c0492cc7c9b35b54ec83a102c3c17479f88baa7e19d374608a71bb57a27959",
+          "size": 705600
+        }
+      },
+      "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+      "params_sha256": "eb7016175b01c0b25a6f31c5d599201d4809cd38de752ac03a4618e94e8bf7e3"
+    },
+    "waveform:vco_2:saw": {
+      "files": {
+        "control_upsample.vco_1_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "control_upsample.vco_2_pitch": {
+          "sha256": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+          "size": 705600
+        },
+        "vco_1.raw": {
+          "sha256": "e8bfcf8feaf466e2ada8419dab8bb365d9fd44a313547f251025cf6bb815dbcf",
+          "size": 705600
+        },
+        "vco_2.raw": {
+          "sha256": "aea30bc59d059a723f0b8bc01b770c42b2478fcf7b13fb51b0cfc46c6d8e5014",
+          "size": 705600
+        }
+      },
+      "noise_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+      "params_sha256": "30445b0d166eb2441827d986f60dd0ea74e1ab9540e717c24b5aca9178c28256"
+    }
+  },
+  "limitations": [
+    "VCO comparisons are declared-metrics (DR-0007): binary32 transcendental sites (exp2/sin/cos/tanh/log10) use binary64 libm rounded to binary32 while upstream uses SLEEF binary32 kernels, so near-one-ulp sample differences are expected and no VCO byte identity is claimed.",
+    "Swing-case limits are dominated by a measured phase-drift mechanism: a reachable pitch input where libm exp2 rounds differently from torch SLEEF exp2 (7 of 7675 inputs, one ulp each) shifts the increment of every sample visiting it; on the ADSR sustain plateau this accumulates to ~3.5e-3 rad. The 5e-2 limits cover several such plateaus plus cross-platform libm variance; constant-frequency cases see no accumulation and stay near one binary32 ulp of the waveform.",
+    "The phase cumsum reproduces the pinned CPU binary64-accumulator algorithm (f32 stored partials, no wrap); the fixed model's wrapping accumulator (DR-0008, Proposed) is deliberately not implemented here.",
+    "Noise exactness covers the resolved slot streams; larger reproducible batches repeat the 32 streams (pinned config behavior, not re-measured here).",
+    "No runtime, fixed-model, hardware, or sound-fidelity claim is established by this record."
+  ],
+  "limits": {
+    "boundary:vco_1.initial_phase:upper": 0.0001,
+    "boundary:vco_1.mod_depth:upper": 0.05,
+    "boundary:vco_1.tuning:upper": 5e-05,
+    "boundary:vco_2.mod_depth:upper": 0.05,
+    "waveform:vco_2:saw": 0.001
+  },
+  "measurements": {
+    "boundary:vco_1.initial_phase:upper": {
+      "vco_1": {
+        "error_rms": 1.116768362654887e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.0001,
+        "max_abs_error": 5.960464477539063e-08,
+        "mean_abs_error": 2.286829848408429e-09,
+        "rendered_sha256": "95c26e60d4cf5c2454c7b63451f90fe7ee33b559bb0ad654b4e975d5e8bdf995"
+      },
+      "vco_2": {
+        "error_rms": 1.3742071339692891e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.0001,
+        "max_abs_error": 1.1920928955078125e-07,
+        "mean_abs_error": 3.2098059839586982e-09,
+        "rendered_sha256": "64794b58a0f2f71681759c0a1b8a368956c237284a0d458746a604505d68965e"
+      }
+    },
+    "boundary:vco_1.mod_depth:upper": {
+      "vco_1": {
+        "error_rms": 1.3530314401093636e-05,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.05,
+        "max_abs_error": 0.0041637420654296875,
+        "mean_abs_error": 4.6092379086412275e-08,
+        "rendered_sha256": "e512f50bb00f0efe3535f04f6526fc5328fa9ad3af41cca1b35c9e05992cda2c"
+      },
+      "vco_2": {
+        "error_rms": 1.3742071339692891e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.05,
+        "max_abs_error": 1.1920928955078125e-07,
+        "mean_abs_error": 3.2098059839586982e-09,
+        "rendered_sha256": "64794b58a0f2f71681759c0a1b8a368956c237284a0d458746a604505d68965e"
+      }
+    },
+    "boundary:vco_1.tuning:upper": {
+      "vco_1": {
+        "error_rms": 7.120783687184568e-09,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 5e-05,
+        "max_abs_error": 5.960464477539063e-08,
+        "mean_abs_error": 9.264943745333591e-10,
+        "rendered_sha256": "5760e745b78e09dedf93ffe3067e1e72d8ec4d860b1486a27800f85d06e581af"
+      },
+      "vco_2": {
+        "error_rms": 1.3742071339692891e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 5e-05,
+        "max_abs_error": 1.1920928955078125e-07,
+        "mean_abs_error": 3.2098059839586982e-09,
+        "rendered_sha256": "64794b58a0f2f71681759c0a1b8a368956c237284a0d458746a604505d68965e"
+      }
+    },
+    "boundary:vco_2.mod_depth:upper": {
+      "vco_1": {
+        "error_rms": 1.111983566319489e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.05,
+        "max_abs_error": 5.960464477539063e-08,
+        "mean_abs_error": 2.264328165794987e-09,
+        "rendered_sha256": "481762e07e951df653b75f707f1e72425a0de4a68e52d3d8b53278bd0400d77c"
+      },
+      "vco_2": {
+        "error_rms": 7.47099998660933e-07,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.05,
+        "max_abs_error": 0.00022480450570583344,
+        "mean_abs_error": 2.5359756308512726e-09,
+        "rendered_sha256": "2b70167dae685119b5e0c985bb6646494816ec6cd33f26472738945fb49f185f"
+      }
+    },
+    "waveform:vco_2:saw": {
+      "vco_1": {
+        "error_rms": 1.111983566319489e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.001,
+        "max_abs_error": 5.960464477539063e-08,
+        "mean_abs_error": 2.264328165794987e-09,
+        "rendered_sha256": "481762e07e951df653b75f707f1e72425a0de4a68e52d3d8b53278bd0400d77c"
+      },
+      "vco_2": {
+        "error_rms": 1.2139580365342557e-08,
+        "exact_equal": 0,
+        "framing_match": 1,
+        "limit": 0.001,
+        "max_abs_error": 1.7881393432617188e-07,
+        "mean_abs_error": 2.692519668791654e-09,
+        "rendered_sha256": "85fe85e2d1a8921f8285c2345d72bc0a03f8d9a61dd8af4464f46d006567d328"
+      }
+    }
+  },
+  "model_module_sha256": "dc40f8826043a3ccddbf60d6faf83e0c8e768a3313f2b49bf456184047edea4e",
+  "noise": {
+    "all_slots_sha256": "843fc712459c7ec5affeb45df12531080fd99b6f75f89f528753ec28b7da48f6",
+    "bit_exact": true,
+    "declared_slot0_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+    "model_regeneration_sha256": "dbc4c21b9d0198e539032073b95dbbf6fec17721ae09c67517d963fdff3eb6d2",
+    "sample_count": 176400,
+    "seed": 13,
+    "slot": 0
+  },
+  "numeric_contract": "unbound:#53",
+  "purpose": "Issue #41 evidence: independent float VCO and noise models matched against the pinned Voice at the declared source checkpoints; noise bit-exact by identity, oscillators under declared metrics",
+  "recorded_from_tool": "a4fc1c6a06ea90bb82d6ebdf581a5f814621f9e04b3abe6527ae7f952736c177",
+  "schema": "torchsynth-float-sources-evidence",
+  "schema_version": 1,
+  "semantic_version": "float-sources-v1",
+  "sound_index": 0,
+  "source_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+}
