@@ -7,8 +7,15 @@ check; the ordinary/empty/sham controls stay byte-identical and the
 declared-frame preflight refuses missing/duplicated samples before any
 scoring. Actual-Voice runtime injection is not exercised here and is
 never substituted by these proofs.
+
+The periodic rows depend on the optional NumPy metrics extra. On a
+stdlib-only host those rows are asserted as the declared detector
+unavailability recorded by the family runner (unrun is never a PASS);
+the dedicated numerical CI job asserts the full trips with NumPy
+installed and single-threaded BLAS.
 """
 
+import importlib.util
 import struct
 import sys
 import unittest
@@ -405,7 +412,13 @@ class FloorAndCoverageTests(unittest.TestCase):
         self.assertEqual(by_case["flat-sustain"]["verdict"], "NO VERDICT")
         self.assertEqual(by_case["zero-release"]["verdict"], "NO VERDICT")
         self.assertIn("zero_release", by_case["zero-release"]["reason"])
-        self.assertEqual(by_case["high-rate-lfo-20hz"]["verdict"], "PASS")
+        high_rate = by_case["high-rate-lfo-20hz"]
+        if importlib.util.find_spec("numpy") is None:
+            self.assertEqual(high_rate["verdict"], "NO VERDICT")
+            self.assertNotEqual(high_rate["reason"], "valid")
+        else:
+            self.assertEqual(high_rate["verdict"], "PASS")
+            self.assertEqual(high_rate["reason"], "valid")
         self.assertEqual(
             by_case["one-audio-sample-delay-visibility"]["verdict"], "FAIL")
 
@@ -420,10 +433,19 @@ class MatrixAndEvidenceTests(unittest.TestCase):
 
     def test_every_family_fault_trips_with_a_passing_control(self):
         self.assertGreaterEqual(len(self.matrix), 12)
+        unavailable = 0
         for entry in self.matrix:
             with self.subTest(fault=entry["fault"]):
-                self.assertTrue(entry["control_accepted"], entry["fault"])
-                self.assertTrue(entry["tripped"], entry["fault"])
+                if (entry["observed_refusal"] or "").startswith(
+                        "periodic detector unavailable"):
+                    unavailable += 1
+                    self.assertFalse(entry["control_accepted"], entry["fault"])
+                    self.assertFalse(entry["tripped"], entry["fault"])
+                    self.assertIn("numpy", entry["observed_refusal"])
+                else:
+                    self.assertTrue(entry["control_accepted"], entry["fault"])
+                    self.assertTrue(entry["tripped"], entry["fault"])
+        self.assertLessEqual(unavailable, 2)
 
     def test_composed_plan_runs_in_declared_order(self):
         harness = make_harness("upsample-audio")
