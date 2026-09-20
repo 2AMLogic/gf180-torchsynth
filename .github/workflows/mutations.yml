@@ -29,3 +29,26 @@ jobs:
           python tools/qualify_mutations.py --check
       - name: Check the committed actual-Voice runtime publication
         run: python tools/qualify_mutations_runtime.py --check-publication
+
+  timing-numerical:
+    # The #32 family's periodic rows need NumPy. The stdlib contract surface
+    # asserts the declared detector unavailability there; this job asserts
+    # the full trips with the locked metrics extra and single-threaded BLAS.
+    runs-on: ubuntu-latest
+    env:
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      VECLIB_MAXIMUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v6
+      - name: Install locked numerical environment
+        run: uv sync --locked --extra metrics --python '3.13'
+      - name: Require NumPy (a missing dependency must not become a skip)
+        run: uv run --no-sync python -c "import numpy"
+      - name: Run the timing family tests with NumPy
+        run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing.py -v
