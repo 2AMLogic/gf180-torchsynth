@@ -1,0 +1,349 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "torchsynth-listening-protocol-config-v1",
+  "title": "Listening protocol config v1 (parameterization surface for issue 44)",
+  "description": "Parameterizes the mechanical listening scaffolding (stimulus generation, preregistered analysis) declared agent-doable in the issue 44 protocol-draft comment. INERT until the operator ratifies: every artifact produced from a config with ratified=false is stamped not-protocol-evidence, and the analysis tool refuses unratified configs outright. All perceptual design content (ladder values, trial counts, conditions, stopping rules, ethics box) lives in config documents conforming to this schema, never in code. Note: JSON Schema tooling is optional; tools/listening_protocol_common.py enforces the same rules fail-closed in stdlib Python.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "config_id",
+    "ratified",
+    "ratification",
+    "method",
+    "ladders",
+    "binary_trials",
+    "selection",
+    "blinding",
+    "level_conditions",
+    "session",
+    "analysis",
+    "ethics"
+  ],
+  "properties": {
+    "schema": {"const": "torchsynth-listening-protocol-config"},
+    "schema_version": {"const": 1},
+    "config_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
+    "ratified": {
+      "type": "boolean",
+      "description": "Master fail-closed switch. false: generator outputs are stamped UNRATIFIED/NOT-EVIDENCE and require an explicit --allow-unratified override; the analysis tool refuses outright. true: requires ratification.status=adopted with decided_by/decided_utc."
+    },
+    "ratification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decided_by", "decided_utc", "protocol_version", "notes"],
+      "properties": {
+        "status": {"enum": ["draft", "adopted"]},
+        "decided_by": {"type": ["string", "null"]},
+        "decided_utc": {"type": ["string", "null"], "format": "date-time"},
+        "protocol_version": {"type": ["string", "null"]},
+        "notes": {"type": ["string", "null"]}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parts", "abx", "mushra"],
+      "properties": {
+        "parts": {
+          "type": "array",
+          "items": {"enum": ["abx", "mushra"]},
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "abx": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "catch_trial_rate", "session_anchor"],
+          "properties": {
+            "format": {"const": "3afc-ax", "description": "Reference then A/B with one hidden reference (protocol draft section 4); chance rate is fixed at 0.5."},
+            "catch_trial_rate": {"type": "number", "minimum": 0, "maximum": 0.5},
+            "session_anchor": {
+              "type": "boolean",
+              "description": "Known L5 anchor of the same operator presented at session start for listener validation."
+            }
+          }
+        },
+        "mushra": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["items_per_block", "scale", "anchor_operator", "anchor_magnitude", "bracket_validation"],
+          "properties": {
+            "items_per_block": {"type": "integer", "minimum": 4},
+            "scale": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+            "anchor_operator": {"type": "string", "pattern": "^[A-Za-z0-9._]+$"},
+            "anchor_magnitude": {"type": "number"},
+            "bracket_validation": {
+              "type": "boolean",
+              "description": "Standard MUSHRA check: hidden reference and anchor must bracket a block's ratings or the block is invalidated."
+            }
+          }
+        }
+      }
+    },
+    "ladders": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[A-Za-z0-9._]+$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["render", "unit", "points"],
+        "properties": {
+          "render": {
+            "enum": ["corpus-audio", "host-run-gated"],
+            "description": "corpus-audio: the operator has a landed sample-domain application and the generator renders over development-corpus audio. host-run-gated: requires the DR-0006 gated actual-Voice bridge (matrix not_run); generator records a skipped row, never audio."
+          },
+          "unit": {"type": "string", "minLength": 1},
+          "points": {
+            "type": "array",
+            "items": {"type": "number", "minimum": -1e308, "maximum": 1e308},
+            "minItems": 5,
+            "maxItems": 5,
+            "description": "Exactly five magnitudes L1..L5 in severity order (L1 expected-inaudible floor probe, L5 clearly-objectionable anchor). Values may increase or decrease with severity (e.g. saturation ceilings); the array position is the ground-truth rank."
+          },
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "binary_trials": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[A-Za-z0-9._]+$"},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["render"],
+        "properties": {
+          "render": {"enum": ["corpus-audio", "host-run-gated"]},
+          "note": {"type": "string"}
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pool", "cases_per_operator", "seed", "stratification", "exclusions"],
+      "properties": {
+        "pool": {
+          "const": "development-corpus",
+          "description": "Holdout-refusing: only the 96-case development partition of the landed corpus is ever selectable."
+        },
+        "cases_per_operator": {"type": "integer", "minimum": 1, "maximum": 16},
+        "seed": {"type": "integer", "description": "Recorded deterministic draw seed; same config+seed must reproduce the same selection and receipts."},
+        "stratification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["normalization_active_required_for"],
+          "properties": {
+            "normalization_active_required_for": {
+              "type": "array",
+              "items": {"type": "string", "pattern": "^[A-Za-z0-9._]+$"},
+              "description": "Operators whose drawn cases must be normalization-active per the coverage receipt's normalization_seam rows."
+            }
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["selector", "source"],
+            "properties": {
+              "selector": {
+                "enum": [
+                  "exact_silence",
+                  "near_silence",
+                  "normalization_inactive",
+                  "unqualified_pitch_property_tag"
+                ],
+                "description": "Preregistered, uniform across conditions (protocol draft section 6). unqualified_pitch_property_tag does not remove cases (all 96 are unqualified); it tags drawn cases as listen-only, never backing a pitch-property claim."
+              },
+              "source": {"type": "string", "minLength": 1},
+              "applies_to": {
+                "type": "array",
+                "items": {"type": "string", "pattern": "^[A-Za-z0-9._*]+$"},
+                "description": "Operator patterns (trailing * wildcard) the selector applies to; omit for all operators."
+              }
+            }
+          }
+        }
+      }
+    },
+    "blinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition_map", "randomization_seed", "same_ladder_points_per_case"],
+      "properties": {
+        "condition_map": {
+          "const": "sealed",
+          "description": "Opaque stimulus codes only; code-to-condition map unblinded after collection (protocol draft section 5, OBS section 6)."
+        },
+        "randomization_seed": {"type": "integer"},
+        "same_ladder_points_per_case": {
+          "const": true,
+          "description": "Every listener hears the same ladder points per case (OBS section 4.2.1 same-choice control)."
+        }
+      }
+    },
+    "level_conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["C1", "C2", "assignment"],
+      "properties": {
+        "C1": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "rms_matched"],
+          "properties": {
+            "name": {"const": "rms-matched"},
+            "rms_matched": {"const": true}
+          }
+        },
+        "C2": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "native"],
+          "properties": {
+            "name": {"const": "native"},
+            "native": {"const": true}
+          }
+        },
+        "assignment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["default", "operators"],
+          "properties": {
+            "default": {"enum": ["C1", "C2"]},
+            "operators": {
+              "type": "object",
+              "propertyNames": {"pattern": "^[A-Za-z0-9._]+$"},
+              "additionalProperties": {"enum": ["C1", "C2"]},
+              "description": "Preassigned per operator; listening-harness presentation only, never a measurement correction (spec/PAIRED-METRICS.md)."
+            }
+          }
+        }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pilot", "main", "stopping_rule", "invalidation"],
+      "properties": {
+        "pilot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["listeners", "purpose"],
+          "properties": {
+            "listeners": {"type": "integer", "minimum": 1},
+            "purpose": {"const": "harness-validation-only"}
+          }
+        },
+        "main": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["listeners", "min_non_author_musicians"],
+          "properties": {
+            "listeners": {"type": "integer", "minimum": 2},
+            "min_non_author_musicians": {"type": "integer", "minimum": 0}
+          }
+        },
+        "stopping_rule": {
+          "const": "fixed_count",
+          "description": "Sessions stop when the preregistered count is complete; no adaptive extension, no optional stopping."
+        },
+        "invalidation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["catch_false_positive_rate_max", "anchor_failure_invalidates", "replacement_limit"],
+          "properties": {
+            "catch_false_positive_rate_max": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "anchor_failure_invalidates": {"const": true},
+            "replacement_limit": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ladder_validation",
+        "detection",
+        "identity_question",
+        "aggregate_score"
+      ],
+      "properties": {
+        "ladder_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["statistic", "magnitude_axis", "monotonicity_required"],
+          "properties": {
+            "statistic": {"const": "spearman"},
+            "magnitude_axis": {
+              "const": "ladder_position_rank",
+              "description": "Ground-truth rank is the L1..L5 array position in this config, not the numeric magnitude (severity may invert numeric order, e.g. saturation ceilings)."
+            },
+            "monotonicity_required": {
+              "const": true,
+              "description": "A non-monotone ladder is flagged invalid_anchor; it is repaired in a new protocol version, never smoothed (protocol draft section 7)."
+            }
+          }
+        },
+        "detection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["interval", "chance_rate", "alpha"],
+          "properties": {
+            "interval": {"const": "clopper_pearson_exact"},
+            "chance_rate": {"const": 0.5},
+            "alpha": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+          }
+        },
+        "identity_question": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "red_flag_same_patch_rate_below"],
+          "properties": {
+            "required": {
+              "const": true,
+              "description": "Forced same-patch question recorded independently of quality/detection (AC3); never merged with it."
+            },
+            "red_flag_same_patch_rate_below": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            }
+          }
+        },
+        "aggregate_score": {
+          "const": false,
+          "description": "Fail-closed: no aggregate score exists in this scaffold; results are per-condition rows only."
+        }
+      }
+    },
+    "ethics": {
+      "type": "object",
+      "description": "Open operator decision box (AC6, protocol draft section 8). Nulls keep collection and analysis blocked even after ratification of the rest.",
+      "additionalProperties": false,
+      "required": [
+        "consent_text",
+        "identity_handling",
+        "raw_response_retention",
+        "access_control",
+        "publication_policy",
+        "compensation"
+      ],
+      "properties": {
+        "consent_text": {"type": ["string", "null"]},
+        "identity_handling": {"type": ["string", "null"]},
+        "raw_response_retention": {"type": ["string", "null"]},
+        "access_control": {"type": ["string", "null"]},
+        "publication_policy": {"type": ["string", "null"]},
+        "compensation": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
