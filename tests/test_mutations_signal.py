@@ -407,7 +407,23 @@ class PublicationTests(unittest.TestCase):
                 return
             fresh = qualify_mutations_signal.build_publication()
             for field in qualify_mutations_signal.COMPARABLE_FIELDS:
-                self.assertEqual(committed.get(field), fresh[field], field)
+                if field == "optional_observations":
+                    # The band rms values are NumPy-FFT demonstration
+                    # observations (declared tolerant, never a perceptual
+                    # qualification); their last-ulp rendering is platform
+                    # dependent while the declared verdict structure is not.
+                    self.assertEqual(sorted(committed[field]), sorted(fresh[field]))
+                    for fault, row in fresh[field].items():
+                        with self.subTest(fault=fault):
+                            declared = committed[field][fault]
+                            self.assertEqual(row["metric"], declared["metric"])
+                            self.assertEqual(row["tolerance"], declared["tolerance"])
+                            self.assertEqual(row["optional"], declared["optional"])
+                            self.assertEqual(row["tolerant"], declared["tolerant"])
+                            self.assertTrue(math.isfinite(row["observed"]))
+                            self.assertLessEqual(row["observed"], row["tolerance"])
+                else:
+                    self.assertEqual(committed.get(field), fresh[field], field)
         finally:
             sys.path.remove(str(ROOT / "tools"))
             sys.modules.pop("qualify_mutations_signal", None)
