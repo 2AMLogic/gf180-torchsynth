@@ -23,8 +23,9 @@ record"), #135's ISA-dependent repr set (declared, never silently tolerated),
 and the #133/#135/#137 `-numerical` job pattern
 (`.github/workflows/mutations.yml:43-47`, `:63-89`, `:91-117`). The
 declared-guarantee comparison pattern those PRs landed for the signal and
-timing publications (commit `5160a5d`,
-`tests/test_mutations_signal.py`) is the mechanism adopted here, and the DR-0008
+timing publications (commit `2cfeedf7` — the squash merge of PR #135 into
+`main`; developed at branch head `5160a5d`, not itself an ancestor of
+`main` — `tests/test_mutations_signal.py`) is the mechanism adopted here, and the DR-0008
 Choice Register's "choices are data" discipline
 (`spec/decision-records/0008-fixed-point-numeric-contract.md:293-302`) is the
 bookkeeping form.
@@ -126,6 +127,11 @@ red check, a forensics pass and an exoneration.
   release-era qualification matrix, or any consumer of DR-0006/DR-0007/DR-0008.
   The pinned-runtime renders themselves stay governed by DR-0006; this record
   governs only what the CI comparison of those bytes asserts across the pool.
+- Ladder boundary: the platform-variable declared-guarantee region applies
+  only to the two sentinel workflows' committed-byte comparisons (Level-1
+  evidence plumbing). It never reaches the float→fixed preregistered metrics
+  (DR-0008) or Level-4/RTL, which remain sample-exact and are out of this
+  envelope's scope.
 
 ## Alternatives considered
 
@@ -170,9 +176,12 @@ red check, a forensics pass and an exoneration.
 
 ## Evidence log (seeded 2026-09-20; appended per Decision 4)
 
-All entries: `ValueError: sentinel drift: global-6 canonical` from the
-committed-seam compare step, in-run gates passing, green on rerun at the
-identical head unless noted. Dates 2026.
+All entries: in-run gates passing, green on rerun at the identical head
+unless noted. Scalar-side entries fail with `ValueError: sentinel drift:
+global-6 canonical` from the committed-seam compare step; the
+repeatability-side entry (09-20 11:21) fails with its own signature,
+`ValueError: sentinel artifact hash mismatch` from `check_sentinel`
+(`env/release-era/qualify_repeatability.py:940`). Dates 2026.
 
 | Date (UTC) | Run | Head | Pins | Exoneration |
 | --- | --- | --- | --- | --- |
@@ -184,15 +193,18 @@ identical head unless noted. Dates 2026.
 | 09-20 00:23 (PR #128) | (see #128 forensics) | `545120b` | **active, verified in log** | #128 forensics; green rerun |
 | 09-20 05:09 | [35490965833](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35490965833) | `b3ef9cc`, `main` | active (post-#127) | signature spot-verified |
 | 09-20 07:15 | [35496359125](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35496359125) | `c91a193`, `main` | active (post-#127) | — |
-| 09-20 08:00 | [35498376775](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35498376775) | `bc3fa64`, `main` | active (post-#127) | — |
+| 09-20 08:00 | [35498376775](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35498376775) | `bc3fa64`, PR branch (pull_request, `feature/issue-32`) | active (post-#127) | — |
 | 09-20 10:28 | [35505181070](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35505181070) | `def62b3`, `main` | active (post-#127) | signature spot-verified |
-| 09-20 10:50 | [35506161396](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35506161396) | `8b24352`, `main` | active (post-#127) | signature spot-verified |
-| 09-20 12:00 | [35509410280](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35509410280) | `1629c67`, `main` | active (post-#127) | signature spot-verified |
+| 09-20 10:50 | [35506161396](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35506161396) | `8b24352`, PR branch (pull_request, `feature/issue-33`) | active (post-#127) | signature spot-verified |
+| 09-20 11:21 (repeatability side) | [35507583628](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35507583628) | `2cfeedf7`, `main` | active (post-#127) | next `main` repeatability run green (`2245e9e`) |
+| 09-20 12:00 | [35509410280](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35509410280) | `1629c67`, PR branch (pull_request, `feature/issue-34`) | active (post-#127) | signature spot-verified |
 
 The 2026-09-19 occurrences established the dispatch-variance signature and
-produced #127's pins; the 2026-09-20 occurrences, all with the pins verified
-active, establish that the pins are necessary but not sufficient — the direct
-motivation for this record.
+produced #127's pins; the 2026-09-20 occurrences — three `main` events and
+three PR-branch (pull_request) runs on the same pool, labeled as such above —
+all with the pins verified active, establish that the pins are necessary but
+not sufficient on both sentinel workflows (scalar committed-seam and
+repeatability sides): the direct motivation for this record.
 
 ## Ratification
 
