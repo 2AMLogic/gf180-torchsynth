@@ -1,0 +1,433 @@
+{
+  "calibration": {
+    "case_count": 488,
+    "endpoints_all_exact": true,
+    "report_sha256": "779570fc6b145c7f0ec7150fee997483e8011b0c986a4a60ccdf6569d157a334",
+    "trace_rows": 10736
+  },
+  "calibration_policy": "smallest power of two >= 2x the measured per-trace maximum absolute error over the full preregistered fixture set (392 directed + 96 development cases), measured before preregistration and never increased afterwards; zero-tolerance where the measured maximum was exactly zero",
+  "numeric_contract": "unbound:#53",
+  "schema": "torchsynth-control-path-rubric",
+  "schema_version": 1,
+  "semantic_version": "control-path-rubric-v1",
+  "traces": {
+    "adsr_1.output": {
+      "calibrated_max_abs_error": 7.450580596923828e-06,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 1.52587890625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "adsr_2.output": {
+      "calibrated_max_abs_error": 7.97659158706665e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.000244140625,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "control_upsample.noise_amp": {
+      "calibrated_max_abs_error": 2.6226043701171875e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "control_upsample.vco_1_amp": {
+      "calibrated_max_abs_error": 4.285573959350586e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.0001220703125,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "control_upsample.vco_1_pitch": {
+      "calibrated_max_abs_error": 3.388524055480957e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.0001220703125,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "control_upsample.vco_2_amp": {
+      "calibrated_max_abs_error": 2.777576446533203e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "control_upsample.vco_2_pitch": {
+      "calibrated_max_abs_error": 3.629922866821289e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.0001220703125,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "keyboard.duration": {
+      "calibrated_max_abs_error": 0.0,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.0,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "keyboard.midi_f0": {
+      "calibrated_max_abs_error": 0.0,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 0.0,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_1.post_control_vca": {
+      "calibrated_max_abs_error": 1.1444091796875e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 3.0517578125e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_1.raw": {
+      "calibrated_max_abs_error": 2.6404857635498047e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_1_amp_adsr.output": {
+      "calibrated_max_abs_error": 5.125999450683594e-06,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 1.52587890625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_1_rate_adsr.output": {
+      "calibrated_max_abs_error": 2.434849739074707e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_2.post_control_vca": {
+      "calibrated_max_abs_error": 1.4156103134155273e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 3.0517578125e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_2.raw": {
+      "calibrated_max_abs_error": 2.6404857635498047e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_2_amp_adsr.output": {
+      "calibrated_max_abs_error": 1.627206802368164e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "lfo_2_rate_adsr.output": {
+      "calibrated_max_abs_error": 8.64267349243164e-06,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 3.0517578125e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "mod_matrix.noise_amp": {
+      "calibrated_max_abs_error": 2.0265579223632812e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "mod_matrix.vco_1_amp": {
+      "calibrated_max_abs_error": 2.0265579223632812e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "mod_matrix.vco_1_pitch": {
+      "calibrated_max_abs_error": 2.0265579223632812e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "mod_matrix.vco_2_amp": {
+      "calibrated_max_abs_error": 2.0265579223632812e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    },
+    "mod_matrix.vco_2_pitch": {
+      "calibrated_max_abs_error": 2.0265579223632812e-05,
+      "limits": {
+        "framing_match": {
+          "expected": 1,
+          "source": "spec/CONTROL-PATH.md declared-metrics framing (v1)",
+          "tolerance": 0,
+          "unit": "1"
+        },
+        "max_abs_error": {
+          "expected": 0,
+          "source": "spec/CONTROL-PATH.md preregistered rubric v1: smallest power of two >= 2x measured calibration maximum",
+          "tolerance": 6.103515625e-05,
+          "unit": "amplitude"
+        }
+      },
+      "rubric_id": "control-path-declared-metrics-v1",
+      "rubric_version": "1"
+    }
+  }
+}
