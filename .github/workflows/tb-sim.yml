@@ -1,0 +1,31 @@
+name: TB sim
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sim-selftest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Icarus Verilog (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Compile source
+        run: python -m compileall -q src tests tools
+      - name: Golden-vector and constants-gate tests
+        run: python -m unittest -v tests.test_golden_vectors tests.test_fixedpoint_codegen
+      - name: Synthetic DUT self-test (iverilog, PDK-free)
+        run: python3 tb/run_tb.py selftest
+      - name: Constants refusal-gate check
+        run: python3 tools/generate_rtl_constants.py --check
