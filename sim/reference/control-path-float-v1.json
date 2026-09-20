@@ -1,0 +1,170 @@
+{
+  "calibration": {
+    "byte_identical_reference": "all 488 per-case trace/physical/noise digests equal between the calibration and final captures; measured maxima transfer exactly",
+    "capture_manifest_sha256": "b55b17a37cb57fb26a560599ed08c630c5fa3a6f6db670f9fd1f31320b63b134",
+    "policy": "smallest power of two >= 2x the measured per-trace maximum absolute error over the full preregistered fixture set (392 directed + 96 development cases), measured before preregistration and never increased afterwards; zero-tolerance where the measured maximum was exactly zero",
+    "rubric_sha256": "d16b9562c0079e5c195f7b63543b55e677b5d03fb66af2faa8fa1a305b00f2b8"
+  },
+  "capture_manifest_sha256": "f5c89a557f234ec5e1f2961321cbce361a099926e6d8fc92ce9495085f932067",
+  "claim_scope": "Independent float control path (checkpoint orders 1-13 plus shared upsampler instances 15/17/19/22; 22 named traces) matches the pinned Voice control path under the preregistered declared-metrics rubric over the preregistered fixture set. No VCO/VCA/noise/mixer claim (#41/#42/#43), no fixed-format ratification (#53 / DR-0008 Proposed), no cross-width byte identity (DR-0007), and no sound-fidelity, hardware, synthesis, layout, signoff, or playback claim of any kind.",
+  "comparison_report_sha256": "f204c76bd9815cb3ac935368a7ae5a6f245a8eac0467c60ff5abb731026a9d8b",
+  "date": "2026-09-19",
+  "directed_sha256": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+  "fixture_set": {
+    "case_count": 488,
+    "development_indices": "0-95",
+    "directed_cases": 392,
+    "selection": "preregistered-issue-40"
+  },
+  "generated_at": "2026-09-20T04:28:47.207379+00:00",
+  "inventory_sha256": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+  "issue": 40,
+  "limitations": [
+    "Declared-metrics agreement at preregistered binary32-scale bands; not byte identity (DR-0007)",
+    "Development draws 0-7 exercise the mutation set; random draws keep several mod depths active",
+    "Raw trace bytes and paired-metrics diagnostics stay in the operator out/ store, referenced by digest",
+    "No fidelity, fixed-point, RTL, hardware, or listening claim"
+  ],
+  "match": {
+    "decided_rows": 10736,
+    "endpoints_all_exact": true,
+    "fail_rows": 0,
+    "pass_rows": 10736,
+    "per_trace_max_abs_error": {
+      "adsr_1.output": 7.450580596923828e-06,
+      "adsr_2.output": 7.97659158706665e-05,
+      "control_upsample.noise_amp": 2.6226043701171875e-05,
+      "control_upsample.vco_1_amp": 4.285573959350586e-05,
+      "control_upsample.vco_1_pitch": 3.388524055480957e-05,
+      "control_upsample.vco_2_amp": 2.777576446533203e-05,
+      "control_upsample.vco_2_pitch": 3.629922866821289e-05,
+      "keyboard.duration": 0.0,
+      "keyboard.midi_f0": 0.0,
+      "lfo_1.post_control_vca": 1.1444091796875e-05,
+      "lfo_1.raw": 2.6404857635498047e-05,
+      "lfo_1_amp_adsr.output": 5.125999450683594e-06,
+      "lfo_1_rate_adsr.output": 2.434849739074707e-05,
+      "lfo_2.post_control_vca": 1.4156103134155273e-05,
+      "lfo_2.raw": 2.6404857635498047e-05,
+      "lfo_2_amp_adsr.output": 1.627206802368164e-05,
+      "lfo_2_rate_adsr.output": 8.64267349243164e-06,
+      "mod_matrix.noise_amp": 2.0265579223632812e-05,
+      "mod_matrix.vco_1_amp": 2.0265579223632812e-05,
+      "mod_matrix.vco_1_pitch": 2.0265579223632812e-05,
+      "mod_matrix.vco_2_amp": 2.0265579223632812e-05,
+      "mod_matrix.vco_2_pitch": 2.0265579223632812e-05
+    },
+    "trace_rows": 10736
+  },
+  "mutations": [
+    {
+      "failed": true,
+      "failing_traces_by_case": {
+        "development:global-0": 3,
+        "development:global-1": 3,
+        "development:global-2": 3,
+        "development:global-3": 2,
+        "development:global-4": 3,
+        "development:global-5": 2,
+        "development:global-6": 2,
+        "development:global-7": 2
+      },
+      "must_fail": "clamped mod matrix must fail the declared match",
+      "mutation": "clamp-mod-matrix"
+    },
+    {
+      "failed": true,
+      "failing_traces_by_case": {
+        "development:global-0": 2,
+        "development:global-1": 2,
+        "development:global-2": 2,
+        "development:global-3": 2,
+        "development:global-4": 2,
+        "development:global-5": 2,
+        "development:global-6": 2,
+        "development:global-7": 2
+      },
+      "must_fail": "selector LFO must fail the declared match",
+      "mutation": "selector-lfo"
+    },
+    {
+      "failed": true,
+      "failing_traces_by_case": {
+        "development:global-0": 6,
+        "development:global-1": 6,
+        "development:global-2": 6,
+        "development:global-3": 6,
+        "development:global-4": 6,
+        "development:global-5": 6,
+        "development:global-6": 6,
+        "development:global-7": 6
+      },
+      "must_fail": "integer-sample ADSR timing must fail the declared match",
+      "mutation": "integer-adsr-timing"
+    },
+    {
+      "failed": true,
+      "failing_traces_by_case": {
+        "development:global-0": 5,
+        "development:global-1": 5,
+        "development:global-2": 5,
+        "development:global-3": 5,
+        "development:global-4": 5,
+        "development:global-5": 5,
+        "development:global-6": 5,
+        "development:global-7": 5
+      },
+      "must_fail": "ZOH upsample must fail the match",
+      "mutation": "upsample-mode-zoh"
+    },
+    {
+      "failed": true,
+      "failing_traces_by_case": {
+        "development:global-0": 3,
+        "development:global-1": 5,
+        "development:global-2": 5,
+        "development:global-3": 5,
+        "development:global-4": 3,
+        "development:global-5": 4,
+        "development:global-6": 3,
+        "development:global-7": 4
+      },
+      "must_fail": "off-endpoint coordinate must fail the match",
+      "mutation": "upsample-mode-off-endpoint"
+    }
+  ],
+  "numeric_contract": "unbound:#53",
+  "producers_sha256": {
+    "env/release-era/capture_control_path.py": "0d98b4aaafb133b844ef95c23a4040c6a0b35fb7e9c54bc1f881e0a39d0b8e45",
+    "src/torchsynth_voice/control_path.py": "6ae185f840655d5eb510d91d1823201be550a4d07c9eb1e6880af4c8345246fe",
+    "tests/test_control_path.py": "dc16bbc629a4890361130188a25b84ddef8c07dee50d9a893e8085bbafd2cd9b",
+    "tools/compare_control_path.py": "ed592f60e3f4d32a68ded4857eb3f1d66a33259ab0d702f169dec08c31c8a3b8"
+  },
+  "registry_sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+  "runtime": {
+    "platform": "Linux-7.0.12-linuxkit-x86_64-with-glibc2.31",
+    "processor": "",
+    "python": "3.9.13",
+    "runtime_profile": "release-mkl-compatible-v1",
+    "torch": "1.12.1+cpu"
+  },
+  "runtime_profile": "release-mkl-compatible-v1",
+  "schema": "torchsynth-control-path-float-match",
+  "schema_version": 1,
+  "semantic_version": "control-path-float-v1",
+  "source_sha256": {
+    "examples/examples.py": "0b76395368cb4599cc43712bdc815c8400d0e9d383c8c763490b0383bb245f38",
+    "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
+    "torchsynth/__init__.py": "6925d4e20fc74fa347978662cd1d7ba7341cbcdd45a56dee464cc3391cebc370",
+    "torchsynth/config.py": "0a0fbd308aacbf54a9b3ddf91825f2084857fd018ab928a8297af8f8b02c5264",
+    "torchsynth/module.py": "f2450efee7cfa5a450238885db636cb673d6dd3c731983dc08ccc0a0e42faa8c",
+    "torchsynth/nebulae/voice/default.json": "29818c50a2b9ece101d3952edc746a75fb7d043f2d68624f356c66b83bbeae24",
+    "torchsynth/nebulae/voice/drum.json": "87a136e7c8156d659d22cb69d79199c1564be2b111b6136b60a7fcd429c656f8",
+    "torchsynth/parameter.py": "db4e81bff3e930293b3e74377053e9b3d485b0939ad4ac6dd63b34bbc523a7a3",
+    "torchsynth/profile.py": "eac9e6eed462f6e9c3315b064208785ac597769fa4ec84241fa67a10b9ce025f",
+    "torchsynth/signal.py": "0087090d47efc6b297387e9f6f7ceb1c2be923970b3330757399a5a769d8683c",
+    "torchsynth/synth.py": "64b3c2909757f944397e4243425ceab889e6b71472445fa6710c734edb4d28f3",
+    "torchsynth/util.py": "d16a313640d2edd3f22e930e0b0e807b88c5c2cf71aba35c9107f7267231b333"
+  },
+  "status": "PASS"
+}
