@@ -213,3 +213,14 @@ collection. Do not discuss trials between listeners before unblind.
   `unqualified_pitch_property_tag`: listen-only evidence, never backing a
   pitch-property claim (coverage receipt: 96/96 cases pitch-unqualified).
 
+
+## Perceptual anchor (default nebula character reference)
+
+The rendered stimuli implement the pinned default nebula (DR-0001). The
+author's reference for the intended character of that target is the
+operator-provided SoundCloud upload
+[synth1k1](https://soundcloud.com/user-357924775/synth1k1) ("It's supposed to
+sound like this"; provided by the operator 2026-09-20). Listeners should
+audition it before session 01 to calibrate expectations. It is a **character
+reference, not a per-sample target** — per-sample truth is the hash-pinned
+corpus (`sim/reference/development-corpus-first.json`), never this recording.
