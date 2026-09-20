@@ -25,7 +25,8 @@ listening. **No listening has occurred yet; no perceptual claim exists.**
 Custody is receipts-only: the repository holds the manifest receipt
 (SHA-256 identities only). Stimulus audio and raw responses stay outside the
 repository. The committed manifest copy is byte-identical to
-`session-01/manifest.json` (sha256 `e2d62ec0c06a7c8e50245ed0a1d5caa67290f3dd`;
+`session-01/manifest.json` (sha256
+`604f37ada6ce0458d9bdca2b652b3a5ac7564965b02615c8f04d098feb277535`;
 byte-exact reproduction requires the documented session paths above).
 
 Session 01 contents: **84 degraded stimuli** (4 corpus-audio ladders × 5
@@ -211,3 +212,4 @@ collection. Do not discuss trials between listeners before unblind.
 - `osc.tuning_shift` (when rendered post-bridge) carries the
   `unqualified_pitch_property_tag`: listen-only evidence, never backing a
   pitch-property claim (coverage receipt: 96/96 cases pitch-unqualified).
+
