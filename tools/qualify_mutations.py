@@ -13,8 +13,9 @@ in-memory rerun and the current input digests. Absence is reported as absent,
 never as a pass; staleness (any participating input changed) fails.
 
 This qualification never renders audio and never touches the Voice graph:
-actual-Voice runtime fault injection is owned by a later qualified-runtime
-pass and is recorded under ``not_run`` rather than substituted.
+the bounded actual-Voice runtime fault-injection evidence is owned by
+``tools/qualify_mutations_runtime.py`` and the pinned release-era worker
+(``sim/reference/mutation-runtime-v1.json``), never substituted here.
 """
 
 from __future__ import annotations
@@ -46,11 +47,9 @@ INPUT_PATHS = (
 )
 
 NOT_RUN = (
-    "actual Voice runtime fault injection at #23 capture seams "
-    "(requires the Torch release-era runtime; synthetic apparatus proofs "
-    "never count as runtime evidence)",
     "fault-operator families #31/#32/#33 (they register through this API in "
-    "their own issues; no operator family is qualified here)",
+    "their own issues; no operator family is qualified here; the bridge.* "
+    "voice-runtime operators are test-only bridge proofs)",
     "detector qualification #34 matrix publication",
 )
 

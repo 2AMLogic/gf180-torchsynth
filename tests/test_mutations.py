@@ -53,7 +53,10 @@ class SeamCatalogTests(unittest.TestCase):
         self.assertGreaterEqual(len(CATALOG["seams"]), 5)
         for name, entry in CATALOG["seams"].items():
             with self.subTest(seam=name):
-                self.assertIn(entry["phase"], ("producer", "persistence", "access", "capture"))
+                self.assertIn(
+                    entry["phase"],
+                    ("producer", "persistence", "access", "capture", "voice-runtime"),
+                )
                 self.assertTrue(entry["downstream"].strip())
 
     def test_derived_digest_seam_is_not_writable(self):
@@ -664,6 +667,299 @@ class EnvelopeTests(unittest.TestCase):
         matrix = mutation_runtime.fault_matrix(DOCUMENT)
         envelope = self.envelope(self.result, fault_matrix=matrix)
         self.assertTrue(all(entry["tripped"] for entry in envelope["fault_matrix"]))
+
+
+VOICE_BINDING = {
+    "case_id": "global-0",
+    "partition": "development",
+    "fixture_identity": "f" * 64,
+}
+PARAMETER_NAMES = ["adsr_1.attack", "lfo_1.frequency"]
+
+
+def voice_plan(*instances):
+    return mutations.make_plan(VOICE_BINDING, list(instances), CATALOG)
+
+
+class VoiceSeamCatalogTests(unittest.TestCase):
+    def test_voice_replacement_seams_are_declared_writable(self):
+        for seam in ("voice.post_module", "voice.parameter_value"):
+            with self.subTest(seam=seam):
+                self.assertTrue(CATALOG["seams"][seam]["writable"])
+
+    def test_normalization_decision_seam_names_producer_handoff(self):
+        entry = CATALOG["seams"]["voice.normalization_decision"]
+        self.assertFalse(entry["writable"])
+        self.assertIn("Producer handoff required", entry["summary"])
+
+    def test_plan_at_normalization_decision_refuses_naming_handoff(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            voice_plan(
+                mutation_runtime.instance(
+                    "mi-norm",
+                    "bridge.scale_slot",
+                    "voice.normalization_decision",
+                    0.0,
+                    {"trace": "mixer.output", "slot": 0},
+                )
+            )
+        message = str(caught.exception)
+        self.assertIn("not a writable injection seam", message)
+        self.assertIn("Producer handoff required", message)
+
+    def test_bridge_operators_are_declared_test_only(self):
+        for operator_id in (
+            "bridge.sham_slot",
+            "bridge.scale_slot",
+            "bridge.raise_slot",
+            "bridge.scale_parameter",
+        ):
+            with self.subTest(operator=operator_id):
+                self.assertIn("test-only", mutations.OPERATORS[operator_id]["summary"])
+
+
+class TypedConfigurationTests(unittest.TestCase):
+    def test_integer_configuration_accepted_and_identity_bound(self):
+        base = voice_plan(
+            mutation_runtime.instance(
+                "mi-m", "bridge.scale_slot", "voice.post_module", 0.0,
+                {"trace": "mixer.output", "slot": 6},
+            )
+        )
+        other = voice_plan(
+            mutation_runtime.instance(
+                "mi-m", "bridge.scale_slot", "voice.post_module", 0.0,
+                {"trace": "mixer.output", "slot": 7},
+            )
+        )
+        self.assertNotEqual(base["plan_id"], other["plan_id"])
+
+    def test_boolean_slot_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            voice_plan(
+                mutation_runtime.instance(
+                    "mi-m", "bridge.scale_slot", "voice.post_module", 0.0,
+                    {"trace": "mixer.output", "slot": True},
+                )
+            )
+        self.assertIn("never bool", str(caught.exception))
+
+    def test_below_minimum_slot_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            voice_plan(
+                mutation_runtime.instance(
+                    "mi-m", "bridge.scale_slot", "voice.post_module", 0.0,
+                    {"trace": "mixer.output", "slot": -1},
+                )
+            )
+        self.assertIn("below declared minimum", str(caught.exception))
+
+    def test_float_slot_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            voice_plan(
+                mutation_runtime.instance(
+                    "mi-m", "bridge.scale_slot", "voice.post_module", 0.0,
+                    {"trace": "mixer.output", "slot": 1.5},
+                )
+            )
+        self.assertIn("must be an integer", str(caught.exception))
+
+    def test_invalid_typed_schemas_refused_at_registration(self):
+        bad_specs = [
+            {"slot": {"type": "boolean"}},
+            {"slot": {"type": "integer", "minimum": "0"}},
+            {"slot": {"type": "integer", "extra": 1}},
+            {"slot": 0},
+        ]
+        for spec in bad_specs:
+            with self.subTest(spec=spec):
+                with self.assertRaises(mutations.MutationError):
+                    mutations.register_operator(
+                        "test.badconfig",
+                        {
+                            "version": 1,
+                            "seam": "voice.post_module",
+                            "sham": False,
+                            "magnitude": {"type": "null", "unit": "none"},
+                            "configuration": spec,
+                            "composes_with": [],
+                            "summary": "test-only bad configuration schema",
+                        },
+                    )
+        self.assertNotIn("test.badconfig", mutations.OPERATORS)
+
+
+class VoicePlanTests(unittest.TestCase):
+    def test_module_seam_map_is_registry_derived(self):
+        seam_map = mutation_runtime.module_seam_map(DOCUMENT)
+        self.assertEqual(
+            seam_map["control_upsample.vco_1_amp"], ("control_upsample", 1)
+        )
+        self.assertEqual(seam_map["vco_2.post_vca"], ("vca", 1))
+        self.assertEqual(seam_map["noise.post_vca"], ("vca", 2))
+        self.assertEqual(seam_map["lfo_2.post_control_vca"], ("control_vca", 1))
+        self.assertEqual(seam_map["mixer.output"], ("mixer", 0))
+        self.assertEqual(len(seam_map), 22)
+        for passive in (
+            "mixer.pre_normalization",
+            "mixer.peak",
+            "mixer.gain",
+            "keyboard.midi_f0",
+            "mod_matrix.vco_1_pitch",
+        ):
+            self.assertNotIn(passive, seam_map)
+
+    def test_resolve_voice_plan_resolves_registry_association(self):
+        schedule = mutation_runtime.resolve_voice_plan(
+            voice_plan(
+                mutation_runtime.instance(
+                    "mi-p", "bridge.scale_parameter", "voice.parameter_value",
+                    0.5, {"parameter": "adsr_1.attack", "slot": 6},
+                ),
+                mutation_runtime.instance(
+                    "mi-m", "bridge.scale_slot", "voice.post_module",
+                    0.0, {"trace": "control_upsample.vco_1_amp", "slot": 6},
+                ),
+            ),
+            DOCUMENT,
+            PARAMETER_NAMES,
+            32,
+        )
+        self.assertEqual(schedule["kind"], "mutation-voice-schedule-v1")
+        self.assertEqual(schedule["declared_order"], ["mi-p", "mi-m"])
+        self.assertEqual(
+            schedule["module_mutations"][0],
+            {
+                "instance_id": "mi-m",
+                "trace": "control_upsample.vco_1_amp",
+                "module": "control_upsample",
+                "occurrence": 1,
+                "slot": 6,
+                "ratio": 0.0,
+                "raise": False,
+                "sham": False,
+                "declared_position": 1,
+            },
+        )
+        self.assertEqual(schedule["parameter_swaps"][0]["parameter"], "adsr_1.attack")
+
+    def test_unknown_trace_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            mutation_runtime.resolve_voice_plan(
+                voice_plan(
+                    mutation_runtime.instance(
+                        "mi-m", "bridge.scale_slot", "voice.post_module",
+                        0.0, {"trace": "mixer.not_a_trace", "slot": 0},
+                    )
+                ),
+                DOCUMENT,
+                PARAMETER_NAMES,
+                32,
+            )
+        self.assertIn("unknown module-output trace", str(caught.exception))
+
+    def test_passive_observation_is_not_a_writable_trace(self):
+        with self.assertRaises(mutations.MutationError):
+            mutation_runtime.resolve_voice_plan(
+                voice_plan(
+                    mutation_runtime.instance(
+                        "mi-m", "bridge.scale_slot", "voice.post_module",
+                        0.0, {"trace": "mixer.peak", "slot": 0},
+                    )
+                ),
+                DOCUMENT,
+                PARAMETER_NAMES,
+                32,
+            )
+
+    def test_slot_outside_pinned_batch_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            mutation_runtime.resolve_voice_plan(
+                voice_plan(
+                    mutation_runtime.instance(
+                        "mi-m", "bridge.scale_slot", "voice.post_module",
+                        0.0, {"trace": "mixer.output", "slot": 32},
+                    )
+                ),
+                DOCUMENT,
+                PARAMETER_NAMES,
+                32,
+            )
+        self.assertIn("slot outside pinned batch", str(caught.exception))
+
+    def test_unknown_parameter_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            mutation_runtime.resolve_voice_plan(
+                voice_plan(
+                    mutation_runtime.instance(
+                        "mi-p", "bridge.scale_parameter", "voice.parameter_value",
+                        0.5, {"parameter": "not_a_parameter", "slot": 0},
+                    )
+                ),
+                DOCUMENT,
+                PARAMETER_NAMES,
+                32,
+            )
+        self.assertIn("unknown inventory parameter", str(caught.exception))
+
+    def test_unsupported_batching_refused(self):
+        for batch_size in (0, 16, 31):
+            with self.subTest(batch_size=batch_size):
+                with self.assertRaises(mutations.MutationError):
+                    mutation_runtime.resolve_voice_plan(
+                        voice_plan(
+                            mutation_runtime.instance(
+                                "mi-m", "bridge.scale_slot", "voice.post_module",
+                                0.0, {"trace": "mixer.output", "slot": 0},
+                            )
+                        ),
+                        DOCUMENT,
+                        PARAMETER_NAMES,
+                        batch_size,
+                    )
+
+    def test_module_mutation_before_parameter_mutation_refused(self):
+        with self.assertRaises(mutations.MutationError) as caught:
+            mutation_runtime.resolve_voice_plan(
+                voice_plan(
+                    mutation_runtime.instance(
+                        "mi-m", "bridge.scale_slot", "voice.post_module",
+                        0.0, {"trace": "mixer.output", "slot": 6},
+                    ),
+                    mutation_runtime.instance(
+                        "mi-p", "bridge.scale_parameter", "voice.parameter_value",
+                        0.5, {"parameter": "adsr_1.attack", "slot": 6},
+                    ),
+                ),
+                DOCUMENT,
+                PARAMETER_NAMES,
+                32,
+            )
+        self.assertIn("graph causality", str(caught.exception))
+
+    def test_sham_and_raise_bridge_plans_accepted(self):
+        sham = voice_plan(
+            mutation_runtime.instance(
+                "mi-sham", "bridge.sham_slot", "voice.post_module",
+                configuration={"trace": "mixer.output", "slot": 6},
+            )
+        )
+        composed = voice_plan(
+            mutation_runtime.instance(
+                "mi-scale", "bridge.scale_slot", "voice.post_module",
+                0.0, {"trace": "control_upsample.vco_1_amp", "slot": 6},
+            ),
+            mutation_runtime.instance(
+                "mi-raise", "bridge.raise_slot", "voice.post_module",
+                configuration={"trace": "vco_1.post_vca", "slot": 6},
+            ),
+        )
+        schedule = mutation_runtime.resolve_voice_plan(composed, DOCUMENT, PARAMETER_NAMES, 32)
+        self.assertTrue(schedule["module_mutations"][1]["raise"])
+        self.assertEqual(
+            schedule["module_mutations"][1]["trace"], "vco_1.post_vca"
+        )
+        self.assertTrue(sham["mutations"][0]["sham"])
 
 
 if __name__ == "__main__":

@@ -36,7 +36,7 @@
       "sham_events_marked_and_ineffective": true,
       "sham_plan_identity_distinct": true
     },
-    "envelope_id": "mu1-98a1704aa084bcb27dcf7aa46054ca7ecc1fdf2cf2a3f4c9f08efb420efa49b7",
+    "envelope_id": "mu1-cc7f4ed0c4984962114b77a2c1e79cc729ac9ece1981e7ebf8590d952f0c5ed0",
     "events_summary": {
       "applied": 0,
       "complete": true,
@@ -120,8 +120,7 @@
     ],
     "kind": "mutation-evidence-v1",
     "not_run": [
-      "actual Voice runtime fault injection at #23 capture seams (requires the Torch release-era runtime; synthetic apparatus proofs never count as runtime evidence)",
-      "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here)",
+      "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here; the bridge.* voice-runtime operators are test-only bridge proofs)",
       "detector qualification #34 matrix publication"
     ],
     "plan_id": "mp1-fb22508d5dad5566e8ecb350fb863e2ee692a23abada04109bbdd604ce9c7379",
@@ -206,12 +205,12 @@
     }
   ],
   "inputs": {
-    "spec/reference/mutation-seams-v1.json": "5136981f6d4a6763b5b40b141d310c00de006a85cc58972f515bc8dae4bd16bb",
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "spec/schemas/mutation-v1.schema.json": "1cf1df64b81bcefbd95dadc5d8e17cba65394d600384e92143692bf2f0bd087e",
-    "src/torchsynth_voice/artifacts.py": "66326d0dea68ba770c8424e5776a0846fbd3ad3391ac46fdf732530d2939673b",
+    "src/torchsynth_voice/artifacts.py": "be4bf299c6699b547ea321d4eaa7ec719b97b13e63437a0112ab1456fb5fdb33",
     "src/torchsynth_voice/case_registry.py": "a4e54a7587c14500b80ee18379519c6382ccdcb1a7b70b72a80e91a41e0b2077",
-    "src/torchsynth_voice/mutation_runtime.py": "3c64c880b03e9380459b2ce5395b5f05773925d9b15872c61b4a3817d3649498",
-    "src/torchsynth_voice/mutations.py": "c65a089b81efd6321b51d59a4193d5816c21a62b00e5e7b08975c8c56db74240",
+    "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
+    "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
     "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
     "src/torchsynth_voice/trace_capture.py": "276c462ea09e46c61d14eb407a0c1629779a36ba8eee96133abc4e97427a5b54",
     "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
@@ -219,8 +218,7 @@
   "kind": "mutation-framework-v1",
   "mutation_contract": "mutation-v1",
   "not_run": [
-    "actual Voice runtime fault injection at #23 capture seams (requires the Torch release-era runtime; synthetic apparatus proofs never count as runtime evidence)",
-    "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here)",
+    "fault-operator families #31/#32/#33 (they register through this API in their own issues; no operator family is qualified here; the bridge.* voice-runtime operators are test-only bridge proofs)",
     "detector qualification #34 matrix publication"
   ],
   "schema_version": 1,

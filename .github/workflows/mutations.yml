@@ -27,3 +27,5 @@ jobs:
         run: |
           python tools/qualify_mutations.py
           python tools/qualify_mutations.py --check
+      - name: Check the committed actual-Voice runtime publication
+        run: python tools/qualify_mutations_runtime.py --check-publication

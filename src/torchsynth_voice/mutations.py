@@ -17,6 +17,14 @@ units, boolean or non-finite magnitudes, duplicate instance IDs, undeclared
 compositions, non-writable seams, and incomplete/extra/swapped event logs are
 refused before or at completion of an attempt. Errors raised at a seam are
 recorded in-band as ``errored`` events and re-raised; nothing is swallowed.
+
+Voice-runtime seams: ``voice.post_module`` and ``voice.parameter_value`` are
+declared writable seams hosted by a scoped session around the landed #23
+passive capture (observers first, replacement second, in one defined order);
+``voice.normalization_decision`` is declared non-writable and a plan there
+refuses with the required producer handoff. The ``bridge.*`` operators are
+#30-owned test-only proofs of that bridge; the #31/#32/#33 fault families
+register their own operator definitions through ``register_operator``.
 """
 
 from __future__ import annotations
@@ -135,6 +143,41 @@ def validate_magnitude(spec: Dict[str, Any], magnitude: Any) -> None:
         _require(value <= spec["maximum"], "magnitude value above declared maximum")
 
 
+def validate_configuration_schema(schema: Dict[str, Any]) -> None:
+    """A configuration schema maps keys to string enums or typed specs.
+
+    A string-list value is an enum of allowed strings. A dict value is a
+    typed spec; the only supported type is ``integer`` with an optional
+    nonnegative ``minimum`` (selectors such as batch slots and call
+    occurrences). Anything else fails closed at registration.
+    """
+    for key, allowed in schema.items():
+        _nonempty(key, "configuration key")
+        if type(allowed) is list:
+            _require(
+                all(type(item) is str for item in allowed),
+                "configuration schema values must be string lists: " + key,
+            )
+        elif type(allowed) is dict:
+            _require(
+                set(allowed) <= {"type", "minimum"},
+                "typed configuration spec allows exactly type/minimum: " + key,
+            )
+            _require(
+                allowed.get("type") == "integer",
+                "typed configuration spec supports only integer: " + key,
+            )
+            if "minimum" in allowed:
+                _require(
+                    type(allowed["minimum"]) is int,
+                    "configuration minimum must be an integer: " + key,
+                )
+        else:
+            raise MutationError(
+                "configuration schema value must be a string list or typed spec: " + key
+            )
+
+
 def _validate_definition(operator_id: str, definition: Dict[str, Any]) -> None:
     _nonempty(operator_id, "operator id")
     expected = {
@@ -155,12 +198,7 @@ def _validate_definition(operator_id: str, definition: Dict[str, Any]) -> None:
     _require(type(definition["sham"]) is bool, "operator sham flag must be boolean")
     validate_magnitude_spec(definition["magnitude"])
     _require(type(definition["configuration"]) is dict, "operator configuration schema")
-    for key, allowed in definition["configuration"].items():
-        _nonempty(key, "configuration key")
-        _require(
-            type(allowed) is list and all(type(item) is str for item in allowed),
-            "configuration schema values must be string lists: " + key,
-        )
+    validate_configuration_schema(definition["configuration"])
     _require(type(definition["composes_with"]) is list, "composes_with must be a list")
     _nonempty(definition["summary"], "operator summary")
 
@@ -238,6 +276,42 @@ OPERATORS: Dict[str, Dict[str, Any]] = {
         "composes_with": [],
         "summary": "traverse dispatch and return the original value; marked sham, never detected",
     },
+    "bridge.sham_slot": {
+        "version": 1,
+        "seam": "voice.post_module",
+        "sham": True,
+        "magnitude": {"type": "null", "unit": "none"},
+        "configuration": {"trace": [], "slot": {"type": "integer", "minimum": 0}},
+        "composes_with": [],
+        "summary": "voice-runtime sham: traverse the replacement seam and return the original value; test-only bridge proof, never detected",
+    },
+    "bridge.scale_slot": {
+        "version": 1,
+        "seam": "voice.post_module",
+        "sham": False,
+        "magnitude": {"type": "number", "unit": "ratio", "minimum": -1000, "maximum": 1000},
+        "configuration": {"trace": [], "slot": {"type": "integer", "minimum": 0}},
+        "composes_with": ["bridge.raise_slot", "bridge.scale_parameter"],
+        "summary": "voice-runtime bridge proof: replace one declared batch slot of one registry-named module output in place at the seam (same tensor object, replaced data) after the passive observer captured the original, keeping the landed #22 producer->consumer association intact; test-only, never a family operator",
+    },
+    "bridge.raise_slot": {
+        "version": 1,
+        "seam": "voice.post_module",
+        "sham": False,
+        "magnitude": {"type": "null", "unit": "none"},
+        "configuration": {"trace": [], "slot": {"type": "integer", "minimum": 0}},
+        "composes_with": ["bridge.scale_slot"],
+        "summary": "voice-runtime bridge proof: raise the identified RuntimeMutationCrash at the declared module-output occurrence; test-only; records the errored event in band, then re-raises",
+    },
+    "bridge.scale_parameter": {
+        "version": 1,
+        "seam": "voice.parameter_value",
+        "sham": False,
+        "magnitude": {"type": "number", "unit": "ratio", "minimum": -1000, "maximum": 1000},
+        "configuration": {"parameter": [], "slot": {"type": "integer", "minimum": 0}},
+        "composes_with": ["bridge.scale_slot"],
+        "summary": "voice-runtime bridge proof: scale one declared batch slot of one inventory-named parameter value before render and restore it after the attempt; test-only, never a family operator",
+    },
 }
 
 
@@ -256,13 +330,24 @@ def _validate_configuration(definition: Dict[str, Any], configuration: Any) -> N
             "undeclared configuration key: " + str(key),
         )
         allowed = definition["configuration"][key]
-        if allowed:
-            _require(
-                value in allowed,
-                "configuration value not allowed for " + key + ": " + str(value),
-            )
+        if type(allowed) is list:
+            if allowed:
+                _require(
+                    value in allowed,
+                    "configuration value not allowed for " + key + ": " + str(value),
+                )
+            else:
+                _nonempty(value, "configuration value: " + key)
         else:
-            _nonempty(value, "configuration value: " + key)
+            _require(
+                type(value) is int,
+                "configuration value must be an integer, never bool: " + key,
+            )
+            if "minimum" in allowed:
+                _require(
+                    value >= allowed["minimum"],
+                    "configuration value below declared minimum: " + key,
+                )
 
 
 def plan_core(plan: Dict[str, Any]) -> Dict[str, Any]:
@@ -311,13 +396,17 @@ def validate_plan(plan: Dict[str, Any], catalog: Dict[str, Any]) -> None:
                 + SEAM_CATALOG_PATH
                 + "; adding a writable seam requires a producer handoff)"
             )
+        entry = catalog["seams"][seam]
+        _require(
+            entry["writable"] is True,
+            "seam is not a writable injection seam (producer handoff required): "
+            + str(seam)
+            + " — "
+            + entry["summary"],
+        )
         _require(
             definition["seam"] == seam,
             "operator " + operator_id + " does not support seam " + str(seam),
-        )
-        _require(
-            catalog["seams"][seam]["writable"] is True,
-            "seam is not a writable injection seam: " + str(seam),
         )
         _require(
             instance["sham"] is definition["sham"],
