@@ -1,0 +1,634 @@
+{
+  "controls": {
+    "cleanup_after_producer_crash": true,
+    "empty_plan_events_complete": true,
+    "global_rng_untouched_by_attempts": true,
+    "no_errored_events_in_controls": true,
+    "plain_rerun_deterministic": true,
+    "plain_vs_empty_plan_bytes_identical": true,
+    "plain_vs_sham_bytes_identical": true,
+    "plan_identity_tracks_magnitude_and_configuration": true,
+    "sham_events_marked_and_ineffective": true,
+    "sham_plan_identity_distinct": true,
+    "sibling_case_bytes_unchanged_by_faulted_case": true
+  },
+  "counts": {
+    "controls_passed": 11,
+    "coverage_cases": 6,
+    "envelopes": 5,
+    "faults": 13,
+    "floor_probes": 2,
+    "tripped": 13
+  },
+  "coverage": {
+    "envelope_and_high_rate": [
+      {
+        "coverage_case": "attack-one-sample",
+        "domain": "short-degenerate-envelope",
+        "fixture_parameters": {
+          "attack": 1.0,
+          "decay": 4.0,
+          "note_samples": 12.0,
+          "release": 6.0
+        },
+        "property": "attack_end",
+        "reason": "short_merged_or_unidentifiable_stage",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "silent-sustain",
+        "domain": "short-degenerate-envelope",
+        "fixture_parameters": {
+          "attack": 8.0,
+          "decay": 44.0,
+          "release": 88.0,
+          "sustain": 0.0
+        },
+        "property": "sustain_amplitude",
+        "reason": "short_merged_or_unidentifiable_stage",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "flat-sustain",
+        "domain": "short-degenerate-envelope",
+        "fixture_parameters": {
+          "attack": 8.0,
+          "decay": 44.0,
+          "release": 88.0,
+          "sustain": 1.0
+        },
+        "property": "decay_end",
+        "reason": "short_merged_or_unidentifiable_stage",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "zero-release",
+        "domain": "short-degenerate-envelope",
+        "fixture_parameters": {
+          "attack": 8.0,
+          "decay": 44.0,
+          "release": 0.0
+        },
+        "property": "release_end",
+        "reason": "zero_release_or_non_adsr_shape",
+        "verdict": "NO VERDICT"
+      },
+      {
+        "coverage_case": "high-rate-lfo-20hz",
+        "domain": "high-rate-control",
+        "fixture_parameters": {
+          "frequency_hz": 20.0,
+          "rate_hz": 441.0
+        },
+        "property": "frequency_hz",
+        "range_cell": "lfo:75c6040c5fec:mid:441:1764:ordinary:1:4.37:0.0",
+        "reason": "valid",
+        "verdict": "PASS"
+      },
+      {
+        "coverage_case": "one-audio-sample-delay-visibility",
+        "domain": "high-rate-control",
+        "fixture_parameters": {
+          "rate_hz": 44100.0,
+          "sample_count": 176400
+        },
+        "property": "exact_equal",
+        "reason": "measured max_abs_error 0.5738800516653348 at 44100 Hz in the unaligned primary row",
+        "verdict": "FAIL"
+      }
+    ]
+  },
+  "envelopes": [
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "1b02a70513e9967ce93e7e47fb66eb5ff01d5fd370c438a8b39805d5a519e7eb",
+          "size_bytes": 2949
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
+          "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound",
+          "fault": "attack-breakpoint-shift-plus2",
+          "observed_refusal": "attack_end measured near 10.0 against declared truth 8.0 (verdict FAIL)",
+          "operator": "envelope.breakpoint_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-6fdfc1aa8e43b726ace0382a3a0eb78d35ee087376961aa04d214bd318b33d11",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:adsr-control",
+        "fixture_identity": "265da1eb8b37ea9571212f4a83dc97f6bdedb0de380384e45509538be89be41c",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "1ceaffb463eecc2d2119ef1d1dfc1c71cdc3b5b4d205323e1df54aba20bd1945",
+          "size_bytes": 19187
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+          "expected_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit",
+          "fault": "lfo-rate-shift-plus-half-hz",
+          "observed_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit (verdict FAIL)",
+          "operator": "modulation.lfo_rate_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-bb04507757188baf5cb44ee8ed854461c5e9516b0adfacf69fe11be5950bb426",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:lfo-control",
+        "fixture_identity": "7c0175f4a784db0c94d4c186e6404fe172b61107cc3f6fe224e7e4b64677dff0",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "c11be3bb6e2b9dccc8b72406e9e969b08a34d7693869a1b51c918607a2b4b454",
+          "size_bytes": 19187
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+          "expected_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
+          "fault": "lfo-depth-shift-plus-0.1",
+          "observed_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit (verdict FAIL)",
+          "operator": "modulation.lfo_depth_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-fdf6e8b444aa617297eaa32c9f124747c69c1211ef9652286308f6b38d7b7611",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:lfo-control",
+        "fixture_identity": "7c0175f4a784db0c94d4c186e6404fe172b61107cc3f6fe224e7e4b64677dff0",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "ec13f7102f0a8e0046b4a487afd9c17e38452404aab12f8b5cb1e63d2ffb2f19",
+          "size_bytes": 3291
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+          "expected_refusal": "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
+          "fault": "route-sign-flip",
+          "observed_refusal": "gain.vco_1_pitch sign flipped (verdict FAIL)",
+          "operator": "modulation.route_sign_flip",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+          "expected_refusal": "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
+          "fault": "route-depth-shift-plus25",
+          "observed_refusal": "gain.vco_1_amp depth scaled (verdict FAIL)",
+          "operator": "modulation.route_depth_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+          "expected_refusal": "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths",
+          "fault": "route-destination-swap",
+          "observed_refusal": "each swapped destination carries the other's measured gain; expected route labels unchanged",
+          "operator": "modulation.route_swap",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-3aa04068731c26fb1ebd7a65ddcca5f7c5ed72d3f01beef3e0a1473e0a9630fe",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:route-control",
+        "fixture_identity": "0a321c9a34d650abd942d28d1c1baf28c1b77b9de8f46dd53d4c09ef3916a235",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "8379cb5ae2a04f6900d766a89bded21ce8b84d801c0945b5076378cb8be16be0",
+          "size_bytes": 1901042
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
+          "expected_refusal": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
+          "fault": "zero-order-hold-control",
+          "observed_refusal": "ZOH re-derivation diverges from the landed align_corners=False interpolation (verdict FAIL)",
+          "operator": "interp.zoh_control",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "trace_capture.check_endpoint_bytes + paired exactness row",
+          "expected_refusal": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
+          "fault": "dropped-endpoint-coordinate",
+          "observed_refusal": "trace_capture.check_endpoint_bytes: endpoint loss: upsampled first/last sample bytes differ from control",
+          "operator": "interp.off_endpoint",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
+          "expected_refusal": "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
+          "fault": "one-audio-sample-delay",
+          "observed_refusal": "one-sample audio delay stays visible in the unaligned row (verdict FAIL)",
+          "operator": "timing.delay_audio_sample",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "in-band declared-order events + paired exactness row",
+          "expected_refusal": "declared-order applied events; composed fault FAIL on the unaligned row",
+          "fault": "composed-zoh-then-audio-delay",
+          "observed_refusal": "declared-order events applied then applied; the composed fault diverges from the expected trace",
+          "operator": "interp.zoh_control + timing.delay_audio_sample",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-bace82e5fdbed3981c66ae2511c0e6ade297bfcdbf30d1e79e537e4a7bceb16f",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:upsample-audio",
+        "fixture_identity": "5e3da7c43fa3f17e88d92b97e1e2375b177d65475533ace7a5593744e6e86bf9",
+        "partition": "development"
+      }
+    }
+  ],
+  "fault_matrix": [
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
+      "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound",
+      "fault": "attack-breakpoint-shift-plus2",
+      "observed_refusal": "attack_end measured near 10.0 against declared truth 8.0 (verdict FAIL)",
+      "operator": "envelope.breakpoint_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
+      "expected_refusal": "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error",
+      "fault": "one-control-sample-delay",
+      "observed_refusal": "delayed lane diverges from the unpaired expected lane (verdict FAIL)",
+      "operator": "timing.delay_control_sample",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "mutations_timing.frame_preflight + compare_paired frame gate",
+      "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+      "fault": "missing-sample",
+      "observed_refusal": "declared frame preflight refusal: analytic.adsr declares 240 samples at 441.0 Hz, observed 239; compare_paired refuses the frame: frame_mismatch",
+      "operator": "timing.drop_sample",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "mutations_timing.frame_preflight + compare_paired frame gate",
+      "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+      "fault": "duplicated-sample",
+      "observed_refusal": "declared frame preflight refusal: analytic.adsr declares 240 samples at 441.0 Hz, observed 241; compare_paired refuses the frame: frame_mismatch",
+      "operator": "timing.duplicate_sample",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+      "expected_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit",
+      "fault": "lfo-rate-shift-plus-half-hz",
+      "observed_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit (verdict FAIL)",
+      "operator": "modulation.lfo_rate_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+      "expected_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
+      "fault": "lfo-depth-shift-plus-0.1",
+      "observed_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit (verdict FAIL)",
+      "operator": "modulation.lfo_depth_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+      "expected_refusal": "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
+      "fault": "route-sign-flip",
+      "observed_refusal": "gain.vco_1_pitch sign flipped (verdict FAIL)",
+      "operator": "modulation.route_sign_flip",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+      "expected_refusal": "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
+      "fault": "route-depth-shift-plus25",
+      "observed_refusal": "gain.vco_1_amp depth scaled (verdict FAIL)",
+      "operator": "modulation.route_depth_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+      "expected_refusal": "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths",
+      "fault": "route-destination-swap",
+      "observed_refusal": "each swapped destination carries the other's measured gain; expected route labels unchanged",
+      "operator": "modulation.route_swap",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
+      "expected_refusal": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
+      "fault": "zero-order-hold-control",
+      "observed_refusal": "ZOH re-derivation diverges from the landed align_corners=False interpolation (verdict FAIL)",
+      "operator": "interp.zoh_control",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "trace_capture.check_endpoint_bytes + paired exactness row",
+      "expected_refusal": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
+      "fault": "dropped-endpoint-coordinate",
+      "observed_refusal": "trace_capture.check_endpoint_bytes: endpoint loss: upsampled first/last sample bytes differ from control",
+      "operator": "interp.off_endpoint",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
+      "expected_refusal": "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
+      "fault": "one-audio-sample-delay",
+      "observed_refusal": "one-sample audio delay stays visible in the unaligned row (verdict FAIL)",
+      "operator": "timing.delay_audio_sample",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "in-band declared-order events + paired exactness row",
+      "expected_refusal": "declared-order applied events; composed fault FAIL on the unaligned row",
+      "fault": "composed-zoh-then-audio-delay",
+      "observed_refusal": "declared-order events applied then applied; the composed fault diverges from the expected trace",
+      "operator": "interp.zoh_control + timing.delay_audio_sample",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    }
+  ],
+  "floor_probes": [
+    {
+      "declared_truth_control_samples": 8.0,
+      "detected": true,
+      "expected_detected": true,
+      "magnitude_control_samples": 0.03,
+      "measured_attack_end": 8.030000000000001,
+      "measured_error": 0.030000000000001137,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "attack-breakpoint-shift-0.03",
+      "qualified_resolution_control_samples": 0.02,
+      "seam": "apparatus.producer_call"
+    },
+    {
+      "declared_truth_control_samples": 8.0,
+      "detected": false,
+      "expected_detected": false,
+      "magnitude_control_samples": 0.005,
+      "measured_attack_end": 8.004999999999999,
+      "measured_error": 0.004999999999999005,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "attack-breakpoint-shift-0.005",
+      "qualified_resolution_control_samples": 0.02,
+      "seam": "apparatus.producer_call"
+    }
+  ],
+  "inputs": {
+    "sim/qualification/periodic-v1.json": "686f9423fc03d7f284527f87b1800a5f8fc7a640e93d40ef4e5f65383050b158",
+    "spec/CONTROL-PATH.md": "17730df56ca76cfead66cfaca647ba4d739f833197b1479fb45579e3ffbf3d18",
+    "spec/ENVELOPE-ESTIMATORS.md": "8b5e5bb83e5e6bbfe6d714b0895f2a59a637c22af05ee232b8b2834c760a660d",
+    "spec/PERIODIC-ESTIMATORS.md": "359b05496ac1498d3a101a8be66725cef66eacd71b6ca295b9a8d79dbb6b8ba1",
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
+    "src/torchsynth_voice/artifacts.py": "be4bf299c6699b547ea321d4eaa7ec719b97b13e63437a0112ab1456fb5fdb33",
+    "src/torchsynth_voice/envelope_estimators.py": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
+    "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
+    "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
+    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
+    "src/torchsynth_voice/periodic_estimators.py": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
+    "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
+    "src/torchsynth_voice/trace_capture.py": "276c462ea09e46c61d14eb407a0c1629779a36ba8eee96133abc4e97427a5b54",
+    "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
+  },
+  "kind": "mutation-timing-v1",
+  "mutation_contract": "mutation-v1",
+  "not_run": [
+    "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+    "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+    "holdout partitions (sealed; development-only constructed fixtures)",
+    "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+  ],
+  "schema_version": 1,
+  "status": "PASS",
+  "trace_registry_sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c"
+}
