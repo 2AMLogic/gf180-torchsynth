@@ -1,11 +1,16 @@
 """Scoped fault-injection runtime bridge for the qualification apparatus.
 
-The #30 execution side of spec/MUTATIONS.md. Stdlib-only and Torch-free:
-actual-Voice runtime fault injection is owned by a later qualified-runtime
-pass and is never substituted by this apparatus. The bridge is strictly
-additive — it wraps apparatus-owned callables declared in the seam catalog,
-never producer or render-path modules, and it removes every wrapper after
-success, operator errors and partial setup failure.
+The #30 execution side of spec/MUTATIONS.md. Stdlib-only: the apparatus bridge
+wraps apparatus-owned callables declared in the seam catalog, never producer
+or render-path modules, and it removes every wrapper after success, operator
+errors and partial setup failure. The voice-runtime side of this module is
+resolution-only stdlib code: it validates declared ``voice.*`` mutations
+against the landed #22 registry/#23 capture contract and produces the JSON
+execution schedule consumed by the pinned release-era worker
+(``env/release-era/mutation_worker.py``), which owns the actual Torch
+mechanics inside the qualified runtime. Actual-Voice evidence is bounded and
+executed under the DR-0006 gated tool; it is never substituted by synthetic
+proofs, and unavailable runtime work is recorded not-run, never a pass.
 
 In-band reporting: every application is recorded as an ordered event
 (``applied``/``ineffective``/``errored``/``refused``); an exception raised at
@@ -673,4 +678,133 @@ def qualification_controls(document: Optional[Dict[str, Any]] = None) -> Dict[st
         "no_errored_events_in_controls": plain.errored is None
         and empty.errored is None
         and sham.errored is None,
+    }
+
+
+VOICE_POST_MODULE_SEAM = "voice.post_module"
+VOICE_PARAMETER_SEAM = "voice.parameter_value"
+SCHEDULE_SCHEMA_VERSION = 1
+
+
+def module_seam_map(document: Dict[str, Any]) -> Dict[str, Tuple[str, int]]:
+    """Registry-derived replacement targets: trace name -> (module, occurrence).
+
+    Only single-output forward-hook traces are executable replacement seams.
+    Profiler-derived observations (``mixer.pre_normalization``/``peak``/``gain``)
+    are strictly passive and are absent, as are multi-output hook results. The
+    call association is the landed #22 registry's own producer binding, so a
+    module-wide hook cannot silently mutate the wrong occurrence of a reused
+    module (control VCA 2, control upsample 5, audio VCA 3).
+    """
+    seam_map: Dict[str, Tuple[str, int]] = {}
+    for trace in document["traces"]:
+        producer = trace["producer"]
+        if (
+            producer["mechanism"] == "forward-hook"
+            and producer["output_index"] is None
+        ):
+            seam_map[trace["name"]] = (producer["module"], producer["occurrence"] - 1)
+    return seam_map
+
+
+def resolve_voice_plan(
+    plan: Dict[str, Any],
+    document: Dict[str, Any],
+    parameter_names: List[str],
+    batch_size: int,
+) -> Dict[str, Any]:
+    """Validate declared voice mutations and resolve the execution schedule.
+
+    Fail-closed before execution: unknown trace or parameter names, seams
+    whose producer binding is not a writable hook (the normalization decision
+    among them), slots outside the pinned batch, and module mutations
+    declared before parameter mutations (graph causality) are all refused
+    here.     The returned schedule is plain JSON for the pinned release-era
+    worker; it binds the plan identity and the declared instance order.
+    """
+    from . import trace_registry
+
+    trace_registry.validate_registry(document)
+    _require(
+        type(batch_size) is int and batch_size > 0 and batch_size % 32 == 0,
+        "voice attempts require supported reproducible batching",
+    )
+    _require(
+        type(parameter_names) is list
+        and len(set(parameter_names)) == len(parameter_names)
+        and all(type(name) is str and name.strip() for name in parameter_names),
+        "parameter names must be distinct nonblank strings",
+    )
+    seam_map = module_seam_map(document)
+    module_mutations: List[Dict[str, Any]] = []
+    parameter_swaps: List[Dict[str, Any]] = []
+    declared_order: List[str] = []
+    for position, instance_plan in enumerate(plan["mutations"]):
+        instance_id = instance_plan["instance_id"]
+        declared_order.append(instance_id)
+        configuration = instance_plan["configuration"]
+        seam = instance_plan["seam"]
+        if seam == VOICE_POST_MODULE_SEAM:
+            trace = configuration["trace"]
+            _require(trace in seam_map, "unknown module-output trace: " + str(trace))
+            module, occurrence = seam_map[trace]
+            slot = configuration["slot"]
+            _require(slot < batch_size, "slot outside pinned batch: " + instance_id)
+            raising = instance_plan["operator"] == "bridge.raise_slot"
+            module_mutations.append(
+                {
+                    "instance_id": instance_id,
+                    "trace": trace,
+                    "module": module,
+                    "occurrence": occurrence,
+                    "slot": slot,
+                    "ratio": None
+                    if raising or instance_plan["magnitude"] is None
+                    else instance_plan["magnitude"]["value"],
+                    "raise": raising,
+                    "sham": instance_plan["sham"],
+                    "declared_position": position,
+                }
+            )
+        else:
+            _require(
+                seam == VOICE_PARAMETER_SEAM,
+                "seam has no voice runtime target: " + str(seam),
+            )
+            parameter = configuration["parameter"]
+            _require(
+                parameter in parameter_names,
+                "unknown inventory parameter: " + str(parameter),
+            )
+            slot = configuration["slot"]
+            _require(slot < batch_size, "slot outside pinned batch: " + instance_id)
+            parameter_swaps.append(
+                {
+                    "instance_id": instance_id,
+                    "parameter": parameter,
+                    "slot": slot,
+                    "ratio": instance_plan["magnitude"]["value"],
+                    "sham": instance_plan["sham"],
+                    "declared_position": position,
+                }
+            )
+    _require(
+        max(
+            (swap["declared_position"] for swap in parameter_swaps), default=-1
+        )
+        < min(
+            (mutation["declared_position"] for mutation in module_mutations),
+            default=len(declared_order),
+        ),
+        "parameter mutations must be declared before module mutations (graph causality)",
+    )
+    return {
+        "schema_version": SCHEDULE_SCHEMA_VERSION,
+        "kind": "mutation-voice-schedule-v1",
+        "plan_id": plan["plan_id"],
+        "source_binding": dict(plan["source_binding"]),
+        "batch_size": batch_size,
+        "module_mutations": module_mutations,
+        "parameter_swaps": parameter_swaps,
+        "declared_order": declared_order,
     }

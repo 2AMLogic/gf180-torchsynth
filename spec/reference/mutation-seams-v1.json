@@ -43,6 +43,24 @@
       "writable": true,
       "summary": "The capture descriptor inventory presented to the landed capture validator. A declared mutation may swap or drop names so the capture refusal path is exercised against the #22 registry; passive observers themselves stay passive.",
       "downstream": "trace_capture.validate_selected_capture refuses missing, extra, swapped or reordered capture inventories"
+    },
+    "voice.post_module": {
+      "phase": "voice-runtime",
+      "writable": true,
+      "summary": "In-place replacement of one declared batch slot of one registry-named module output during an actual Voice render: the same tensor object keeps flowing to consumers (preserving the #22 CallTracker producer->consumer argument association) while its declared slot data is replaced after the #23 passive observer has snapshotted the original bytes at the seam. Downstream modules and the returned audio consume the replacement; the captured inventory keeps the original. Occurrence/call association comes from the #22 registry producer binding, never from registration order. Covers module-output classes that downstream families own (noise input, oscillator, gain, timing, envelope, mixer framing); the bridge.* operators are test-only proofs, never family operators.",
+      "downstream": "#23 capture inventory holds the original bytes at the seam while downstream traces and returned audio show the replacement; trace_registry.CallTracker argument association and invocation counts stay unchanged; session cleanup restores byte-identical rerenders"
+    },
+    "voice.parameter_value": {
+      "phase": "voice-runtime",
+      "writable": true,
+      "summary": "Scoped by-reference replacement of one declared batch slot of one inventory-named parameter value, hosted at the keyboard anchor seam (the first registry call): the pinned Voice.forward re-randomizes every parameter at the start of each render, so the swap is applied only after the producer's own initialization completes and before any later module read. The keyboard module's own reads happen before the anchor returns and are therefore not swappable here; swapping them requires a producer handoff. Restored after the attempt.",
+      "downstream": "the anchor event records the post-randomization original and the replacement slot digests; module-output traces and returned audio show the replacement; sibling parameters and a post-attempt rerun stay byte-identical to the pristine baseline"
+    },
+    "voice.normalization_decision": {
+      "phase": "voice-runtime",
+      "writable": false,
+      "summary": "The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the producer function, there is no observer/replacement hook at this exact site, and the captured mixer.peak and derived mixer.gain are strictly passive observations that never replace the original division. Producer handoff required: an AudioMixer.output seam that presents the candidate peak and clamp decision to a scoped mutator while the original computation still runs. A plan declaring a mutation here fails closed naming this handoff.",
+      "downstream": "mutations.validate_plan refuses with the named producer handoff; mixer.peak/mixer.gain remain captured diagnostics of the original decision"
     }
   }
 }

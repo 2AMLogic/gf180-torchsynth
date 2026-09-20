@@ -8,9 +8,11 @@ apparatus-owned seams so that downstream tooling refusals and NO VERDICT paths
 are exercised as tests. It owns:
 `src/torchsynth_voice/mutations.py`,
 `src/torchsynth_voice/mutation_runtime.py`,
-`tests/test_mutations.py`, `tools/qualify_mutations.py`, the seam overlay
-`spec/reference/mutation-seams-v1.json`, this document, the bounded
-publication `sim/reference/mutation-framework-v1.json`, and
+`tests/test_mutations.py`, `tools/qualify_mutations.py`,
+`tools/qualify_mutations_runtime.py`, `env/release-era/mutation_worker.py`,
+the seam overlay `spec/reference/mutation-seams-v1.json`, this document, the
+bounded publications `sim/reference/mutation-framework-v1.json` (apparatus)
+and `sim/reference/mutation-runtime-v1.json` (actual Voice), and
 `.github/workflows/mutations.yml`.
 
 It does not edit any producer or render-path module, does not fork #22's
@@ -33,6 +35,55 @@ own files; #34 consumes plans, events and raw evidence.
 - A passive or derived observation is not an executable seam: the catalog
   marks the derived evidence-digest step non-writable, and a plan declaring a
   mutation there fails closed at registration.
+
+## Voice runtime bridge
+
+Two voice seams are declared writable: `voice.post_module` (replacement of
+one declared batch slot of one registry-named module output) and
+`voice.parameter_value` (scoped by-reference replacement of one inventory-
+named parameter slot). The normalization decision inside
+`torchsynth.util.normalize_if_clipping` is declared non-writable: the exact
+site has no observer/replacement hook, and the captured `mixer.peak` and
+derived `mixer.gain` are strictly passive diagnostics. A plan declaring a
+mutation there fails closed naming the required `AudioMixer.output` producer
+handoff; it is never substituted by a convenient later edit.
+
+The voice-runtime execution surface is split by contract and mechanics:
+
+- `mutation_runtime.resolve_voice_plan` is stdlib host code. It validates the
+  declared mutations against the landed #22 registry (call association comes
+  from the registry's own producer binding, never from registration order),
+  refuses unknown traces/parameters, passive or multi-output observations,
+  slots outside the pinned batch, and module mutations declared before
+  parameter mutations (graph causality), and emits a JSON
+  `mutation-voice-schedule-v1`.
+- `env/release-era/mutation_worker.py` executes the schedule inside the
+  pinned DR-0006 release image (Python 3.9, Torch 1.12.1, pinned source).
+  Passive #23 observers are installed first and stay the sole capture owner;
+  replacement hooks are installed after them in one defined order. The
+  replacement is applied in place at the seam value — the same tensor object
+  keeps flowing to consumers, so the landed #22 CallTracker
+  producer->consumer argument association stays intact — while the data is
+  replaced after the observer's pre-mutation snapshot: the captured inventory
+  keeps the original bytes, downstream modules and the returned audio consume
+  the replacement. Parameter swaps are hosted at the keyboard anchor seam:
+  the pinned producer re-randomizes every parameter at the start of each
+  render, so the swap is applied in the first registry call's hook — after
+  the producer's own initialization, before any later module read — by
+  reference and restored; the keyboard module's own reads require a producer
+  handoff. Every
+  application is an ordered in-band event with original/replacement slot
+  digests; a declared raise records the errored event and re-raises; all
+  hooks and swaps are removed after success, render errors and partial setup
+  failure.
+- The host tool `tools/qualify_mutations_runtime.py` re-validates every event
+  log against its plan with the landed contract, binds `mu1-` evidence
+  envelopes, and writes the bounded publication. `--check-publication`
+  re-verifies the committed publication (plans, schedules, events, envelope
+  identities, input digests) with stdlib only.
+
+The `bridge.*` operators are #30-owned test-only proofs of this bridge; they
+are never published as #31/#32/#33 family qualification.
 
 ## Contracts
 
@@ -105,19 +156,34 @@ relabeling holdout allocations as development.
 ## Qualification protocol
 
 `tools/qualify_mutations.py` (default mode) runs the controls and the full
-fault×downstream matrix in-process and writes the bounded publication. Every
-fault must trip its named downstream refusal — `artifacts.verify_sha256`,
-`scorecard.validate_row`/`validate_report`,
-`trace_capture.validate_selected_capture`,
-`case_registry.evaluate`/`row_outcome`, and the attempt-denominator
-completeness gate — and every control must pass, or nothing is written.
-`--check` reruns the qualification and compares against the committed
-publication plus the digests of every participating module; absence is
-reported as absent, never as a pass.
+fault×downstream matrix in-process and writes the bounded apparatus
+publication. Every fault must trip its named downstream refusal —
+`artifacts.verify_sha256`, `scorecard.validate_row`/`validate_report`,
+`trace_capture.validate_selected_capture`, `case_registry.evaluate`/
+`row_outcome`, and the attempt-denominator completeness gate — and every
+control must pass, or nothing is written. `--check` reruns the qualification
+and compares against the committed publication plus the digests of every
+participating module; absence is reported as absent, never as a pass.
+
+`tools/qualify_mutations_runtime.py` (default mode, DR-0006 gated host) runs
+the bounded actual-Voice protocol inside the pinned release image: ordinary
+traced baseline, empty-plan and sham attempts must be byte-identical to each
+other and to the committed #22 prototype sentinel (final audio, every
+captured trace, named parameters, noise, RNG state, invocation counts); each
+declared fault must change exactly its blast radius (declared slot audio and
+expected downstream traces diverge; sibling traces, undeclared batch slots,
+normalization decision evidence and invocation counts stay byte-identical);
+the composed ordered crash must abort the render with in-band events and a
+byte-identical clean rerun; and the normalization decision seam must refuse
+at plan time naming the producer handoff. `--check-publication` revalidates
+the committed publication with stdlib only.
 
 ## Not run here
 
-Actual-Voice runtime fault injection at #23 capture seams (requires the
-Torch release-era runtime), the #31/#32/#33 fault-operator families, and
-#34's matrix publication. Synthetic apparatus proofs never count as runtime
-evidence, and no detector-family qualification is claimed by this framework.
+The #31/#32/#33 fault-operator families (they register through this public
+API in their own issues; `bridge.*` operators are test-only bridge proofs,
+never family operators) and #34's matrix publication. Injection at
+`voice.normalization_decision` is not executable without the named producer
+handoff; its fail-closed refusal is executed host-side instead. Synthetic
+apparatus proofs never count as runtime evidence, and no detector-family
+qualification is claimed by this framework.
