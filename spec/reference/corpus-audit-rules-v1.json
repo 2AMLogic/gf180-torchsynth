@@ -1,0 +1,240 @@
+{
+  "schema": "torchsynth-corpus-audit-rules",
+  "schema_version": 1,
+  "identity": {
+    "version": "v1",
+    "rule_kind": "descriptive coverage and stratum rules; not acceptance thresholds, not estimator floors, not perceptual claims",
+    "frozen_for": "issue #21 audit of the repeat-qualified 96-case development corpus",
+    "freeze_note": "Thresholds below are fixed a priori from contract and arithmetic facts (float32 samples, 44100 Hz, 176400-sample clip, unit full scale). They are not inferred from, tuned against, or revised after any corpus outcome. Any later change preserves the old report and records a new rule identity and reason.",
+    "change_policy": "A new rules document with a new identity value supersedes this one; reports record the exact rules_sha256 they were computed under; old reports are never rewritten."
+  },
+  "audited_corpus": {
+    "denominator": {
+      "expected_identities": "global-0 .. global-95 (global sound indices 0-95, all partition=development)",
+      "expected_count": 96,
+      "holdout_rule": "identities 96-127 are holdout; any holdout identity is refused before any payload access and no holdout file is read"
+    },
+    "required_inputs": [
+      "first-run receipt (#19) passing the landed tools/audit_development_corpus.audit_receipt against its raw store",
+      "repeat receipt (#20) passing the landed tools/audit_development_corpus.audit_receipt against its raw store",
+      "byte-identical corpus index documents across both stores",
+      "per-identity metadata bytes and audio bytes byte-equal across both stores",
+      "rules document (this file) matching the rules_sha256 recorded in the report"
+    ],
+    "refusal_rule": "if any required input fails, the qualified-corpus audit is refused; diagnostics are retained and no coverage verdicts are emitted; missing store directories are never created"
+  },
+  "status_vocabulary": {
+    "statuses": [
+      "measured",
+      "not_applicable",
+      "unqualified",
+      "missing",
+      "ambiguous",
+      "error"
+    ],
+    "partition_rule": "for every family and every one of the 96 identities exactly one row exists with a value or null plus a status and reason; per-family status counts reconcile to 96; overlapping descriptive strata across families are explicitly non-additive",
+    "score_rule": "no distribution, average, or aggregate score is computed or called correctness; verdicts are per-row and per-stratum counts only"
+  },
+  "families": {
+    "audio_facts": {
+      "method": {
+        "name": "direct-arithmetic-fsum-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "float32 little-endian decode; binary64 math.fsum accumulation; no alignment, onset search, trimming, padding, resampling, level normalization, filtering, or gain fitting",
+        "units": "native amplitude; full scale = 1.0",
+        "observation_window": "the original full clip, samples 0..176399; time origin is sample 0 at 0.0 s; time_seconds = sample_index / 44100.0"
+      },
+      "required_inputs": ["audio.f32le bytes hash-bound through the per-case artifact reference"],
+      "allowed_preparation": "none",
+      "applicability_rule": "applicable to every complete qualified case",
+      "properties": {
+        "finite_sample_count": {
+          "definition": "count of samples finite under IEEE-754; required to equal 176400",
+          "unit": "samples"
+        },
+        "exact_silence": {
+          "definition": "true iff every sample is numerically zero (value == 0.0, either sign of zero)",
+          "note": "signed-zero bytes are reported as stored and are never canonicalized; exact silence is a raw observable, separate from any pitch or energy property"
+        },
+        "signed_zero_sample_count": {
+          "definition": "count of samples whose stored byte pattern is negative zero (0x80000000)",
+          "unit": "samples"
+        },
+        "rms": {
+          "definition": "sqrt(math.fsum(v*v)/176400)",
+          "unit": "native amplitude"
+        },
+        "dc_mean": {
+          "definition": "math.fsum(v)/176400",
+          "unit": "native amplitude"
+        },
+        "peak_abs": {
+          "definition": "max |v| over all samples",
+          "unit": "native amplitude",
+          "tie_rule": "the first (lowest) sample index attaining the maximum wins"
+        },
+        "peak_signed": {
+          "definition": "the signed value at the winning peak index",
+          "unit": "native amplitude"
+        },
+        "peak_index": {
+          "definition": "winning peak sample index",
+          "unit": "samples"
+        },
+        "peak_time_seconds": {
+          "definition": "peak_index / 44100.0",
+          "unit": "seconds"
+        },
+        "beyond_full_scale_count": {
+          "definition": "count(|v| > 1.0), strict",
+          "note": "reaching exactly +1.0 or -1.0 is not proof of a clipping operation",
+          "unit": "samples"
+        },
+        "at_full_scale_count": {
+          "definition": "count(|v| >= 1.0), inclusive",
+          "unit": "samples"
+        },
+        "near_silence": {
+          "rms_cutoff": 1e-06,
+          "rms_comparison": "<",
+          "peak_cutoff": 0.0001,
+          "peak_comparison": "<",
+          "definition": "true iff rms < 1e-6 AND peak_abs < 1e-4",
+          "justification": "1e-6 native amplitude sits one order of magnitude above the float32 relative resolution at unit scale (~1.19e-7), so sub-threshold signals are at or below single-precision storage noise; the 1e-4 peak condition excludes signals whose RMS is tiny only because excursions are isolated. This is a descriptive convention fixed before data access; it is not an estimator floor, a silence guarantee, or a perceptual inaudibility claim. Full-scale reference if displayed in dB: dBFS = 20*log10(x/1.0).",
+          "boundary_note": "a case with rms exactly 1e-6 or peak exactly 1e-4 is NOT near-silence (strict comparisons)"
+        }
+      },
+      "unavailable_reasons": {
+        "missing": "audio bytes referenced by a complete case are absent or fail their recorded hash",
+        "error": "samples are nonfinite or the byte count is not 705600"
+      }
+    },
+    "normalization_seam": {
+      "method": {
+        "name": "producer-seam-recording-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "read-only comparison of recorded producer observations; derived values are labeled derived",
+        "units": "gain: 1; peaks: native amplitude, full scale = 1.0"
+      },
+      "required_inputs": [
+        "per-attempt worker receipt observations.pre_normalization_peak and observations.normalization_gain_derived from the digest-verified run envelope in the store",
+        "artifact metadata audio.normalization_gain"
+      ],
+      "allowed_preparation": "none; the final peak alone is never used to reconstruct the earlier peak or gain and never proves bypass",
+      "applicability_rule": "applicable only where both recorded seam values exist; a requested-but-missing promised capture is an input defect (error), not an optional omission",
+      "classification": {
+        "active": "recorded pre_normalization_peak > 1.0 (strict; contract normalizes only above 1.0)",
+        "not_applied": "recorded pre_normalization_peak <= 1.0; a pre-peak of exactly 1.0 is the unchanged tie and is not_applied",
+        "missing": "either recorded seam value is absent; never inferred from the final peak"
+      },
+      "consistency": {
+        "gain_definition": "recorded normalization_gain_derived must equal exactly (1.0 / pre_normalization_peak) when pre_peak > 1.0, else exactly 1.0 (same IEEE-754 operation as the producer; exact binary64 equality)",
+        "metadata_binding": "metadata audio.normalization_gain must equal the envelope normalization_gain_derived exactly",
+        "derived_pre_peak": "when active, 1.0 / recorded gain is reported as derived_pre_peak and labeled derived"
+      },
+      "unavailable_reasons": {
+        "missing": "envelope attempt receipt carries no observations block or lacks a seam field",
+        "error": "recorded values are inconsistent under the declared exact-equality checks"
+      }
+    },
+    "parameter_strata": {
+      "method": {
+        "name": "inventory-keyed-fixed-bins-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "read the producer-recorded normalized_by_name and physical_by_name maps; bin normalized values into fixed bins declared here",
+        "units": "normalized: 1 on [0.0, 1.0]; physical: the unit declared per name in spec/reference/parameter-inventory-v1.json"
+      },
+      "required_inputs": ["per-case artifact metadata inputs.parameters maps", "checked-in parameter inventory (78 canonical names)"],
+      "allowed_preparation": "none; the pinned inventory is the only conversion reference and no second parameter-conversion renderer is used",
+      "applicability_rule": "applicable to every complete qualified case whose metadata maps contain exactly the 78 canonical names",
+      "bins": {
+        "axis": "normalized value",
+        "edges": [0.0, 0.25, 0.5, 0.75, 1.0],
+        "labels": ["[0.00,0.25)", "[0.25,0.50)", "[0.50,0.75)", "[0.75,1.00]"],
+        "inclusivity": "lower edge inclusive, upper edge exclusive, except the final bin whose upper edge 1.0 is inclusive",
+        "additivity": "within one parameter the four bins partition the 96 cases and are additive; strata across different parameters or families are non-additive and are never summed"
+      },
+      "intended_controls": {
+        "rule": "keyboard.midi_f0, keyboard.duration, LFO frequency/weight settings, vco tunings, mixer weights, and mod-matrix depths are intended parameter settings (controls), never measured mixed-output frequencies, measured source contributions, or observed selector modes; vco_2.shape and LFO weights are continuous and are never reduced to invented integer enums; raw values and identities are preserved through the per-case artifact digests",
+        "dominant_weight_stratum": {
+          "definition": "per LFO, the physical weight with the greatest value among sin, saw, rsaw, sqr, tri, reported only as an intended-control stratum",
+          "tie_rule": "ties resolve to the lexicographically first weight name (rsaw < saw < sin < sqr < tri)",
+          "non_measurement_note": "this is never an observed spectral or source contribution"
+        },
+        "families": [
+          "keyboard.midi_f0",
+          "keyboard.duration",
+          "lfo_1.frequency",
+          "lfo_1 weights (sin,saw,rsaw,sqr,tri)",
+          "lfo_2.frequency",
+          "lfo_2 weights (sin,saw,rsaw,sqr,tri)",
+          "mixer.noise",
+          "mixer.vco_1",
+          "mixer.vco_2",
+          "vco_2.shape",
+          "mod_matrix depths"
+        ]
+      },
+      "unavailable_reasons": {
+        "missing": "a parameter name is absent from a metadata map",
+        "error": "a metadata map carries an unknown or duplicated name, or a nonfinite value"
+      }
+    },
+    "pitch_stability": {
+      "method": {
+        "name": "landed-qualification-scope-check-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "compare the landed qualification scope of every landed pitch/periodic estimator against each case's capture inventory; no estimator is executed"
+      },
+      "required_inputs": ["sim/qualification/periodic-v1.json scope", "per-case capture inventory from artifact metadata"],
+      "applicability_rule": "the landed periodic qualification (sim/qualification/periodic-v1.json, scope analytic-development-only) covers declared stationary analytic/isolated models with alias provenance, cycle/sample, waveform, amplitude and residual restrictions; it is not a general mixed-Voice F0 detector. Corpus rows are mixed Voice output captured audio-only, so no landed qualified method applies and no pitch value is estimated for any case",
+      "status_rule": "every row is unqualified with the scope reason; a known keyboard.midi_f0 setting is never ground truth for a mixed/FM/noisy/aliased output; unresolved or unsupported pitch is never reported as no pitch; exact silence is a separate audio_facts observable and is not a pitch result",
+      "attempted_estimators": 0,
+      "unavailable_reasons": {
+        "unqualified": "landed periodic qualification scope is analytic-development-only (sim/qualification/periodic-v1.json): declared stationary analytic/isolated models with alias provenance, cycle/sample, waveform, amplitude and residual restrictions; it is not a general mixed-Voice F0 detector, and isolated-input estimator domains do not intersect the audio-only mixed-Voice corpus captures"
+      }
+    },
+    "noise_contribution_observed": {
+      "method": {
+        "name": "capture-inventory-check-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "compare required captures (identified post-VCA/weighted pre-normalization source signals and the actual mixer relationship) against each case's capture inventory; no contribution is derived"
+      },
+      "required_inputs": ["per-case capture inventory from artifact metadata", "per-attempt richer_module_facts availability"],
+      "applicability_rule": "observed noise energy at the mix requires captured, identified source contributions; mixer.noise knob settings, a noise seed/slot, an enabled route, or a nonzero envelope setting do not establish observed noise energy; the corpus was rendered audio-only (richer_module_facts unavailable, reason audio-only-adapter) so no case has the required captures",
+      "status_rule": "every row is missing with the capture reason; the mixer.noise normalized/physical setting is reported only as an intended control under parameter_strata; source powers are never assumed to add to mix power (cross terms); derived weighted quantities are never confused with captured traces; planned directed trace IDs are intentions, not measurements",
+      "attempted_estimators": 0,
+      "unavailable_reasons": {
+        "missing": "no captured pre-mix source signals exist for this case (audio-only corpus)"
+      }
+    },
+    "envelope_stages_observed": {
+      "method": {
+        "name": "capture-inventory-check-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "compare required captures (identified stage-boundary evidence such as ADSR output traces) against each case's capture inventory; no stage length is estimated from final audio"
+      },
+      "required_inputs": ["per-case capture inventory from artifact metadata", "requested physical envelope settings from metadata physical_by_name"],
+      "applicability_rule": "observed attack/decay/release stage lengths require stage evidence; requested ADSR times and note duration are settings, not observed stage lengths: source truncation, merged stages, zero-release behavior, low excitation and finite observation can make observed lengths different or unidentifiable; the landed direct-envelope/tone/broadband/route methods are qualified on isolated inputs (sim/qualification/envelope-routes-v1.json, constructed development only), not on mixed Voice output",
+      "status_rule": "requested physical settings are reported per case as measured settings; the observed-stage-length property is missing for every case with the capture reason; requested and observed values are never mixed",
+      "attempted_estimators": 0,
+      "unavailable_reasons": {
+        "missing": "no captured envelope stage evidence exists for this case (audio-only corpus)"
+      }
+    },
+    "frequency_ranges_observed": {
+      "method": {
+        "name": "landed-qualification-scope-check-v1",
+        "implementation": "tools/audit_corpus_coverage.py",
+        "arithmetic": "compare the landed spectral-analysis qualification scope against each case's capture inventory; no spectrum is computed"
+      },
+      "required_inputs": ["landed spectral estimator qualification records", "per-case capture inventory from artifact metadata"],
+      "applicability_rule": "no landed qualified spectral method covers arbitrary mixed Voice output (the landed spectral apparatus is isolated-input; no sim/qualification spectral record covers mixed Voice), so no frequency-range value is computed for any case; the peak_abs peak-time facts in audio_facts are waveform facts, not frequency facts",
+      "status_rule": "every row is unqualified with the scope reason; a keyboard.midi_f0 or vco tuning setting is never an observed output frequency",
+      "attempted_estimators": 0,
+      "unavailable_reasons": {
+        "unqualified": "no landed qualified method covers mixed Voice audio"
+      }
+    }
+  }
+}
