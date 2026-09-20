@@ -6,8 +6,17 @@ API with typed magnitudes and native units, fail-closed plan validation, the
 non-writable normalization decision seam, directed-fixture exactness,
 declared fault behavior with affected-sample reporting, clean-control
 pairing, and the committed bounded publication.
+
+The periodic oscillator property rows depend on the optional NumPy metrics
+extra. On a stdlib-only host those rows are asserted as the declared
+estimator unavailability recorded by the family runner
+(numpy_unavailable_install_metrics_extra; unrun is never a PASS) and the
+committed-publication rebuild refuses fail-closed naming exactly those
+rows; the dedicated numerical CI job asserts the full trips with NumPy
+installed and single-threaded BLAS.
 """
 
+import importlib.util
 import math
 import random
 import sys
@@ -378,6 +387,24 @@ class PublicationTests(unittest.TestCase):
             import qualify_mutations_signal
 
             committed = json.loads(qualify_mutations_signal.PUBLICATION_PATH.read_bytes())
+            if importlib.util.find_spec("numpy") is None:
+                refused = qualify_mutations_signal.analytic_periodic(
+                    family.analytic_sine(family.ANALYTIC_HZ, 0.0), family.ANALYTIC_HZ
+                )
+                self.assertEqual(refused["status"], "invalid")
+                self.assertEqual(
+                    refused["reason"], "numpy_unavailable_install_metrics_extra"
+                )
+                with self.assertRaises(SystemExit) as caught:
+                    qualify_mutations_signal.build_publication()
+                message = caught.exception.code
+                self.assertIn("family faults did not trip their rows", message)
+                untripped = message.split("did not trip their rows: ", 1)[1].split(", ")
+                self.assertEqual(
+                    untripped,
+                    ["osc.tuning_shift (property)", "osc.phase_offset (property)"],
+                )
+                return
             fresh = qualify_mutations_signal.build_publication()
             for field in qualify_mutations_signal.COMPARABLE_FIELDS:
                 self.assertEqual(committed.get(field), fresh[field], field)
