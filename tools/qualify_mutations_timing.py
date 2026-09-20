@@ -26,6 +26,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,73 @@ NOT_RUN = (
     "detector-family matrix publication (#34 consumes plans, events and "
     "raw evidence)",
 )
+
+COMPARABLE_FIELDS = (
+    "kind",
+    "status",
+    "mutation_contract",
+    "controls",
+    "fault_matrix",
+    "floor_probes",
+    "coverage",
+    "envelopes",
+    "counts",
+    "not_run",
+    "inputs",
+    "trace_registry_sha256",
+)
+
+_IDENTITY_64HEX = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _declared_body(envelope):
+    """The envelope minus its platform-variable identity/digest renderings."""
+    body = dict(envelope)
+    body.pop("envelope_id")
+    body.pop("plan_id")
+    source = dict(body["source_binding"])
+    source.pop("fixture_identity")
+    body["source_binding"] = source
+    body["artifacts"] = [
+        {name: artifact[name] for name in artifact if name != "sha256"}
+        for artifact in body["artifacts"]
+    ]
+    return body
+
+
+def envelopes_declared(committed, fresh) -> bool:
+    """Declared-guarantee comparison for the evidence envelopes.
+
+    The fixture lanes are analytic renders through libm transcendentals
+    (cos/sin/pow); their binary64 last-ulp bytes differ across platforms
+    (measured: the lfo-rate, lfo-depth and high-rate fixtures differ
+    glibc-vs-Darwin while adsr/route happen to agree, so which cases drift
+    is itself platform-variable). The identity and artifact digests render
+    those bytes -- envelope_id, plan_id, source_binding.fixture_identity and
+    artifacts[].sha256 -- and are therefore platform-variable too. Their
+    declared guarantees (mu1-/mp1- identity format, 64-hex digest format,
+    artifact path and size invariance) are asserted instead, while every
+    declared field -- controls, events summaries, the whole fault matrix
+    including trip verdicts and refusal renderings, runtime scope, not_run
+    -- stays byte-exact. This mirrors the landed #135 pattern for the
+    signal family's NumPy-rendered evidence; nothing is loosened elsewhere
+    and no verdict is relaxed.
+    """
+    if len(committed) != len(fresh):
+        return False
+    for committed_envelope, envelope in zip(committed, fresh):
+        if _declared_body(committed_envelope) != _declared_body(envelope):
+            return False
+        if not re.fullmatch(r"mu1-[0-9a-f]{64}", envelope["envelope_id"]):
+            return False
+        if not re.fullmatch(r"mp1-[0-9a-f]{64}", envelope["plan_id"]):
+            return False
+        if not _IDENTITY_64HEX.fullmatch(envelope["source_binding"]["fixture_identity"]):
+            return False
+        for artifact in envelope["artifacts"]:
+            if not _IDENTITY_64HEX.fullmatch(artifact["sha256"]):
+                return False
+    return True
 
 
 def sha256(data: bytes) -> str:
@@ -167,24 +235,13 @@ def check_publication():
         raise SystemExit(2)
     committed = json.loads(PUBLICATION_PATH.read_bytes())
     fresh = build_publication()
-    failures = [
-        field
-        for field in (
-            "kind",
-            "status",
-            "mutation_contract",
-            "controls",
-            "fault_matrix",
-            "floor_probes",
-            "coverage",
-            "envelopes",
-            "counts",
-            "not_run",
-            "inputs",
-            "trace_registry_sha256",
-        )
-        if committed.get(field) != fresh[field]
-    ]
+    failures = []
+    for field in COMPARABLE_FIELDS:
+        if field == "envelopes":
+            if not envelopes_declared(committed.get(field, []), fresh[field]):
+                failures.append(field)
+        elif committed.get(field) != fresh[field]:
+            failures.append(field)
     if failures:
         print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
         raise SystemExit(1)

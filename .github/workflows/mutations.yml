@@ -35,7 +35,10 @@ jobs:
   timing-numerical:
     # The #32 family's periodic rows need NumPy. The stdlib contract surface
     # asserts the declared detector unavailability there; this job asserts
-    # the full trips with the locked metrics extra and single-threaded BLAS.
+    # the full trips with the locked metrics extra and single-threaded BLAS,
+    # and revalidates the committed timing publication against a fresh
+    # rebuild on the same numerical host (the #34 matrix rerun gate executes
+    # this check; drift must surface here first, never only in composition).
     runs-on: ubuntu-latest
     env:
       OMP_NUM_THREADS: "1"
@@ -54,12 +57,16 @@ jobs:
         run: uv run --no-sync python -c "import numpy"
       - name: Run the timing family tests with NumPy
         run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing.py -v
+      - name: Check the committed timing publication against a fresh rebuild
+        run: uv run --no-sync python tools/qualify_mutations_timing.py --check
 
   signal-numerical:
     # The #33 family's periodic property rows need NumPy. The stdlib contract
     # surface asserts the declared estimator unavailability there; this job
     # asserts the full trips with the locked metrics extra and single-threaded
-    # BLAS.
+    # BLAS, and revalidates the committed signal publication against a fresh
+    # rebuild on the same numerical host (the #34 matrix rerun gate executes
+    # this check; drift must surface here first, never only in composition).
     runs-on: ubuntu-latest
     env:
       OMP_NUM_THREADS: "1"
@@ -78,6 +85,8 @@ jobs:
         run: uv run --no-sync python -c "import numpy"
       - name: Run the signal family tests with NumPy
         run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_signal.py -v
+      - name: Check the committed signal publication against a fresh rebuild
+        run: uv run --no-sync python tools/qualify_mutations_signal.py --check
 
   matrix-numerical:
     # The #34 matrix reruns the landed family publications, and four family
