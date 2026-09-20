@@ -1,0 +1,1061 @@
+{
+  "controls": {
+    "empty_plan_events_complete": true,
+    "global_rng_untouched_by_attempts": true,
+    "no_errored_events_in_controls": true,
+    "plain_vs_rerun_bytes_identical": true,
+    "plain_vs_sham_bytes_identical": true,
+    "sham_event_marked_ineffective": true,
+    "sham_plan_identity_distinct": true
+  },
+  "counts": {
+    "controls_passed": 7,
+    "faults": 17,
+    "normalization_cells": 12,
+    "operators": 14,
+    "tripped": 17
+  },
+  "envelope": {
+    "artifacts": [
+      {
+        "path": "directed-signal-fixture/sham-control/noise.post_vca.f32le",
+        "sha256": "a514600043293dc17412806bb64b9226232201fb82c83a346949e2278c3f6be4",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/vco_1.post_vca.f32le",
+        "sha256": "fbff2817643781fcfc49637ee8451910541b63226cbdeac6fad9b993eab4998e",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/vco_2.post_vca.f32le",
+        "sha256": "e4cc31ea69f26dab1ccb3e98715c7e210609302bca19ec614dec07af22ce38da",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/mixer.gain.f32le",
+        "sha256": "acea1ca825c630b6874c5338a2643b41436d4b23a1f798e61d868cea151b1dee",
+        "size_bytes": 20
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/mixer.output.f32le",
+        "sha256": "6a261f82bca33157f7e45273393747ea5c768271dcb677055fd78a23523e4bee",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/mixer.peak.f32le",
+        "sha256": "13fad3d00319a3251af5abb0e2f1eba94eade40a6f2669a336250bdc008f4336",
+        "size_bytes": 20
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/mixer.pre_normalization.f32le",
+        "sha256": "dda5493a0d777cffc76984eef391d325533090ca40389ca8fe4b59fbf4cf0180",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/noise.post_vca.f32le",
+        "sha256": "e0b2ff9845dfbcbc2088776a42f4931885bb6e348d1c6ace4098ef36853d0543",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/vco_1.post_vca.f32le",
+        "sha256": "c4cfabd1805248a4d185e5966868557cbe910a5886a14c49cc61b11c6a79af3f",
+        "size_bytes": 705600
+      },
+      {
+        "path": "directed-signal-fixture/sham-control/vco_2.post_vca.f32le",
+        "sha256": "405924f397771742bf3626eb486503a6c09e1a3b2c1838054c7fad0481151bc7",
+        "size_bytes": 705600
+      }
+    ],
+    "controls": {
+      "empty_plan_events_complete": true,
+      "global_rng_untouched_by_attempts": true,
+      "no_errored_events_in_controls": true,
+      "plain_vs_rerun_bytes_identical": true,
+      "plain_vs_sham_bytes_identical": true,
+      "sham_event_marked_ineffective": true,
+      "sham_plan_identity_distinct": true
+    },
+    "envelope_id": "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05",
+    "events_summary": {
+      "applied": 0,
+      "complete": true,
+      "errored": 0,
+      "expected": 1,
+      "ineffective": 1,
+      "observed": 1,
+      "refused": 0
+    },
+    "fault_matrix": [
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "gain.db",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.10981661081314087, affected_samples=176399)",
+        "operator": "gain.db",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "gain.polarity",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.7999995946884155, affected_samples=176399)",
+        "operator": "gain.polarity",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "gain.dc_offset",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=0.050000011920928955, affected_samples=176400)",
+        "operator": "gain.dc_offset",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "clip.round_step",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.003903329372406006, affected_samples=176399)",
+        "operator": "clip.round_step",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "clip.saturation_ceiling",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.4576394557952881, affected_samples=75840)",
+        "operator": "clip.saturation_ceiling",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "osc.mode_substitute",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.045294627547264, affected_samples=None)",
+        "operator": "osc.mode_substitute",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "osc.shape_scale",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.3766823038458824, affected_samples=None)",
+        "operator": "osc.shape_scale",
+        "seam": "voice.parameter_value",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "osc.tuning_shift",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=1.7999609112739563, affected_samples=None)",
+        "operator": "osc.tuning_shift",
+        "seam": "voice.parameter_value",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fault": "osc.phase_offset",
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.6888300776481628, affected_samples=None)",
+        "operator": "osc.phase_offset",
+        "seam": "voice.parameter_value",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "periodic.cents analytic property row (identity preparation, no normalization)",
+        "expected_refusal": "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control",
+        "fault": "osc.tuning_shift (property)",
+        "observed_refusal": "property deviation cents observed=100.00000000000071 declared_offset_match=True",
+        "operator": "osc.tuning_shift",
+        "seam": "voice.parameter_value",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
+        "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
+        "fault": "osc.phase_offset (property)",
+        "observed_refusal": "property deviation phase_rad observed=0.7853981633974669 declared_offset_match=True",
+        "operator": "osc.phase_offset",
+        "seam": "voice.parameter_value",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
+        "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "fault": "norm.always_on",
+        "observed_refusal": "below-one fixture: detected, failed rows decision_match,rule_error_max",
+        "operator": "norm.always_on",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
+        "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "fault": "norm.off",
+        "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+        "operator": "norm.off",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
+        "expected_refusal": "FAIL on rule_error_max with a PASSing clean control",
+        "fault": "norm.wrong_peak",
+        "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+        "operator": "norm.wrong_peak",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
+        "expected_refusal": "FAIL on reciprocal_error with a PASSing clean control",
+        "fault": "norm.wrong_reciprocal",
+        "observed_refusal": "above-one fixture: detected, failed rows reciprocal_error",
+        "operator": "norm.wrong_reciprocal",
+        "seam": "voice.post_module",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "mutations.validate_plan (fail-closed at plan time)",
+        "expected_refusal": "Producer handoff required",
+        "fault": "normalization-decision-replacement",
+        "observed_refusal": "seam is not a writable injection seam (producer handoff required): voice.normalization_decision \u2014 The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the",
+        "operator": "norm.always_on",
+        "seam": "voice.normalization_decision",
+        "tripped": true
+      },
+      {
+        "control_accepted": true,
+        "downstream": "paired exactness contract rows over the composed ordered application",
+        "expected_refusal": "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control",
+        "fault": "composed-round-then-saturate",
+        "observed_refusal": "events=applied,applied failed rows exact_equal,max_abs_error",
+        "operator": "clip.round_step + clip.saturation_ceiling",
+        "seam": "voice.post_module",
+        "tripped": true
+      }
+    ],
+    "kind": "mutation-evidence-v1",
+    "not_run": [
+      "actual-Voice runtime execution of family operators (the pinned release-era worker hosts only the #30 bridge.* test-only mechanics; this family is qualified on directed signal fixtures host-side)",
+      "voice.normalization_decision injection (non-writable without the named AudioMixer.output producer handoff; the fail-closed refusal is executed host-side instead)",
+      "development corpus cases and holdout partitions (directed development fixtures only; the holdout gate stays untouched)",
+      "numeric-format ratification (declared fault magnitudes are mutation parameters; DR-0008 stays Proposed and normalization semantics stay DR-0003-Proposed)",
+      "#34 bidirectional mutation-coverage matrix publication",
+      "perceptual metric calibration (band-limited tolerance rows here are demonstration-only, never a perceptual qualification)"
+    ],
+    "plan_id": "mp1-e460408478a44de0453404f5dfb3ced5e6c51653cdb1b132c46cce4a5632f9d4",
+    "runtime_scope": "stdlib-directed-signal-fixtures",
+    "schema_version": 1,
+    "source_binding": {
+      "case_id": "directed:signal-family-0",
+      "fixture_identity": "f70124be96ece87914b93887a59d5195b6e9063f036dbed5f989a65f8dc734f6",
+      "partition": "development"
+    }
+  },
+  "family": "signal-chain-v1",
+  "fault_matrix": [
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "gain.db",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.10981661081314087, affected_samples=176399)",
+      "operator": "gain.db",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "gain.polarity",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.7999995946884155, affected_samples=176399)",
+      "operator": "gain.polarity",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "gain.dc_offset",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=0.050000011920928955, affected_samples=176400)",
+      "operator": "gain.dc_offset",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "clip.round_step",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.003903329372406006, affected_samples=176399)",
+      "operator": "clip.round_step",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "clip.saturation_ceiling",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.4576394557952881, affected_samples=75840)",
+      "operator": "clip.saturation_ceiling",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "osc.mode_substitute",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.045294627547264, affected_samples=None)",
+      "operator": "osc.mode_substitute",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "osc.shape_scale",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.3766823038458824, affected_samples=None)",
+      "operator": "osc.shape_scale",
+      "seam": "voice.parameter_value",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "osc.tuning_shift",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=1.7999609112739563, affected_samples=None)",
+      "operator": "osc.tuning_shift",
+      "seam": "voice.parameter_value",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+      "fault": "osc.phase_offset",
+      "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.6888300776481628, affected_samples=None)",
+      "operator": "osc.phase_offset",
+      "seam": "voice.parameter_value",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "periodic.cents analytic property row (identity preparation, no normalization)",
+      "expected_refusal": "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control",
+      "fault": "osc.tuning_shift (property)",
+      "observed_refusal": "property deviation cents observed=100.00000000000071 declared_offset_match=True",
+      "operator": "osc.tuning_shift",
+      "seam": "voice.parameter_value",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
+      "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
+      "fault": "osc.phase_offset (property)",
+      "observed_refusal": "property deviation phase_rad observed=0.7853981633974669 declared_offset_match=True",
+      "operator": "osc.phase_offset",
+      "seam": "voice.parameter_value",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
+      "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+      "fault": "norm.always_on",
+      "observed_refusal": "below-one fixture: detected, failed rows decision_match,rule_error_max",
+      "operator": "norm.always_on",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
+      "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+      "fault": "norm.off",
+      "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+      "operator": "norm.off",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
+      "expected_refusal": "FAIL on rule_error_max with a PASSing clean control",
+      "fault": "norm.wrong_peak",
+      "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
+      "operator": "norm.wrong_peak",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
+      "expected_refusal": "FAIL on reciprocal_error with a PASSing clean control",
+      "fault": "norm.wrong_reciprocal",
+      "observed_refusal": "above-one fixture: detected, failed rows reciprocal_error",
+      "operator": "norm.wrong_reciprocal",
+      "seam": "voice.post_module",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "mutations.validate_plan (fail-closed at plan time)",
+      "expected_refusal": "Producer handoff required",
+      "fault": "normalization-decision-replacement",
+      "observed_refusal": "seam is not a writable injection seam (producer handoff required): voice.normalization_decision \u2014 The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the",
+      "operator": "norm.always_on",
+      "seam": "voice.normalization_decision",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "paired exactness contract rows over the composed ordered application",
+      "expected_refusal": "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control",
+      "fault": "composed-round-then-saturate",
+      "observed_refusal": "events=applied,applied failed rows exact_equal,max_abs_error",
+      "operator": "clip.round_step + clip.saturation_ceiling",
+      "seam": "voice.post_module",
+      "tripped": true
+    }
+  ],
+  "fixture": {
+    "amps": [
+      0.8,
+      0.6,
+      0.3
+    ],
+    "binding": {
+      "case_id": "directed:signal-family-0",
+      "fixture_identity": "f70124be96ece87914b93887a59d5195b6e9063f036dbed5f989a65f8dc734f6",
+      "partition": "development"
+    },
+    "comparison_preparation": "none (amplitude-exact; no windowing, gain fitting or level normalization)",
+    "lane_samples": 176400,
+    "levels": [
+      1.0,
+      1.0,
+      0.025
+    ],
+    "normalization_peak_targets": {
+      "above": 1.0000001192092896,
+      "at": 1.0,
+      "below": 0.9999999403953552
+    },
+    "sample_rate_hz": 44100.0
+  },
+  "inputs": {
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
+    "src/torchsynth_voice/float_mix.py": "0651ea0d94e47b35cffdf1f8701653ce805af1975f2ce2dbd9c77aba9f42b894",
+    "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
+    "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
+    "src/torchsynth_voice/mutations_signal.py": "170691d10b75f3adacde54e1f5236f380bbe7c9a6999c6c273c00de444c8bed9",
+    "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
+    "src/torchsynth_voice/periodic_estimators.py": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
+    "src/torchsynth_voice/spectral_estimators.py": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066"
+  },
+  "kind": "mutation-signal-v1",
+  "localization": {
+    "osc.mode_substitute": {
+      "downstream_mix_changed": true,
+      "sibling_traces_unchanged": [
+        "vco_2.post_vca",
+        "noise.post_vca"
+      ],
+      "source_traces_changed": [
+        "vco_1.post_vca"
+      ]
+    },
+    "osc.phase_offset": {
+      "downstream_mix_changed": true,
+      "sibling_traces_unchanged": [
+        "vco_2.post_vca",
+        "noise.post_vca"
+      ],
+      "source_traces_changed": [
+        "vco_1.post_vca"
+      ]
+    },
+    "osc.shape_scale": {
+      "downstream_mix_changed": true,
+      "sibling_traces_unchanged": [
+        "vco_1.post_vca",
+        "noise.post_vca"
+      ],
+      "source_traces_changed": [
+        "vco_2.post_vca"
+      ]
+    },
+    "osc.tuning_shift": {
+      "downstream_mix_changed": true,
+      "sibling_traces_unchanged": [
+        "vco_2.post_vca",
+        "noise.post_vca"
+      ],
+      "source_traces_changed": [
+        "vco_1.post_vca"
+      ]
+    }
+  },
+  "mutation_contract": "mutation-v1",
+  "normalization_coverage": [
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.always_on",
+      "fixture_class": "above",
+      "peak_target": 1.0000001192092896,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": true,
+      "failed_rows": [
+        "decision_match",
+        "rule_error_max"
+      ],
+      "fault": "norm.off",
+      "fixture_class": "above",
+      "peak_target": 1.0000001192092896,
+      "status": "detected"
+    },
+    {
+      "changed_vs_clean": true,
+      "failed_rows": [
+        "decision_match",
+        "rule_error_max"
+      ],
+      "fault": "norm.wrong_peak",
+      "fixture_class": "above",
+      "peak_target": 1.0000001192092896,
+      "status": "detected"
+    },
+    {
+      "changed_vs_clean": true,
+      "failed_rows": [
+        "reciprocal_error"
+      ],
+      "fault": "norm.wrong_reciprocal",
+      "fixture_class": "above",
+      "peak_target": 1.0000001192092896,
+      "status": "detected"
+    },
+    {
+      "changed_vs_clean": true,
+      "failed_rows": [
+        "decision_match",
+        "rule_error_max"
+      ],
+      "fault": "norm.always_on",
+      "fixture_class": "below",
+      "peak_target": 0.9999999403953552,
+      "status": "detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.off",
+      "fixture_class": "below",
+      "peak_target": 0.9999999403953552,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.wrong_peak",
+      "fixture_class": "below",
+      "peak_target": 0.9999999403953552,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.wrong_reciprocal",
+      "fixture_class": "below",
+      "peak_target": 0.9999999403953552,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [
+        "decision_match"
+      ],
+      "fault": "norm.always_on",
+      "fixture_class": "at",
+      "peak_target": 1.0,
+      "status": "detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.off",
+      "fixture_class": "at",
+      "peak_target": 1.0,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.wrong_peak",
+      "fixture_class": "at",
+      "peak_target": 1.0,
+      "status": "ineffective_not_detected"
+    },
+    {
+      "changed_vs_clean": false,
+      "failed_rows": [],
+      "fault": "norm.wrong_reciprocal",
+      "fixture_class": "at",
+      "peak_target": 1.0,
+      "status": "ineffective_not_detected"
+    }
+  ],
+  "not_run": [
+    "actual-Voice runtime execution of family operators (the pinned release-era worker hosts only the #30 bridge.* test-only mechanics; this family is qualified on directed signal fixtures host-side)",
+    "voice.normalization_decision injection (non-writable without the named AudioMixer.output producer handoff; the fail-closed refusal is executed host-side instead)",
+    "development corpus cases and holdout partitions (directed development fixtures only; the holdout gate stays untouched)",
+    "numeric-format ratification (declared fault magnitudes are mutation parameters; DR-0008 stays Proposed and normalization semantics stay DR-0003-Proposed)",
+    "#34 bidirectional mutation-coverage matrix publication",
+    "perceptual metric calibration (band-limited tolerance rows here are demonstration-only, never a perceptual qualification)"
+  ],
+  "operator_matrix": [
+    {
+      "composes_with": [
+        "clip.saturation_ceiling"
+      ],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ]
+      },
+      "magnitude": {
+        "maximum": 1,
+        "minimum": 0,
+        "type": "number",
+        "unit": "amplitude_step"
+      },
+      "operator": "clip.round_step",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "round one declared module output slot to the declared amplitude step (explicit numeric magnitude); reports the affected sample count and must fail paired exactness rows",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [
+        "clip.round_step"
+      ],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ]
+      },
+      "magnitude": {
+        "maximum": 4,
+        "minimum": 0,
+        "type": "number",
+        "unit": "amplitude"
+      },
+      "operator": "clip.saturation_ceiling",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "saturate one declared module output slot at the declared +/- ceiling (explicit numeric magnitude); reports the affected sample count and must fail paired exactness rows",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [
+        "osc.tuning_shift"
+      ],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ]
+      },
+      "magnitude": {
+        "maximum": 60,
+        "minimum": -60,
+        "type": "number",
+        "unit": "dB"
+      },
+      "operator": "gain.db",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "apply the declared +/-dB gain error to one declared module output slot; must fail contract rows even when a band-limited optional observation stays tolerant",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ]
+      },
+      "magnitude": {
+        "maximum": 2,
+        "minimum": -2,
+        "type": "number",
+        "unit": "amplitude"
+      },
+      "operator": "gain.dc_offset",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "add the declared DC offset amplitude to one declared module output slot; must fail mean/max error rows even when the high-band spectral observation stays tolerant",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca",
+          "noise.post_vca"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "gain.polarity",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "invert the polarity of one declared module output slot; must fail contract rows even when a band-limited optional observation stays tolerant",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "mixer.output"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "norm.always_on",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "force the whole-clip normalization branch on (composes with #131 float_mix semantics); must fail the bypass decision and byte-preservation rows on the below/at-one fixtures",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "mixer.output"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "norm.off",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "force the whole-clip normalization branch off (composes with #131 float_mix semantics); must fail the divided output row on the above-one fixture",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "mixer.output"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "norm.wrong_peak",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "let the runner-up magnitude drive the branch and division (composes with #131 float_mix semantics); must fail the output rule row on the above-one fixture",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "mixer.output"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "norm.wrong_reciprocal",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "report a doubled reciprocal as the derived mixer.gain replay diagnostic while the audio division stays correct; must fail the reciprocal gain-error row and pass the audio rows (complementary detection)",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": [
+          "vco_1.post_vca",
+          "vco_2.post_vca"
+        ]
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "osc.mode_substitute",
+      "seam": "voice.post_module",
+      "sham": false,
+      "summary": "substitute the declared oscillator module output with the other VCO mode waveform (sine <-> square/saw) at the same frequency, phase and depth; must fail paired exactness rows at the source lane and downstream",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "parameter": [
+          "vco_1.initial_phase",
+          "vco_2.initial_phase"
+        ],
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "magnitude": {
+        "maximum": 7,
+        "minimum": -7,
+        "type": "number",
+        "unit": "radian"
+      },
+      "operator": "osc.phase_offset",
+      "seam": "voice.parameter_value",
+      "sham": false,
+      "summary": "offset one inventory-named oscillator initial phase by the declared radian magnitude; must fail the periodic phase row against the declared zero-origin fixture",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "parameter": [
+          "vco_2.shape"
+        ],
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "magnitude": {
+        "maximum": 1000,
+        "minimum": 0,
+        "type": "number",
+        "unit": "ratio"
+      },
+      "operator": "osc.shape_scale",
+      "seam": "voice.parameter_value",
+      "sham": false,
+      "summary": "scale one inventory-named square/saw shape value by the declared ratio (clamped into [0,1]); must fail the paired exactness rows on the shape-bearing lane",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [
+        "gain.db"
+      ],
+      "configuration": {
+        "parameter": [
+          "vco_1.tuning",
+          "vco_2.tuning"
+        ],
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "magnitude": {
+        "maximum": 24,
+        "minimum": -24,
+        "type": "number",
+        "unit": "semitone"
+      },
+      "operator": "osc.tuning_shift",
+      "seam": "voice.parameter_value",
+      "sham": false,
+      "summary": "shift one inventory-named oscillator tuning by the declared semitone magnitude; must fail the periodic cents row against the declared reference and the paired exactness rows",
+      "version": 1,
+      "writable": true
+    },
+    {
+      "composes_with": [],
+      "configuration": {
+        "slot": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "trace": []
+      },
+      "magnitude": {
+        "type": "null",
+        "unit": "none"
+      },
+      "operator": "signal.sham",
+      "seam": "voice.post_module",
+      "sham": true,
+      "summary": "family sham control: traverse dispatch and return the original lane value; marked sham, never detected, never a family fault",
+      "version": 1,
+      "writable": true
+    }
+  ],
+  "optional_observations": {
+    "clip.round_step": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 0.0007339476667104366,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "clip.saturation_ceiling": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 0.0013947135624985485,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "gain.db": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 5.323955218707736e-09,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "gain.dc_offset": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 7.391239937650287e-10,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "gain.polarity": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 9.197354951776259e-09,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "osc.mode_substitute": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 6.8223514284700845e-09,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "osc.phase_offset": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 6.048254063358137e-09,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "osc.shape_scale": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 1.021716617032772e-08,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    },
+    "osc.tuning_shift": {
+      "metric": "band.20000_up.error_rms",
+      "observed": 0.00028222200838134276,
+      "optional": true,
+      "tolerance": 0.01,
+      "tolerant": true
+    }
+  },
+  "schema_version": 1,
+  "status": "PASS"
+}
