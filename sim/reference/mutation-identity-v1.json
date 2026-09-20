@@ -1,0 +1,2534 @@
+{
+  "case_receipts": [
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4116b89626dd266c546747402d1005e9957dfdedc703c53fc4d78ce0b7750cf8",
+          "size_bytes": 948267
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 0,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-70eeb6211736bbe62688cb6d1f53d0d939a32dec7742f12ace31e9ae34917113",
+      "fault": "identity-batch-shift-128",
+      "gate": {
+        "gate_reason": "provenance refusal at render_batch_index",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-6f1a517f4df760d62e003dbeaf4f85f7bbea21d539043e2e181c75cd6a724239",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "88c8955a87ff98def9ea0eb7c658d2b3c3b24e256b6951fa88b99cdeecac704d",
+          "size_bytes": 948267
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 0,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": 0,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-b93ed31e774264bbc0eb4fd6f8fd33566264f7d3fe04caff983539a11986006b",
+      "fault": "train-test-designation-flip",
+      "gate": {
+        "gate_reason": "provenance refusal at is_train",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-a1b05e9ee957adb25f333ed6f697dec130a6a3b3af198fa1427e612b9e5f9219",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "945503477905d3ddc656254b3125ca60a7af1f77b62b6fa65a9e31ec74e9e594",
+          "size_bytes": 948266
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "FAIL"
+        }
+      ],
+      "envelope_id": "mu1-bcf9aa67b2f4821ec460e6e789636e395871a8f6f586b2131a270096e9424433",
+      "fault": "positional-parameter-shuffle",
+      "gate": {
+        "gate_reason": "parameter conversion refusal at adsr_1.alpha",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-06976097d065863e4294a7eff172d8f86c9f06b02d014a025acfe9117ccda05d",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "2ce9b8d61a1c6ed85df768d36b79bbe6280a1c3da5402e3539623521a8c74225",
+          "size_bytes": 948257
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "FAIL"
+        }
+      ],
+      "envelope_id": "mu1-ede06bf0645a955661093a87bb4f8602d542357f7d140d68f5679a4f12d3912e",
+      "fault": "wrong-normalized-physical-conversion",
+      "gate": {
+        "gate_reason": "parameter conversion refusal at adsr_1.attack",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-db39addd1e35838092aa7502bb268675bf7302b439d227351876c73c9015a5b1",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "76c92b8ab3f70a54af8a2370ed7f2f91e40b45c0dae519d6308d667d3325b0ba",
+          "size_bytes": 948266
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.002604795108302286,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.0001975427887053931,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.004092657204287372,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.0021244586711619746,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-b13b260cb8052042be33775dd3105586c73d6e7b179e5dc43f1f349843a60ebf",
+      "fault": "wrong-noise-slot",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-ca8140203867084431fe1385186724682607602068017a503a6791a03109371c",
+      "witness": {
+        "accepted": false,
+        "refusal": "diagnostic batch-1 must copy the resolved noise slot exactly"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4cf7a6258cc5564c835ab361cd766f627bbc93250389294eb79c6a97251aedba",
+          "size_bytes": 948266
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.000797848609753462,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.002175128027231482,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.0013405924323098995,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.0006313492993846473,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-c1af57c6da8b42ae5da56587f3affcfd414443bd6e86d8d9b8b703bcf652d7a2",
+      "fault": "wrong-noise-seed",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-ca215d6c312b775e88023cadcbcdb56e7cc8fcffa791a55b8f662fe31aca7fa4",
+      "witness": {
+        "accepted": false,
+        "refusal": "noise seed must be the declared seed 13"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "81977f85e8e0a897f869d3d52151cc2afb97c81129395869d513aeb77a41fbdb",
+          "size_bytes": 948266
+        }
+      ],
+      "case": "directed-train",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.0015035502214477575,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.002230883414239278,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.002454662308988733,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.006966742672245596,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-126b5b1a6827deeaf661c6aba81cd0517907d7a944572cffce1c31e8c4cff0d7",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-e84c5b97e28d6a0ee22303cf36ededc213571ddc2a3f008d055f43be87eed4c4",
+      "witness": {
+        "accepted": false,
+        "refusal": "noise seed must be the declared seed 13"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "632e3ffa3eb78af1cef6e79ae06c04dda6a026ad3670597d4fccbefd79badde2",
+          "size_bytes": 948264
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 0,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-c47c597641bddd4500f568440beaf4358980f653a31fea1aa101636f99272821",
+      "fault": "identity-batch-shift-128",
+      "gate": {
+        "gate_reason": "provenance refusal at render_batch_index",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-c7b570d45e148228b9dab12be07b9df7c5cf863bad4d6609b318250f3d89263c",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "e9006d91845d660940614e049853cdebf5eb4a40d3cd224b91e5d4303f39dbea",
+          "size_bytes": 948263
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 0,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": 0,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-115db6d8c1fdd18acb2252245644b25c55f6ea29e49033fe6f9e6bdfeb819eb1",
+      "fault": "train-test-designation-flip",
+      "gate": {
+        "gate_reason": "provenance refusal at is_train",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-a4e8fcf677523bc0ef8cd5873a891262ed22669b33cd0388de6743d0963081ef",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "2afff187503cf6348d5d2ed6fe4f1cab4ab6aa77908a2affbc220e9ad8820475",
+          "size_bytes": 948264
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "FAIL"
+        }
+      ],
+      "envelope_id": "mu1-ccbb7f9198e225b2e4c56b6f9afbc079d2a2e9065f4eb9d44d4502272e722d3d",
+      "fault": "positional-parameter-shuffle",
+      "gate": {
+        "gate_reason": "parameter conversion refusal at adsr_1.alpha",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-4c2574e9777f15e86ac7bdbe51752fc32f9f0e435eb725b14f3d0c8ea2c55697",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "fb0f537d540a52a4c687bafb6adea9dd941283922d35a82b1fb77e2c89e8a95e",
+          "size_bytes": 948255
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "FAIL"
+        }
+      ],
+      "envelope_id": "mu1-f98a15bd918b27ecc59d1c1aab7df2b55f6afa828ae8aa721be39a50064e99f3",
+      "fault": "wrong-normalized-physical-conversion",
+      "gate": {
+        "gate_reason": "parameter conversion refusal at adsr_1.attack",
+        "perceptual_rows_reached": false
+      },
+      "plan_id": "mp1-1f4522e4a3636236ff7fb917281db797c7ca63913220f24cbf63d2a558917c9f",
+      "witness": {
+        "accepted": true,
+        "refusal": null
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "e8f99bede096fc3ffa359acb9bac8544b024254b4ceb94c520cbea12d02dd61b",
+          "size_bytes": 948264
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.002604795108302286,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.0001975427887053931,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.004092657204287372,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.0021244586711619746,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-7e31bdbe72614e457b53fbb57e8da774b75431812ba7c4a27e9e80e9247089ad",
+      "fault": "wrong-noise-slot",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-c42d3d5087ddd4f321aa9644c950307b4569c0dc6d786babbc0f27c160b65de5",
+      "witness": {
+        "accepted": false,
+        "refusal": "diagnostic batch-1 must copy the resolved noise slot exactly"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4da3948a678ef8d655f177c34119e3d440efd149d07ac798f0f3d905e49aa848",
+          "size_bytes": 948264
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.000797848609753462,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.002175128027231482,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.0013405924323098995,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.0006313492993846473,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-fe478c112fcbb3c831aa3c4a2b986d07a1f092e0bdda61460b26044f82b255fd",
+      "fault": "wrong-noise-seed",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-a0a18c7ffb84102cb89f322ebfc186fb557e3056db3df3f33b8987dc2af7291f",
+      "witness": {
+        "accepted": false,
+        "refusal": "noise seed must be the declared seed 13"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "56a84120fa76673bda76d5a98d3c9b5120bdce326b89686e489ad7557069dca9",
+          "size_bytes": 948264
+        }
+      ],
+      "case": "directed-test",
+      "detector_rows": [
+        {
+          "observed": 1,
+          "property": "identity.provenance_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "identity.train_test_match",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -1,
+          "property": "parameter.first_wrong_position",
+          "unit": "parameter_position",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0,
+          "property": "noise.identity",
+          "unit": "1",
+          "verdict": "FAIL"
+        },
+        {
+          "observed": -0.0015035502214477575,
+          "property": "noise.ac.1",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.002230883414239278,
+          "property": "noise.ac.2",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 0.002454662308988733,
+          "property": "noise.ac.8",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": -0.006966742672245596,
+          "property": "noise.ac.32",
+          "unit": "1",
+          "verdict": "PASS"
+        },
+        {
+          "observed": 1,
+          "property": "blast.exact_match",
+          "unit": "1",
+          "verdict": "PASS"
+        }
+      ],
+      "envelope_id": "mu1-6d0ac9ddd7847309a595b17befb692e5836e1dc725f5c6274821bb8f8d9565ce",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "gate": {
+        "gate_reason": "provenance and parameter gates passed",
+        "perceptual_rows_reached": true
+      },
+      "plan_id": "mp1-0305b02d9874dc35b38e843584e778e5563ce0861441da1b1fd47f0677523aed",
+      "witness": {
+        "accepted": false,
+        "refusal": "noise seed must be the declared seed 13"
+      }
+    }
+  ],
+  "controls": {
+    "cleanup_after_producer_crash": true,
+    "empty_plan_events_complete": true,
+    "global_rng_untouched_by_attempts": true,
+    "no_errored_events_in_controls": true,
+    "parameter_interface_accepts_name_consistent_shuffle": true,
+    "plain_rerun_deterministic": true,
+    "plain_vs_empty_plan_bytes_identical": true,
+    "plain_vs_sham_bytes_identical": true,
+    "plan_identity_tracks_magnitude": true,
+    "resolved_request_accepts_clean_directed_case": true,
+    "sham_events_marked_and_ineffective": true,
+    "sham_plan_identity_distinct": true,
+    "sibling_case_bytes_unchanged_by_faulted_case": true
+  },
+  "counts": {
+    "controls_passed": 13,
+    "directed_cases": 2,
+    "envelopes": 14,
+    "faults": 14,
+    "random_receipts": 48,
+    "representative_cases": 8,
+    "tripped": 14
+  },
+  "envelopes": [
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4116b89626dd266c546747402d1005e9957dfdedc703c53fc4d78ce0b7750cf8",
+          "size_bytes": 948267
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-70eeb6211736bbe62688cb6d1f53d0d939a32dec7742f12ace31e9ae34917113",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+          "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+          "fault": "identity-batch-shift-128",
+          "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+          "operator": "identity.batch_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+          "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+          "fault": "identity-batch-shift-128",
+          "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+          "operator": "identity.batch_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-6f1a517f4df760d62e003dbeaf4f85f7bbea21d539043e2e181c75cd6a724239",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "88c8955a87ff98def9ea0eb7c658d2b3c3b24e256b6951fa88b99cdeecac704d",
+          "size_bytes": 948267
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-b93ed31e774264bbc0eb4fd6f8fd33566264f7d3fe04caff983539a11986006b",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.is_train recomputation",
+          "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+          "fault": "train-test-designation-flip",
+          "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+          "operator": "identity.train_test_flip",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.is_train recomputation",
+          "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+          "fault": "train-test-designation-flip",
+          "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+          "operator": "identity.train_test_flip",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-a1b05e9ee957adb25f333ed6f697dec130a6a3b3af198fa1427e612b9e5f9219",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "945503477905d3ddc656254b3125ca60a7af1f77b62b6fa65a9e31ec74e9e594",
+          "size_bytes": 948266
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-bcf9aa67b2f4821ec460e6e789636e395871a8f6f586b2131a270096e9424433",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "positional-parameter-shuffle",
+          "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+          "operator": "param.positional_shuffle",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "positional-parameter-shuffle",
+          "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+          "operator": "param.positional_shuffle",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-06976097d065863e4294a7eff172d8f86c9f06b02d014a025acfe9117ccda05d",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "2ce9b8d61a1c6ed85df768d36b79bbe6280a1c3da5402e3539623521a8c74225",
+          "size_bytes": 948257
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-ede06bf0645a955661093a87bb4f8602d542357f7d140d68f5679a4f12d3912e",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "wrong-normalized-physical-conversion",
+          "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+          "operator": "param.conversion_substitute",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "wrong-normalized-physical-conversion",
+          "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+          "operator": "param.conversion_substitute",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-db39addd1e35838092aa7502bb268675bf7302b439d227351876c73c9015a5b1",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "76c92b8ab3f70a54af8a2370ed7f2f91e40b45c0dae519d6308d667d3325b0ba",
+          "size_bytes": 948266
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-b13b260cb8052042be33775dd3105586c73d6e7b179e5dc43f1f349843a60ebf",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+          "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+          "fault": "wrong-noise-slot",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+          "operator": "noise.slot_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+          "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+          "fault": "wrong-noise-slot",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+          "operator": "noise.slot_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-ca8140203867084431fe1385186724682607602068017a503a6791a03109371c",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4cf7a6258cc5564c835ab361cd766f627bbc93250389294eb79c6a97251aedba",
+          "size_bytes": 948266
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-c1af57c6da8b42ae5da56587f3affcfd414443bd6e86d8d9b8b703bcf652d7a2",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+          "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+          "fault": "wrong-noise-seed",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+          "operator": "noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+          "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+          "fault": "wrong-noise-seed",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+          "operator": "noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-ca215d6c312b775e88023cadcbcdb56e7cc8fcffa791a55b8f662fe31aca7fa4",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "81977f85e8e0a897f869d3d52151cc2afb97c81129395869d513aeb77a41fbdb",
+          "size_bytes": 948266
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-126b5b1a6827deeaf661c6aba81cd0517907d7a944572cffce1c31e8c4cff0d7",
+      "events_summary": {
+        "applied": 2,
+        "complete": true,
+        "errored": 0,
+        "expected": 2,
+        "ineffective": 0,
+        "observed": 2,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+          "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+          "fault": "composed-wrong-slot-then-wrong-seed",
+          "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+          "operator": "noise.slot_shift + noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+          "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+          "fault": "composed-wrong-slot-then-wrong-seed",
+          "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+          "operator": "noise.slot_shift + noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-e84c5b97e28d6a0ee22303cf36ededc213571ddc2a3f008d055f43be87eed4c4",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-train",
+        "fixture_identity": "2be13eb888e441af6191af93150ee1b44703e62eefe67d7c755a09b76e89617b",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "632e3ffa3eb78af1cef6e79ae06c04dda6a026ad3670597d4fccbefd79badde2",
+          "size_bytes": 948264
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-c47c597641bddd4500f568440beaf4358980f653a31fea1aa101636f99272821",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+          "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+          "fault": "identity-batch-shift-128",
+          "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+          "operator": "identity.batch_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+          "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+          "fault": "identity-batch-shift-128",
+          "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+          "operator": "identity.batch_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-c7b570d45e148228b9dab12be07b9df7c5cf863bad4d6609b318250f3d89263c",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "e9006d91845d660940614e049853cdebf5eb4a40d3cd224b91e5d4303f39dbea",
+          "size_bytes": 948263
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-115db6d8c1fdd18acb2252245644b25c55f6ea29e49033fe6f9e6bdfeb819eb1",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.is_train recomputation",
+          "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+          "fault": "train-test-designation-flip",
+          "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+          "operator": "identity.train_test_flip",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "identity.SoundIdentity.is_train recomputation",
+          "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+          "fault": "train-test-designation-flip",
+          "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+          "operator": "identity.train_test_flip",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-a4e8fcf677523bc0ef8cd5873a891262ed22669b33cd0388de6743d0963081ef",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "2afff187503cf6348d5d2ed6fe4f1cab4ab6aa77908a2affbc220e9ad8820475",
+          "size_bytes": 948264
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-ccbb7f9198e225b2e4c56b6f9afbc079d2a2e9065f4eb9d44d4502272e722d3d",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "positional-parameter-shuffle",
+          "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+          "operator": "param.positional_shuffle",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "positional-parameter-shuffle",
+          "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+          "operator": "param.positional_shuffle",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-4c2574e9777f15e86ac7bdbe51752fc32f9f0e435eb725b14f3d0c8ea2c55697",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "fb0f537d540a52a4c687bafb6adea9dd941283922d35a82b1fb77e2c89e8a95e",
+          "size_bytes": 948255
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-f98a15bd918b27ecc59d1c1aab7df2b55f6afa828ae8aa721be39a50064e99f3",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "wrong-normalized-physical-conversion",
+          "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+          "operator": "param.conversion_substitute",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "directed.physical_value pinned-conversion recomputation",
+          "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+          "fault": "wrong-normalized-physical-conversion",
+          "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+          "operator": "param.conversion_substitute",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-1f4522e4a3636236ff7fb917281db797c7ca63913220f24cbf63d2a558917c9f",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "e8f99bede096fc3ffa359acb9bac8544b024254b4ceb94c520cbea12d02dd61b",
+          "size_bytes": 948264
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-7e31bdbe72614e457b53fbb57e8da774b75431812ba7c4a27e9e80e9247089ad",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+          "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+          "fault": "wrong-noise-slot",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+          "operator": "noise.slot_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+          "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+          "fault": "wrong-noise-slot",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+          "operator": "noise.slot_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-c42d3d5087ddd4f321aa9644c950307b4569c0dc6d786babbc0f27c160b65de5",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "4da3948a678ef8d655f177c34119e3d440efd149d07ac798f0f3d905e49aa848",
+          "size_bytes": 948264
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-fe478c112fcbb3c831aa3c4a2b986d07a1f092e0bdda61460b26044f82b255fd",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+          "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+          "fault": "wrong-noise-seed",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+          "operator": "noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+          "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+          "fault": "wrong-noise-seed",
+          "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+          "operator": "noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-a0a18c7ffb84102cb89f322ebfc186fb557e3056db3df3f33b8987dc2af7291f",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "56a84120fa76673bda76d5a98d3c9b5120bdce326b89686e489ad7557069dca9",
+          "size_bytes": 948264
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "parameter_interface_accepts_name_consistent_shuffle": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude": true,
+        "resolved_request_accepts_clean_directed_case": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true
+      },
+      "envelope_id": "mu1-6d0ac9ddd7847309a595b17befb692e5836e1dc725f5c6274821bb8f8d9565ce",
+      "events_summary": {
+        "applied": 2,
+        "complete": true,
+        "errored": 0,
+        "expected": 2,
+        "ineffective": 0,
+        "observed": 2,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+          "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+          "fault": "composed-wrong-slot-then-wrong-seed",
+          "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+          "operator": "noise.slot_shift + noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        },
+        {
+          "control_accepted": true,
+          "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+          "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+          "fault": "composed-wrong-slot-then-wrong-seed",
+          "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+          "operator": "noise.slot_shift + noise.seed_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+        "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+      ],
+      "plan_id": "mp1-0305b02d9874dc35b38e843584e778e5563ce0861441da1b1fd47f0677523aed",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-identity:directed-test",
+        "fixture_identity": "acd645fda68922342d786631f5ef774807e3fcdc4b49f3d70cde28063a6df46f",
+        "partition": "development"
+      }
+    }
+  ],
+  "fault_matrix": [
+    {
+      "control_accepted": true,
+      "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+      "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+      "fault": "identity-batch-shift-128",
+      "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+      "operator": "identity.batch_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "identity.SoundIdentity.is_train recomputation",
+      "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+      "fault": "train-test-designation-flip",
+      "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+      "operator": "identity.train_test_flip",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+      "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "fault": "positional-parameter-shuffle",
+      "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+      "operator": "param.positional_shuffle",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "directed.physical_value pinned-conversion recomputation",
+      "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "fault": "wrong-normalized-physical-conversion",
+      "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+      "operator": "param.conversion_substitute",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+      "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+      "fault": "wrong-noise-slot",
+      "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+      "operator": "noise.slot_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+      "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+      "fault": "wrong-noise-seed",
+      "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+      "operator": "noise.seed_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+      "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+      "operator": "noise.slot_shift + noise.seed_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+      "expected_refusal": "provenance mismatch at render_batch_index before perceptual rows",
+      "fault": "identity-batch-shift-128",
+      "observed_refusal": "provenance refusal at render_batch_index; perceptual rows not reached",
+      "operator": "identity.batch_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "identity.SoundIdentity.is_train recomputation",
+      "expected_refusal": "is_train designation mismatch at the provenance gate before perceptual rows",
+      "fault": "train-test-designation-flip",
+      "observed_refusal": "provenance refusal at is_train; perceptual rows not reached",
+      "operator": "identity.train_test_flip",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+      "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "fault": "positional-parameter-shuffle",
+      "observed_refusal": "parameter conversion refusal at adsr_1.alpha; perceptual rows not reached; first wrong canonical parameter: adsr_1.alpha at position 0",
+      "operator": "param.positional_shuffle",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "directed.physical_value pinned-conversion recomputation",
+      "expected_refusal": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "fault": "wrong-normalized-physical-conversion",
+      "observed_refusal": "parameter conversion refusal at adsr_1.attack; perceptual rows not reached; first wrong canonical parameter: adsr_1.attack at position 1",
+      "operator": "param.conversion_substitute",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+      "expected_refusal": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+      "fault": "wrong-noise-slot",
+      "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: diagnostic batch-1 must copy the resolved noise slot exactly",
+      "operator": "noise.slot_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+      "expected_refusal": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+      "fault": "wrong-noise-seed",
+      "observed_refusal": "noise.identity FAIL while noise statistics stay inside the declared plausibility band; blast radius confined to noise.source, noise.vca; ResolvedRequest: noise seed must be the declared seed 13",
+      "operator": "noise.seed_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "in-band declared-order events + spectral_estimators.noise_identity",
+      "expected_refusal": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+      "fault": "composed-wrong-slot-then-wrong-seed",
+      "observed_refusal": "declared-order applied events; composed wrong-slot and wrong-seed stream fails the exact identity record with the blast radius confined to the noise lanes",
+      "operator": "noise.slot_shift + noise.seed_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    }
+  ],
+  "inputs": {
+    "spec/FLOAT-INTERFACES.md": "d9041e70c7bf312b057c9758fcdb6c2705276eb0aa0372d2d1784ad005ffda45",
+    "spec/FLOAT-SOURCES.md": "4e918a05553ab0c47e0db852056478b2ba066b1b54562d0f6d688da8fad93cca",
+    "spec/PARAMETER-INVENTORY.md": "729a5065a5982b05bbf9f7af864e6c59e8ab24017684b8cb57d7844cecf49561",
+    "spec/SPECTRAL-ESTIMATORS.md": "7a85827b7c27db629e131f804bec168c884009ceb264d98bc7a557235ab13f08",
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
+    "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+    "spec/schemas/parameter-inventory-v1.schema.json": "4eae278e03f0470888e3cf3708b635e95f562a56e1fd732df42bdcbc767b793a",
+    "src/torchsynth_voice/artifacts.py": "be4bf299c6699b547ea321d4eaa7ec719b97b13e63437a0112ab1456fb5fdb33",
+    "src/torchsynth_voice/directed.py": "13f614db4b89c47fbc349e77779238854381426fbbbbb1c1df1d93cd5bae0bc7",
+    "src/torchsynth_voice/float_interfaces.py": "eb391c1748742e3f368e1f843b6b9d77c454a5cfcf87e6732f8aabb36252a236",
+    "src/torchsynth_voice/float_sources.py": "dc40f8826043a3ccddbf60d6faf83e0c8e768a3313f2b49bf456184047edea4e",
+    "src/torchsynth_voice/identity.py": "dbf681534e85d363f0f75356b9c5182b2e8567425b867166615b1e56c8790aa0",
+    "src/torchsynth_voice/inventory.py": "f62a5bd31623f25feb6eec442c90e1452da3064155ee76c852a7e0172ed3fb9e",
+    "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
+    "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
+    "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
+    "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
+    "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
+    "src/torchsynth_voice/spectral_estimators.py": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
+    "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
+  },
+  "kind": "mutation-identity-v1",
+  "mutation_contract": "mutation-v1",
+  "not_run": [
+    "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+    "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+    "holdout partitions (sealed; development-only constructed fixtures)",
+    "detector-family matrix publication (#34 consumes plans, events and raw evidence)",
+    "numeric-format selection or ratification (the numeric contract stays unbound; #53/DR-0008)"
+  ],
+  "random_receipts": [
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_size",
+      "noise_slot": 17,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 17,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 17,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 17,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 17,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "17",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 17,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 17,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 3,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 3,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 3,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 3,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 3,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "2051",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 3,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 2051,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 31,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 31,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 31,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 31,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 31,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "3103",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 31,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 3103,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 5,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 5,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 5,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 5,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 5,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "5125",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 5,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 5125,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 12,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 12,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 12,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 12,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 12,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "6156",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 12,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 6156,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 1,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 1,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 1,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 1,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 1,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "8193",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 1,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 8193,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 28,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 28,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 28,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 28,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": null,
+      "noise_slot": 28,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "9244",
+      "control_accepted": true,
+      "is_train": false,
+      "named": null,
+      "noise_slot": 28,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 9244,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at render_batch_index",
+      "noise_slot": 9,
+      "operator": "identity.batch_shift",
+      "perceptual_rows_reached": false,
+      "sound_index": 10249,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "provenance refusal at is_train",
+      "noise_slot": 9,
+      "operator": "identity.train_test_flip",
+      "perceptual_rows_reached": false,
+      "sound_index": 10249,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.alpha",
+      "noise_slot": 9,
+      "operator": "param.positional_shuffle",
+      "perceptual_rows_reached": false,
+      "sound_index": 10249,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": "first wrong canonical parameter: adsr_1.attack",
+      "noise_slot": 9,
+      "operator": "param.conversion_substitute",
+      "perceptual_rows_reached": false,
+      "sound_index": 10249,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 9,
+      "operator": "noise.slot_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 10249,
+      "tripped": true
+    },
+    {
+      "case": "10249",
+      "control_accepted": true,
+      "is_train": true,
+      "named": null,
+      "noise_slot": 9,
+      "operator": "noise.seed_shift",
+      "perceptual_rows_reached": true,
+      "sound_index": 10249,
+      "tripped": true
+    }
+  ],
+  "schema_version": 1,
+  "status": "PASS",
+  "trace_registry_sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c"
+}
