@@ -1,12 +1,15 @@
-# Core/host transport protocol — startable subset (pre-#53)
+# Core/host transport protocol — version 2, numerically bound
 
 This directory specifies the transport protocol between the host and the
-TorchSynth Voice core, scoped to the startable subset declared on issue
-[#62](https://github.com/2AMLogic/gf180-torchsynth/issues/62) on 2026-09-19.
-Everything here is arithmetic-independent: no DSP semantics are invented, and
-no fixed-point width, scaling, or numeric parameter encoding is fixed. The
-normative behavioral target remains [`../VOICE-CONTRACT.md`](../VOICE-CONTRACT.md);
-`spec/` owns this behavior and code alone may not change it.
+TorchSynth Voice core. It was first landed as the startable subset declared
+on issue [#62](https://github.com/2AMLogic/gf180-torchsynth/issues/62) on
+2026-09-19 (protocol version 1, placeholder widths). After #53 closed via
+the DR-0008 ratification (Accepted by reviewed merge, 2026-09-21), protocol
+version 2 replaced the placeholder policy with the accepted numeric binding:
+no DSP semantics are invented, and every bound value comes from the accepted
+register. The normative behavioral target remains
+[`../VOICE-CONTRACT.md`](../VOICE-CONTRACT.md); `spec/` owns this behavior
+and code alone may not change it.
 
 ## Documents
 
@@ -16,33 +19,41 @@ normative behavioral target remains [`../VOICE-CONTRACT.md`](../VOICE-CONTRACT.m
 | [SESSION.md](SESSION.md) | Session lifecycle, ordering, backpressure, timeouts, reset, idempotency, error codes and recovery, live-note exclusion |
 | [PATCH-LOAD.md](PATCH-LOAD.md) | Name-keyed patch load transaction and the versioned canonical name table structure |
 | [TRANSPORTS.md](TRANSPORTS.md) | Transport-agnostic interface contract and UART/SPI/USB binding requirements |
-| [MOCK-HARNESS.md](MOCK-HARNESS.md) | The software mock round-trip harness: contract, placeholder policy, acceptance-criteria mapping |
+| [MOCK-HARNESS.md](MOCK-HARNESS.md) | The software mock round-trip harness: contract, numeric binding policy, acceptance-criteria mapping |
 
 ## Scope boundary
 
-Declared startable subset (issue #62, `## Startable Subset`): message framing;
-command sequencing and ordering; idempotency; error semantics; the name-keyed
-patch load path and canonical name table structure; version/capability
-negotiation with profile, source, and numeric-contract versions, patch hash,
-and sound identity carried as opaque byte strings; transport separation; and a
-software mock round-trip harness with placeholder widths.
+The version 1 startable subset (framing; command sequencing and ordering;
+idempotency; error semantics; the name-keyed patch load path and canonical
+name table structure; version/capability negotiation; transport separation;
+and the software mock round-trip harness) is unchanged in structure. Version
+2 binds the regions #53 had gated:
 
-Explicitly **not** specified here — each waits on #53 (the fixed arithmetic
-and error contract decision record):
+- sample payload packing: the audio sample word is 24-bit Q2.21
+  little-endian (DR-0008 C1, accepted);
+- `patch_value` is the uniform 32-bit Q10.21 host-entry word (DR-0008 C4,
+  C6, C7, accepted);
+- `numeric_contract_version` is the SHA-256 of the accepted machine-readable
+  DR-0008 register, and the negotiation gate refuses any other value —
+  including the stale `unbound:#53` marker — as a fatal version error;
+- the patch hash is a domain-separated SHA-256 bound to the negotiated
+  numeric contract (replacing the version 1 stand-in digest).
 
-- sample payload packing widths and audio transfer/streaming wire formats;
-- any fixed-point field widths, scaling constants, or numeric parameter
-  encodings beyond opaque width placeholders;
-- final numeric-contract version binding of the protocol header and hash
-  computation.
+Still **not** specified here:
 
-Fields whose final form depends on #53 carry explicitly named placeholder
-widths or opaque byte-string encodings; nothing in this directory may be read
-as fixing them.
+- the audio transfer/streaming command set (its numeric format is bound;
+  the commands belong to the architecture decision record, issue #63);
+- per-parameter wire widths and numeric IDs (the name table's `numeric_id`
+  and `width` columns stay reserved);
+- the global sound identity binding (issues #12/#88), the product profile
+  naming, and the device lock-state semantics — `sound_identity`,
+  `profile_id`, and `locks` remain opaque byte strings;
+- live-note semantics: absent, per [SESSION.md](SESSION.md).
 
 ## Status
 
-All documents in this directory are **unratified** until the #62 increment
-merges and a later decision record binds the numeric contract. They specify
-control-plane behavior only; they qualify no hardware and no synthesis
-fidelity.
+These documents specify control-plane behavior plus the numeric wire binding
+consumed from the accepted DR-0008 register. They qualify the protocol only:
+they are not evidence of synthesis fidelity, RTL equivalence, or hardware
+playback, and they implement no architecture decision (issue #63 owns the
+audio transfer/streaming and render-trigger command sets).

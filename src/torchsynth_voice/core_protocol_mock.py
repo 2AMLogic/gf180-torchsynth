@@ -2,8 +2,9 @@
 
 Implements spec/protocol/SESSION.md and spec/protocol/PATCH-LOAD.md as a
 byte-level round-trip model. It verifies protocol behavior only; it is not
-evidence of synthesis fidelity or RTL equivalence, and every numeric-gated
-region stays opaque.
+evidence of synthesis fidelity or RTL equivalence. The regions protocol
+version 1 carried opaquely are bound to the accepted DR-0008 register; the
+still-opaque fields (sound_identity, profile_id, locks) remain verbatim.
 """
 
 from __future__ import annotations
@@ -25,13 +26,13 @@ from .core_protocol import (
     CMD_READY,
     CMD_RESET,
     COMMAND_NAMES,
+    PARAM_VALUE_BYTES,
     ErrorCode,
     FrameError,
     KIND_COMMAND,
     KIND_ERROR,
     KIND_RESPONSE,
     KNOWN_CAPABILITIES,
-    NUMERIC_CONTRACT_UNBOUND,
     PROTOCOL_VERSION,
     Ready,
     decode_frame,
@@ -42,6 +43,7 @@ from .core_protocol import (
     decode_patch_value,
     encode_frame,
     encode_ready,
+    numeric_contract_version_bound,
     patch_hash,
 )
 
@@ -71,7 +73,7 @@ class MockCore:
         name_table_sha256: bytes,
         capabilities: int = KNOWN_CAPABILITIES,
         profile_id: bytes = b"torchsynth-1-voice-default",
-        numeric_contract_version: bytes = NUMERIC_CONTRACT_UNBOUND,
+        numeric_contract_version: bytes | None = None,
         locks: bytes = b"",
         max_payload: int = 1024,
         rx_queue_depth: int = 2,
@@ -82,6 +84,8 @@ class MockCore:
         self._name_table_sha256 = bytes(name_table_sha256)
         self._supported_capabilities = capabilities & KNOWN_CAPABILITIES
         self._profile_id = bytes(profile_id)
+        if numeric_contract_version is None:
+            numeric_contract_version = numeric_contract_version_bound()
         self._numeric_contract_version = bytes(numeric_contract_version)
         self._locks = bytes(locks)
         self._max_payload = max_payload
@@ -224,6 +228,12 @@ class MockCore:
         except FrameError:
             return self._respond(frame.command, frame.sequence, ErrorCode.PAYLOAD_LENGTH)
 
+        if hello.numeric_contract_version != self._numeric_contract_version:
+            self._fatal()
+            return self._error_frame(
+                frame.command, frame.sequence, ErrorCode.PROTOCOL_VERSION
+            )
+
         self._retire_transaction()
         self._replay_cache.clear()
         self._last_sequence = frame.sequence
@@ -315,6 +325,8 @@ class MockCore:
             name, value = decode_patch_value(frame.payload)
         except FrameError:
             return self._respond(frame.command, frame.sequence, ErrorCode.PAYLOAD_LENGTH)
+        if len(value) != PARAM_VALUE_BYTES:
+            return self._respond(frame.command, frame.sequence, ErrorCode.PAYLOAD_LENGTH)
         transaction = self._transaction
         if name not in transaction["declared"]:
             return self._respond(frame.command, frame.sequence, ErrorCode.UNKNOWN_NAME)
@@ -341,7 +353,10 @@ class MockCore:
         missing = set(transaction["declared"]) - set(transaction["staged"])
         if missing or len(transaction["declared"]) != transaction["declared_count"]:
             return self._respond(frame.command, frame.sequence, ErrorCode.PATCH_INCOMPLETE)
-        computed = patch_hash(transaction["staged"])
+        computed = patch_hash(
+            transaction["staged"],
+            numeric_contract_version=self._numeric_contract_version,
+        )
         if computed != declared_hash:
             self._retire_transaction()
             self.state = SessionState.READY
