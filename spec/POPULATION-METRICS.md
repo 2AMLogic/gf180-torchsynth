@@ -236,7 +236,7 @@ Builder evidence recorded 2026-09-20, worktree `feature/issue-46`:
 | `python3 tools/check_contract.py` | `contract manifests are internally consistent`, exit 0. |
 | `tools/population_drift_demo.py` against the landed store (v1 values) | All v1 rows reproduce exactly (table above). |
 | `tools/population_drift_demo.py` v2 receipt | Receipt written in ~67 s; outlier rows and FAD∞ response as tabled above. |
-| Byte stability | Two clean-tree runs sharing one declared `--generated-utc` are byte-identical (sha256 `0f917b3c…4f8397`); a default run differs only in `generated_utc`. |
+| Byte stability | Two clean-tree runs sharing one declared `--generated-utc` are byte-identical; the committed receipt's sha256 is `e94a1ed9f1b9b17c94d3eebccc51e767ab8096e55d4b430e3ce1d061e539a44f`, and a default-timestamp run differs only in `generated_utc`. |
 
 This establishes machinery and receipts only. No listening evidence, no
 ladder comparison, no acceptance semantics, and no hardware claim is made.
