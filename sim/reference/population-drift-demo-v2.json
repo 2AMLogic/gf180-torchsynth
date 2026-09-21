@@ -1,0 +1,1074 @@
+{
+  "conditions": [
+    {
+      "accumulation": "fsum-binary64-v1",
+      "control_holds": true,
+      "distance": "l1",
+      "estimator": "obs2104.12922-eq2-distance-induced-v1",
+      "kind": "permutation_control",
+      "n": 96,
+      "note": "identical partitions; population metrics must not move",
+      "population": "corpus",
+      "value": 0.0
+    },
+    {
+      "accumulation": "fsum-binary64-v1",
+      "distance": "l1",
+      "estimator": "obs2104.12922-eq2-distance-induced-v1",
+      "kind": "split_half",
+      "n": 48,
+      "note": "within-corpus 50/50 baseline",
+      "population": "corpus",
+      "value": 0.02953805986400858
+    },
+    {
+      "a": "corpus",
+      "b": "corpus_pitch_x2",
+      "fad": {
+        "accumulation": "fsum-binary64-v1",
+        "dim": 9,
+        "estimator": "frechet-gaussian-eq1-v1",
+        "n_reference": 96,
+        "n_test": 96,
+        "value": 0.01402457154375547
+      },
+      "kind": "cross_population",
+      "label": "extreme-pitch (decimation x2 octave-up analog)",
+      "mmd": {
+        "accumulation": "fsum-binary64-v1",
+        "distance": "l1",
+        "estimator": "obs2104.12922-eq2-distance-induced-v1",
+        "n": 96,
+        "value": 0.0123105613603632
+      },
+      "note": "population-drift demonstration; no acceptance meaning"
+    },
+    {
+      "a": "corpus",
+      "b": "corpus_noise_gain",
+      "fad": {
+        "accumulation": "fsum-binary64-v1",
+        "dim": 9,
+        "estimator": "frechet-gaussian-eq1-v1",
+        "n_reference": 96,
+        "n_test": 96,
+        "value": 0.18758989400995082
+      },
+      "kind": "cross_population",
+      "label": "noise-gain (seeded white noise +-0.25)",
+      "mmd": {
+        "accumulation": "fsum-binary64-v1",
+        "distance": "l1",
+        "estimator": "obs2104.12922-eq2-distance-induced-v1",
+        "n": 96,
+        "value": 1.1751456344051627
+      },
+      "note": "population-drift demonstration; no acceptance meaning"
+    },
+    {
+      "fad": {
+        "accumulation": "fsum-binary64-v1",
+        "dim": 9,
+        "estimator": "frechet-gaussian-eq1-v1",
+        "n_reference": 96,
+        "n_test": 96,
+        "value": 0.0012593998525666228
+      },
+      "kind": "parameter_shift_biased_resample",
+      "label": "wrong-nebula / parameter-distribution stand-in (biased resample)",
+      "mmd": {
+        "accumulation": "fsum-binary64-v1",
+        "distance": "l1",
+        "estimator": "obs2104.12922-eq2-distance-induced-v1",
+        "n": 96,
+        "value": 0.006493833152155225
+      },
+      "note": "stratum-biased resample as a wrong-nebula/parameter-distribution stand-in; the #44-gated ladder remains the ratified comparator",
+      "population": "corpus"
+    },
+    {
+      "injection_rule": "trailing-k replacement: the last k corpus rows are replaced by the first k outlier-pool rows; deterministic, seed-free",
+      "injection_sizes": [
+        1,
+        4,
+        16
+      ],
+      "injections": [
+        {
+          "contamination_rate": 0.010416666666666666,
+          "fad": {
+            "accumulation": "fsum-binary64-v1",
+            "dim": 9,
+            "estimator": "frechet-gaussian-eq1-v1",
+            "n_reference": 96,
+            "n_test": 96,
+            "value": 0.0002333320400615957
+          },
+          "k": 1,
+          "mmd": {
+            "accumulation": "fsum-binary64-v1",
+            "distance": "l1",
+            "estimator": "obs2104.12922-eq2-distance-induced-v1",
+            "n": 96,
+            "value": 0.0003528816803676844
+          }
+        },
+        {
+          "contamination_rate": 0.041666666666666664,
+          "fad": {
+            "accumulation": "fsum-binary64-v1",
+            "dim": 9,
+            "estimator": "frechet-gaussian-eq1-v1",
+            "n_reference": 96,
+            "n_test": 96,
+            "value": 0.002688941918681964
+          },
+          "k": 4,
+          "mmd": {
+            "accumulation": "fsum-binary64-v1",
+            "distance": "l1",
+            "estimator": "obs2104.12922-eq2-distance-induced-v1",
+            "n": 96,
+            "value": 0.005363142141912963
+          }
+        },
+        {
+          "contamination_rate": 0.16666666666666666,
+          "fad": {
+            "accumulation": "fsum-binary64-v1",
+            "dim": 9,
+            "estimator": "frechet-gaussian-eq1-v1",
+            "n_reference": 96,
+            "n_test": 96,
+            "value": 0.029191389002421853
+          },
+          "k": 16,
+          "mmd": {
+            "accumulation": "fsum-binary64-v1",
+            "distance": "l1",
+            "estimator": "obs2104.12922-eq2-distance-induced-v1",
+            "n": 96,
+            "value": 0.08623928526249457
+          }
+        }
+      ],
+      "kind": "outlier_injection",
+      "label": "outlier injection (scaled noise-gain pool, amplitude +-0.5)",
+      "note": "contamination-response demonstration; no alerting threshold, no pass/fail, never a gate",
+      "outlier_pool": "outlier_pool_noise_gain_x2",
+      "pool_n": 96,
+      "population": "corpus"
+    },
+    {
+      "accumulation": "fsum-binary64-v1",
+      "curve": [
+        {
+          "max_fad": 0.1299885022079732,
+          "mean_fad": 0.0528770106535244,
+          "min_fad": 0.025204000095162826,
+          "n": 8,
+          "values": [
+            0.07896552625579911,
+            0.03699990293755706,
+            0.02776976236256376,
+            0.02768706821595246,
+            0.025204000095162826,
+            0.03731762313584591,
+            0.027461724110223407,
+            0.03258544231977753,
+            0.07805020159069434,
+            0.1299885022079732,
+            0.0408480807824565,
+            0.06845387087635241,
+            0.07449507296643226,
+            0.0714002556254863,
+            0.035578906287200424,
+            0.03898389511148381,
+            0.0655538417577971,
+            0.032982957677026026,
+            0.09540445070488232,
+            0.03180912804982122
+          ]
+        },
+        {
+          "max_fad": 0.05294917144363365,
+          "mean_fad": 0.02619430290271425,
+          "min_fad": 0.014488338755492408,
+          "n": 16,
+          "values": [
+            0.02489128708432614,
+            0.023793803177626527,
+            0.018723894721588086,
+            0.03629354840677612,
+            0.0217069097220553,
+            0.05294917144363365,
+            0.014488338755492408,
+            0.03503488156688642,
+            0.021130386489712938,
+            0.03676580037615279,
+            0.020960885171218968,
+            0.018309503570821284,
+            0.020747643662448356,
+            0.031005479548484954,
+            0.02253238153396775,
+            0.03481033961454466,
+            0.01798509645262053,
+            0.02493512027172501,
+            0.029891032692791752,
+            0.01693055379141134
+          ]
+        },
+        {
+          "max_fad": 0.05841949296281945,
+          "mean_fad": 0.017934563450257145,
+          "min_fad": 0.004256963513485423,
+          "n": 24,
+          "values": [
+            0.03714918076575052,
+            0.013469948754088523,
+            0.017623715550435515,
+            0.05841949296281945,
+            0.005242289889556717,
+            0.009142616064605036,
+            0.014218709214716962,
+            0.013742121538182162,
+            0.022685827998917052,
+            0.014767863654528979,
+            0.012833319527693843,
+            0.015525968392462342,
+            0.004256963513485423,
+            0.010378908504541484,
+            0.029499300642677306,
+            0.024655563854460105,
+            0.008800963104051207,
+            0.014885377382753806,
+            0.020400202917888577,
+            0.010992934771527907
+          ]
+        },
+        {
+          "max_fad": 0.032586112581926535,
+          "mean_fad": 0.011136604480242425,
+          "min_fad": 0.003738435356194003,
+          "n": 32,
+          "values": [
+            0.032586112581926535,
+            0.01748536661368366,
+            0.006245593942885208,
+            0.005958213452384842,
+            0.0047231921250388,
+            0.005904615648598732,
+            0.021263216928451595,
+            0.006602325619114058,
+            0.009224947149178375,
+            0.003738435356194003,
+            0.0090162025401469,
+            0.00457841242922058,
+            0.010884861017217973,
+            0.006174971287895958,
+            0.007679822269000769,
+            0.008305285428432285,
+            0.020472116155906495,
+            0.009387681031965078,
+            0.016529338742294175,
+            0.015971379285312476
+          ]
+        },
+        {
+          "max_fad": 0.02084099057804023,
+          "mean_fad": 0.007753527116650544,
+          "min_fad": 0.003215453932865431,
+          "n": 48,
+          "values": [
+            0.010630455349806112,
+            0.00780417373521225,
+            0.005889582439503216,
+            0.00660713202101848,
+            0.006893678338723341,
+            0.014341816565857923,
+            0.007999032910145809,
+            0.0045175006299290055,
+            0.007990670573836234,
+            0.007821765600493413,
+            0.009210786480444821,
+            0.006321568993718829,
+            0.005990696995229139,
+            0.003215453932865431,
+            0.0036586357851086104,
+            0.010557049098645577,
+            0.0055422097590168695,
+            0.02084099057804023,
+            0.003599562059753869,
+            0.005637780485661714
+          ]
+        },
+        {
+          "max_fad": 0.019925192403751235,
+          "mean_fad": 0.005219891293793788,
+          "min_fad": 0.0010323237007380248,
+          "n": 64,
+          "values": [
+            0.0026604807029664834,
+            0.004167579758377338,
+            0.007184824871384776,
+            0.010485447458450647,
+            0.0038627936066614743,
+            0.019925192403751235,
+            0.010171134097773149,
+            0.0010713776411647724,
+            0.003625214734476745,
+            0.0034967212354704014,
+            0.0026427182551597705,
+            0.0011645843040410941,
+            0.009778995305269433,
+            0.0020063495890392247,
+            0.0025088590874142724,
+            0.003106298159426535,
+            0.003979215657328172,
+            0.00667713315758417,
+            0.004850582149398042,
+            0.0010323237007380248
+          ]
+        },
+        {
+          "max_fad": 0.012174494928512608,
+          "mean_fad": 0.003628843244430323,
+          "min_fad": 0.0014810426451632441,
+          "n": 96,
+          "values": [
+            0.004638988711209879,
+            0.003452300417508658,
+            0.0014810426451632441,
+            0.002680115938889893,
+            0.001853061625171737,
+            0.0022866307008089226,
+            0.0034834268932537604,
+            0.004354514394763198,
+            0.0042566710047607925,
+            0.002362380938628006,
+            0.004330698698106705,
+            0.0018957762557982316,
+            0.0035488256025628107,
+            0.0027220960876435663,
+            0.002102777749705187,
+            0.005735827733448329,
+            0.012174494928512608,
+            0.0046991976445519,
+            0.002637015685451105,
+            0.0018810212326679232
+          ]
+        }
+      ],
+      "estimator": "frechet-gaussian-eq1-v1",
+      "fadinfty": -0.001259364422901671,
+      "fadinfty_estimator": "fadinfty-linear-extrapolation-gui23-v1",
+      "fit_slope": 0.43463688928083927,
+      "kind": "fadinfty",
+      "population": "corpus",
+      "reference": "corpus",
+      "sample_sizes": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64,
+        96
+      ],
+      "seed": 20260922,
+      "trials": 20
+    },
+    {
+      "accumulation": "fsum-binary64-v1",
+      "curve": [
+        {
+          "max_fad": 0.27444843327509194,
+          "mean_fad": 0.07798203159044517,
+          "min_fad": 0.026945487822505998,
+          "n": 8,
+          "values": [
+            0.16296727899611302,
+            0.06248821820214706,
+            0.06748850141641421,
+            0.035751951295716344,
+            0.03708111915385698,
+            0.05355153232134463,
+            0.10201297520515185,
+            0.042217736515274606,
+            0.048559789009112925,
+            0.04455513768067054,
+            0.05618395869996379,
+            0.11271470759606039,
+            0.04410846623118575,
+            0.15310769354539028,
+            0.04040657152921756,
+            0.11097185425880185,
+            0.27444843327509194,
+            0.026945487822505998,
+            0.03419902883288217,
+            0.049880190222001686
+          ]
+        },
+        {
+          "max_fad": 0.1453032865401218,
+          "mean_fad": 0.0645410834106472,
+          "min_fad": 0.01723166923733882,
+          "n": 16,
+          "values": [
+            0.05305058408566882,
+            0.01723166923733882,
+            0.01884914885613298,
+            0.05021437961749464,
+            0.08455100521227582,
+            0.07063856214874903,
+            0.06542485795464853,
+            0.0652849427388259,
+            0.03606977995907851,
+            0.04228038558450942,
+            0.10935743793755348,
+            0.08514438190915657,
+            0.04979032117852539,
+            0.062404313999454675,
+            0.13932374159053323,
+            0.030361204826867383,
+            0.08800264762034776,
+            0.05203817640029296,
+            0.1453032865401218,
+            0.02550084081536802
+          ]
+        },
+        {
+          "max_fad": 0.0738943206801923,
+          "mean_fad": 0.0411822467951367,
+          "min_fad": 0.017841758203559266,
+          "n": 24,
+          "values": [
+            0.06832088307338924,
+            0.028182814423682978,
+            0.0738943206801923,
+            0.02571160691913643,
+            0.038822816186607045,
+            0.0476063365941537,
+            0.04665356075236621,
+            0.030725442275036707,
+            0.017841758203559266,
+            0.06310181217089667,
+            0.02578597496178353,
+            0.0294075892268994,
+            0.042870422368536,
+            0.038984141223189606,
+            0.019990478348621665,
+            0.0733890038845959,
+            0.0389695572839176,
+            0.04757816658751851,
+            0.023127270019754564,
+            0.0426809807188967
+          ]
+        },
+        {
+          "max_fad": 0.09239185501215086,
+          "mean_fad": 0.04014659101151271,
+          "min_fad": 0.00432896442202263,
+          "n": 32,
+          "values": [
+            0.017220803527494333,
+            0.03358220197957246,
+            0.056448278094040516,
+            0.09239185501215086,
+            0.04770275493561982,
+            0.00432896442202263,
+            0.061231028848784896,
+            0.014269465616961408,
+            0.027082224151551426,
+            0.027195801519973695,
+            0.058940702382608234,
+            0.05353185732577537,
+            0.04082740521177275,
+            0.04454283756624816,
+            0.0791770273229237,
+            0.03326155826334176,
+            0.03303825515194475,
+            0.041547665823832236,
+            0.02281339690516343,
+            0.013797736168471797
+          ]
+        },
+        {
+          "max_fad": 0.08401468010256874,
+          "mean_fad": 0.04370136209610263,
+          "min_fad": 0.008061578133069902,
+          "n": 48,
+          "values": [
+            0.05243771535687197,
+            0.012969098868613471,
+            0.014412257884499347,
+            0.043461747446331356,
+            0.038254178148332485,
+            0.008061578133069902,
+            0.07194781979358006,
+            0.048084284536435595,
+            0.027398973621152123,
+            0.05076234085106923,
+            0.05556144824937248,
+            0.08295874021937721,
+            0.025759210000721955,
+            0.05197494804214298,
+            0.033234606850707005,
+            0.08401468010256874,
+            0.025752689781615323,
+            0.058868916525311676,
+            0.04339196158157943,
+            0.044720045928700325
+          ]
+        },
+        {
+          "max_fad": 0.058960624617845236,
+          "mean_fad": 0.035432933100092115,
+          "min_fad": 0.012738695759046015,
+          "n": 64,
+          "values": [
+            0.04045997473425722,
+            0.056731553180769445,
+            0.042713289784940434,
+            0.012738695759046015,
+            0.027935444988200553,
+            0.034559840834414435,
+            0.04367099748716391,
+            0.03721469199414196,
+            0.0337978527042172,
+            0.023329613264288285,
+            0.015137499988260472,
+            0.016577280107076986,
+            0.038072514070842334,
+            0.039112852998877956,
+            0.03599174354800183,
+            0.038761308801536165,
+            0.03885911927099328,
+            0.058960624617845236,
+            0.04357127609210737,
+            0.030462487774861102
+          ]
+        },
+        {
+          "max_fad": 0.05155046859672896,
+          "mean_fad": 0.028639090385514966,
+          "min_fad": 0.013221598074946217,
+          "n": 96,
+          "values": [
+            0.040512342348170916,
+            0.01728794563016256,
+            0.013291326512306356,
+            0.039185460806555605,
+            0.014050612281817532,
+            0.03302123328059914,
+            0.047120143049565966,
+            0.037397995651243354,
+            0.024153668549734275,
+            0.05155046859672896,
+            0.03227206936756405,
+            0.024865336620350786,
+            0.030471650127504968,
+            0.018742373861517392,
+            0.025025880642842557,
+            0.01698353155294896,
+            0.04541306389251715,
+            0.013221598074946217,
+            0.01431651693674868,
+            0.03389858992647393
+          ]
+        }
+      ],
+      "estimator": "frechet-gaussian-eq1-v1",
+      "fadinfty": 0.0291705083353243,
+      "fadinfty_estimator": "fadinfty-linear-extrapolation-gui23-v1",
+      "fit_slope": 0.4146932503067598,
+      "kind": "fadinfty",
+      "population": "corpus_outlier_k16",
+      "reference": "corpus",
+      "sample_sizes": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64,
+        96
+      ],
+      "seed": 20260924,
+      "trials": 20
+    }
+  ],
+  "disclaimers": [
+    "DEMONSTRATION EVIDENCE ONLY: population diagnostics answer population questions.",
+    "Never per-sound identity or implementation correctness; per-index comparison remains an independent mandatory gate.",
+    "No acceptance verdict, no frozen threshold, and never an optimization target (OBS negative-result doctrine, docs/MEASUREMENT-PLAN.md).",
+    "The #44-gated corruption-ladder comparator is NOT exercised here; the wrong-nebula condition is a declared biased-resample stand-in.",
+    "Outlier injection is a contamination-response demonstration over a declared severity grid: no alerting threshold, no pass/fail, no gating authority.",
+    "The narrow role decision (2026-09-20) is recorded in spec/POPULATION-METRICS.md: corpus-level auxiliary diagnostics only; alerting is flag-only; the human-transparency row stays NO VERDICT."
+  ],
+  "embedding": {
+    "identity": "provisional-envelope-v0",
+    "note": "provisional stdlib embedding because the pinned dependency is absent; machinery demonstration only",
+    "obs_reference_pin": {
+      "audio_distance": "l1",
+      "content_type": "music",
+      "dependency_status": "declared pin only; openl3/torch are not repo dependencies, so producing these embeddings refuses with an explicit reason until installed",
+      "embedding_size": 512,
+      "family": "openl3",
+      "frame_aggregation": "mean-over-frames-v1",
+      "frame_aggregation_note": "the OBS paper does not specify frame handling for its corpus MMD; mean-over-frames is this repo's declared default, following fadtk",
+      "hop_seconds": 0.5,
+      "identity": "openl3-music-mel256-512-l1",
+      "input_representation": "mel256",
+      "sources": [
+        "arXiv:2104.12922 S4.3 Table 2 and S5: OpenL3 (music, mel256, 512) with L1 distance; corpus similarity via its Eq. 2 MMD",
+        "arXiv:2311.01616: FAD sample-size bias and FAD-infinity extrapolation"
+      ]
+    },
+    "openl3_available": false,
+    "provisional": {
+      "definition": "fixed count of equal windows: per-window RMS, plus whole-clip zero-crossing rate; one dimension per window plus one",
+      "identity": "provisional-envelope-v0",
+      "note": "stdlib demonstration embedding; NOT the OBS reference pin; carries no perceptual meaning and no acceptance semantics"
+    }
+  },
+  "generated_utc": "2026-09-21T02:20:00+00:00",
+  "issue": 46,
+  "populations": {
+    "corpus": {
+      "n": 96,
+      "source": "landed development corpus, indices 0-95, store audio.f32le"
+    },
+    "corpus_noise_gain": {
+      "definition": "corpus clip plus seeded uniform white noise, amplitude +-0.25, scale relative to float range",
+      "n": 96,
+      "seed": 20260921
+    },
+    "corpus_outlier_k16": {
+      "definition": "trailing-16 replacement injection via population_metrics.inject_outliers: the last 16 corpus embeddings are replaced by the first 16 outlier_pool_noise_gain_x2 embeddings; deterministic, seed-free",
+      "n": 96
+    },
+    "corpus_pitch_x2": {
+      "definition": "every second sample of each corpus clip (octave-up analog on playback at the original rate)",
+      "n": 96
+    },
+    "outlier_pool_noise_gain_x2": {
+      "definition": "declared outlier construction rule: corpus clip plus seeded uniform white noise, amplitude +-0.5 (2x the noise-gain condition), scale relative to float range",
+      "n": 96,
+      "seed": 20260923
+    }
+  },
+  "producer": {
+    "git_context": {
+      "clean": true,
+      "commit": "857f09f163f91ed8f22626142fe41547582d5c48"
+    }
+  },
+  "provenance": {
+    "accumulation": "fsum-binary64-v1",
+    "doctrine": "population diagnostics only: never per-sound identity or correctness, never an acceptance oracle, never an optimization target",
+    "estimators": {
+      "fadinfty": "fadinfty-linear-extrapolation-gui23-v1",
+      "frechet": "frechet-gaussian-eq1-v1",
+      "mmd": "obs2104.12922-eq2-distance-induced-v1"
+    },
+    "seed": 20260920
+  },
+  "schema": "torchsynth-population-drift-demo",
+  "schema_version": 2,
+  "status": "complete",
+  "store": {
+    "case_count": 96,
+    "combined_audio_sha256": "babcfe7f79a7668161039e19ebc60776fcdcb7d0bd14a957416270ab38bef23d",
+    "expected_samples_per_case": 176400,
+    "index_path": "/Users/joseph/dev/gf180-issue19-corpus-store/indexes/1b81701327150597fd6fd70b24d642bc87519a0c76777bc695506d3ae8bf80cd.json",
+    "index_sha256": "1b81701327150597fd6fd70b24d642bc87519a0c76777bc695506d3ae8bf80cd",
+    "per_case_audio_sha256": [
+      [
+        "global-0",
+        "acb333168ddc547d800ea4e495f8130b557b613f198426387fd92614345d0463"
+      ],
+      [
+        "global-1",
+        "6fc07a9f83789f321fa31b230611b721c93bd587e4d8b1b396dcd74f1036b095"
+      ],
+      [
+        "global-2",
+        "26e5d52bac095734af68a6c469e33ae51c78e70b2192e7c701b0246c4a164c08"
+      ],
+      [
+        "global-3",
+        "80b1343803337804cc008feb46b88a3d84160f9d906013bc1d205bed1d1bc0a3"
+      ],
+      [
+        "global-4",
+        "bb4b99dab942b1746accaa772a2508fba996d910ada5296ecf06137580528fcf"
+      ],
+      [
+        "global-5",
+        "bf8d3434315940b79d46ff462159c63ab4433fe5fadca0533df2ecfd087d115a"
+      ],
+      [
+        "global-6",
+        "2bfd8b0f3703b5d2996411bb021dfd2352064cb92dbd152f207bf187b4e7611f"
+      ],
+      [
+        "global-7",
+        "e8faaecffa5c7283bf269cc473642ac40f9154478ea1b163f17f9c78d3f07a94"
+      ],
+      [
+        "global-8",
+        "48b31f000cf7572ece067cccbc82904c87a89c1325a76d27757ef48e4f1179c2"
+      ],
+      [
+        "global-9",
+        "db60972df44b3983e722a5433e665bd432872332fa4f0ce49324e607654ce848"
+      ],
+      [
+        "global-10",
+        "0240f083885fe2e9cf546709ea499596d9728f7c167324174c593c6fe10bb767"
+      ],
+      [
+        "global-11",
+        "b42f78d874bf6718214f30b74b653cc94468a612c939f2507a03287f2c834fc1"
+      ],
+      [
+        "global-12",
+        "5eef4f5b0e93abb8bc9a956b1dc7ad0580f22e5bd3fc624fc1f60a678c336450"
+      ],
+      [
+        "global-13",
+        "cbe901f49e7adea6b544229c8c49307387c9c6c6772d2b85d85415532f7a08c7"
+      ],
+      [
+        "global-14",
+        "c2868fda5508742aacf1bdf9e8fd940205d5be033efc610f8132d6c3a6ff2e8c"
+      ],
+      [
+        "global-15",
+        "f04e8513864301e824dbcfa44c158394716ad8cbb1d554ea7a6cf434c2ee3bdb"
+      ],
+      [
+        "global-16",
+        "4ddb1e1ddc890b15e5e834682fbb538165fd9372b9de8eb45e5f45278128991f"
+      ],
+      [
+        "global-17",
+        "745a5c1e8575e09f5a118cb2e1f22b7e107418c55c83e9e83082ccd06fdad3bc"
+      ],
+      [
+        "global-18",
+        "ea7dfbf798690c8cc5505e64dc02677ca37bfcf655cce1fe7a516283035a84de"
+      ],
+      [
+        "global-19",
+        "8262e298acd37e403757b02b9791e9ef2e355dfd49a13aa9e0e95dff7cab9890"
+      ],
+      [
+        "global-20",
+        "04c4d4bacbb184b20fba2472372674edb620db335dab0b25a1ee6fe62197ae1c"
+      ],
+      [
+        "global-21",
+        "630cbe0459d8d2c208a086ba23731d5d762c10a56496fd472e087864d738adad"
+      ],
+      [
+        "global-22",
+        "d94c920e18f418389a63f0f70596a15d5f0ae4d4dd425a9924f0a27aa539912b"
+      ],
+      [
+        "global-23",
+        "bee34946be9b334877b24ab1f74243e7a20b76492e3343429a7a2e71b1623472"
+      ],
+      [
+        "global-24",
+        "27e576eaaf2a6d13c673b67eaf86a15abaabea975dae7024ecc9c2ddd116954f"
+      ],
+      [
+        "global-25",
+        "437a041178ee838810b62063f5a735167e87c20018cf731a499b39f796472320"
+      ],
+      [
+        "global-26",
+        "2575cc3f982adb00d7f644cebeae0f650e170224514f83f39678c12c65c79677"
+      ],
+      [
+        "global-27",
+        "d089a2998088214af903f795e0d57b17b28dbed0c85ef7e8e2df7d8dcedfcf2f"
+      ],
+      [
+        "global-28",
+        "9f59cfc7859f1c6e22da1609476bb2ac9ab6f2e0e1cc88fbd440248a48ae68fe"
+      ],
+      [
+        "global-29",
+        "1de22e13f9feb61b01c05f93cf59f64af16d443efb88dde54452dec0715037b8"
+      ],
+      [
+        "global-30",
+        "310779803a5e4dae4344f28d008e8387d26bc0bcfec9bc205a8678083911a824"
+      ],
+      [
+        "global-31",
+        "2a64a9fb015096d38c7109d6f4fecb2684eb3cee8a93d6935ab7b7fa733f513d"
+      ],
+      [
+        "global-32",
+        "17832d2a45063d01bea42fa1d13fdceb73fb71f5707e4731f6ec0aceb5140ed6"
+      ],
+      [
+        "global-33",
+        "d6f2b7470a99f3e45e7ccfb869e300153878c64935596fee890eebd1cf823e9a"
+      ],
+      [
+        "global-34",
+        "1135f4e4e425342e694271ec3c56fee561ea30e44e5e32b7ae7e877e2a7a5f30"
+      ],
+      [
+        "global-35",
+        "6cebf53c2cc9868360c7a3da3e7fcfbb7f212146c4c1844c1c0c021f02d656d6"
+      ],
+      [
+        "global-36",
+        "53f681a4a568f45de8bc8edebecb1459e709719d8319a8f08048ca0a4e3bd455"
+      ],
+      [
+        "global-37",
+        "7cd58ba6f071943ff02e7d1f8bcd3a64667123c5360f50f1f48d693003b2d519"
+      ],
+      [
+        "global-38",
+        "f0c552b1584a7fc69b9556e77b59b76bde9ef5b7d56bcb86aba6ea45d3d377d4"
+      ],
+      [
+        "global-39",
+        "4568924618f05c8ea54b989571624e5a5fd399a0de5368a4fbb3c2c262d698db"
+      ],
+      [
+        "global-40",
+        "1ff9c95d3296fdef530df201963c6487a085ccf7ed06bc943540e2f9f38a4a04"
+      ],
+      [
+        "global-41",
+        "6c389a3db7d077173a0f3c467adc015abc1c6a1274c75e79fbb409729a2f142e"
+      ],
+      [
+        "global-42",
+        "979faffd9116b40f0da5150cc23d874923f4ace7bfbf9815dae4298ef664be9c"
+      ],
+      [
+        "global-43",
+        "be1d049138670cce0d06cc632e6ceeb26e0e2a2e8e851ee61808a99325efd560"
+      ],
+      [
+        "global-44",
+        "69aaefa97aeaea3fc79472e57ea0df66abeacfa16cd2cb66e58ee46e52fd82f4"
+      ],
+      [
+        "global-45",
+        "33d7e0d6f20ea215607ab91831c1bc2cb1ec4e7df0661a82c5fc815a01629bb6"
+      ],
+      [
+        "global-46",
+        "53cb157fb0ad727fc25643dad8dcdcec37c881afa713b7632d3127697766eff1"
+      ],
+      [
+        "global-47",
+        "a9d1041f63efe2eac6fd448396dc5cdc13bf121b497493f0fb9c48b4cf0af181"
+      ],
+      [
+        "global-48",
+        "19c15198293d8672c2ce62bff1742667986caa420270300f36e41d660ce22f10"
+      ],
+      [
+        "global-49",
+        "58fcdcbda1ac2836802d6a070f03f9bbf2695f6d6caeea2b1d93d83ecb4dff15"
+      ],
+      [
+        "global-50",
+        "1b394102c3052207dc72cb60fd281da148febee1c609f266061a2a4798a4ed8e"
+      ],
+      [
+        "global-51",
+        "de0852533a626cbb01ae55ac5bc3bc781185932e036b54a790fd996cbe5e33db"
+      ],
+      [
+        "global-52",
+        "bc782d2a75af0626c63c4183e571ed3846398813a07393823761290457191ae1"
+      ],
+      [
+        "global-53",
+        "0e53ca8de8067946c31c6e0a1ad3dbb4f2442a35a50c1bb2ca0a5a1f1f855c7a"
+      ],
+      [
+        "global-54",
+        "9d320e5de1b18c579446f8d2040b37e0efbc47c3f8bd951f7fd21eccab6c4da5"
+      ],
+      [
+        "global-55",
+        "bb644d610b439544ea6e5004e6ed5b9a59b7ad5b1fc611885a41fbc84c9d2243"
+      ],
+      [
+        "global-56",
+        "dd3b9bf35144bf32757526b7fac454dcd8ab37be6a3e76139447af7d3e1d171b"
+      ],
+      [
+        "global-57",
+        "88e41eb999027cb505e1ca86bb2d3cd4db0a159280e3f6700056e6e84c508df5"
+      ],
+      [
+        "global-58",
+        "7706b8017b275e79e5378f1e6225eced608078f077d1c9525ec0bab7e1deeaea"
+      ],
+      [
+        "global-59",
+        "9ef806b2d0d5218a71957de5e0c0af4b4c450c1187f23eb3925899f4d0cda593"
+      ],
+      [
+        "global-60",
+        "474a6a472580c5731cfdff0b773f025c1af371048766885a5e82bc9caceecce1"
+      ],
+      [
+        "global-61",
+        "356f7fccaa4c1be70a002ab6685895085340d043b471036bcdb23378362269c7"
+      ],
+      [
+        "global-62",
+        "3604625c92a19f25d7902e5e8a4004ad97d2eda1c52531a2fe4fbdf5f5bca966"
+      ],
+      [
+        "global-63",
+        "ce720a10cb30bed728ef0be4999fab76549e8b088c367956e3ddd05e67a517e1"
+      ],
+      [
+        "global-64",
+        "48b5e7e13c985e3220c71f7241e1a5f3409742e6c06d82906eb5a6f2019ad23e"
+      ],
+      [
+        "global-65",
+        "83bce684a826006c43ddda104eaef6ed4913e4a811a71d7742bc525d4d8c5d3d"
+      ],
+      [
+        "global-66",
+        "8bd45d3ee59227df1feac3888e00faa0ce616cf1580a1c40acc6b049a9af784e"
+      ],
+      [
+        "global-67",
+        "aded5cc8146e301326aa9e365d7bb8ef05ac0232763a628561f369dac255d396"
+      ],
+      [
+        "global-68",
+        "5542a97ba1235c357280265e23d6de2f56b5b21c2425639dff59a7a52783a235"
+      ],
+      [
+        "global-69",
+        "7c490806d2e64c8346b39f160cda2dbbac6b80a58234131f4b33511ad3a6f62c"
+      ],
+      [
+        "global-70",
+        "a43530c817c03a074243dc8366a453101598dfe308a503929e504dbd2c6281c6"
+      ],
+      [
+        "global-71",
+        "c0a05290cf5781db697eb091ce3f88a4310f5147606a4b686b45e6488b5c371d"
+      ],
+      [
+        "global-72",
+        "2f85b5e35560a746ea809c0e2bbe5fd41918198c1d58c0ab1c1d6c9b48b04ccd"
+      ],
+      [
+        "global-73",
+        "2c2fe7d4cbefbf8796d04d12a2a709060ad311e715eaf86ccc2535a5cbb1173e"
+      ],
+      [
+        "global-74",
+        "f005b0723a8189e6417fb38382158892f16ec3731ea63b1d80439a6473410001"
+      ],
+      [
+        "global-75",
+        "d63b028d024539fddc6e687648a2befa5e22c11786807ed7e4bd60a0e3ab961c"
+      ],
+      [
+        "global-76",
+        "35a984b3e313572a7a7be7a1b030f27e0533e4c15a1cd83ac3b775effffd5f73"
+      ],
+      [
+        "global-77",
+        "1e3f962b2c9d47503d701d14bf63c5c7cb2b4f8e0b0ea3143d24b282ba4ba3a4"
+      ],
+      [
+        "global-78",
+        "a427c1699dcb20b42aecbe98d3f169890ce13f2fb7016dec17f06d8d5b0d1daf"
+      ],
+      [
+        "global-79",
+        "ded3ae84127925570845137869110ad364d50ce5a2c3544b76ca41039bf717c1"
+      ],
+      [
+        "global-80",
+        "dcdde49000ee3d93ab8675b5456513447ee583eea8162459132d1441741fe8c8"
+      ],
+      [
+        "global-81",
+        "0755aa147837919eca8cec65f9d45592d9708b8c0dc5c5f84d0f90f96e825911"
+      ],
+      [
+        "global-82",
+        "1fc83a87314f6c7606148e0940560b77204c2a0e475dba8cb32dcecf60d3ce32"
+      ],
+      [
+        "global-83",
+        "b37bb36b55d71074634654f0c89ab27f5ba687a79567951b322f18ef1259c21e"
+      ],
+      [
+        "global-84",
+        "493625d1c2ae3bbb079ebe42d2d0ed371c36f53333a3c4dd910a62da296b7e0a"
+      ],
+      [
+        "global-85",
+        "cef491f0188163e57269a5acf6b366ec1239caed794ae08881dbe4ec2c155336"
+      ],
+      [
+        "global-86",
+        "91a149622da378451916e5ce49466a54427f70e7373f70885913961842f997df"
+      ],
+      [
+        "global-87",
+        "c538a0c259fb4136e7e4fe638de87a27d37a5b365a12ad24b5997203bfb68f78"
+      ],
+      [
+        "global-88",
+        "98992e3a1aa571f711b845d501c454c30831e3d1c698225741c90f05914a3976"
+      ],
+      [
+        "global-89",
+        "90ffe04c409392e760b9c36502e41adc0548aba9207e4d4aefea403b3c79df5c"
+      ],
+      [
+        "global-90",
+        "158f3dbd17968e79cf82d9e9022c7da5b7e334036fa7e092f1cae0757b555c03"
+      ],
+      [
+        "global-91",
+        "33f3c947711ba0eae31bea9c7327682ba64d957694516058d6c1b13d7f476879"
+      ],
+      [
+        "global-92",
+        "4cd0b92e080645fec854d16d4177f4ae7153c1d9fc4868f397b95ef4c0264870"
+      ],
+      [
+        "global-93",
+        "a12bb76040ae3b9b68f4dd90b49156720683fb8d763b703539bca3b2e4768138"
+      ],
+      [
+        "global-94",
+        "62ef143da4ea07c2d60dc6744ebf31be2964ffe0aa6d93158349ae7825b026dd"
+      ],
+      [
+        "global-95",
+        "b40e69be993b0bdf9b54d75480399e96ad1738412e2487535ebd1099980b9d0f"
+      ]
+    ],
+    "sample_rate": 44100
+  }
+}

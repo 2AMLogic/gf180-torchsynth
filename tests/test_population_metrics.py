@@ -28,6 +28,7 @@ from torchsynth_voice.population_metrics import (  # noqa: E402
     fad_infinity_estimate,
     frechet_from_embeddings,
     frechet_gaussian,
+    inject_outliers,
     jacobi_eigenpairs,
     mean_and_covariance,
     mmd_obs_eq2,
@@ -195,6 +196,159 @@ class FadInfinityTests(unittest.TestCase):
                 population, population, sample_sizes=[8], trials=2, seed=1
             )
 
+    def test_condition_accepts_distinct_reference_population(self):
+        corpus = gaussian_population(31, 40)
+        shifted = [[x + 25.0 for x in row] for row in corpus]
+        receipt = run_population_conditions(
+            {"corpus": corpus, "shifted": shifted},
+            conditions=[
+                {
+                    "kind": "fadinfty",
+                    "reference": "corpus",
+                    "population": "shifted",
+                    "sample_sizes": [8, 16, 32],
+                    "trials": 4,
+                    "seed": 3,
+                }
+            ],
+            seed=1,
+        )
+        entry = receipt["conditions"][0]
+        self.assertEqual(entry["reference"], "corpus")
+        self.assertEqual(entry["population"], "shifted")
+        # A genuinely shifted test population extrapolates above zero, unlike
+        # the degenerate self-comparison.
+        self.assertGreater(entry["fadinfty"], 0.0)
+
+    def test_condition_reference_defaults_to_self_comparison(self):
+        population = gaussian_population(31, 40)
+        entry = run_population_conditions(
+            {"corpus": population},
+            conditions=[
+                {
+                    "kind": "fadinfty",
+                    "population": "corpus",
+                    "sample_sizes": [8, 16],
+                    "trials": 2,
+                    "seed": 3,
+                }
+            ],
+            seed=1,
+        )["conditions"][0]
+        self.assertEqual(entry["reference"], "corpus")
+        self.assertEqual(entry["population"], "corpus")
+
+
+class OutlierInjectionTests(unittest.TestCase):
+    """Deterministic trailing-k injection and its monotone contamination response."""
+
+    def _corpus_and_pool(self):
+        corpus = gaussian_population(23, 24, dim=3)
+        pool = [
+            [x + 30.0 for x in row] for row in gaussian_population(77, 8, dim=3)
+        ]
+        return corpus, pool
+
+    def test_trailing_replacement_is_exact_and_repeatable(self):
+        corpus, pool = self._corpus_and_pool()
+        injected = inject_outliers(corpus, pool, 4)
+        self.assertEqual(len(injected), len(corpus))
+        self.assertEqual(injected[:-4], corpus[:-4])
+        self.assertEqual(injected[-4:], pool[:4])
+        self.assertEqual(injected, inject_outliers(corpus, pool, 4))
+
+    def test_refusals(self):
+        corpus, pool = self._corpus_and_pool()
+        with self.assertRaises(PopulationMetricsError):
+            inject_outliers(corpus, pool, 0)
+        with self.assertRaises(PopulationMetricsError):
+            inject_outliers(corpus, pool, len(corpus))
+        with self.assertRaises(PopulationMetricsError):
+            inject_outliers(corpus, pool, len(pool) + 1)
+        with self.assertRaises(PopulationMetricsError):
+            inject_outliers(gaussian_population(5, 4, dim=2), pool, 1)
+        with self.assertRaises(PopulationMetricsError):
+            inject_outliers(corpus, pool, True)
+
+    def test_condition_rows_are_monotone_and_seed_free(self):
+        corpus, pool = self._corpus_and_pool()
+        sizes = [1, 4, 8]
+        conditions = [
+            {
+                "kind": "outlier_injection",
+                "population": "corpus",
+                "outlier_pool": "pool",
+                "injection_sizes": sizes,
+            }
+        ]
+        first = run_population_conditions(
+            {"corpus": corpus, "pool": pool}, conditions=conditions, seed=1
+        )
+        second = run_population_conditions(
+            {"corpus": corpus, "pool": pool}, conditions=conditions, seed=999
+        )
+        entry = first["conditions"][0]
+        self.assertEqual(entry["kind"], "outlier_injection")
+        self.assertEqual(entry["population"], "corpus")
+        self.assertEqual(entry["outlier_pool"], "pool")
+        self.assertEqual(entry["injection_sizes"], sizes)
+        self.assertIn("seed-free", entry["injection_rule"])
+        self.assertEqual([row["k"] for row in entry["injections"]], sizes)
+        self.assertEqual(
+            [row["contamination_rate"] for row in entry["injections"]],
+            [1 / 24, 4 / 24, 8 / 24],
+        )
+        fads = [row["fad"]["value"] for row in entry["injections"]]
+        mmds = [row["mmd"]["value"] for row in entry["injections"]]
+        # Strongly separated pool: the contamination response must not decrease
+        # as the severity grid climbs.
+        self.assertEqual(fads, sorted(fads))
+        self.assertEqual(mmds, sorted(mmds))
+        self.assertTrue(all(value > 0.0 for value in mmds))
+        # The injection rule is seed-free: identical rows under any harness seed.
+        self.assertEqual(first["conditions"], second["conditions"])
+
+    def test_condition_refuses_unknown_pool_and_bad_sizes(self):
+        corpus, pool = self._corpus_and_pool()
+        with self.assertRaises(PopulationMetricsError):
+            run_population_conditions(
+                {"corpus": corpus, "pool": pool},
+                conditions=[
+                    {
+                        "kind": "outlier_injection",
+                        "population": "corpus",
+                        "outlier_pool": "missing",
+                    }
+                ],
+                seed=1,
+            )
+        with self.assertRaises(PopulationMetricsError):
+            run_population_conditions(
+                {"corpus": corpus, "pool": pool},
+                conditions=[
+                    {
+                        "kind": "outlier_injection",
+                        "population": "corpus",
+                        "outlier_pool": "pool",
+                        "injection_sizes": [0],
+                    }
+                ],
+                seed=1,
+            )
+        with self.assertRaises(PopulationMetricsError):
+            run_population_conditions(
+                {"corpus": corpus, "pool": pool},
+                conditions=[
+                    {
+                        "kind": "outlier_injection",
+                        "population": "corpus",
+                        "outlier_pool": "pool",
+                        "injection_sizes": "1,4",
+                    }
+                ],
+                seed=1,
+            )
+
 
 class ReferencePinTests(unittest.TestCase):
     def test_declared_pin_identity(self):
@@ -252,6 +406,7 @@ class ConditionsHarnessTests(unittest.TestCase):
                 [x + random.Random(9 + i).gauss(0, 0.5) for i, x in enumerate(row)]
                 for row in base
             ],
+            "outlier_pool": [[x + 20.0 for x in row] for row in base],
         }
 
     def test_all_condition_kinds_run_and_control_holds(self):
@@ -279,8 +434,23 @@ class ConditionsHarnessTests(unittest.TestCase):
                     "label": "wrong-nebula stand-in",
                 },
                 {
+                    "kind": "outlier_injection",
+                    "population": "corpus",
+                    "outlier_pool": "outlier_pool",
+                    "injection_sizes": [1, 3],
+                    "label": "outlier demonstration",
+                },
+                {
                     "kind": "fadinfty",
                     "population": "corpus",
+                    "sample_sizes": [6, 12, 24],
+                    "trials": 4,
+                    "seed": 5,
+                },
+                {
+                    "kind": "fadinfty",
+                    "reference": "corpus",
+                    "population": "corpus_noise_gain",
                     "sample_sizes": [6, 12, 24],
                     "trials": 4,
                     "seed": 5,
@@ -292,6 +462,7 @@ class ConditionsHarnessTests(unittest.TestCase):
         self.assertEqual(kinds[0], "permutation_control")
         self.assertTrue(receipt["conditions"][0]["control_holds"])
         self.assertEqual(receipt["conditions"][0]["value"], 0.0)
+        self.assertIn("outlier_injection", kinds)
         by_label = {
             entry.get("label"): entry
             for entry in receipt["conditions"]
@@ -300,9 +471,18 @@ class ConditionsHarnessTests(unittest.TestCase):
         self.assertGreater(by_label["extreme-pitch demonstration"]["mmd"]["value"], 0.0)
         self.assertGreater(by_label["noise-gain demonstration"]["mmd"]["value"], 0.0)
         self.assertGreater(by_label["wrong-nebula stand-in"]["mmd"]["value"], 0.0)
-        fad_entry = receipt["conditions"][-1]
+        outlier_entry = by_label["outlier demonstration"]
+        self.assertEqual(
+            [row["k"] for row in outlier_entry["injections"]], [1, 3]
+        )
+        self.assertTrue(
+            all(row["mmd"]["value"] > 0.0 for row in outlier_entry["injections"])
+        )
+        fad_entry = receipt["conditions"][-2]
         self.assertEqual(fad_entry["kind"], "fadinfty")
         self.assertGreaterEqual(fad_entry["fadinfty"], 0.0)
+        cross_entry = receipt["conditions"][-1]
+        self.assertEqual(cross_entry["reference"], "corpus")
         self.assertIn("never an optimization target", receipt["provenance"]["doctrine"])
 
     def test_unknown_population_and_kind_refuse(self):
