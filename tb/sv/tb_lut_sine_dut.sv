@@ -4,7 +4,10 @@
 // level word, sample count), drives one enabled sample per clock, and
 // writes captured.txt as "<vco_word> <mix_word>" per line. The LUT payload
 // arrives via the +lut=<memh> plusarg so the Python runner (tb/run_tb.py)
-// controls everything, including the temp working directory. PDK-free:
+// controls everything, including the temp working directory. The enabled
+// clock cycles consumed are written to cycles.txt for the runner's
+// measured-vs-budget headroom report (a partial-DUT measurement: this DUT
+// is one sample per cycle, not the DR-0010 serialized schedule). PDK-free:
 // plain Icarus Verilog, no vendor or PDK cells.
 
 `timescale 1ns/1ps
@@ -39,11 +42,13 @@ module tb;
 
     integer fd;
     integer ofd;
+    integer cfd;
     integer code;
     integer k_step;
     integer lvl;
     integer n_samples;
     integer i;
+    integer measured_cycles;
 
     initial begin
         fd = $fopen("stimulus.txt", "r");
@@ -79,13 +84,22 @@ module tb;
             $display("TB-ERROR cannot open captured.txt");
             $finish;
         end
+        measured_cycles = 0;
         for (i = 0; i < n_samples; i = i + 1) begin
             @(posedge clk);
+            measured_cycles = measured_cycles + 1;
             #1;
             $fwrite(ofd, "%0d %0d\n", $signed(vco_word), $signed(mix_word));
         end
         $fclose(ofd);
-        $display("TB-DONE %0d", n_samples);
+        cfd = $fopen("cycles.txt", "w");
+        if (cfd == 0) begin
+            $display("TB-ERROR cannot open cycles.txt");
+            $finish;
+        end
+        $fwrite(cfd, "%0d\n", measured_cycles);
+        $fclose(cfd);
+        $display("TB-DONE %0d samples in %0d enabled cycles", n_samples, measured_cycles);
         $finish;
     end
 

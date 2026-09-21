@@ -1,4 +1,9 @@
-"""Refusal-gated RTL constants emitter over the DR-0008 choice register."""
+"""Refusal-gated RTL constants emitter over the accepted contract sources.
+
+The DR-0008 choice register supplies the numeric formats; the DR-0010
+schedule register supplies the ratified cycle-budget constants. Each gates
+independently through its own require_accepted refusal gate.
+"""
 
 import copy
 import subprocess
@@ -12,6 +17,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice.fixedpoint import choices as choices_module  # noqa: E402
 from torchsynth_voice.fixedpoint import codegen  # noqa: E402
+from torchsynth_voice.fixedpoint import schedule as schedule_module  # noqa: E402
 
 TOOL = ROOT / "tools/generate_rtl_constants.py"
 PACKAGE = ROOT / "tb/sv/gf180_rtl_constants_pkg.sv"
@@ -24,12 +30,32 @@ EXPECTED_WIDTHS = {
     "C9": 23,  # U1.22 reciprocal gain word
 }
 
+#: DR-0010 (Accepted) Schedule — ratified cycle-budget constants.
+EXPECTED_SCHEDULE = {
+    "SCHED_COUNTED_CYCLES_PER_SAMPLE": 145,
+    "SCHED_PASSES_PER_CLIP": 2,
+    "SCHED_SAMPLES_PER_PASS": 176400,
+    "SCHED_CLIP_SAMPLE_SLOTS": 352800,
+    "SCHED_PASS2_FOLDED_CYCLES_MAX": 4,
+    "SCHED_T_MAX_AT_25MHZ": 138,
+    "SCHED_BOUND_CLOCK_MHZ": 25,
+}
+
 
 def proposed_payload() -> dict:
     """A pre-ratification-shaped register (DR-0008 Proposed). Test data
     only — proves the refusal path stays armed behind the gate."""
     payload = choices_module.load_choices()
     payload = copy.deepcopy(payload)
+    payload["dr_status"] = "Proposed"
+    return payload
+
+
+def proposed_schedule() -> dict:
+    """A pre-ratification-shaped schedule register (DR-0010 not yet
+    Accepted). Test data only — the landed register is Accepted, so the
+    draft shape is a test construct for the refusal path."""
+    payload = copy.deepcopy(schedule_module.load_schedule())
     payload["dr_status"] = "Proposed"
     return payload
 
@@ -69,7 +95,8 @@ class TestLiveRegisterAdmits(unittest.TestCase):
     def test_package_is_emitted_with_no_refusals(self):
         self.assertIsNotNone(self.result.package_text)
         self.assertEqual(
-            self.result.emitted_ids, ["C%d" % n for n in range(1, 11)]
+            self.result.emitted_ids,
+            ["C%d" % n for n in range(1, 11)] + [schedule_module.SCHEDULE_ID],
         )
         self.assertEqual(self.result.refusals, [])
         self.assertFalse(self.result.refused_all)
@@ -95,8 +122,24 @@ class TestLiveRegisterAdmits(unittest.TestCase):
         self.assertNotIn("C8_", text)
         self.assertNotIn("C10_", text)
 
-    def test_landed_package_matches_the_register(self):
-        # The committed package must be exactly what the register emits.
+    def test_emitted_schedule_matches_the_dr_0010_register(self):
+        text = self.result.package_text
+        for ident, value in EXPECTED_SCHEDULE.items():
+            self.assertIn("localparam int %s = %d;" % (ident, value), text)
+        # Strings: the declared (unselected) candidate clocks and the
+        # honest none-selected marker.
+        self.assertIn('SCHED_CLOCK_CANDIDATES_MHZ = "25,50,100"', text)
+        self.assertIn('SCHED_CLOCK_SELECTED = "none"', text)
+        # Every schedule constant cites DR-0010's Accepted section.
+        self.assertEqual(text.count("// DR-0010 (Accepted) Schedule"), 9)
+        # The T parameterization is stated, and T itself is not a constant:
+        self.assertIn("C = C_counted + T", text)
+        self.assertNotIn("localparam int SCHED_T ", text)
+        self.assertNotIn("localparam int SCHED_T =", text)
+
+    def test_landed_package_matches_the_registers(self):
+        # The committed package must be exactly what both accepted
+        # registers emit (DR-0008 choices + DR-0010 schedule).
         self.assertEqual(
             PACKAGE.read_text(encoding="utf-8"), self.result.package_text
         )
@@ -104,23 +147,41 @@ class TestLiveRegisterAdmits(unittest.TestCase):
 
 class TestRefusalPathStaysArmed(unittest.TestCase):
     """The refusal path is proven on hand-built payloads — the landed
-    register is post-ratification, so the pre-ratification shape is a
-    test construct."""
+    registers are post-ratification, so pre-ratification shapes are test
+    constructs. Each source (choices, schedule) refuses independently."""
 
-    def test_proposed_register_refuses_every_choice(self):
-        payload = proposed_payload()
-        result = codegen.emit(payload)
+    def test_both_sources_proposed_refuse_everything(self):
+        result = codegen.emit(
+            proposed_payload(), schedule_payload=proposed_schedule()
+        )
         refused = [rid for rid, _ in result.refusals]
-        self.assertEqual(refused, ["C%d" % n for n in range(1, 11)])
+        self.assertEqual(
+            refused, ["C%d" % n for n in range(1, 11)] + [schedule_module.SCHEDULE_ID]
+        )
         self.assertIsNone(result.package_text)
         self.assertTrue(result.refused_all)
 
+    def test_proposed_choices_still_emit_the_accepted_schedule(self):
+        # Sources gate independently: a DR-0008 refusal names every choice
+        # while the accepted DR-0010 schedule still emits.
+        result = codegen.emit(proposed_payload())
+        refused = [rid for rid, _ in result.refusals]
+        self.assertEqual(refused, ["C%d" % n for n in range(1, 11)])
+        self.assertEqual(result.emitted_ids, [schedule_module.SCHEDULE_ID])
+        self.assertIn("SCHED_CLIP_SAMPLE_SLOTS = 352800", result.package_text)
+
+    def test_proposed_schedule_refuses_by_name(self):
+        result = codegen.emit(schedule_payload=proposed_schedule())
+        self.assertIn(schedule_module.SCHEDULE_ID, [rid for rid, _ in result.refusals])
+        self.assertNotIn("SCHED_", result.package_text)
+        self.assertIn("C1_WIDTH = 24", result.package_text)
+
     def test_mixed_register_emits_only_accepted_choices(self):
         payload = accepted_payload()
-        result = codegen.emit(payload)
+        result = codegen.emit(payload, schedule_payload=proposed_schedule())
         self.assertEqual(result.emitted_ids, ["C1"])
         refused = [rid for rid, _ in result.refusals]
-        self.assertEqual(len(refused), 9)
+        self.assertEqual(len(refused), 10)  # C2..C10 + the schedule
         self.assertNotIn("C1", refused)
 
     def test_width_comes_from_the_payload_not_the_module(self):
@@ -133,7 +194,7 @@ class TestRefusalPathStaysArmed(unittest.TestCase):
     def test_unrepresentable_parameter_refuses_that_choice(self):
         payload = accepted_payload()
         payload["choices"][0]["parameters"]["sites"] = ["S1", "S2"]
-        result = codegen.emit(payload)
+        result = codegen.emit(payload, schedule_payload=proposed_schedule())
         self.assertIsNone(result.package_text)
         self.assertTrue(any(rid == "C1" for rid, _ in result.refusals))
         self.assertIn(
@@ -155,6 +216,7 @@ class TestCliAcceptedGate(unittest.TestCase):
             self.assertIn("Wrote", proc.stdout)
             for n in range(1, 11):
                 self.assertIn("C%d" % n, proc.stdout)
+            self.assertIn("SCHED", proc.stdout)
             self.assertEqual(
                 out.read_text(encoding="utf-8"),
                 PACKAGE.read_text(encoding="utf-8"),

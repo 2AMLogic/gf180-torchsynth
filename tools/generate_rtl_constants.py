@@ -1,21 +1,33 @@
 #!/usr/bin/env python3
-"""Generate the RTL numeric-constants package from the DR-0008 choice register.
+"""Generate the RTL constants package from the accepted contract sources.
 
-Refusal-gated (issue #68): every choice is consumed through
-``torchsynth_voice.fixedpoint.choices.require_accepted``. While DR-0008 is
-Proposed the register refuses all of C1-C10, so the generate mode writes
-nothing and exits 2 after naming every refusal; ``--check`` treats exactly
-that state as success (gate verified) so CI can assert the refusal without
-requiring ratification.
+Two refusal-gated machine-readable sources feed one package
+(``tb/sv/gf180_rtl_constants_pkg.sv``):
 
-Since the issue #53 ratification (DR-0008 Accepted by reviewed merge,
-2026-09-21) the live register admits every entry: generate mode writes the
-package (default ``tb/sv/gf180_rtl_constants_pkg.sv``) and ``--check``
-verifies the landed package still matches the register byte-for-byte, so a
-stale package after any register edit is a CI failure.
+- the DR-0008 choice register (``spec/reference/fixedpoint-choices-v1.json``)
+  through ``torchsynth_voice.fixedpoint.choices.require_accepted``; and
+- the DR-0010 schedule register (``spec/reference/rtl-schedule-v1.json``,
+  the ratified one-shot cycle budget: C = 145 + T, 352,800 sample-slots per
+  clip, the refutable T <= 138 @ 25 MHz bound) through
+  ``torchsynth_voice.fixedpoint.schedule.require_accepted_schedule``.
+
+Each source gates independently and every emitted constant cites its
+record's Accepted section. While a source is not Accepted the tool refuses
+it by name; if both refuse, generate mode writes nothing and exits 2 after
+naming every refusal; ``--check`` treats exactly that state as success
+(gate verified) so CI can assert the refusal without requiring
+ratification.
+
+Since the issue #53/#63 ratifications (DR-0008 and DR-0010 Accepted by
+reviewed merges, 2026-09-21) both registers admit their entries: generate
+mode writes the package (default ``tb/sv/gf180_rtl_constants_pkg.sv``) and
+``--check`` verifies the landed package still matches both registers
+byte-for-byte, so a stale package after any register edit is a CI failure.
 
 No synthesis or PDK step is involved anywhere: this tool emits plain
-SystemVerilog source text or nothing.
+SystemVerilog source text or nothing. Emitting the schedule constants makes
+no implementability, PPA, fit, or hardware claim (schedule-candidate; no
+clock selected; #82/#83 validations open).
 
 Usage:
     python3 tools/generate_rtl_constants.py [--check] [--output PATH]
@@ -75,17 +87,20 @@ def main(argv=None) -> int:
                 "tools/generate_rtl_constants.py" % args.output
             )
             return 1
-        print("CHECK OK: %s matches the accepted register." % args.output)
+        print(
+            "CHECK OK: %s matches the accepted registers "
+            "(DR-0008 choices + DR-0010 schedule)." % args.output
+        )
         return 0
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(result.package_text or "", encoding="utf-8")
     print(
-        "Wrote %s (accepted choices: %s)"
+        "Wrote %s (accepted sources: %s)"
         % (args.output, ", ".join(result.emitted_ids))
     )
-    for choice_id, reason in result.refusals:
-        print("  not emitted %s: %s" % (choice_id, reason))
+    for source_id, reason in result.refusals:
+        print("  not emitted %s: %s" % (source_id, reason))
     return 0
 
 

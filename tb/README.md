@@ -59,28 +59,45 @@ Landed today, per the issue's declared Startable Subset:
   7. requires the RTL capture to match sample-exactly, on the vector
      trace and on the derived mixer-level product stream;
   8. plants a fault and requires the reporter to name the exact
-     cycle/sample/trace/expected/actual row on the real vector.
+      cycle/sample/trace/expected/actual row on the real vector; and
+   9. asserts the ratified clip budget (DR-0010 Accepted schedule): the
+      budget constants' internal consistency, the landed constants package
+      against its live emission, and a measured-vs-budget headroom report
+      over the testbench-counted cycles — printed as a PARTIAL-DUT
+      MEASUREMENT (the LUT DUT retires one sample per cycle and is not the
+      serialized schedule; no schedule-conformance, PPA, or fit claim).
 - **Generated-constants tooling** —
   `src/torchsynth_voice/fixedpoint/codegen.py` +
   `tools/generate_rtl_constants.py`. Consumes
   `spec/reference/fixedpoint-choices-v1.json` strictly through
-  `torchsynth_voice.fixedpoint.choices.require_accepted`. Since the issue
-  #53 ratification (DR-0008 Accepted by reviewed merge, 2026-09-21) the
-  register admits C1-C10 and the tool emits
-  `tb/sv/gf180_rtl_constants_pkg.sv`; `--check` fails CI if that package
-  goes stale against the register. Widths are only ever taken from an
-  accepted register payload, never hardcoded.
+  `torchsynth_voice.fixedpoint.choices.require_accepted`, and the DR-0010
+  schedule register `spec/reference/rtl-schedule-v1.json` through
+  `torchsynth_voice.fixedpoint.schedule.require_accepted_schedule`. Since
+  the issue #53/#63 ratifications (DR-0008 and DR-0010 Accepted by
+  reviewed merges, 2026-09-21) the tool emits the C1-C10 numeric formats
+  plus the ratified cycle-budget constants
+  (`SCHED_*`: C_counted 145, C = 145 + T parameterization, 2 passes,
+  352,800 clip sample-slots, pass-2 fold ≤ 4 cycles, the refutable
+  T ≤ 138 @ 25 MHz ≤ 1x-real-time bound, candidate clocks "25,50,100" with
+  none selected) into `tb/sv/gf180_rtl_constants_pkg.sv`; `--check` fails
+  CI if that package goes stale against either register. Every emitted
+  constant cites its record's Accepted section; widths and cycle numbers
+  are only ever taken from an accepted register payload, never hardcoded.
+  Emitting the schedule makes no implementability, PPA, fit, or hardware
+  claim (schedule-candidate; T is an elaboration-time lane parameter, not
+  a constant; #82/#83 own the measurements).
 - **CI** — `.github/workflows/tb-sim.yml` installs Icarus Verilog and runs
-  the self-test, the anchor run, and the two test suites. PDK-free.
+  the self-test, the anchor run, and the test suites. PDK-free.
 
 ## Gated, not in this increment
 
-Cycle-budget constants (#63/#82 — both open; the schedule dimension of
-this issue stays NO VERDICT until #63's microarchitecture schedule lands),
-the remaining control-path/VCA/normalization RTL beyond the minimal LUT
-sine block (the shadow exp2 site included), and any synthesis/PDK step.
-Nothing landed here claims synthesis, layout, signoff, or hardware
-conformance of any kind.
+The remaining control-path/VCA/normalization RTL beyond the minimal LUT
+sine block (the shadow exp2 site included), the serialized single-MAC
+schedule pipeline itself (the RTL consumer of the `SCHED_*` constants),
+the concrete clock selection (#82/#83 timing evidence amends DR-0010), the
+#82/#83 area/fit/PPA validations, and any synthesis/PDK step. Nothing
+landed here claims synthesis, layout, signoff, or hardware conformance of
+any kind.
 
 ## Vector file shape (v1)
 

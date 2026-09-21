@@ -48,4 +48,22 @@ package gf180_rtl_constants;
     localparam int C9_SIGNED = 0;
     localparam int C9_WIDTH = 23;
   // C10: Thresholds: 2x-measured power-of-two, preregistered pre-freeze
+  // ---- DR-0010 schedule ----
+  // DR-0010 (Accepted) — "Schedule (schedule-candidate — P1/P3)" (issue #63, reviewed merge 2026-09-21);
+  // machine-readable source: spec/reference/rtl-schedule-v1.json.
+  // Budget equation: C = C_counted + T; N_clip = 352800 x C. T is the
+  // declared allowance for 2x exp2 + 1x tanh — an elaboration-time
+  // parameter of the consuming lane, never a ratified constant.
+  // Schedule-candidate honesty: no clock is selected; the T <= 138
+  // bound at 25 MHz is the refutable <= 1x-real-time bound; no
+  // implementability, synthesis, PPA, fit, or hardware claim is made.
+    localparam int SCHED_COUNTED_CYCLES_PER_SAMPLE = 145;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_PASSES_PER_CLIP = 2;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_SAMPLES_PER_PASS = 176400;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_CLIP_SAMPLE_SLOTS = 352800;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_PASS2_FOLDED_CYCLES_MAX = 4;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_T_MAX_AT_25MHZ = 138;  // DR-0010 (Accepted) Schedule
+    localparam int SCHED_BOUND_CLOCK_MHZ = 25;  // DR-0010 (Accepted) Schedule
+    localparam string SCHED_CLOCK_CANDIDATES_MHZ = "25,50,100";  // DR-0010 (Accepted) Schedule
+    localparam string SCHED_CLOCK_SELECTED = "none";  // DR-0010 (Accepted) Schedule
 endpackage
