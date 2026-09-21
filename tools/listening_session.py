@@ -144,10 +144,14 @@ def locate_repo(explicit: Optional[str]) -> Path:
             raise SessionRefusal("--repo %s has no %s" % (candidate, CONFIG_RELATIVE))
         return candidate
     here = Path(__file__).resolve()
-    if here.parent.name == "tools" and (here.parent.parent / CONFIG_RELATIVE).is_file():
-        return here.parent.parent.resolve()
-    if (FALLBACK_REPO_DIR / CONFIG_RELATIVE).is_file():
-        return FALLBACK_REPO_DIR
+    candidates: List[Path] = []
+    if here.parent.name == "tools":
+        candidates.append(here.parent.parent.resolve())
+    candidates.append(FALLBACK_REPO_DIR)
+    candidates.append(FALLBACK_REPO_DIR / ".loom" / "worktrees" / "issue-44")
+    for candidate in candidates:
+        if (candidate / CONFIG_RELATIVE).is_file():
+            return candidate.resolve()
     raise SessionRefusal(
         "cannot locate the repo checkout holding %s; pass --repo /path/to/gf180-torchsynth"
         % CONFIG_RELATIVE
