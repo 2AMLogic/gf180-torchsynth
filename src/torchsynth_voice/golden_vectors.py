@@ -12,7 +12,11 @@ registry's 4-second default-nebula clip).
 Version policy (#68 AC: "interface changes fail contract/version checks
 rather than silently recompiling"): a vector file declares the trace-registry
 semantic version and the parameter-inventory source commit it was generated
-against. The loader refuses any mismatch with the live spec files.
+against. The loader refuses any mismatch with the live spec files. Real
+(contract-bound) vectors additionally carry accepted-contract digests in
+their provenance (constants package, choice register, and — via the frozen
+release receipt — the DR-0008 record); :func:`verify_accepted_contract` is
+the tb flow's refusal check over that binding.
 
 Comparison policy: the reporter compares with exact equality. Per AGENTS.md,
 fixed-point model to RTL is sample-exact; declared error metrics belong to
@@ -35,6 +39,15 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "spec/reference/trace-registry-v1.json"
 INVENTORY_PATH = ROOT / "spec/reference/parameter-inventory-v1.json"
+
+#: Accepted-contract artifacts the vector files are hash-linked to (issue #68
+#: AC: generated/handwritten constants hash-linked to the accepted numeric
+#: contract; interface changes fail the check instead of silently recompiling).
+SENTINEL_VECTOR_PATH = ROOT / "sim/reference/golden-vector-fixed-anchor.json"
+RECEIPT_PATH = ROOT / "sim/reference/fixed-voice-golden-v1.json"
+CONSTANTS_PACKAGE_PATH = ROOT / "tb/sv/gf180_rtl_constants_pkg.sv"
+CHOICES_REGISTER_PATH = ROOT / "spec/reference/fixedpoint-choices-v1.json"
+DR_0008_RECORD_PATH = ROOT / "spec/decision-records/0008-fixed-point-numeric-contract.md"
 
 VECTOR_SCHEMA = "gf180-torchsynth/golden-vector-v1"
 SCHEMA_VERSION = 1
@@ -127,6 +140,122 @@ def compute_content_hash(document: Dict[str, Any]) -> str:
         payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True
     ).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()
+
+
+def sha256_file(path: Union[str, Path]) -> str:
+    """SHA-256 over the file's raw bytes."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def verify_accepted_contract(
+    vector: Dict[str, Any],
+    constants_path: Union[str, Path, None] = None,
+    register_path: Union[str, Path, None] = None,
+    record_path: Union[str, Path, None] = None,
+    receipt_path: Union[str, Path, None] = None,
+) -> Dict[str, str]:
+    """Contract check binding a vector file to the accepted DR-0008 contract.
+
+    Issue #68 AC: generated constants are hash-linked to the accepted numeric
+    contract, and interface changes fail contract/version checks rather than
+    silently recompiling. This is the tb flow's consumer side of that link:
+    it refuses (raises :class:`VectorError`) unless
+
+    - the vector's provenance declares DR-0008 ``Accepted``;
+    - the declared constants-package digest matches the live package bytes;
+    - the declared choice-register digest matches the live register bytes;
+    - the accepted DR-0008 record digest matches the live record — taken
+      from the vector provenance when present, otherwise from the frozen
+      release receipt's ``bindings`` (the two committed #54 artifacts bind
+      the three digests between them).
+
+    Returns the map of verified live bindings. Every refusal names the
+    stale artifact and says "regenerate", never "recompile".
+    """
+    provenance = vector.get("provenance")
+    _require(
+        isinstance(provenance, dict),
+        "vector carries no provenance object; nothing is contract-bound",
+    )
+    status = provenance.get("dr_0008_status")
+    _require(
+        isinstance(status, str) and status.startswith("Accepted"),
+        "contract refusal: vector provenance declares dr_0008_status %r, "
+        "not Accepted; refusing to consume it against the numeric contract"
+        % (status,),
+    )
+
+    constants_path = constants_path or CONSTANTS_PACKAGE_PATH
+    register_path = register_path or CHOICES_REGISTER_PATH
+    record_path = record_path or DR_0008_RECORD_PATH
+    receipt_path = receipt_path or RECEIPT_PATH
+
+    verified: Dict[str, str] = {}
+    declared_package = provenance.get("dr_0008_constants_package_sha256")
+    _require(
+        isinstance(declared_package, str) and declared_package,
+        "vector provenance must declare dr_0008_constants_package_sha256; "
+        "regenerate the vector against the accepted register",
+    )
+    live_package = sha256_file(constants_path)
+    _require(
+        declared_package == live_package,
+        "contract refusal: constants package %s hashes to %s but the vector "
+        "was generated against %s; regenerate the constants (and the vectors "
+        "derived from them) instead of silently recompiling"
+        % (constants_path, live_package, declared_package),
+    )
+    verified["constants_package_sha256"] = live_package
+
+    declared_register = provenance.get("choices_register_sha256")
+    _require(
+        isinstance(declared_register, str) and declared_register,
+        "vector provenance must declare choices_register_sha256; "
+        "regenerate the vector against the accepted register",
+    )
+    live_register = sha256_file(register_path)
+    _require(
+        declared_register == live_register,
+        "contract refusal: choice register %s hashes to %s but the vector "
+        "was generated against %s; regenerate the vector instead of "
+        "silently recompiling" % (register_path, live_register, declared_register),
+    )
+    verified["choices_register_sha256"] = live_register
+
+    declared_record = provenance.get("dr_0008_record_sha256")
+    if isinstance(declared_record, str) and declared_record:
+        verified["dr_0008_record_source"] = "vector provenance"
+    else:
+        try:
+            receipt = json.loads(
+                Path(receipt_path).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as error:
+            raise VectorError(
+                "vector provenance declares no dr_0008_record_sha256 and the "
+                "release receipt %s is unreadable (%s); cannot bind the "
+                "accepted record" % (receipt_path, error)
+            ) from error
+        declared_record = (receipt.get("bindings") or {}).get(
+            "dr_0008_record_sha256"
+        )
+        _require(
+            isinstance(declared_record, str) and declared_record,
+            "neither the vector provenance nor the receipt bindings declare "
+            "dr_0008_record_sha256; cannot bind the accepted record",
+        )
+        verified["dr_0008_record_source"] = "receipt bindings"
+
+    live_record = sha256_file(record_path)
+    _require(
+        declared_record == live_record,
+        "contract refusal: DR-0008 record %s hashes to %s but the bound "
+        "digest is %s; the accepted contract changed — regenerate the "
+        "constants and vectors instead of silently recompiling"
+        % (record_path, live_record, declared_record),
+    )
+    verified["dr_0008_record_sha256"] = live_record
+    return verified
 
 
 def load_registry_document() -> Dict[str, Any]:
