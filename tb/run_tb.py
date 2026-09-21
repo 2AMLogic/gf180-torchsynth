@@ -31,9 +31,16 @@ Verilog; no PDK, no vendor tooling):
    package) over the full 176,400-sample clip,
 6. replay the integer dataflow host-side with the model's own primitives
    and require it to match the frozen vector trace exactly,
-7. require the RTL capture to match both streams sample-exactly, and
+7. require the RTL capture to match both streams sample-exactly,
 8. plant a fault into the captured stream and require the reporter to name
-   the exact cycle/sample/trace/expected/actual row on the real vector.
+   the exact cycle/sample/trace/expected/actual row on the real vector, and
+9. assert the ratified clip budget (DR-0010 Accepted schedule, machine-
+   readable in spec/reference/rtl-schedule-v1.json): the budget constants'
+   internal consistency, the landed constants package against its emission,
+   and a measured-vs-budget headroom report over the DUT's counted cycles —
+   honestly labeled a PARTIAL-DUT measurement (the LUT DUT is one sample
+   per cycle, not the serialized single-MAC schedule; no schedule-
+   conformance or PPA/fit claim is made).
 
 Exit 0 only if every step passes. The declared shadow sites are replayed
 host-side exactly as DR-0008 declares them open items — no RTL claim is
@@ -61,6 +68,8 @@ from torchsynth_voice.fixed_voice import (  # noqa: E402
     entry_quantize,
     shadow_half_even,
 )
+from torchsynth_voice.fixedpoint import codegen  # noqa: E402
+from torchsynth_voice.fixedpoint import schedule as sched  # noqa: E402
 from torchsynth_voice.fixedpoint.choices import ChoiceNotAccepted  # noqa: E402
 from torchsynth_voice.fixedpoint.counters import StickyCounters  # noqa: E402
 from torchsynth_voice.fixedpoint.ops import OverflowPolicy, mul, rescale  # noqa: E402
@@ -68,6 +77,7 @@ from torchsynth_voice.fixedpoint.rounding import (  # noqa: E402
     RoundingMode,
     div_round,
 )
+from torchsynth_voice.fixedpoint.schedule import ScheduleNotAccepted  # noqa: E402
 
 DUT_SV = TB_ROOT / "sv/synth_dut.sv"
 TB_SV = TB_ROOT / "sv/tb_synth_dut.sv"
@@ -356,7 +366,125 @@ def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
         v_word, m_word = line.split()
         vco_words.append(int(v_word))
         mix_words.append(int(m_word))
-    return vco_words, mix_words
+    cycles_file = workdir / "cycles.txt"
+    measured_cycles = int(cycles_file.read_text(encoding="utf-8").strip())
+    return vco_words, mix_words, measured_cycles
+
+
+def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
+    """Assert the ratified clip budget against the anchor run (issue #68).
+
+    The DR-0010 schedule register is consumed through its refusal gate; the
+    budget constants are (a) checked for internal consistency, (b) checked
+    against the live emission of the constants package (the anchor's cycle
+    count is measured against the emitted budget, so a stale package fails
+    here exactly as ``tools/generate_rtl_constants.py --check`` would), and
+    (c) reported as measured-vs-budget headroom over the DUT's counted
+    cycles.
+
+    Honesty: the format-true LUT DUT retires one sample per cycle and is
+    NOT the DR-0010 serialized single-MAC schedule, so the measured-vs-
+    budget comparison is a PARTIAL-DUT headroom report, not a schedule-
+    conformance assertion — only the consistency and emission checks are
+    hard asserts.
+    """
+    try:
+        schedule = sched.require_accepted_schedule()
+    except ScheduleNotAccepted as error:
+        print("BUDGET REFUSED: DR-0010 schedule register refused: %s" % error)
+        return False
+
+    slots = sched.constant(schedule, "clip_sample_slots")
+    passes = sched.constant(schedule, "passes_per_clip")
+    samples = sched.constant(schedule, "samples_per_pass")
+    rate = int(schedule["profile"]["sample_rate_hz"])
+    counted = sched.constant(schedule, "counted_cycles_per_sample")
+    t_max = sched.constant(schedule, "t_max_at_25mhz")
+    bound_mhz = sched.constant(schedule, "bound_clock_mhz")
+    slots_per_second = int(schedule["refutable_bound"]["slots_per_realtime_second"])
+    example = schedule["budget_equation"]["worked_example"]
+
+    checks = [
+        (
+            "clip sample-slots: %d == %d passes x %d samples/pass"
+            % (slots, passes, samples),
+            slots == passes * samples,
+        ),
+        (
+            "real-time slot rate: %d == %d x %d / %d"
+            % (slots_per_second, slots, rate, samples),
+            slots_per_second == slots * rate // samples,
+        ),
+        (
+            "refutable bound: T_max %d == floor(%d MHz / %d) - C_counted %d"
+            % (t_max, bound_mhz, slots_per_second, counted),
+            t_max == bound_mhz * 1000000 // slots_per_second - counted,
+        ),
+        (
+            "DR-0010 worked example: %d slots x (%d + T=%d) = %d cycles"
+            % (slots, counted, example["t"], example["n_clip"]),
+            example["n_clip"] == slots * (counted + example["t"]),
+        ),
+    ]
+    ok = True
+    for line, holds in checks:
+        print("  budget consistency: %s -> %s" % (line, "OK" if holds else "FAIL"))
+        ok = ok and holds
+
+    try:
+        emitted = codegen.emit(schedule_payload=schedule)
+        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+        matches = emitted.package_text == landed and (
+            sched.SCHEDULE_ID in emitted.emitted_ids
+        )
+        print(
+            "  emitted budget constants: landed %s matches the live emission "
+            "of both accepted registers -> %s"
+            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        )
+        ok = ok and matches
+    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
+        print("  emitted budget constants: emission failed -> %s" % error)
+        return False
+
+    if sample_count <= 0 or measured_cycles <= 0:
+        print("  measured cycles: invalid measurement (%d cycles)" % measured_cycles)
+        return False
+
+    per_sample = measured_cycles / sample_count
+    budget_t0 = sample_count * counted
+    budget_tmax = sample_count * sched.cycles_per_sample(schedule, t_max)
+    n_clip_t0 = sched.clip_cycles(schedule, 0)
+    n_clip_tmax = sched.clip_cycles(schedule, t_max)
+    print(
+        "  measured (PARTIAL DUT): %d enabled cycles for %d samples "
+        "(%.3f cycles/sample)" % (measured_cycles, sample_count, per_sample)
+    )
+    print(
+        "  headroom vs budget (same sample count, single pass): "
+        "T=0 C=%d -> %d cycles (%.1f%% free); T=T_max=%d C=%d -> %d cycles "
+        "(%.1f%% free)"
+        % (
+            counted,
+            budget_t0,
+            100.0 * (budget_t0 - measured_cycles) / budget_t0,
+            t_max,
+            counted + t_max,
+            budget_tmax,
+            100.0 * (budget_tmax - measured_cycles) / budget_tmax,
+        )
+    )
+    print(
+        "  clip budget N_clip = %d x C: %d cycles at T=0, %d cycles at "
+        "T=T_max=%d" % (slots, n_clip_t0, n_clip_tmax, t_max)
+    )
+    print(
+        "  NOTE: PARTIAL-DUT MEASUREMENT - the format-true LUT DUT is one "
+        "sample per cycle, not the DR-0010 serialized single-MAC schedule; "
+        "this is a headroom report, not a schedule-conformance, PPA, or "
+        "fit claim (#82/#83 own those measurements)."
+    )
+    return ok
 
 
 def anchor(workdir: Path, simulator: str) -> int:
@@ -400,7 +528,7 @@ def anchor(workdir: Path, simulator: str) -> int:
 
     lut_memh = workdir / "lut_quarter_cos.memh"
     write_lut_memh(table, lut_memh)
-    captured_vco, captured_mix = simulate_anchor(
+    captured_vco, captured_mix, measured_cycles = simulate_anchor(
         workdir, simulator, phase_step, level_word, sample_count, lut_memh
     )
     if len(captured_vco) != sample_count or len(captured_mix) != sample_count:
@@ -410,10 +538,13 @@ def anchor(workdir: Path, simulator: str) -> int:
         )
         return 1
 
+    ok = True
+    budget_ok = check_clip_budget(measured_cycles, sample_count)
+    if not budget_ok:
+        ok = False
+
     focus = focus_vector(vector, ANCHOR_TRACE)
     expected_vco = focus["traces"][0]["values"]
-
-    ok = True
 
     mirror_vco, mirror_mix = anchor_mirror(
         formats, phase_step, level_word, sample_count
@@ -488,7 +619,10 @@ def anchor(workdir: Path, simulator: str) -> int:
     if not ok:
         print("ANCHOR RUN FAILED")
         return 1
-    print("ANCHOR RUN PASSED (contract binding + vector truth + RTL sample-exact + fail path)")
+    print(
+        "ANCHOR RUN PASSED (contract binding + vector truth + RTL "
+        "sample-exact + clip budget + fail path)"
+    )
     return 0
 
 

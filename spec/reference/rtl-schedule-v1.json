@@ -1,0 +1,96 @@
+{
+ "schema": "gf180-torchsynth/rtl-schedule-v1",
+ "schema_version": 1,
+ "dr": "DR-0010",
+ "source": "spec/decision-records/0010-one-shot-rtl-microarchitecture.md",
+ "source_section": "Schedule (schedule-candidate — P1/P3)",
+ "dr_status": "Accepted",
+ "acceptance": {
+  "event": "reviewed merge of the issue #63 ratification PR (2026-09-21)",
+  "note": "P1/P3 are 'decided (schedule-candidate)': refutable per the stop-at-first-failed-premise rule. Amendment is required before downstream artifacts if any premise fails (DR-0010 Change control); a declared approximation exceeding the applicable T bound stops the schedule there."
+ },
+ "consumer_rule": "Consumers take the schedule constants only through torchsynth_voice.fixedpoint.schedule.require_accepted_schedule, which refuses unless this register declares dr_status 'Accepted' (the DR-0010 acceptance event above). Constants are emitted into tb/sv/gf180_rtl_constants_pkg.sv by the same refusal-gated tooling as the DR-0008 numeric constants; tools/generate_rtl_constants.py --check fails on any divergence.",
+ "profile": {
+  "pipeline": "serialized single-MAC candidate: one shared 24x24 multiplier, one shared round/narrow unit, one shared LUT read port",
+  "passes_per_clip": 2,
+  "samples_per_pass": 176400,
+  "sample_rate_hz": 44100,
+  "pass2_note": "pass 2 adds one multiply + one narrow (<= 4 cycles, folded into C); two passes always (P4: DR-0003 replays at unity too)"
+ },
+ "pass1_counted_ops": {
+  "mults": 28,
+  "adds_compares": 26,
+  "narrows": 21,
+  "shadow_sites": 3,
+  "mult_pipeline_slots": 3,
+  "source": "DR-0010 (Accepted) Schedule counted-per-audio-sample table (pass 1), derived from the frozen composition's loop body plus the five upsample columns"
+ },
+ "constants": [
+  {
+   "name": "counted_cycles_per_sample",
+   "value": 145,
+   "source": "DR-0010 (Accepted), Schedule section: 'Counted-arithmetic estimate C_counted ~= 145 cycles/sample (28 mults x 3 pipeline slots + 26 adds + 21 narrows + compare folding + control amortization)'"
+  },
+  {
+   "name": "passes_per_clip",
+   "value": 2,
+   "source": "DR-0010 (Accepted), Schedule section: 'Two passes always (P4: DR-0003 replays at unity too)'"
+  },
+  {
+   "name": "samples_per_pass",
+   "value": 176400,
+   "source": "DR-0010 (Accepted), Schedule section: '176,400 samples per clip' (the DR-0002 one-shot grid, 4.000 s @ 44,100 Hz)"
+  },
+  {
+   "name": "clip_sample_slots",
+   "value": 352800,
+   "source": "DR-0010 (Accepted), Schedule section: '176,400 samples per clip = 352,800 sample-slots'"
+  },
+  {
+   "name": "pass2_folded_cycles_max",
+   "value": 4,
+   "source": "DR-0010 (Accepted), Schedule section: 'pass 2 adds one multiply + one narrow (<= 4 cycles, folded into C)'"
+  },
+  {
+   "name": "t_max_at_25mhz",
+   "value": 138,
+   "source": "DR-0010 (Accepted), Schedule feasibility table: 'Max T for <= 1x real-time (C <= f/88,200)' at the 25 MHz candidate clock"
+  },
+  {
+   "name": "bound_clock_mhz",
+   "value": 25,
+   "source": "DR-0010 (Accepted), Schedule feasibility table: the refutable T <= 138 bound is stated at the 25 MHz candidate clock"
+  },
+  {
+   "name": "clock_candidates_mhz",
+   "value": "25,50,100",
+   "source": "DR-0010 (Accepted), Schedule section: 'candidate clocks 25/50/100 MHz declared, none selected'"
+  },
+  {
+   "name": "clock_selected",
+   "value": "none",
+   "source": "DR-0010 (Accepted), Schedule section: 'none selected'; the concrete clock selection amends on #82/#83 timing evidence"
+  }
+ ],
+ "budget_equation": {
+  "form": "C = C_counted + T;  N_clip = 352,800 x C",
+  "t_parameterization": "T is the declared allowance for 2x exp2 + 1x tanh and is an elaboration-time parameter of the consuming lane (the #73/#74 transcendental approximation work, each verified against the frozen M1 bands and golden vectors); T is intentionally NOT a ratified constant",
+  "worked_example": {
+   "t": 100,
+   "c": 245,
+   "n_clip": 86436000,
+   "source": "DR-0010 (Accepted), Schedule feasibility table: 'N_clip at T=100 (C=245)' = 86.4 M cycles"
+  }
+ },
+ "refutable_bound": {
+  "statement": "T <= 138 at 25 MHz for <= 1x real-time; if the declared fixed exp2 and tanh approximations cannot be built within it, the premise fails and the schedule stops there — no downstream artifact may claim this budget",
+  "slots_per_realtime_second": 88200,
+  "derivation": "C <= f/88,200 with 88,200 = 352,800 slots / 4 s clip = 2 passes x 44,100 samples/s; T_max = floor(25e6/88,200) - 145 = floor(283.45) - 145 = 138"
+ },
+ "open_items": [
+  "P2 memory macro-vs-distributed for the 12 KiB LUT ROM: pending #82",
+  "P5 area/fit/PPA: pending #82/#83 measurement; no PPA or fit claim is made from these estimates (#82 area validation is downstream and does not gate these constants)",
+  "concrete clock selection: none selected; amends on #82/#83 timing evidence"
+ ],
+ "honesty": "Emitting these constants makes no implementability, synthesis, layout, signoff, PPA, fit, hardware-playback, or sound-fidelity claim (DR-0010 Scope; AGENTS.md). The tb format-true LUT DUT is one sample per cycle and is NOT the serialized schedule: any measured-vs-budget comparison through tb/run_tb.py is a partial-DUT headroom report, never a schedule-conformance claim."
+}
