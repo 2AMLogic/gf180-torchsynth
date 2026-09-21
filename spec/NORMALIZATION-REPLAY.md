@@ -13,11 +13,15 @@ Model module: `src/torchsynth_voice/normalization_replay.py`; receipt tool:
 `tools/measure_normalization_reciprocal.py`; tests:
 `tests/test_normalization_replay.py`.
 
-**Status: CANDIDATE-pending-ratification.** This package is the decision
-*evidence input* for DR-0003 acceptance. It accepts nothing: DR-0003 and
-DR-0008 both remain Proposed, and acceptance is the operator's later
-action. This record makes no RTL, synthesis, layout, signoff, hardware
-playback, or sound-fidelity claim.
+**Status: RATIFIED (2026-09-21).** This package was the decision *evidence
+input* for DR-0003 acceptance. It has since been consumed as exactly that:
+the reciprocal-precision item was ratified as register C9 (DR-0008 §12/§15,
+2026-09-21), and DR-0003 reached Accepted — citing this receipt and
+DR-0010's P4 replay-versus-buffering cost analysis — by the reviewed merge
+of the issue #63 ratification PR. Its recommendation (F=22, U1.22) is
+accepted mechanics; the measurement rows and negative controls are frozen
+evidence. This record still makes no RTL, synthesis, layout, signoff,
+hardware playback, or sound-fidelity claim.
 
 ## Fixed semantics (declared, not re-decided)
 
@@ -28,9 +32,10 @@ limiter, AGC, and constant-headroom substitutes DR-0003 forbids appear in
 this package only as preregistered negative controls that must fail
 (`tests/test_normalization_replay.py`, `ForbiddenSubstitutesMustFail`).
 
-Numeric mechanics come from DR-0008 Section 8 and the C1/C6/C9 candidate
-instantiations (all `selected (operator ruling 2026-09-19); pending
-ratification`, never accepted while DR-0008 is Proposed):
+Numeric mechanics come from DR-0008 Section 8 and the C1/C6/C9 register
+instantiations (consumed here as `selected (operator ruling 2026-09-19)` at
+measurement time; accepted by the DR-0008 ratification of 2026-09-21, after
+which the measured rows below were frozen):
 
 - the peak is measured on the 24-bit Q2.21 pre-normalization mix
   (`C1`: `Q2.21`, range [-4, +4), LSB 2^-21);
