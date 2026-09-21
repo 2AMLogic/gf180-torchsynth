@@ -126,15 +126,15 @@ divide-branch rows:
 
 | Candidate | Worst max abs error (exact) | ≈ value | Worst case | C10 calibrated threshold | Meets draft 2^-13 band | Within 1/2 output LSB of floor |
 | --- | --- | --- | --- | --- | --- | --- |
-| `direct-division` | 524287/2199023255552 | 2.384e-7 (2^-22) | `fixed:extremum` | 2^-22 | yes | yes (is the floor) |
-| `reciprocal-multiply F=12` | 961/2097152 | 4.582e-4 | `fixed:anchor-loud` | 2^-11 | **no** | no |
-| `reciprocal-multiply F=14` | 25/1048576 | 2.384e-5 | `fixed:anchor-loud` | 2^-15 | yes | no |
-| `reciprocal-multiply F=16` | 25/1048576 | 2.384e-5 | `fixed:anchor-loud` | 2^-15 | yes | no |
-| `reciprocal-multiply F=18` | 7/1048576 | 6.676e-6 | `fixed:anchor-loud` | 2^-17 | yes | no |
+| `direct-division` | 524287/2199023255552 | 2.384e-7 (2^-22) | `fixed:extremum` | 2^-21 | yes | yes (is the floor) |
+| `reciprocal-multiply F=12` | 961/2097152 | 4.582e-4 | `fixed:anchor-loud` | 2^-10 | **no** | no |
+| `reciprocal-multiply F=14` | 25/1048576 | 2.384e-5 | `fixed:anchor-loud` | 2^-14 | yes | no |
+| `reciprocal-multiply F=16` | 25/1048576 | 2.384e-5 | `fixed:anchor-loud` | 2^-14 | yes | no |
+| `reciprocal-multiply F=18` | 7/1048576 | 6.676e-6 | `fixed:anchor-loud` | 2^-16 | yes | no |
 | `reciprocal-multiply F=20` | 1/1048576 | 9.537e-7 | `fixed:anchor-loud` | 2^-19 | yes | no |
 | `reciprocal-multiply F=21` | 1/1048576 | 9.537e-7 | `fixed:anchor-loud` | 2^-19 | yes | no |
-| `reciprocal-multiply F=22` | 524289/2199023255552 | 2.384e-7 | `fixed:extremum` | 2^-21 | yes | **yes** |
-| `reciprocal-multiply F=24` | 524287/2199023255552 | 2.384e-7 | `fixed:extremum` | 2^-22 | yes | **yes** |
+| `reciprocal-multiply F=22` | 524289/2199023255552 | 2.384e-7 | `fixed:extremum` | 2^-20 | yes | **yes** |
+| `reciprocal-multiply F=24` | 524287/2199023255552 | 2.384e-7 | `fixed:extremum` | 2^-21 | yes | **yes** |
 
 Gain-word accuracy on the anchor-loud peak (exact rows in the receipt):
 against the float `mixer.gain` diagnostic `f32(1/peak)` the `F=22` word

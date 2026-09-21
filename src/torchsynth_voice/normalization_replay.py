@@ -348,7 +348,8 @@ def directed_cases() -> Dict[str, List[int]]:
         # silence: bypass, unity gain, no division by zero
         "fixed:silence": [0] * CLIP_SAMPLES,
         # unique peak at the last sample: index semantics on the divide branch
-        "fixed:late-peak": clip_with_peak(UNITY_INT + 12345, CLIP_SAMPLES - 1),        # two equal maxima: earliest index wins, branch decided once
+        "fixed:late-peak": clip_with_peak(UNITY_INT + 12345, CLIP_SAMPLES - 1),
+        # two equal maxima: earliest index wins, branch decided once
         "fixed:tied-max": clip_tied_max(UNITY_INT + 777),
     }
 
@@ -482,7 +483,7 @@ def _calibrated_threshold(measured: Fraction) -> Fraction:
     """C10 rule: smallest power of two >= 2x the measured maximum."""
     target = measured * 2
     power = 0
-    while Fraction(1, 1 << power) > target:
+    while Fraction(1, 1 << (power + 1)) >= target:
         power += 1
     return Fraction(1, 1 << power)
 

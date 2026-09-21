@@ -304,6 +304,42 @@ class CommittedReceipt(unittest.TestCase):
         self.assertEqual(recomputed, rows[22])
 
 
+class CalibrationRuleDirection(unittest.TestCase):
+    """C10 thresholds are the smallest power of two >= 2x the measured max.
+
+    Pins the DR-0008 Section 10 example: a measured maximum of 2^-22
+    calibrates to 2^-21 (at least 2x headroom), never 2^-22 -- the largest
+    power of two at or below 2x measured is the wrong, one-octave-tight
+    direction.
+    """
+
+    def test_dr0008_section10_example_measured_2_pow_neg22(self):
+        threshold = nr._calibrated_threshold(Fraction(1, 1 << 22))
+        self.assertEqual(threshold, Fraction(1, 1 << 21))
+        self.assertGreaterEqual(threshold, 2 * Fraction(1, 1 << 22))
+
+    def test_non_power_measured_calibrates_up_not_down(self):
+        # the direct-division floor 524287/2^41: 2^-22 is below 2x measured
+        threshold = nr._calibrated_threshold(Fraction(524287, 1 << 41))
+        self.assertEqual(threshold, Fraction(1, 1 << 21))
+
+    def test_exact_power_measured_stays_at_twice_itself(self):
+        # measured exactly 2^-20: smallest power of two >= 2^-19 is 2^-19
+        threshold = nr._calibrated_threshold(Fraction(1, 1 << 20))
+        self.assertEqual(threshold, Fraction(1, 1 << 19))
+
+    def test_every_committed_threshold_has_at_least_twice_the_headroom(self):
+        band_check = RECEIPT["decision"]["band_check"]
+        for label, row in band_check.items():
+            measured = Fraction(row["measured_worst_case_exact"])
+            threshold = Fraction(row["calibrated_threshold_exact"])
+            self.assertGreaterEqual(
+                threshold,
+                2 * measured,
+                label + " threshold below 2x measured (wrong direction)",
+            )
+
+
 class RecomputedRows(unittest.TestCase):
     """Recompute a bounded subset of full-clip rows against the receipt."""
 
