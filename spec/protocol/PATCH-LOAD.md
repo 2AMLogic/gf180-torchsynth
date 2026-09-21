@@ -1,9 +1,11 @@
 # Name-keyed patch load and the canonical name table
 
-Normative patch load path. Parameter values are carried as opaque byte
-strings with placeholder widths ([FRAMING.md](FRAMING.md)); this document
-defines only the name routing, transaction structure, and the canonical name
-table. No numeric encoding, width, or scaling is fixed here — that is #53.
+Normative patch load path. Parameter values are carried as bound 32-bit
+Q10.21 words and the patch hash is a bound, domain-separated SHA-256
+([FRAMING.md](FRAMING.md)); this document defines the name routing,
+transaction structure, and the canonical name table. Per-parameter physical
+interpretation of the value word stays owned by the fixed-model lanes; no
+per-parameter width table exists on the wire.
 
 ## Canonical name table
 
@@ -60,10 +62,14 @@ name, length-prefixed). Declares the name; its value arrives separately.
 | Field | Encoding | Meaning |
 | --- | --- | --- |
 | `name` | opaque byte string | must equal a declared name |
-| `value` | opaque byte string (`patch_value` placeholder) | the parameter's value bytes; width and encoding are #53's |
+| `value` | exactly 4 bytes: 32-bit two's-complement Q10.21 word, little-endian | the parameter's value word (uniform host-entry encoding; DR-0008 C4, C6, C7) |
 
-`PATCH_COMMIT` (`0x13`) payload: one opaque byte string, the declared
-`patch_hash` over the transaction's values.
+A `value` region of any length other than 4 is `ERR_PAYLOAD_LENGTH`; the
+core never applies it.
+
+`PATCH_COMMIT` (`0x13`) payload: exactly 32 bytes, the declared `patch_hash`
+over the transaction's values under the negotiated numeric contract. Any
+other length is `ERR_PAYLOAD_LENGTH`.
 
 `PATCH_ABORT` (`0x14`) payload: empty.
 
@@ -79,10 +85,13 @@ Transaction rules:
 - The patch hash is computed over the concatenation of staged entries in
   sorted canonical-name order: for each name, its UTF-8 bytes, a single `0x00`
   separator byte, its value bytes, then the two-byte little-endian value
-  length. Pre-#53 the digest algorithm is a named stand-in (SHA-256, marked as
-  a placeholder in the mock harness); the final binding of algorithm, domain
-  separation, and width is #53's. Consumers treat the result as an opaque
-  byte string.
+  length. The digest is the bound `patch_hash`: SHA-256 over the ASCII domain
+  tag `gf180-torchsynth/patch-hash-v2`, a single `0x00` byte, the negotiated
+  `numeric_contract_version` (32 bytes), and that staged concatenation
+  ([FRAMING.md](FRAMING.md)). The domain separation binds every patch hash to
+  the numeric contract under which the value words were encoded: a hash
+  computed under one contract can never validate a transaction under another.
+  The 32-byte digest is carried verbatim in `PATCH_COMMIT`.
 - Names must be declared before their value arrives; a `PATCH_VALUE` for an
   undeclared name is `ERR_UNKNOWN_NAME`. A name declared twice, or a value
   re-staged with different bytes, is `ERR_DUPLICATE_NAME`.

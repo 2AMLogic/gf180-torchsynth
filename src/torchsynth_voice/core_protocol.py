@@ -1,7 +1,13 @@
-"""Core/host protocol framing: envelope, opaque encoding, negotiation structures.
+"""Core/host protocol framing: envelope, numeric binding, negotiation structures.
 
-Implements spec/protocol/FRAMING.md. Everything numeric-gated is an opaque
-byte string or a named placeholder width; final binding waits on #53.
+Implements spec/protocol/FRAMING.md (protocol version 2). The regions that
+protocol version 1 carried as opaque placeholders are bound here to the
+accepted DR-0008 choice register (Accepted by reviewed merge, 2026-09-21;
+``spec/reference/fixedpoint-choices-v1.json``): the numeric-contract version,
+the patch hash, the uniform parameter value word, and the audio sample word.
+The register is consumed only through the refusal gate in
+:mod:`torchsynth_voice.fixedpoint.choices`; a non-accepted register is never
+bound.
 """
 
 from __future__ import annotations
@@ -10,9 +16,13 @@ import hashlib
 import struct
 from dataclasses import dataclass
 from enum import IntEnum
+from fractions import Fraction
 from typing import Mapping
 
-PROTOCOL_VERSION = 1
+from .fixedpoint.choices import CHOICES_PATH, load_choices, require_accepted
+from .fixedpoint.rounding import div_round
+
+PROTOCOL_VERSION = 2
 
 SYNC = b"\x67\xf1"
 HEADER_LEN = 9
@@ -50,7 +60,33 @@ CAP_NAME_KEYED_PATCH_LOAD = 1 << 0
 CAP_RESET = 1 << 1
 KNOWN_CAPABILITIES = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET
 
-NUMERIC_CONTRACT_UNBOUND = b"unbound:#53"
+# Pre-binding protocol version 1 advertised this reserved ASCII marker in the
+# numeric_contract_version field. It is carried only so stale peers can be
+# recognized and refused; a v2 core never accepts it.
+NUMERIC_CONTRACT_STALE = b"unbound:#53"
+
+# Audio sample word: DR-0008 C1 (accepted) — 24-bit two's-complement Q2.21,
+# range [-4, +4), carried little-endian in 3 bytes.
+AUDIO_SAMPLE_BYTES = 3
+AUDIO_INT_BITS = 2
+AUDIO_FRAC_BITS = 21
+_AUDIO_WORD_MIN = -(1 << (8 * AUDIO_SAMPLE_BYTES - 1))
+_AUDIO_WORD_MAX = (1 << (8 * AUDIO_SAMPLE_BYTES - 1)) - 1
+
+# Uniform parameter value word: DR-0008 C4 (accepted) — 32-bit
+# two's-complement Q10.21, carried little-endian in 4 bytes. This is the
+# host-entry word for every parameter value on the wire; per-parameter
+# physical interpretation stays owned by the model lanes, never by the core.
+PARAM_VALUE_BYTES = 4
+PARAM_INT_BITS = 10
+PARAM_FRAC_BITS = 21
+_PARAM_WORD_MIN = -(1 << (8 * PARAM_VALUE_BYTES - 1))
+_PARAM_WORD_MAX = (1 << (8 * PARAM_VALUE_BYTES - 1)) - 1
+
+# Patch hash: SHA-256 (32 bytes), domain-separated with the numeric contract
+# version so a digest is valid only under the negotiated numeric contract.
+PATCH_HASH_BYTES = 32
+PATCH_HASH_DOMAIN = b"gf180-torchsynth/patch-hash-v2\x00"
 
 
 class ErrorCode(IntEnum):
@@ -76,13 +112,43 @@ class PlaceholderWidth:
     deferred_to: str
 
 
+@dataclass(frozen=True)
+class BoundField:
+    name: str
+    encoding: str
+    authority: str
+
+
+# Regions still carried as opaque byte strings. Their deferring decisions did
+# not gate on #53 and have not landed; binding them is out of scope.
 PLACEHOLDER_WIDTHS = (
-    PlaceholderWidth("patch_value", "length-prefixed opaque bytes", "#53"),
-    PlaceholderWidth("numeric_contract_version", "length-prefixed opaque bytes", "#53"),
-    PlaceholderWidth("patch_hash", "length-prefixed opaque bytes", "#53"),
     PlaceholderWidth("sound_identity", "length-prefixed opaque bytes", "#12/#88"),
     PlaceholderWidth("profile_id", "length-prefixed opaque bytes", "profile naming"),
     PlaceholderWidth("locks", "length-prefixed opaque bytes", "not defined by this subset"),
+)
+
+# Regions bound by this protocol version to accepted DR-0008 register values.
+BOUND_FIELDS = (
+    BoundField(
+        "numeric_contract_version",
+        f"{PATCH_HASH_BYTES}-byte SHA-256 of {CHOICES_PATH.name}",
+        "DR-0008 Sections 12/13 (Accepted 2026-09-21)",
+    ),
+    BoundField(
+        "patch_value",
+        f"{PARAM_VALUE_BYTES}-byte two's-complement Q10.21 little-endian word",
+        "DR-0008 C4, C6, C7 (accepted 2026-09-21)",
+    ),
+    BoundField(
+        "patch_hash",
+        f"{PATCH_HASH_BYTES}-byte SHA-256, domain-separated with the numeric contract version",
+        "DR-0008 Sections 12/13 (Accepted 2026-09-21)",
+    ),
+    BoundField(
+        "audio_sample",
+        f"{AUDIO_SAMPLE_BYTES}-byte two's-complement Q2.21 little-endian word",
+        "DR-0008 C1, C6, C7 (accepted 2026-09-21)",
+    ),
 )
 
 
@@ -173,6 +239,85 @@ class PayloadReader:
     def require_end(self) -> None:
         if self._offset != len(self._data):
             raise PayloadError("payload_trailing_bytes")
+
+
+def _round_half_even(value: Fraction) -> int:
+    return div_round(value.numerator, value.denominator)
+
+
+def numeric_contract_version_bound() -> bytes:
+    """Return the bound numeric-contract version for protocol version 2.
+
+    The value is the SHA-256 of the machine-readable DR-0008 choice register.
+    The register is read through the structural loader and every choice this
+    binding depends on is consumed through the acceptance gate, so a register
+    that is not Accepted is refused instead of bound.
+    """
+    payload = load_choices()
+    for choice_id in ("C1", "C4", "C6", "C7"):
+        require_accepted(choice_id, payload)
+    return hashlib.sha256(CHOICES_PATH.read_bytes()).digest()
+
+
+def encode_audio_word(value) -> int:
+    """Host real value to the C1 Q2.21 integer word (half-even, saturating)."""
+    scaled = Fraction(value) * (1 << AUDIO_FRAC_BITS)
+    word = _round_half_even(scaled)
+    if word > _AUDIO_WORD_MAX:
+        return _AUDIO_WORD_MAX
+    if word < _AUDIO_WORD_MIN:
+        return _AUDIO_WORD_MIN
+    return word
+
+
+def decode_audio_word(data: bytes) -> Fraction:
+    """C1 wire bytes to the exact rational sample value."""
+    if len(data) != AUDIO_SAMPLE_BYTES:
+        raise PayloadError("audio_sample_width")
+    word = int.from_bytes(data, "little", signed=True)
+    return Fraction(word, 1 << AUDIO_FRAC_BITS)
+
+
+def encode_audio_sample(value) -> bytes:
+    """C1 audio sample: 3-byte little-endian Q2.21 (half-even, saturating)."""
+    return encode_audio_word(value).to_bytes(AUDIO_SAMPLE_BYTES, "little", signed=True)
+
+
+def decode_audio_sample(data: bytes) -> Fraction:
+    return decode_audio_word(data)
+
+
+def encode_audio_payload(samples) -> bytes:
+    """Pack samples contiguously, little-endian, no padding, sample[0] first."""
+    return b"".join(encode_audio_sample(sample) for sample in samples)
+
+
+def decode_audio_payload(data: bytes) -> list:
+    if len(data) % AUDIO_SAMPLE_BYTES:
+        raise PayloadError("audio_payload_length")
+    return [
+        decode_audio_word(data[i : i + AUDIO_SAMPLE_BYTES])
+        for i in range(0, len(data), AUDIO_SAMPLE_BYTES)
+    ]
+
+
+def encode_param_word(value) -> bytes:
+    """Host real value to the C4 Q10.21 wire word (half-even, saturating)."""
+    scaled = Fraction(value) * (1 << PARAM_FRAC_BITS)
+    word = _round_half_even(scaled)
+    if word > _PARAM_WORD_MAX:
+        word = _PARAM_WORD_MAX
+    elif word < _PARAM_WORD_MIN:
+        word = _PARAM_WORD_MIN
+    return word.to_bytes(PARAM_VALUE_BYTES, "little", signed=True)
+
+
+def decode_param_word(data: bytes) -> Fraction:
+    """C4 wire bytes to the exact rational parameter value."""
+    if len(data) != PARAM_VALUE_BYTES:
+        raise PayloadError("param_value_width")
+    word = int.from_bytes(data, "little", signed=True)
+    return Fraction(word, 1 << PARAM_FRAC_BITS)
 
 
 @dataclass(frozen=True)
@@ -303,6 +448,8 @@ def decode_patch_name(payload: bytes) -> str:
 
 
 def encode_patch_value(name: str, value: bytes) -> bytes:
+    if len(value) != PARAM_VALUE_BYTES:
+        raise PayloadError("param_value_width")
     return pack_opaque(name.encode("utf-8")) + pack_opaque(value)
 
 
@@ -317,24 +464,35 @@ def decode_patch_value(payload: bytes) -> tuple[str, bytes]:
         raise PayloadError("name_not_utf8") from exc
 
 
-def encode_patch_commit(patch_hash: bytes) -> bytes:
-    return pack_opaque(patch_hash)
+def encode_patch_commit(patch_hash_digest: bytes) -> bytes:
+    if len(patch_hash_digest) != PATCH_HASH_BYTES:
+        raise PayloadError("patch_hash_width")
+    return pack_opaque(patch_hash_digest)
 
 
 def decode_patch_commit(payload: bytes) -> bytes:
     reader = PayloadReader(payload)
     digest = reader.take_opaque()
     reader.require_end()
+    if len(digest) != PATCH_HASH_BYTES:
+        raise PayloadError("patch_hash_width")
     return digest
 
 
-def patch_hash(entries: Mapping[str, bytes]) -> bytes:
-    """Stand-in digest over staged entries; final binding waits on #53.
+def patch_hash(entries: Mapping[str, bytes], *, numeric_contract_version: bytes) -> bytes:
+    """Bound digest over staged entries under the negotiated numeric contract.
 
-    Concatenation in sorted canonical-name order: UTF-8 name, one 0x00
-    separator byte, value bytes, then the u16 little-endian value length.
+    Domain-separated SHA-256: the ASCII domain tag, then the 32-byte
+    numeric-contract version, then the staged concatenation in sorted
+    canonical-name order (UTF-8 name, one 0x00 separator byte, value bytes,
+    u16 little-endian value length).
     """
-    accumulator = bytearray()
+    if len(numeric_contract_version) != PATCH_HASH_BYTES:
+        raise ValueError("numeric_contract_version must be 32 bytes")
+    for value in entries.values():
+        if len(value) != PARAM_VALUE_BYTES:
+            raise ValueError("staged values must be bound parameter words")
+    accumulator = bytearray(PATCH_HASH_DOMAIN + numeric_contract_version)
     for name in sorted(entries):
         encoded = name.encode("utf-8")
         value = entries[name]

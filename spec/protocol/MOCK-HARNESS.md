@@ -20,22 +20,29 @@ with the reference tooling package. It injects everything environment-shaped
 (clock, queue depth, capabilities, name table) as constructor arguments; no
 backend is implicitly configured.
 
-## Placeholder policy
+## Numeric binding policy
 
-The harness encodes every numeric-gated region as an opaque byte string or a
-named placeholder width, exactly as [FRAMING.md](FRAMING.md) requires:
+Protocol version 2 binds the regions protocol version 1 carried as
+placeholders. The harness encodes them exactly as [FRAMING.md](FRAMING.md)
+requires, consuming the accepted DR-0008 register only through the refusal
+gate in `torchsynth_voice.fixedpoint.choices`:
 
-- `patch_value` bytes are carried and compared verbatim; the mock never
-  interprets them.
-- The patch hash uses SHA-256 as a **named stand-in algorithm**; the final
-  binding of the hash computation is deferred to #53 and the stand-in must be
-  replaced, not relied on, when that decision record lands.
-- `numeric_contract_version` is the reserved ASCII value `unbound:#53` in the
-  mock's default negotiation; a mismatch against any other value is
-  negotiable equality, not an error, until #53 defines the real semantics.
-
-Any concrete numeric interpretation sneaking into these regions is a spec
-violation, not an implementation convenience.
+- `numeric_contract_version` is the 32-byte SHA-256 of
+  `spec/reference/fixedpoint-choices-v1.json`, computed through the gate: a
+  register that is not Accepted raises instead of binding.
+- `patch_value` words are exactly 4 bytes (32-bit Q10.21, little-endian);
+  the mock refuses any other width with `ERR_PAYLOAD_LENGTH` and stores the
+  word verbatim, never interpreting it.
+- The patch hash is the bound digest: SHA-256 over the
+  `gf180-torchsynth/patch-hash-v2` domain tag, the negotiated
+  `numeric_contract_version`, and the staged concatenation. This replaces
+  protocol version 1's stand-in (undomain-separated SHA-256 over the staged
+  concatenation only), per this document's stated successor path: a hash is
+  valid only under the negotiated numeric contract.
+- The audio sample codec packs 3-byte little-endian Q2.21 words
+  (half-even rounding, saturating) per DR-0008 C1.
+- `sound_identity`, `profile_id`, and `locks` remain opaque byte strings
+  carried verbatim; their deferring decisions did not gate on #53.
 
 ## Round-trip contract
 
@@ -65,13 +72,15 @@ the tests must pin.
 | `patch_timeout_s` | open-transaction inactivity timeout |
 | `clock` | zero-argument callable returning the current time; tests inject a controllable clock |
 
-## Acceptance-criteria mapping (issue #62, subset items)
+## Acceptance-criteria mapping (issue #62)
 
 | Criterion | Where verified |
 | --- | --- |
 | Framing, endianness, field order explicit | byte-exact encode/decode tests in `tests/test_core_protocol.py` |
-| Version mismatch rejected | `HELLO` with wrong `version` → fatal `ERR_PROTOCOL_VERSION`, core `closed` |
-| Hash mismatch rejected | `PATCH_COMMIT` with wrong declared hash → `ERR_PATCH_HASH_MISMATCH`, staged state discarded |
+| Protocol carries profile, source/numeric-contract versions, sound identity, locks, and patch hash | `HELLO`/`READY`/transaction field tests; `numeric_contract_version` bound to the accepted register |
+| Version mismatch rejected | `HELLO` with wrong header `version` → fatal `ERR_PROTOCOL_VERSION`, core `closed` |
+| Stale placeholder rejected | `HELLO` with `unbound:#53` or any other mismatched `numeric_contract_version` → fatal `ERR_PROTOCOL_VERSION`, core `closed` |
+| Hash mismatch rejected | `PATCH_COMMIT` with wrong declared hash → `ERR_PATCH_HASH_MISMATCH`, staged state discarded; a hash under a different contract cannot match |
 | Repeat/retry cannot reuse stale state or mix partial patches | replay, stale-sequence, duplicate-name, timeout, and reset tests in `tests/test_core_protocol_mock.py` |
 | Backpressure, timeout, reset, session semantics | `ERR_BUSY`, injected-clock transaction expiry, `RESET` tests |
 | Transport separable | the mock speaks only the transport interface contract; bindings are unimplemented by construction |

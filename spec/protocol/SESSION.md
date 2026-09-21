@@ -97,7 +97,7 @@ one-byte error code as the entire payload.
 | Code | Name | Meaning | Recovery |
 | --- | --- | --- | --- |
 | `0x01` | `ERR_UNSUPPORTED_COMMAND` | command code undefined or not granted by negotiation | host stops using it; core state unchanged |
-| `0x02` | `ERR_PROTOCOL_VERSION` | header `version` unsupported | **fatal**; core → `closed`; host must renegotiate with a supported version |
+| `0x02` | `ERR_PROTOCOL_VERSION` | header `version` unsupported, or `HELLO` `numeric_contract_version` differs from the core's bound numeric contract ([FRAMING.md](FRAMING.md)) | **fatal**; core → `closed`; host must renegotiate with a supported version and the matching numeric contract |
 | `0x03` | `ERR_BAD_FRAME` | decodable header, failed CRC or length | transport resync ([TRANSPORTS.md](TRANSPORTS.md)); core state unchanged; if a transaction was open it stays open and its timeout still applies |
 | `0x04` | `ERR_BAD_SEQUENCE` | transaction frame with no open transaction, or sequence reuse outside idempotency rules | host re-synchronizes its sequence; core state unchanged |
 | `0x05` | `ERR_BUSY` | command queue full | host re-sends identical frame later |
@@ -111,7 +111,9 @@ one-byte error code as the entire payload.
 | `0x0D` | `ERR_PAYLOAD_LENGTH` | payload not the shape the command defines | host corrects the frame; core state unchanged |
 
 All errors are control-plane outcomes. They are distinct from, and define
-nothing about, the numeric arithmetic error contract that #53 ratifies.
+nothing about, the numeric arithmetic error contract that DR-0008 ratifies;
+the one place the numeric contract touches this document is the fatal
+negotiation gate above, where mismatched contract versions must not interoperate.
 
 ## Live-note semantics are absent
 
