@@ -9,9 +9,9 @@ Generation uses exact ``decimal`` arithmetic (no float noise), so identical
 parameters produce byte-identical tables on every platform and run. Evaluation
 is pure integer arithmetic through the canonical rounding scalar, designed for
 direct bit-exact correspondence with future RTL. This module makes no RTL
-claim; DR-0008 stays Proposed and its C5 parameters are instantiation data
-labeled `selected (operator ruling 2026-09-19); pending ratification`, never
-accepted.
+claim; table geometry enters only as explicit data per the DR-0008 Section 12
+choice register (C5 — accepted by reviewed merge, 2026-09-21; see
+:mod:`torchsynth_voice.fixedpoint.choices`).
 
 The quarter table stores ``g(u) = cos((pi/2) * u)`` for ``u`` in ``[0, 1]``
 (``u`` the quarter-turn fraction) in the entry format's integers. Full-circle

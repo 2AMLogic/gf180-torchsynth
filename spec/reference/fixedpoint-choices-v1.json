@@ -2,7 +2,7 @@
   "schema": "gf180-torchsynth/fixedpoint-choices-v1",
   "source": "spec/decision-records/0008-fixed-point-numeric-contract.md",
   "source_section": "12. Choice register (machine-readable status)",
-  "dr_status": "Proposed",
+  "dr_status": "Accepted",
   "status_vocabulary": {
     "register_terms": [
       "proposed",
@@ -10,16 +10,27 @@
       "accepted",
       "rejected"
     ],
-    "note": "Vocabulary and consumer rule per DR-0008 Section 12: 'selected' is not 'accepted'; a choice becomes accepted only when DR-0008 reaches Accepted by reviewed merge. Consumers must refuse proposed, stale, and any not-yet-accepted value wherever the contract requires accepted ones."
+    "note": "Vocabulary and consumer rule per DR-0008 Section 12. DR-0008 reached Accepted by the reviewed merge of the issue #53 ratification PR (2026-09-21), which is the acceptance event DR-0008 Section 13 defines; every entry below carries status 'accepted' with that event. Consumers must refuse proposed, stale, and any not-yet-accepted value wherever the contract requires accepted ones."
   },
-  "consumer_rule": "No entry in this file is accepted while DR-0008 status is Proposed. torchsynth_voice.fixedpoint.choices.require_accepted refuses every entry today; parameters here are candidate instantiation data only.",
+  "consumer_rule": "DR-0008 status is Accepted (reviewed merge, issue #53, 2026-09-21) and every entry C1-C10 carries status 'accepted': torchsynth_voice.fixedpoint.choices.require_accepted admits each entry. Any future edit that flips dr_status away from Accepted, or any entry whose status is not exactly 'accepted', is refused by the gate again.",
+  "ratification": {
+    "event": "reviewed merge of the issue #53 ratification PR (the acceptance event per DR-0008 Section 13)",
+    "date": "2026-09-21",
+    "evidence": [
+      "sim/reference/control-format-sweep-v1.json (issue #50, PR #152)",
+      "sim/candidates/audio-sources-sweep-v1.json (issue #51, PR #153)",
+      "sim/reference/normalization-reciprocal-v1.json (issue #52, PR #150)"
+    ],
+    "per_row_honesty": "Threshold rows whose evidence is genuinely absent stay explicitly open/NO VERDICT in DR-0008 Section 10 and rubric-v1 (R-L3-M0, M4, M5, M6, M7; M1 SNR floors; vco_2 M1 band 2). Ratification covers only what the sweep receipts measure."
+  },
   "choices": [
     {
       "id": "C1",
       "choice": "Audio word 24-bit Q2.21 [-4, +4)",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "signed": true,
@@ -28,7 +39,7 @@
         "width": 24,
         "range": "[-4, +4)"
       },
-      "evidence": "spec/decision-records/0006-canonical-runtime.md:89",
+      "evidence": "spec/decision-records/0006-canonical-runtime.md:89; sweep confirmation: sim/candidates/audio-sources-sweep-v1.json normalization-anchor saturation zero at Q2.21 (Q1.14 clips: 26,158 saturated samples)",
       "affected_traces": [
         "all audio-rate traces"
       ],
@@ -37,9 +48,10 @@
     {
       "id": "C2",
       "choice": "Phase: u32 wrapping, 2^32 units/turn",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "signed": false,
@@ -48,7 +60,7 @@
         "units_per_turn": 4294967296,
         "semantics": "wrapping"
       },
-      "evidence": "#83 comment 5743848538; DR-0004",
+      "evidence": "#83 comment 5743848538; DR-0004; sweep confirmation: sim/candidates/audio-sources-sweep-v1.json intrinsic phase-resolution rows - u32 max drift 1.691281795501709e-05 turns within the DR-0008 M3 bound 176400*2^-33 turns; u24/u28 exceed it",
       "affected_traces": [
         "vco_1.raw",
         "vco_2.raw",
@@ -59,9 +71,10 @@
     {
       "id": "C3",
       "choice": "Frequency word Q16.15",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "signed": true,
@@ -69,7 +82,7 @@
         "frac_bits": 15,
         "width": 32
       },
-      "evidence": "#83 groundwork Section 3.1",
+      "evidence": "#83 groundwork Section 3.1; range column of sim/reference/control-format-sweep-v1.json midi-domain axis (MIDI 151 feasibility recorded, not disputed)",
       "affected_traces": [
         "control_upsample.vco_1_pitch consumers"
       ],
@@ -78,9 +91,10 @@
     {
       "id": "C4",
       "choice": "MIDI domain Q10.21",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "signed": true,
@@ -88,7 +102,7 @@
         "frac_bits": 21,
         "width": 32
       },
-      "evidence": "pinned torchsynth/module.py:600 via #83",
+      "evidence": "pinned torchsynth/module.py:600 via #83; sweep confirmation: sim/reference/control-format-sweep-v1.json midi-domain axis baseline member passes all rows (baseline_all_rows_pass true)",
       "affected_traces": [
         "keyboard/tuning/depth paths"
       ],
@@ -97,9 +111,10 @@
     {
       "id": "C5",
       "choice": "Sine: 4096x24 quarter-wave LUT + linear interp; 1K quadratic fallback pre-authorized",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "n_entries": 4096,
@@ -110,7 +125,7 @@
         "method": "linear",
         "fallback": "1024-entry quadratic interpolation, pre-authorized (DR-0008 Section 5)"
       },
-      "evidence": "DR-0008 Section 5 table; M2 sweep",
+      "evidence": "DR-0008 Section 5 table; measured M2 per geometry: sim/candidates/audio-sources-sweep-v1.json intrinsic m2_lut_vs_cos - selected 4096x24 linear max 2.45576012636306e-07 vs float64 cos (PASS, limit 2^-21); 1K-linear FAILS M2 (5.056888477961152e-07), so the pre-authorized fallback remains the 1K quadratic (2.530771730513415e-07, PASS)",
       "affected_traces": [
         "vco_1.raw"
       ],
@@ -119,21 +134,16 @@
     {
       "id": "C6",
       "choice": "Rounding: half-even at S1-S5",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "rounding_mode": "half_even",
-        "sites": [
-          "S1",
-          "S2",
-          "S3",
-          "S4",
-          "S5"
-        ]
+        "sites": "S1,S2,S3,S4,S5"
       },
-      "evidence": "DR-0008 Section 6",
+      "evidence": "DR-0008 Section 6; sweep confirmation: rounding-mode axis of sim/reference/control-format-sweep-v1.json - truncation member loses to half-even baseline (baseline all rows pass; axis winner keeps mode=half_even)",
       "affected_traces": [
         "all narrowing sites"
       ],
@@ -142,20 +152,18 @@
     {
       "id": "C7",
       "choice": "Saturation + sticky counters; Nyquist clamp forbidden",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": true,
       "parameters": {
         "policy": "saturate",
         "counters": "sticky per-site saturate/overflow",
         "nyquist_clamp": "forbidden",
-        "never_saturate_words": [
-          "phase",
-          "frequency"
-        ]
+        "never_saturate_words": "phase,frequency"
       },
-      "evidence": "#83 groundwork Section 1",
+      "evidence": "#83 groundwork Section 1; sweep confirmation: sim/candidates/audio-sources-sweep-v1.json per-site sticky saturation counters (zero saturation at the normalization anchor for the selected config)",
       "affected_traces": [
         "saturate counters",
         "vco_*.raw"
@@ -165,12 +173,13 @@
     {
       "id": "C8",
       "choice": "Noise: host-fed exact stream, slot sound_index % 32, seed 13",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": false,
       "parameters": {},
-      "evidence": "spec/VOICE-CONTRACT.md:75-77; DR-0003",
+      "evidence": "spec/VOICE-CONTRACT.md:75-77; DR-0003; sweep confirmation: sim/candidates/audio-sources-sweep-v1.json noise identity rows exact-bytes (noise_bit_exact_identity_ok true per fixture; never swept)",
       "affected_traces": [
         "noise.raw"
       ],
@@ -179,12 +188,22 @@
     {
       "id": "C9",
       "choice": "Normalization replay gain 1/peak, declared-precision reciprocal",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
-      "instantiable": false,
-      "parameters": {},
-      "evidence": "DR-0003; spec/decision-records/0003-host-boundary-and-normalization.md:40-44",
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
+      "instantiable": true,
+      "parameters": {
+        "signed": false,
+        "int_bits": 1,
+        "frac_bits": 22,
+        "width": 23,
+        "gain_word": "U1.22",
+        "reciprocal_frac_bits": 22,
+        "rounding_mode": "half_even",
+        "application_site": "S5"
+      },
+      "evidence": "DR-0003; spec/decision-records/0003-host-boundary-and-normalization.md:40-44; measured: sim/reference/normalization-reciprocal-v1.json decision block - reciprocal-multiply F=22 (gain word U1.22, width 23) recommended by the receipt rule (smallest swept width with calibrated threshold <= the draft strictest M1 band 2^-13 AND worst case within half an output LSB of the direct-division floor); F=12 misses the draft band; branch coverage below/at/above one, tie, late peak, extremum, silence",
       "affected_traces": [
         "final output",
         "replay traces"
@@ -194,12 +213,13 @@
     {
       "id": "C10",
       "choice": "Thresholds: 2x-measured power-of-two, preregistered pre-freeze",
-      "register_term": "selected",
-      "status": "selected (operator ruling 2026-09-19); pending ratification",
-      "accepted": false,
+      "register_term": "accepted",
+      "status": "accepted",
+      "accepted_via": "accepted (reviewed merge; 2026-09-21)",
+      "accepted": true,
       "instantiable": false,
       "parameters": {},
-      "evidence": "DR-0008 Section 10; DR-0004",
+      "evidence": "DR-0008 Section 10; DR-0004; applied: the calibrated limits of DR-0008 Section 10 (as amended 2026-09-21) are the rule's output over the sweep receipts - sim/reference/control-format-sweep-v1.json, sim/candidates/audio-sources-sweep-v1.json, sim/reference/normalization-reciprocal-v1.json (calibration_rule 'C10: smallest power of two >= 2x the measured maximum')",
       "affected_traces": [
         "M1/M2 bands"
       ],

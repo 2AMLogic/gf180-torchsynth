@@ -30,19 +30,22 @@ Landed today, per the issue's declared Startable Subset:
   `src/torchsynth_voice/fixedpoint/codegen.py` +
   `tools/generate_rtl_constants.py`. Consumes
   `spec/reference/fixedpoint-choices-v1.json` strictly through
-  `torchsynth_voice.fixedpoint.choices.require_accepted`, which refuses
-  every C1-C10 entry while DR-0008 is Proposed — so today the tool
-  emits nothing but the refusal report. That refusal is the deliverable's
-  honest state; widths are only ever taken from an accepted register
-  payload, never hardcoded.
+  `torchsynth_voice.fixedpoint.choices.require_accepted`. Since the issue
+  #53 ratification (DR-0008 Accepted by reviewed merge, 2026-09-21) the
+  register admits C1-C10 and the tool emits
+  `tb/sv/gf180_rtl_constants_pkg.sv`; `--check` fails CI if that package
+  goes stale against the register. Widths are only ever taken from an
+  accepted register payload, never hardcoded.
 - **CI** — `.github/workflows/tb-sim.yml` installs Icarus Verilog and runs
   the self-test plus the two test suites. PDK-free.
 
 ## Gated, not in this increment
 
-Real default-nebula golden vectors (#54), accepted-contract hash-linking
-(needs DR-0008 Accepted), cycle-budget constants (#63/#82), and any
-synthesis/PDK step. Nothing landed here claims conformance to DR-0008.
+Real default-nebula golden vectors (#54), the RTL consumer of the emitted
+constants package (the package itself is emitted and hash-recorded since
+DR-0008 reached Accepted; see DR-0008 Section 13), cycle-budget constants
+(#63/#82), and any synthesis/PDK step. Nothing landed here claims
+synthesis, layout, signoff, or hardware conformance of any kind.
 
 ## Vector file shape (v1)
 
