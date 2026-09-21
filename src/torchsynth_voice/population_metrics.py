@@ -512,14 +512,45 @@ def openl3_reference_embeddings(
     return rows
 
 
+def inject_outliers(rows, pool, k) -> list[list[float]]:
+    """Deterministic trailing-k outlier injection (contamination response).
+
+    The injected population keeps the reference population's size: the last
+    ``k`` rows are replaced by the first ``k`` rows of the declared outlier
+    pool. The rule is seed-free and order-explicit, so any run on the same
+    corpus and pool reproduces the same injected population exactly. ``k``
+    over the corpus size is the declared contamination rate.
+    """
+
+    matrix = _embedding_matrix(rows, "rows")
+    pool_matrix = _embedding_matrix(pool, "pool")
+    _require(
+        len(matrix[0]) == len(pool_matrix[0]),
+        "outlier pool embedding dimension mismatch",
+    )
+    _require(type(k) is int and k >= 1, "injection size k must be a positive integer")
+    _require(
+        k < len(matrix),
+        "injection size k must leave at least one original row",
+    )
+    _require(
+        k <= len(pool_matrix),
+        "outlier pool is smaller than the requested injection size",
+    )
+    return matrix[: len(matrix) - k] + pool_matrix[:k]
+
+
 def run_population_conditions(populations, *, conditions, seed) -> dict:
     """Run declared drift conditions over named populations; receipts only.
 
     ``populations`` maps names to embedding populations. Each condition is a
     dict: ``kind`` in {``permutation_control``, ``split_half``,
-    ``cross_population``, ``fadinfty``, ``parameter_shift_biased_resample``}
-    plus its arguments (``population``/``a``/``b``/``label``/fadinfty options).
-    Every result is demonstration evidence; no condition yields an acceptance
+    ``cross_population``, ``fadinfty``, ``parameter_shift_biased_resample``,
+    ``outlier_injection``} plus its arguments
+    (``population``/``a``/``b``/``label``/fadinfty options). ``fadinfty`` takes
+    an optional ``reference`` naming a different reference population (default:
+    the condition's own population, the degenerate self-comparison). Every
+    result is demonstration evidence; no condition yields an acceptance
     verdict, a threshold, or an optimization target.
     """
 
@@ -589,14 +620,15 @@ def run_population_conditions(populations, *, conditions, seed) -> dict:
             )
         elif kind == "fadinfty":
             name = condition["population"]
+            reference_name = condition.get("reference", name)
             outcome = fad_infinity_estimate(
-                named_rows(name),
+                named_rows(reference_name),
                 named_rows(name),
                 sample_sizes=condition.get("sample_sizes", [8, 16, 32, 48]),
                 trials=condition.get("trials", 10),
                 seed=condition.get("seed", seed),
             )
-            entry.update(population=name, **outcome)
+            entry.update(population=name, reference=reference_name, **outcome)
         elif kind == "parameter_shift_biased_resample":
             name = condition["population"]
             rows = named_rows(name)
@@ -619,6 +651,48 @@ def run_population_conditions(populations, *, conditions, seed) -> dict:
                 note=(
                     "stratum-biased resample as a wrong-nebula/parameter-distribution "
                     "stand-in; the #44-gated ladder remains the ratified comparator"
+                ),
+            )
+        elif kind == "outlier_injection":
+            name = condition["population"]
+            pool_name = condition["outlier_pool"]
+            rows = named_rows(name)
+            pool = named_rows(pool_name)
+            sizes = condition.get("injection_sizes", [1, 4, 16])
+            _require(
+                isinstance(sizes, Sequence) and not isinstance(sizes, (str, bytes)),
+                "injection_sizes must be a sequence of positive integers",
+            )
+            _require(len(sizes) > 0, "injection_sizes must be non-empty")
+            injections = []
+            for size in sizes:
+                injected = inject_outliers(rows, pool, size)
+                outcome_mmd = mmd_obs_eq2(
+                    rows, injected, distance=condition.get("distance", "l1")
+                )
+                outcome_fad = frechet_from_embeddings(rows, injected)
+                injections.append(
+                    {
+                        "k": size,
+                        "contamination_rate": size / len(rows),
+                        "mmd": outcome_mmd,
+                        "fad": outcome_fad,
+                    }
+                )
+            entry.update(
+                population=name,
+                outlier_pool=pool_name,
+                pool_n=len(pool),
+                injection_sizes=list(sizes),
+                injection_rule=(
+                    "trailing-k replacement: the last k corpus rows are replaced "
+                    "by the first k outlier-pool rows; deterministic, seed-free"
+                ),
+                injections=injections,
+                label=condition.get("label", "outlier injection"),
+                note=(
+                    "contamination-response demonstration; no alerting threshold, "
+                    "no pass/fail, never a gate"
                 ),
             )
         else:

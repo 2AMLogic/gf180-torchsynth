@@ -10,6 +10,11 @@ rendered corpus:
   analog) as a cross-population drift demonstration;
 - noise-gain condition (seeded white noise mixed at a declared amplitude);
 - wrong-nebula / parameter-distribution stand-in (stratum-biased resample);
+- outlier injection over a declared severity grid k in {1, 4, 16}: the
+  trailing k corpus entries are replaced by entries of a declared outlier
+  pool (scaled noise-gain, amplitude 2x the noise-gain condition) and the
+  FAD/MMD contamination response is measured, with a FAD-infinity curve of
+  the clean corpus against the maximally injected population;
 - FAD-infinity sample-size curve with bias/uncertainty.
 
 Everything here is DEMONSTRATION EVIDENCE ONLY: distributions answer population
@@ -17,7 +22,9 @@ questions, never per-sound identity or correctness; no acceptance verdict, no
 threshold, and never an optimization target. Embeddings use the provisional
 stdlib envelope (NOT the OBS OpenL3 pin) unless the pinned dependency is
 installed and --use-openl3 is passed. Stdlib only; never renders, repairs, or
-writes anywhere but the declared receipt path.
+writes anywhere but the declared receipt path. The narrow role decision
+(2026-09-20) is recorded in spec/POPULATION-METRICS.md: corpus-level auxiliary
+diagnostics only; alerting is flag-only with no gating authority.
 """
 
 import argparse
@@ -36,16 +43,20 @@ from torchsynth_voice.artifact_renderer import digest, json_bytes  # noqa: E402
 from torchsynth_voice.population_metrics import (  # noqa: E402
     PROVISIONAL_ENVELOPE_V0,
     REFERENCE_EMBEDDING_PIN,
+    inject_outliers,
     openl3_availability,
     provisional_envelope_embedding,
     run_population_conditions,
 )
 
 SCHEMA = "torchsynth-population-drift-demo"
+SCHEMA_VERSION = 2
 AUDIO_BYTES = 176400 * 4
 EXPECTED_SAMPLES = 176400
 SAMPLE_RATE = 44100
 NOISE_AMPLITUDE = 0.25
+OUTLIER_NOISE_AMPLITUDE = 0.5
+OUTLIER_POOL_NAME = "outlier_pool_noise_gain_x2"
 WINDOWS = 8
 
 
@@ -135,6 +146,18 @@ def main() -> int:
         "--fadinfty-sizes", default="8,16,24,32,48,64,96", help="sample-size curve"
     )
     parser.add_argument("--fadinfty-trials", type=int, default=20)
+    parser.add_argument(
+        "--outlier-sizes",
+        default="1,4,16",
+        help="declared outlier-injection severity grid (corpus entries replaced)",
+    )
+    parser.add_argument(
+        "--generated-utc",
+        default=None,
+        help="declared generation timestamp (ISO 8601); default is the current "
+        "time. Pass one fixed value to make two runs byte-identical (the "
+        "receipt determinism check).",
+    )
     args = parser.parse_args()
 
     clips, store_receipt, _index = load_population(args.store)
@@ -171,6 +194,16 @@ def main() -> int:
         [s + (noise_rng.random() * 2.0 - 1.0) * NOISE_AMPLITUDE for s in clip]
         for clip in clips
     ]
+    outlier_rng = random.Random(args.seed + 3)
+    outlier_pool_clips = [
+        [
+            s + (outlier_rng.random() * 2.0 - 1.0) * OUTLIER_NOISE_AMPLITUDE
+            for s in clip
+        ]
+        for clip in clips
+    ]
+    outlier_sizes = [int(s) for s in args.outlier_sizes.split(",") if s.strip()]
+    max_k = max(outlier_sizes)
 
     populations = {
         "corpus": embeddings,
@@ -180,7 +213,15 @@ def main() -> int:
         "corpus_noise_gain": [
             provisional_envelope_embedding(clip, windows=WINDOWS) for clip in noise_gain
         ],
+        OUTLIER_POOL_NAME: [
+            provisional_envelope_embedding(clip, windows=WINDOWS)
+            for clip in outlier_pool_clips
+        ],
     }
+    injected_max_name = f"corpus_outlier_k{max_k}"
+    populations[injected_max_name] = inject_outliers(
+        populations["corpus"], populations[OUTLIER_POOL_NAME], max_k
+    )
 
     sizes = [int(s) for s in args.fadinfty_sizes.split(",") if s.strip()]
     conditions = [
@@ -204,11 +245,29 @@ def main() -> int:
             "label": "wrong-nebula / parameter-distribution stand-in (biased resample)",
         },
         {
+            "kind": "outlier_injection",
+            "population": "corpus",
+            "outlier_pool": OUTLIER_POOL_NAME,
+            "injection_sizes": outlier_sizes,
+            "label": (
+                f"outlier injection (scaled noise-gain pool, amplitude "
+                f"+-{OUTLIER_NOISE_AMPLITUDE})"
+            ),
+        },
+        {
             "kind": "fadinfty",
             "population": "corpus",
             "sample_sizes": sizes,
             "trials": args.fadinfty_trials,
             "seed": args.seed + 2,
+        },
+        {
+            "kind": "fadinfty",
+            "reference": "corpus",
+            "population": injected_max_name,
+            "sample_sizes": sizes,
+            "trials": args.fadinfty_trials,
+            "seed": args.seed + 4,
         },
     ]
 
@@ -218,10 +277,10 @@ def main() -> int:
 
     receipt = {
         "schema": SCHEMA,
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "status": "complete",
         "issue": 46,
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_utc": args.generated_utc or datetime.now(timezone.utc).isoformat(),
         "producer": {"git_context": git_context()},
         "store": store_receipt,
         "embedding": embedding_block,
@@ -239,6 +298,24 @@ def main() -> int:
                 "seed": args.seed + 1,
                 "n": len(noise_gain),
             },
+            OUTLIER_POOL_NAME: {
+                "definition": (
+                    "declared outlier construction rule: corpus clip plus seeded "
+                    f"uniform white noise, amplitude +-{OUTLIER_NOISE_AMPLITUDE} "
+                    f"(2x the noise-gain condition), scale relative to float range"
+                ),
+                "seed": args.seed + 3,
+                "n": len(populations[OUTLIER_POOL_NAME]),
+            },
+            injected_max_name: {
+                "definition": (
+                    f"trailing-{max_k} replacement injection via "
+                    f"population_metrics.inject_outliers: the last {max_k} corpus "
+                    f"embeddings are replaced by the first {max_k} "
+                    f"{OUTLIER_POOL_NAME} embeddings; deterministic, seed-free"
+                ),
+                "n": len(populations[injected_max_name]),
+            },
         },
         "conditions": results["conditions"],
         "provenance": results["provenance"],
@@ -247,6 +324,8 @@ def main() -> int:
             "Never per-sound identity or implementation correctness; per-index comparison remains an independent mandatory gate.",
             "No acceptance verdict, no frozen threshold, and never an optimization target (OBS negative-result doctrine, docs/MEASUREMENT-PLAN.md).",
             "The #44-gated corruption-ladder comparator is NOT exercised here; the wrong-nebula condition is a declared biased-resample stand-in.",
+            "Outlier injection is a contamination-response demonstration over a declared severity grid: no alerting threshold, no pass/fail, no gating authority.",
+            "The narrow role decision (2026-09-20) is recorded in spec/POPULATION-METRICS.md: corpus-level auxiliary diagnostics only; alerting is flag-only; the human-transparency row stays NO VERDICT.",
         ],
     }
 
@@ -262,9 +341,20 @@ def main() -> int:
                 f"{entry['label']}: mmd={entry['mmd']['value']:.6f} "
                 f"fad={entry['fad']['value']:.6f}"
             )
+        if entry["kind"] == "outlier_injection":
+            for row in entry["injections"]:
+                print(
+                    f"outlier k={row['k']} ({row['contamination_rate']:.4f}): "
+                    f"mmd={row['mmd']['value']:.6f} fad={row['fad']['value']:.6f}"
+                )
         if entry["kind"] == "fadinfty":
+            scope = (
+                f"ref={entry['reference']} test={entry['population']}"
+                if entry["reference"] != entry["population"]
+                else f"self={entry['population']}"
+            )
             print(
-                f"fadinfty={entry['fadinfty']:.6f} curve="
+                f"fadinfty[{scope}]={entry['fadinfty']:.6f} curve="
                 + str([round(row["mean_fad"], 6) for row in entry["curve"]])
             )
     return 0
