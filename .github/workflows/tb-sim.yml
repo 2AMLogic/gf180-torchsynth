@@ -27,5 +27,7 @@ jobs:
         run: python -m unittest -v tests.test_golden_vectors tests.test_fixedpoint_codegen
       - name: Synthetic DUT self-test (iverilog, PDK-free)
         run: python3 tb/run_tb.py selftest
+      - name: Anchor golden-vector run (iverilog, PDK-free)
+        run: python3 tb/run_tb.py anchor
       - name: Constants refusal-gate check
         run: python3 tools/generate_rtl_constants.py --check

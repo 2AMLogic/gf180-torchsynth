@@ -248,5 +248,111 @@ class TestFirstMismatchReporter(unittest.TestCase):
         self.assertIsNotNone(mismatch)
 
 
+class TestAcceptedContractBinding(unittest.TestCase):
+    """The accepted-contract hash link (issue #68 AC-1/AC-7).
+
+    The real anchor vector must bind the live accepted artifacts: the
+    emitted constants package, the choice register, and the accepted
+    DR-0008 record (via the frozen receipt bindings). Any interface
+    change must fail this check instead of silently recompiling.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.anchor = gv.load_vector(gv.SENTINEL_VECTOR_PATH)
+
+    def rehash(self, vector):
+        vector["content_hash"] = gv.compute_content_hash(vector)
+        return vector
+
+    def test_live_anchor_binds_the_live_contract(self):
+        verified = gv.verify_accepted_contract(self.anchor)
+        self.assertEqual(
+            verified["constants_package_sha256"],
+            gv.sha256_file(gv.CONSTANTS_PACKAGE_PATH),
+        )
+        self.assertEqual(
+            verified["choices_register_sha256"],
+            gv.sha256_file(gv.CHOICES_REGISTER_PATH),
+        )
+        self.assertEqual(
+            verified["dr_0008_record_sha256"],
+            gv.sha256_file(gv.DR_0008_RECORD_PATH),
+        )
+
+    def test_record_digest_binds_through_the_receipt(self):
+        """The anchor provenance carries no record digest; the receipt does."""
+        self.assertNotIn("dr_0008_record_sha256", self.anchor["provenance"])
+        verified = gv.verify_accepted_contract(self.anchor)
+        self.assertEqual(verified["dr_0008_record_source"], "receipt bindings")
+
+    def test_tampered_provenance_digest_refuses(self):
+        vector = dict(self.anchor)
+        vector["provenance"] = dict(
+            self.anchor["provenance"],
+            dr_0008_constants_package_sha256="0" * 64,
+        )
+        with self.assertRaises(gv.VectorError) as caught:
+            gv.verify_accepted_contract(self.rehash(vector))
+        self.assertIn("regenerate", str(caught.exception))
+
+    def test_modified_live_package_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / "stale_pkg.sv"
+            stale.write_bytes(
+                Path(gv.CONSTANTS_PACKAGE_PATH).read_bytes() + b"\n// edited\n"
+            )
+            with self.assertRaises(gv.VectorError) as caught:
+                gv.verify_accepted_contract(self.anchor, constants_path=stale)
+            self.assertIn("contract refusal", str(caught.exception))
+
+    def test_modified_live_register_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / "stale_register.json"
+            stale.write_bytes(
+                Path(gv.CHOICES_REGISTER_PATH).read_bytes()
+                .replace(b'"Accepted"', b'"Accepted "', 1)
+            )
+            with self.assertRaises(gv.VectorError):
+                gv.verify_accepted_contract(self.anchor, register_path=stale)
+
+    def test_modified_live_record_refuses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / "stale_record.md"
+            stale.write_bytes(
+                Path(gv.DR_0008_RECORD_PATH).read_bytes() + b"stale\n"
+            )
+            with self.assertRaises(gv.VectorError):
+                gv.verify_accepted_contract(self.anchor, record_path=stale)
+
+    def test_non_accepted_dr_status_refuses(self):
+        vector = dict(self.anchor)
+        vector["provenance"] = dict(
+            self.anchor["provenance"], dr_0008_status="Proposed"
+        )
+        with self.assertRaises(gv.VectorError) as caught:
+            gv.verify_accepted_contract(self.rehash(vector))
+        self.assertIn("not Accepted", str(caught.exception))
+
+    def test_missing_provenance_refuses(self):
+        with self.assertRaises(gv.VectorError):
+            gv.verify_accepted_contract({"schema": gv.VECTOR_SCHEMA})
+
+    def test_unreadable_receipt_refuses_record_binding(self):
+        vector = dict(self.anchor)
+        vector["provenance"] = {
+            k: v
+            for k, v in self.anchor["provenance"].items()
+            if k != "dr_0008_record_sha256"
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "no-receipt.json"
+            with self.assertRaises(gv.VectorError) as caught:
+                gv.verify_accepted_contract(
+                    self.rehash(vector), receipt_path=missing
+                )
+            self.assertIn("dr_0008_record_sha256", str(caught.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
