@@ -8,6 +8,12 @@ nothing and exits 2 after naming every refusal; ``--check`` treats exactly
 that state as success (gate verified) so CI can assert the refusal without
 requiring ratification.
 
+Since the issue #53 ratification (DR-0008 Accepted by reviewed merge,
+2026-09-21) the live register admits every entry: generate mode writes the
+package (default ``tb/sv/gf180_rtl_constants_pkg.sv``) and ``--check``
+verifies the landed package still matches the register byte-for-byte, so a
+stale package after any register edit is a CI failure.
+
 No synthesis or PDK step is involved anywhere: this tool emits plain
 SystemVerilog source text or nothing.
 

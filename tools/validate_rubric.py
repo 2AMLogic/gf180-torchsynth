@@ -31,7 +31,13 @@ import json
 import sys
 from pathlib import Path
 
-SEMANTIC_VERSION = "rubric-v0"
+SEMANTIC_VERSION = "rubric-v0"  # default; the expected version is derived per file (issue #53: rubric-v1 binds the calibrated rows)
+
+
+def expected_semantic_version(rubric_path: Path) -> str:
+    """The rubric's semantic_version is its own file stem (rubric-v0.json ->
+    'rubric-v0'; rubric-v1.json -> 'rubric-v1')."""
+    return rubric_path.stem
 FORBIDDEN_AGGREGATE_KEYS = {
     "aggregate",
     "aggregate_score",
@@ -199,8 +205,10 @@ def validate_rubric(root: Path, rubric_rel: str = "spec/reference/rubric-v0.json
         f.add("schema is not torchsynth-verification-rubric")
     if doc.get("schema_version") != 1:
         f.add("schema_version is not 1")
-    if doc.get("semantic_version") != SEMANTIC_VERSION:
-        f.add(f"semantic_version is not {SEMANTIC_VERSION}")
+    if doc.get("semantic_version") != expected_semantic_version(rubric_path):
+        f.add(
+            f"semantic_version is not {expected_semantic_version(rubric_path)}"
+        )
     if doc.get("status") != "frozen":
         f.add("rubric status is not frozen")
     if doc.get("release_rule", {}).get("form") != "conjunction":
@@ -454,8 +462,11 @@ def main() -> int:
             print(f"ERROR: {error}")
         print(f"rubric validation FAILED with {len(errors)} finding(s)")
         return 1
-    print("rubric v0 is internally consistent: every assertion cites a landed source digest, "
-          "every source digest matches the landed file, no row lacks a source, no aggregate score exists")
+    print(
+        f"rubric {expected_semantic_version(Path(args.rubric))} is internally consistent: "
+        "every assertion cites a landed source digest, "
+        "every source digest matches the landed file, no row lacks a source, no aggregate score exists"
+    )
     return 0
 
 

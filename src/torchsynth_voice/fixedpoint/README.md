@@ -34,19 +34,22 @@ conformant to DR-0008 while that record's status is Proposed.
 - `choices` — loads the machine-readable choice register and refuses
   not-yet-accepted values wherever the contract requires accepted ones.
 
-## Candidate-instantiation status (hard rule)
+## Instantiation status (hard rule)
 
 Any C1–C10 instantiation ships only as data in the machine-readable choice
 register `fixedpoint-choices-v1.json` under the spec reference directory.
-Every entry carries the status
+Every entry carries
 
-    selected (operator ruling 2026-09-19); pending ratification
+    status: accepted
+    accepted_via: accepted (reviewed merge; 2026-09-21)
 
-and is **never** `accepted`: DR-0008 is Proposed, ratification is an
-operator action (issue #53), and `choices.require_accepted` structurally
-refuses these values. The vocabulary follows the DR-0008 Section 12 choice
-register. No widths or scales beyond that register appear anywhere in this
-package.
+recording the DR-0008 Section 13 acceptance event (the reviewed merge of the
+issue #53 ratification PR); `choices.require_accepted` admits these values
+and structurally refuses anything else — a register edit that breaks the
+invariant (an accepted entry in a non-Accepted record, a not-yet-accepted
+status where accepted is required) is refused again. The vocabulary follows
+the DR-0008 Section 12 choice register. No widths or scales beyond that
+register appear anywhere in this package.
 
 ## Verification surface
 

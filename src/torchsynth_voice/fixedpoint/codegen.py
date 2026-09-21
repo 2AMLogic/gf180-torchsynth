@@ -6,14 +6,17 @@ structural refusal gate. While DR-0008's status is ``Proposed`` the register
 refuses all of C1-C10, so this emitter produces **no package at all** —
 that refusal is the honest deliverable state, not a stub awaiting content.
 
-When (and only when) DR-0008 reaches Accepted and entries carry
-``status == "accepted"``, the emitter emits a SystemVerilog package whose
-``localparam`` values are taken verbatim from the register's ``parameters``
-payload. No width, rate, or threshold is hardcoded anywhere in this module.
+Since the issue #53 ratification (reviewed merge, 2026-09-21) DR-0008 is
+Accepted and every register entry carries ``status == "accepted"``, so the
+emitter emits a SystemVerilog package whose ``localparam`` values are taken
+verbatim from the register's ``parameters`` payload. No width, rate, or
+threshold is hardcoded anywhere in this module.
 
 Parameters this emitter cannot represent (lists, nested objects) produce a
-per-choice emit refusal naming the parameter, so a future accepted register
-can never be silently truncated into RTL constants.
+per-choice emit refusal naming the parameter, so an accepted register can
+never be silently truncated into RTL constants. (The register's C6 sites
+and C7 never-saturate words are stored as comma-joined strings for exactly
+this reason; the names are DR-0008 Section 6's.)
 """
 
 from __future__ import annotations

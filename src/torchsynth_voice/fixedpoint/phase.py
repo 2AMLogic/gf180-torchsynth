@@ -12,9 +12,10 @@ bit-exactly. Exact ``Fraction`` accessors make drift measurable without
 float error.
 
 The width is an explicit parameter of every instance: this module embeds no
-candidate width. DR-0008's Section 12 choices (including the wrapping u32
-selection, C2) are `selected (operator ruling 2026-09-19); pending
-ratification` while the record stays Proposed. No RTL claim is made here.
+candidate width. DR-0008's Section 12 phase-semantics choice (the wrapping
+u32 accumulator, C2) is `accepted` as of the record's reviewed merge
+(2026-09-21); see :mod:`torchsynth_voice.fixedpoint.choices`. No RTL claim
+is made here.
 """
 
 from __future__ import annotations

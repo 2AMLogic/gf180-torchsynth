@@ -1,0 +1,3856 @@
+{
+  "schema": "torchsynth-verification-rubric",
+  "schema_version": 1,
+  "semantic_version": "rubric-v1",
+  "kind": "verification-rubric",
+  "status": "frozen",
+  "frozen_at": "2026-09-21",
+  "issue": 53,
+  "composes": [
+    "#120",
+    "#128",
+    "#129",
+    "#130",
+    "#131",
+    "#137",
+    "#147",
+    "#148",
+    "#150",
+    "#152",
+    "#153"
+  ],
+  "upstream_pin": {
+    "commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+    "source_id": "upstream"
+  },
+  "numeric_contract": "bound:DR-0008 Accepted (reviewed merge 2026-09-21)",
+  "dr_0008_status": "Accepted (reviewed merge 2026-09-21; R-L3-M1/M2/M3 thresholds calibrated from the v0 sweeps per DR-0008 Section 15; genuinely-open rows stay NO VERDICT)",
+  "verdict_semantics": {
+    "authority": "DR-0004 and spec/SCORECARD-CONTRACT.md v1",
+    "states": {
+      "PASS": "valid estimator/preparation/evidence, finite observation, complete coverage, within the preregistered limit",
+      "FAIL": "valid evidence, observation outside the preregistered limit - a mismatch, never a tolerance problem",
+      "NO VERDICT": "attempted evaluation cannot support a decision (unqualified estimator, floor-limited, preparation failure, open row); observation is null, never zero-as-pass",
+      "MISSING EVIDENCE": "required input or capture absent; a distinct refusal state, never a numerical failure or pass"
+    },
+    "no_zero_error_pass": "insufficient evidence is NO VERDICT, never a zero error or pass (DR-0004)"
+  },
+  "release_rule": {
+    "form": "conjunction",
+    "omnibus_scalar": false,
+    "required": [
+      "every mandatory row is PASS under this frozen rubric (an open mandatory row is NO VERDICT and blocks release)",
+      "zero MISSING EVIDENCE rows among mandatory rows",
+      "all required injected faults detected under the frozen configuration (R-L2-MM-COVERAGE)",
+      "coverage minimums met: development corpus QUALIFIED over the full 96-case denominator (R-L6-STRATA), case-registry required-row inventory satisfied (R-L0-P3)",
+      "development and holdout summaries kept mechanically separate; the holdout stays sealed until thresholds are frozen",
+      "appendix rows (perceptual, population) are reported and never gating"
+    ],
+    "independent_judge": "numeric fitting may use a smooth development-only surrogate, but release judgment uses this frozen rubric; the optimizer objective must never be the sole acceptance judge; no tolerance is reverse-engineered from the candidate that must pass it",
+    "no_aggregate": "no omnibus scalar or incompatible-unit average controls release; results in different units are never averaged (DR-0004; docs/MEASUREMENT-PLAN.md reporting format)"
+  },
+  "preregistration": {
+    "policy": "measure, then preregister: every tolerance derives from an explicit numeric error budget and estimator floor, measured before preregistration, then preregistered as the smallest power of two >= 2x the measured value, before any RTL freeze (DR-0008 Section 10; operator ruling OQ5/C10)",
+    "never_increase": "thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+    "miss_is_mismatch": "a miss is a mismatch, never a tolerance problem (spec/PAIRED-METRICS.md; DR-0008 Section 10)",
+    "no_post_hoc": "no post-hoc tightening or loosening; no tolerance is reverse-engineered from the candidate that must pass it (issue #48 independent judge rule)",
+    "new_tolerance_new_rubric": "any later estimator or tolerance change creates rubric v1 and invokes the explicit holdout policy; a new tolerance does not rewrite the old scorecard (docs/MEASUREMENT-PLAN.md corpus strategy)",
+    "ratification_note": "applied 2026-09-21 (issue #53): the R-L3-M1/M2/M3 limits below are the C10 rule's output (smallest power of two >= 2x the measured value) over sim/candidates/audio-sources-sweep-v1.json and sim/reference/normalization-reciprocal-v1.json; the composed-model, full-preregistered-suite recalibration remains owed before any RTL freeze"
+  },
+  "change_control": {
+    "bump_rule": "any change to an estimator, tolerance, coverage rule, or row set requires a new rubric version (v1 next); rubric v0 is frozen and never edited in place",
+    "holdout_policy_on_change": "a new rubric version invokes the explicit holdout policy: the sealed 32-case holdout is revealed only after the new version's thresholds are frozen, and it never rewrites the old scorecard",
+    "version_bump": "rubric-v1",
+    "v0_to_v1": "rubric-v1 (issue #53, 2026-09-21): binds the calibrated R-L3-M1/M2/M3 rows from the DR-0008 ratification; rubric-v0 stays frozen and every v0 scorecard keeps its meaning under the holdout policy"
+  },
+  "holdout_seal": {
+    "policy": "sealed-until-thresholds-frozen",
+    "holdout_count": 32,
+    "derivation_statement": "no holdout artifact was read during the derivation of rubric v0: this rubric composes development/analyzer evidence only; the audit's denominator records holdout_identities_read = 0 (assertion in R-L1-R1)",
+    "holdout_artifacts_read": [],
+    "mechanical_separation": "scorecard partitions development|holdout are validated as separate reports (spec/SCORECARD-CONTRACT.md v1); rubric rows are development-partition only"
+  },
+  "perceptual_bounded_role": {
+    "decision": "#47 (closure comment 5754633329, 2026-09-20): perceptual/population metrics are auxiliary diagnostics, flag-only, Level 5 NO VERDICT; acceptance authority on Levels 0-4",
+    "appendix_rows": [
+      "R-L5-PERCEPTUAL",
+      "R-L5-HUMAN",
+      "R-L6-POP-DEMO"
+    ],
+    "never_gating": true
+  },
+  "sources": [
+    {
+      "id": "upstream",
+      "path": "spec/reference/upstream.json",
+      "sha256": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+      "role": "upstream source pin (L0 identity)"
+    },
+    {
+      "id": "corpus-v0",
+      "path": "spec/reference/corpus-v0.json",
+      "sha256": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+      "role": "preregistered random corpus; holdout seal rule"
+    },
+    {
+      "id": "case-registry-v1",
+      "path": "spec/reference/case-registry-v1.json",
+      "sha256": "bbc1dc5028f213f23ffe7835b1335ff0e0279deb8672b33d39f5a0c5e54486bd",
+      "role": "case inventory, required rows, holdout policy"
+    },
+    {
+      "id": "development-corpus-coverage",
+      "path": "sim/reference/development-corpus-coverage.json",
+      "sha256": "35f415a3b94c3a874d09824f2fa7fa5bbc68e2d326b08e78aa6df4d8ff7054b1",
+      "role": "#21 strata/coverage audit; repeat re-qualification; holdout-read counter"
+    },
+    {
+      "id": "directed-coverage-v1",
+      "path": "spec/reference/directed-coverage-v1.json",
+      "sha256": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
+      "role": "392 directed coverage manifest (prepared; audio_render not_run)"
+    },
+    {
+      "id": "control-path-rubric-v1",
+      "path": "spec/reference/control-path-rubric-v1.json",
+      "sha256": "d16b9562c0079e5c195f7b63543b55e677b5d03fb66af2faa8fa1a305b00f2b8",
+      "role": "#40 preregistered per-trace control-path limits"
+    },
+    {
+      "id": "control-path-float-v1",
+      "path": "sim/reference/control-path-float-v1.json",
+      "sha256": "54cddf36de80a6e2f66ae0e9e6e55143cf9cf6ada20acc1ff6fd2f83ca29cc3e",
+      "role": "#40 control-path match record (10736/10736 PASS; mutations; endpoints)"
+    },
+    {
+      "id": "float-sources-v1",
+      "path": "sim/reference/float-sources-v1.json",
+      "sha256": "b60d4cc1efeefe89c69f2691601a390983f9938c3c059a4cb998aa2e1667c73a",
+      "role": "#41 declared VCO/noise checkpoint limits; bit-exact noise identity"
+    },
+    {
+      "id": "trace-capture",
+      "path": "sim/reference/trace-capture.json",
+      "sha256": "b803f015a63f723c95a20c287027a5168d0bf6df0f7bcf95f6fa817b88ccb56d",
+      "role": "#42/#23 release-era capture; normalization digest bindings and branch relations"
+    },
+    {
+      "id": "float-voice-v1",
+      "path": "sim/reference/float-voice-v1.json",
+      "sha256": "e0ed61aa680298204efca7f80983895ca0cf0ddf2cb345e549095e47b1e6065e",
+      "role": "#43 composed whole-voice conformance record (634 PASS rows; 3 mutations)"
+    },
+    {
+      "id": "estimators-v1",
+      "path": "sim/qualification/estimators-v1.json",
+      "sha256": "d31b8fe4a621a768083c2311ebd7dbe6be4e9e425b3bb6f8bbf3b610f7c07447",
+      "role": "#120 estimator qualification ledger (validity, floors, refusals, coverage)"
+    },
+    {
+      "id": "mutation-matrix-v1",
+      "path": "sim/reference/mutation-matrix-v1.json",
+      "sha256": "15f54de553448e10ceada9094d2c5bfdc5a1267b48270f3e43831833f989b741",
+      "role": "#137 bidirectional mutation-coverage matrix"
+    },
+    {
+      "id": "perceptual-benchmark-v1",
+      "path": "sim/qualification/perceptual-benchmark-v1.json",
+      "sha256": "6bbd735e535dc340aed4375ea8ff938071f38e3ab69501e401d94c10e286d6e3",
+      "role": "#147 paired perceptual-diagnostics benchmark (appendix; flag-only)"
+    },
+    {
+      "id": "population-drift-demo-first",
+      "path": "sim/reference/population-drift-demo-first.json",
+      "sha256": "6267aae9285e19fd886a01ee77a04118f51dc0b151bcae0e510d3627bd4aedd7",
+      "role": "#148 population-drift demonstration, first receipt (appendix; flag-only)"
+    },
+    {
+      "id": "population-drift-demo-v2",
+      "path": "sim/reference/population-drift-demo-v2.json",
+      "sha256": "e94a1ed9f1b9b17c94d3eebccc51e767ab8096e55d4b430e3ce1d061e539a44f",
+      "role": "#148 population-drift demonstration, v2 with outlier injection (appendix; flag-only)"
+    },
+    {
+      "id": "measurement-plan",
+      "path": "docs/MEASUREMENT-PLAN.md",
+      "sha256": "1a66a7134289f51e97814ae5c047dec2ad37db121a6ea4ddf46fc437fcf28bd2",
+      "role": "verification ladder L0-L6 and reporting format"
+    },
+    {
+      "id": "dr-0004",
+      "path": "spec/decision-records/0004-verification-claims.md",
+      "sha256": "b3f6ec699524db4854a050e9fdcbbc3d81645361026ba1fe146613b6d3409168",
+      "role": "verdict semantics: separate claims; NO VERDICT, never a zero-error pass"
+    },
+    {
+      "id": "dr-0008",
+      "path": "spec/decision-records/0008-fixed-point-numeric-contract.md",
+      "sha256": "0655ea762bc9c8267ab97f3f06b53f6111c9b0ba138052d479cb0a4a56a9a720",
+      "role": "preregistration discipline (Section 10 calibration policy; M0-M7 definitions)"
+    },
+    {
+      "id": "float-sources-spec",
+      "path": "spec/FLOAT-SOURCES.md",
+      "sha256": "4e918a05553ab0c47e0db852056478b2ba066b1b54562d0f6d688da8fad93cca",
+      "role": "#41 declared comparison classes and fault-localization obligations"
+    },
+    {
+      "id": "control-path-spec",
+      "path": "spec/CONTROL-PATH.md",
+      "sha256": "17730df56ca76cfead66cfaca647ba4d739f833197b1479fb45579e3ffbf3d18",
+      "role": "#40 declared comparison classes and mutation controls"
+    },
+    {
+      "id": "float-mix-spec",
+      "path": "spec/FLOAT-MIX.md",
+      "sha256": "dc991cfdfa05f83bdfd1f1a37518b2c6c75b1ca88920d00730b05ba3e574aaf4",
+      "role": "#42 declared comparison classes and mutation controls"
+    },
+    {
+      "id": "float-voice-spec",
+      "path": "spec/FLOAT-VOICE.md",
+      "sha256": "73a9e8497ec45176640308f2689726baf228c9787129b04e952890314505f455",
+      "role": "#43 composed conformance classes and mutation controls"
+    },
+    {
+      "id": "estimator-qualification-spec",
+      "path": "spec/ESTIMATOR-QUALIFICATION.md",
+      "sha256": "0205c7314dd285765fe1d3edd3693fd778e40aee3cf50146582f280728bc93ea",
+      "role": "estimator ledger semantics; preparation gate; publication view"
+    },
+    {
+      "id": "development-corpus-coverage-spec",
+      "path": "spec/DEVELOPMENT-CORPUS-COVERAGE.md",
+      "sha256": "7efa9cd207cb7269a951e3d85f01ff27d106a303f9a2ba937e1c1c1d988f8f92",
+      "role": "#21 audit identity, findings, coverage gaps"
+    },
+    {
+      "id": "perceptual-benchmark-spec",
+      "path": "spec/PERCEPTUAL-BENCHMARK.md",
+      "sha256": "acc2f1fa6c692c45efd5a4c877af238587f8703944c0d8fbe505e8930d0f3f01",
+      "role": "#45/#147 perceptual diagnostics bounded role"
+    },
+    {
+      "id": "population-metrics-spec",
+      "path": "spec/POPULATION-METRICS.md",
+      "sha256": "6b5fc09ea52eb37bdc75cb9f478af7ec5d81a1dbf7f0e8f0d054c7d8f04cbf91",
+      "role": "#46/#148 population diagnostics narrow role"
+    },
+    {
+      "id": "audio-sources-sweep-v1",
+      "path": "sim/candidates/audio-sources-sweep-v1.json",
+      "sha256": "b86a7ac9c5c34efb2be84cf9886aa17d7ce41c94af607b39d8e9a2bd51265c33",
+      "role": "issue #51 sweep receipt (PR #153): M1 drift-attribution rows, M2 per-geometry table, M3-style phase resolution"
+    },
+    {
+      "id": "control-format-sweep-v1",
+      "path": "sim/reference/control-format-sweep-v1.json",
+      "sha256": "1dab2fed33a4cd371e0a51aa310bfddea32316b8b3662227ca30d28f18369b23",
+      "role": "issue #50 sweep receipt (PR #152): control-path candidate baseline (all rows pass) cited by DR-0008 Section 15"
+    },
+    {
+      "id": "normalization-reciprocal-v1",
+      "path": "sim/reference/normalization-reciprocal-v1.json",
+      "sha256": "f0cb6e50b4f130f3fd9d6b20de3bea6a35d8523e2f194a5f6dbb64ec7927e62b",
+      "role": "issue #52 receipt (PR #150): reciprocal F=22/U1.22 recommendation ratified into C9"
+    },
+    {
+      "id": "choices-register",
+      "path": "spec/reference/fixedpoint-choices-v1.json",
+      "sha256": "e46c25f9edd74e4490b2e6542cb702c70c2dccc7dd9f2d8b5537500544d7a1f9",
+      "role": "DR-0008 Section 12 machine-readable choice register (post-ratification state)"
+    },
+    {
+      "id": "dr-0008-ratified",
+      "path": "spec/decision-records/0008-fixed-point-numeric-contract.md",
+      "sha256": "0655ea762bc9c8267ab97f3f06b53f6111c9b0ba138052d479cb0a4a56a9a720",
+      "role": "DR-0008 as amended 2026-09-21 (Accepted; Section 10 calibrated thresholds; Section 15 ratification record)"
+    }
+  ],
+  "families": {
+    "provenance": {
+      "level": 0,
+      "description": "source/config identity"
+    },
+    "repeatability": {
+      "level": 1,
+      "description": "reference repeatability"
+    },
+    "float-control-path": {
+      "level": 2,
+      "description": "float decomposition: control path (#40)"
+    },
+    "float-sources": {
+      "level": 2,
+      "description": "float decomposition: VCO/noise sources (#41)"
+    },
+    "float-mix": {
+      "level": 2,
+      "description": "float decomposition: VCA/mixer/normalization (#42)"
+    },
+    "float-voice": {
+      "level": 2,
+      "description": "composed whole-voice float conformance (#43)"
+    },
+    "estimator-qualification": {
+      "level": 2,
+      "description": "estimator validity/floors/refusals ledger (#120)"
+    },
+    "mutation-matrix": {
+      "level": 2,
+      "description": "negative-control mutation coverage (#34/#137)"
+    },
+    "fixed-numeric": {
+      "level": 3,
+      "description": "float -> fixed numeric fidelity (open; DR-0008 Section 10)"
+    },
+    "rtl": {
+      "level": 4,
+      "description": "fixed model -> RTL sample-exact (open)"
+    },
+    "perceptual-appendix": {
+      "level": 5,
+      "description": "auditory transparency diagnostics (appendix; flag-only)"
+    },
+    "coverage-strata": {
+      "level": 6,
+      "description": "corpus coverage/strata and open coverage gaps (#21/#128)"
+    },
+    "population-appendix": {
+      "level": 6,
+      "description": "distribution-preservation diagnostics (appendix; flag-only)"
+    }
+  },
+  "rows": [
+    {
+      "id": "R-L0-P1",
+      "family": "provenance",
+      "level": 0,
+      "claim": "Source identity: the normative upstream is the pinned TorchSynth commit declared in spec/reference/upstream.json; every comparison in this rubric is against references rendered from that pin.",
+      "unit": "1",
+      "applicability": "every row of this rubric",
+      "estimator": {
+        "name": "provenance manifest check",
+        "version": "upstream-v1"
+      },
+      "source_id": "upstream",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the pinned commit matches the declared value; any drift FAILs every downstream row (references are no longer the declared target).",
+      "failure_semantics": "a reference rendered from any other commit is MISSING EVIDENCE for identity, never a pass",
+      "assertions": [
+        {
+          "metric": "target_commit",
+          "op": "==",
+          "value": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+          "unit": "1",
+          "source_id": "upstream",
+          "query": {
+            "path": "target_commit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L0-P2",
+      "family": "provenance",
+      "level": 0,
+      "claim": "Corpus preregistration identity: the random corpus is 128 preregistered global indices split 96 development / 32 holdout, blind until thresholds are frozen.",
+      "unit": "1",
+      "applicability": "corpus-derived rows (Levels 1-6)",
+      "estimator": {
+        "name": "preregistered corpus manifest",
+        "version": "corpus-v0"
+      },
+      "source_id": "corpus-v0",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the manifest rules equal the declared values; a changed corpus is a new preregistration and a new rubric version.",
+      "failure_semantics": "editing the corpus after outcomes were examined invalidates corpus-derived rows (MISSING EVIDENCE for identity)",
+      "assertions": [
+        {
+          "metric": "case_count",
+          "op": "==",
+          "value": 128,
+          "unit": "1",
+          "source_id": "corpus-v0",
+          "query": {
+            "path": "rules/case_count"
+          }
+        },
+        {
+          "metric": "development_count",
+          "op": "==",
+          "value": 96,
+          "unit": "1",
+          "source_id": "corpus-v0",
+          "query": {
+            "path": "rules/development_count"
+          }
+        },
+        {
+          "metric": "holdout_count",
+          "op": "==",
+          "value": 32,
+          "unit": "1",
+          "source_id": "corpus-v0",
+          "query": {
+            "path": "rules/holdout_count"
+          }
+        },
+        {
+          "metric": "holdout_blind_rule",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "corpus-v0",
+          "query": {
+            "path": "rules/holdout_is_blind_until_thresholds_are_frozen"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L0-P3",
+      "family": "provenance",
+      "level": 0,
+      "claim": "Case-registry inventory: 69 required rows per case; comparison is time-locked with no alignment and no scaling; holdout policy is sealed-until-thresholds-frozen.",
+      "unit": "1",
+      "applicability": "scorecard coverage denominators for every release verdict",
+      "estimator": {
+        "name": "evidence inventory",
+        "version": "voice-evidence-inventory-v1"
+      },
+      "source_id": "case-registry-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the registry inventory equals the declared values; coverage denominators derive from this inventory.",
+      "failure_semantics": "omitted rows are not detectable without this inventory; a registry change is a new inventory version",
+      "assertions": [
+        {
+          "metric": "required_rows_per_case",
+          "op": "==",
+          "value": 69,
+          "unit": "1",
+          "source_id": "case-registry-v1",
+          "query": {
+            "path": "required_rows",
+            "count": true
+          }
+        },
+        {
+          "metric": "holdout_policy",
+          "op": "==",
+          "value": "sealed-until-thresholds-frozen",
+          "unit": "1",
+          "source_id": "case-registry-v1",
+          "query": {
+            "path": "configuration/holdout_policy"
+          }
+        },
+        {
+          "metric": "comparison_contract",
+          "op": "==",
+          "value": "time-locked-no-alignment-no-scaling",
+          "unit": "1",
+          "source_id": "case-registry-v1",
+          "query": {
+            "path": "configuration/comparison"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L1-R1",
+      "family": "repeatability",
+      "level": 1,
+      "claim": "Reference repeatability: the development corpus re-renders byte-identically (96/96 identities, zero divergences, re-derived per identity in the #21 audit), and the audit read zero holdout identities.",
+      "unit": "1",
+      "applicability": "global indices 0-95 (development partition only)",
+      "estimator": {
+        "name": "repeat receipt re-qualification",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the audit verdict is QUALIFIED over the full 96-case denominator and zero holdout identities were read; any divergence is FAIL.",
+      "failure_semantics": "a non-repeating reference invalidates every float-comparison row built on it (MISSING EVIDENCE until re-qualified)",
+      "assertions": [
+        {
+          "metric": "audit_verdict",
+          "op": "==",
+          "value": "QUALIFIED",
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "verdict"
+          }
+        },
+        {
+          "metric": "observed_repeat_identities",
+          "op": "==",
+          "value": 96,
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "denominator/observed_rows"
+          }
+        },
+        {
+          "metric": "expected_repeat_identities",
+          "op": "==",
+          "value": 96,
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "denominator/expected"
+          }
+        },
+        {
+          "metric": "holdout_identities_read",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "denominator/holdout_identities_read"
+          }
+        },
+        {
+          "metric": "expected_identity_count",
+          "op": "==",
+          "value": 96,
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "expected_identity_count"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-adsr_1.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace adsr_1.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 1.52587890625e-05; framing match tolerance 0); calibrated measured maximum 7.450580596923828e-06 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 1.52587890625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_1.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_1.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 7.450580596923828e-06,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_1.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-adsr_2.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace adsr_2.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.000244140625; framing match tolerance 0); calibrated measured maximum 7.97659158706665e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.000244140625,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_2.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_2.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 7.97659158706665e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/adsr_2.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-control_upsample.noise_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace control_upsample.noise_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.6226043701171875e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.noise_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.noise_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.6226043701171875e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.noise_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-control_upsample.vco_1_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace control_upsample.vco_1_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.0001220703125; framing match tolerance 0); calibrated measured maximum 4.285573959350586e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0001220703125,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 4.285573959350586e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-control_upsample.vco_1_pitch",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace control_upsample.vco_1_pitch: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.0001220703125; framing match tolerance 0); calibrated measured maximum 3.388524055480957e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0001220703125,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_pitch/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_pitch/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 3.388524055480957e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_1_pitch/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-control_upsample.vco_2_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace control_upsample.vco_2_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.777576446533203e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.777576446533203e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-control_upsample.vco_2_pitch",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace control_upsample.vco_2_pitch: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.0001220703125; framing match tolerance 0); calibrated measured maximum 3.629922866821289e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0001220703125,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_pitch/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_pitch/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 3.629922866821289e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/control_upsample.vco_2_pitch/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-keyboard.duration",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace keyboard.duration: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.0; framing match tolerance 0); calibrated measured maximum 0.0 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.duration/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.duration/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 0.0,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.duration/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-keyboard.midi_f0",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace keyboard.midi_f0: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 0.0; framing match tolerance 0); calibrated measured maximum 0.0 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.midi_f0/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.midi_f0/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 0.0,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/keyboard.midi_f0/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_1.post_control_vca",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_1.post_control_vca: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 3.0517578125e-05; framing match tolerance 0); calibrated measured maximum 1.1444091796875e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 3.0517578125e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.post_control_vca/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.post_control_vca/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 1.1444091796875e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.post_control_vca/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_1.raw",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_1.raw: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.6404857635498047e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.raw/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.raw/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.6404857635498047e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1.raw/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_1_amp_adsr.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_1_amp_adsr.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 1.52587890625e-05; framing match tolerance 0); calibrated measured maximum 5.125999450683594e-06 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 1.52587890625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_amp_adsr.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_amp_adsr.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 5.125999450683594e-06,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_amp_adsr.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_1_rate_adsr.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_1_rate_adsr.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.434849739074707e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_rate_adsr.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_rate_adsr.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.434849739074707e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_1_rate_adsr.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_2.post_control_vca",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_2.post_control_vca: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 3.0517578125e-05; framing match tolerance 0); calibrated measured maximum 1.4156103134155273e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 3.0517578125e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.post_control_vca/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.post_control_vca/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 1.4156103134155273e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.post_control_vca/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_2.raw",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_2.raw: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.6404857635498047e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.raw/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.raw/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.6404857635498047e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2.raw/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_2_amp_adsr.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_2_amp_adsr.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 1.627206802368164e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_amp_adsr.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_amp_adsr.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 1.627206802368164e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_amp_adsr.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-lfo_2_rate_adsr.output",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace lfo_2_rate_adsr.output: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 3.0517578125e-05; framing match tolerance 0); calibrated measured maximum 8.64267349243164e-06 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 3.0517578125e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_rate_adsr.output/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_rate_adsr.output/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 8.64267349243164e-06,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/lfo_2_rate_adsr.output/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-mod_matrix.noise_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace mod_matrix.noise_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.0265579223632812e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.noise_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.noise_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.0265579223632812e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.noise_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-mod_matrix.vco_1_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace mod_matrix.vco_1_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.0265579223632812e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.0265579223632812e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-mod_matrix.vco_1_pitch",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace mod_matrix.vco_1_pitch: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.0265579223632812e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_pitch/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_pitch/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.0265579223632812e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_1_pitch/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-mod_matrix.vco_2_amp",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace mod_matrix.vco_2_amp: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.0265579223632812e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_amp/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_amp/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.0265579223632812e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_amp/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-mod_matrix.vco_2_pitch",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Trace mod_matrix.vco_2_pitch: independent float control path matches the pinned Voice under the preregistered control-path rubric (max abs error <= 6.103515625e-05; framing match tolerance 0); calibrated measured maximum 2.0265579223632812e-05 recorded for provenance.",
+      "unit": "amplitude",
+      "applicability": "all 488 preregistered fixtures (392 directed + 96 development cases), partition development",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "control-path-rubric-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff framing matches and observed max_abs_error <= the limit; FAIL on excess; NO VERDICT on estimator or preparation refusal; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 6.103515625e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_pitch/limits/max_abs_error/tolerance"
+          }
+        },
+        {
+          "metric": "framing_match_tolerance",
+          "op": "==",
+          "value": 0,
+          "unit": "1",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_pitch/limits/framing_match/tolerance"
+          }
+        },
+        {
+          "metric": "calibrated_max_abs_error",
+          "op": "==",
+          "value": 2.0265579223632812e-05,
+          "unit": "amplitude",
+          "source_id": "control-path-rubric-v1",
+          "query": {
+            "path": "traces/mod_matrix.vco_2_pitch/calibrated_max_abs_error"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-ENDPOINTS",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Upsample endpoint contract: first/last binary32 samples of every upsampled column are byte-equal to the control columns, on the reference capture and the model match (488/488 cases).",
+      "unit": "1",
+      "applicability": "all 488 preregistered fixtures; all five shared endpoint-aligned upsamplers",
+      "estimator": {
+        "name": "endpoint byte check",
+        "version": "trace-capture-v1"
+      },
+      "source_id": "control-path-float-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff both records assert endpoints_all_exact; any endpoint divergence FAILs (a dropped or shifted endpoint is a defect, never an alignment problem).",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "match_endpoints_all_exact",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "match/endpoints_all_exact"
+          }
+        },
+        {
+          "metric": "match_trace_rows",
+          "op": "==",
+          "value": 10736,
+          "unit": "rows",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "match/trace_rows"
+          }
+        },
+        {
+          "metric": "match_pass_rows",
+          "op": "==",
+          "value": 10736,
+          "unit": "rows",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "match/pass_rows"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-CP-MUTATIONS",
+      "family": "float-control-path",
+      "level": 2,
+      "claim": "Control-path negative controls: clamp-mod-matrix, selector-lfo, integer-adsr-timing, ZOH-upsampling and off-endpoint-coordinate each fail the declared match on the exercised development draws; a mutation that does not fail is a defect of the control, not a pass.",
+      "unit": "1",
+      "applicability": "development draws 0-7 (fixed order, per spec/CONTROL-PATH.md)",
+      "estimator": {
+        "name": "mutation control harness",
+        "version": "compare-control-path-v1"
+      },
+      "source_id": "control-path-float-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff every preregistered mutation is recorded failed=true; a non-failing mutation FAILs this row (metric defect).",
+      "failure_semantics": "an undetected fault means the comparison cannot distinguish pass from fail (DR-0004): dependent rows are NO VERDICT, never a pass",
+      "assertions": [
+        {
+          "metric": "mutation_clamp-mod-matrix_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "clamp-mod-matrix"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        },
+        {
+          "metric": "mutation_selector-lfo_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "selector-lfo"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        },
+        {
+          "metric": "mutation_integer-adsr-timing_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "integer-adsr-timing"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        },
+        {
+          "metric": "mutation_upsample-mode-zoh_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "upsample-mode-zoh"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        },
+        {
+          "metric": "mutation_upsample-mode-off-endpoint_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "control-path-float-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "upsample-mode-off-endpoint"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-boundary:vco_1.initial_phase:upper",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Declared source checkpoint boundary:vco_1.initial_phase:upper: independent float VCO models match the pinned Voice with max abs error <= 0.0001 linear amplitude at the declared checkpoints.",
+      "unit": "linear-amplitude",
+      "applicability": "directed checkpoint case boundary:vco_1.initial_phase:upper (vco_1.raw, vco_2.raw); float32 calculation policy float-sources-v1",
+      "estimator": {
+        "name": "paired metrics at declared checkpoints",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff observed max abs error <= the declared limit; FAIL on excess; NO VERDICT when the qualified release-era environment is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.0001,
+          "unit": "linear-amplitude",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "limits/boundary:vco_1.initial_phase:upper"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-boundary:vco_1.mod_depth:upper",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Declared source checkpoint boundary:vco_1.mod_depth:upper: independent float VCO models match the pinned Voice with max abs error <= 0.05 linear amplitude at the declared checkpoints.",
+      "unit": "linear-amplitude",
+      "applicability": "directed checkpoint case boundary:vco_1.mod_depth:upper (vco_1.raw, vco_2.raw); float32 calculation policy float-sources-v1",
+      "estimator": {
+        "name": "paired metrics at declared checkpoints",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff observed max abs error <= the declared limit; FAIL on excess; NO VERDICT when the qualified release-era environment is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.05,
+          "unit": "linear-amplitude",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "limits/boundary:vco_1.mod_depth:upper"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-boundary:vco_1.tuning:upper",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Declared source checkpoint boundary:vco_1.tuning:upper: independent float VCO models match the pinned Voice with max abs error <= 5e-05 linear amplitude at the declared checkpoints.",
+      "unit": "linear-amplitude",
+      "applicability": "directed checkpoint case boundary:vco_1.tuning:upper (vco_1.raw, vco_2.raw); float32 calculation policy float-sources-v1",
+      "estimator": {
+        "name": "paired metrics at declared checkpoints",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff observed max abs error <= the declared limit; FAIL on excess; NO VERDICT when the qualified release-era environment is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 5e-05,
+          "unit": "linear-amplitude",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "limits/boundary:vco_1.tuning:upper"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-boundary:vco_2.mod_depth:upper",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Declared source checkpoint boundary:vco_2.mod_depth:upper: independent float VCO models match the pinned Voice with max abs error <= 0.05 linear amplitude at the declared checkpoints.",
+      "unit": "linear-amplitude",
+      "applicability": "directed checkpoint case boundary:vco_2.mod_depth:upper (vco_1.raw, vco_2.raw); float32 calculation policy float-sources-v1",
+      "estimator": {
+        "name": "paired metrics at declared checkpoints",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff observed max abs error <= the declared limit; FAIL on excess; NO VERDICT when the qualified release-era environment is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.05,
+          "unit": "linear-amplitude",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "limits/boundary:vco_2.mod_depth:upper"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-waveform:vco_2:saw",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Declared source checkpoint waveform:vco_2:saw: independent float VCO models match the pinned Voice with max abs error <= 0.001 linear amplitude at the declared checkpoints.",
+      "unit": "linear-amplitude",
+      "applicability": "directed checkpoint case waveform:vco_2:saw (vco_1.raw, vco_2.raw); float32 calculation policy float-sources-v1",
+      "estimator": {
+        "name": "paired metrics at declared checkpoints",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff observed max abs error <= the declared limit; FAIL on excess; NO VERDICT when the qualified release-era environment is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "max_abs_error_limit",
+          "op": "==",
+          "value": 0.001,
+          "unit": "linear-amplitude",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "limits/waveform:vco_2:saw"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-NOISE",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Noise identity is bit-exact: the resolved slot-0 stream reproduces the pinned torch stream (seed 13, slot sound_index % 32); no tolerance exists for noise.",
+      "unit": "1",
+      "applicability": "noise.raw / input.noise for every case; all 32 precomputed slots",
+      "estimator": {
+        "name": "exact-bytes digest identity",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the digests are equal and bit_exact is true; any noise difference is FAIL (exactness, never a tolerance).",
+      "failure_semantics": "a wrong slot or seed is a detected fault (mutation matrix), never a tolerable difference",
+      "assertions": [
+        {
+          "metric": "noise_bit_exact",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-sources-v1",
+          "query": {
+            "path": "noise/bit_exact"
+          }
+        },
+        {
+          "metric": "slot0_regeneration_digest_binding",
+          "op": "cross_equal",
+          "unit": "1",
+          "left": {
+            "source_id": "float-sources-v1",
+            "query": {
+              "path": "noise/declared_slot0_sha256"
+            }
+          },
+          "right": {
+            "source_id": "float-sources-v1",
+            "query": {
+              "path": "noise/model_regeneration_sha256"
+            }
+          },
+          "note": "the declared pinned stream digest and the model's regeneration digest must be the same bytes"
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FS-MUTATIONS",
+      "family": "float-sources",
+      "level": 2,
+      "claim": "Source fault localization is required: mutations that ignore tuning, clamp frequency inside the band, wrap the phase accumulator, assume the bare-initial-phase convention, force the square shape, or select a wrong noise slot/seed must fail their comparisons (a Nyquist clamp is bit-identically ineffective in the clamped-MIDI domain and is recorded as a no-op, not a pass).",
+      "unit": "1",
+      "applicability": "the five declared checkpoint cases; declared in spec/FLOAT-SOURCES.md",
+      "estimator": {
+        "name": "declared fault-localization controls",
+        "version": "float-sources-v1"
+      },
+      "source_id": "float-sources-spec",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the declared localization obligations hold in the landed tests; an undetected declared fault FAILs this row.",
+      "failure_semantics": "an undetected fault is a metric defect (DR-0008 Section 10 M7), never a pass",
+      "assertions": [
+        {
+          "metric": "declared_obligation",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-sources-spec",
+          "query": {
+            "path": null
+          },
+          "note": "declared comparison class; enforcement recorded in spec/FLOAT-SOURCES.md verification table (21 tests)"
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FM-POSTVCA",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Post-VCA lanes are IEEE-deterministic: with bit-exact captured inputs, vco_1.post_vca, vco_2.post_vca and noise.post_vca must equal the captured buffers byte-for-byte; any observed difference is a mismatch, never a tolerance problem.",
+      "unit": "1",
+      "applicability": "cases with captured inputs; declared comparison class of spec/FLOAT-MIX.md",
+      "estimator": {
+        "name": "byte identity on captured inputs",
+        "version": "float-mix-v1"
+      },
+      "source_id": "float-mix-spec",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the byte-identity rows pass; any byte difference on an IEEE-deterministic site is FAIL.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "declared_byte_identity_class",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-mix-spec",
+          "query": {
+            "path": null
+          },
+          "note": "declared comparison class (spec/FLOAT-MIX.md, Comparison classes and declared limits); enforced by tests/test_float_mix.py and tools/compare_float_mix.py"
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FM-mixer.pre_normalization",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Trace mixer.pre_normalization: paired max_abs_error against the captured buffers under the measure-then-preregister policy; byte identity is expected wherever the pinned GEMM did not fuse an FMA across the three-term reduction.",
+      "unit": "amplitude",
+      "applicability": "capture-calibrated comparisons of the mix chain (spec/FLOAT-MIX.md)",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "float-mix-spec",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until a landed, digest-bound limit exists; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "preregister the numeric limit as the smallest power of two >= 2x the measured calibration maximum, recorded in a landed artifact and bound here by digest",
+      "open_reason": "no committed artifact records the calibrated numeric limit for this trace; the limit is deliberately not invented here"
+    },
+    {
+      "id": "R-L2-FM-mixer.output",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Trace mixer.output: paired max_abs_error against the captured buffers under the measure-then-preregister policy; byte identity is expected wherever the pinned GEMM did not fuse an FMA across the three-term reduction.",
+      "unit": "amplitude",
+      "applicability": "capture-calibrated comparisons of the mix chain (spec/FLOAT-MIX.md)",
+      "estimator": {
+        "name": "time-locked paired metrics",
+        "version": "paired-metrics-v1"
+      },
+      "source_id": "float-mix-spec",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until a landed, digest-bound limit exists; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "preregister the numeric limit as the smallest power of two >= 2x the measured calibration maximum, recorded in a landed artifact and bound here by digest",
+      "open_reason": "no committed artifact records the calibrated numeric limit for this trace; the limit is deliberately not invented here"
+    },
+    {
+      "id": "R-L2-FM-PEAK",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Normalization peak is an exact scalar: mixer.peak digests recorded by the composed conformance record equal the release-era capture digests for the three directed normalization cases (above/below/tie) with peaks exactly on the directed binary32 targets.",
+      "unit": "1",
+      "applicability": "directed normalization cases and every whole-clip peak decision",
+      "estimator": {
+        "name": "exact-digest scalar identity",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff every digest binding is equal; a digest mismatch is FAIL; MISSING EVIDENCE when the capture is absent.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "peak_digest_binding_normalization:above",
+          "op": "cross_equal",
+          "unit": "1",
+          "left": {
+            "source_id": "float-voice-v1",
+            "query": {
+              "stages": [
+                {
+                  "path": "cases/*",
+                  "where": {
+                    "case_id": "normalization:above"
+                  }
+                },
+                {
+                  "path": "rows/*",
+                  "where": {
+                    "checkpoint": "mixer.peak",
+                    "kind": "exact-digest"
+                  }
+                }
+              ],
+              "field": "expected"
+            }
+          },
+          "right": {
+            "source_id": "trace-capture",
+            "query": {
+              "path": "cases/*",
+              "where": {
+                "case/id": "normalization:above"
+              },
+              "field": "normalization_branch/peak_sha256",
+              "equals": null
+            }
+          },
+          "note": "composed-record peak digest equals the release-era capture digest for normalization:above"
+        },
+        {
+          "metric": "peak_digest_binding_normalization:below",
+          "op": "cross_equal",
+          "unit": "1",
+          "left": {
+            "source_id": "float-voice-v1",
+            "query": {
+              "stages": [
+                {
+                  "path": "cases/*",
+                  "where": {
+                    "case_id": "normalization:below"
+                  }
+                },
+                {
+                  "path": "rows/*",
+                  "where": {
+                    "checkpoint": "mixer.peak",
+                    "kind": "exact-digest"
+                  }
+                }
+              ],
+              "field": "expected"
+            }
+          },
+          "right": {
+            "source_id": "trace-capture",
+            "query": {
+              "path": "cases/*",
+              "where": {
+                "case/id": "normalization:below"
+              },
+              "field": "normalization_branch/peak_sha256",
+              "equals": null
+            }
+          },
+          "note": "composed-record peak digest equals the release-era capture digest for normalization:below"
+        },
+        {
+          "metric": "peak_digest_binding_normalization:tie",
+          "op": "cross_equal",
+          "unit": "1",
+          "left": {
+            "source_id": "float-voice-v1",
+            "query": {
+              "stages": [
+                {
+                  "path": "cases/*",
+                  "where": {
+                    "case_id": "normalization:tie"
+                  }
+                },
+                {
+                  "path": "rows/*",
+                  "where": {
+                    "checkpoint": "mixer.peak",
+                    "kind": "exact-digest"
+                  }
+                }
+              ],
+              "field": "expected"
+            }
+          },
+          "right": {
+            "source_id": "trace-capture",
+            "query": {
+              "path": "cases/*",
+              "where": {
+                "case/id": "normalization:tie"
+              },
+              "field": "normalization_branch/peak_sha256",
+              "equals": null
+            }
+          },
+          "note": "composed-record peak digest equals the release-era capture digest for normalization:tie"
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FM-GAIN",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Derived gain rule: mixer.gain is f32(1/peak) exactly on the strict peak > 1 branch and 1.0 otherwise, matching the release-era capture branch relations (division applied above one; bypass preserves input bytes at or below one, including the tie at exactly 1.0 and silence).",
+      "unit": "1",
+      "applicability": "normalization:above / below / tie plus the normalization_exercise buffers (at-boundary, late-peak, silence, tied-maximum)",
+      "estimator": {
+        "name": "branch relation digest checks",
+        "version": "trace-capture-v1"
+      },
+      "source_id": "trace-capture",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff every recorded branch relation is true; a violated branch relation is FAIL (limiter/AGC substitutes are DR-0003-forbidden and are mutation-detected).",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "above_division_applied",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/above/division_applied"
+          }
+        },
+        {
+          "metric": "above_gain_rule",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/above/derived_gain_matches_rule"
+          }
+        },
+        {
+          "metric": "below_bypass_bytes",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/below/output_matches_original_branch"
+          }
+        },
+        {
+          "metric": "at_boundary_bypass",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/at-boundary/output_matches_original_branch"
+          }
+        },
+        {
+          "metric": "late_peak_bypass",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/late-peak/output_matches_original_branch"
+          }
+        },
+        {
+          "metric": "silence_unity",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/silence/output_matches_original_branch"
+          }
+        },
+        {
+          "metric": "tied_maximum_bypass",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "normalization_exercise/tied-maximum/output_matches_original_branch"
+          }
+        },
+        {
+          "metric": "tie_case_bypass_bytes",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "trace-capture",
+          "query": {
+            "path": "cases/*",
+            "where": {
+              "case/id": "normalization:tie"
+            },
+            "field": "normalization_branch/output_equals_original_branch_bytes",
+            "equals": true,
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FM-MUTATIONS",
+      "family": "float-mix",
+      "level": 2,
+      "claim": "Mix-chain mutation controls: limiter-substitute, agc-substitute, normalization-always-on, normalization-off, wrong-peak, wrong-mix-order, pre-vca-gain and latest-index-tie each fail their named comparison rows; a mutation that does not fail is a defect of the control, not a pass.",
+      "unit": "1",
+      "applicability": "the declared mutation table of spec/FLOAT-MIX.md",
+      "estimator": {
+        "name": "declared mutation controls",
+        "version": "float-mix-v1"
+      },
+      "source_id": "float-mix-spec",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff every declared mutation fails its named rows; a non-failing mutation FAILs this row.",
+      "failure_semantics": "an undetected fault is a metric defect (DR-0008 Section 10 M7), never a pass",
+      "assertions": [
+        {
+          "metric": "declared_obligation",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-mix-spec",
+          "query": {
+            "path": null
+          },
+          "note": "declared mutation table; enforcement recorded in spec/FLOAT-MIX.md verification table (42 tests)"
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-STRUCTURE",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Structural identity: the composed render produces all 32 registry checkpoints in evaluation order with registry shape, rate, dtype and binary32 encodability, and the record keeps its four row classes apart.",
+      "unit": "1",
+      "applicability": "every composed case (5 pinned fixtures + 3 directed normalization + 2 development receipts)",
+      "estimator": {
+        "name": "structural identity checks",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff all 32 checkpoints are present per case and class separation holds; a missing checkpoint is MISSING EVIDENCE for that row, never coverage.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "checkpoint_count",
+          "op": "==",
+          "value": 32,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "checkpoint_order",
+            "count": true
+          }
+        },
+        {
+          "metric": "case_count",
+          "op": "==",
+          "value": 10,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "cases",
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-VALIDITY",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Validity invariants: exact-byte input identity, request immutability, repeated-render and restore byte-identity (no cross-render state), derived-gain rule, branch/byte relations and exact upsample endpoints hold in the composed model.",
+      "unit": "1",
+      "applicability": "every composed render",
+      "estimator": {
+        "name": "validity class checks",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff all recorded invariants are true; any violated invariant is FAIL.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "assertions": [
+        {
+          "metric": "repeated_render_byte_identical",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "render_invariants/repeated_render_byte_identical"
+          }
+        },
+        {
+          "metric": "changed_then_restored_byte_identical",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "render_invariants/changed_request_then_restoration_byte_identical"
+          }
+        },
+        {
+          "metric": "request_unchanged_after_renders",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "render_invariants/request_unchanged_after_renders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-NUMERIC",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Composed numeric conformance: every decided numeric row of the composed whole-voice record is PASS with its own per-row limit and provenance (store-gated rows are retained receipts, never verdicts).",
+      "unit": "rows",
+      "applicability": "decided rows of sim/reference/float-voice-v1.json over its preregistered cases",
+      "estimator": {
+        "name": "composed declared-metrics + exact-digest rows",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff decided FAIL rows are zero and the PASS count equals the committed record; a new FAIL is a release-blocking mismatch.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "decided_rows_pass",
+          "op": "==",
+          "value": 634,
+          "unit": "rows",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "cases/*/rows",
+            "where": {
+              "verdict": "PASS"
+            },
+            "count": true
+          }
+        },
+        {
+          "metric": "decided_rows_fail",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "cases/*/rows",
+            "where": {
+              "verdict": "FAIL"
+            },
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-MUT-swapped-vco-pitch",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Composed wiring mutation swapped-vco-pitch must fail its named composed rows on its gate case, preserve its intact rows, and localize to the declared module boundary.",
+      "unit": "1",
+      "applicability": "gate case per spec/FLOAT-VOICE.md (swapped-vco-pitch)",
+      "estimator": {
+        "name": "composed mutation harness",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the mutation is recorded failed=true; a non-failing mutation FAILs this row (metric defect).",
+      "failure_semantics": "an undetected fault is a metric defect (DR-0008 Section 10 M7), never a pass",
+      "assertions": [
+        {
+          "metric": "mutation_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "swapped-vco-pitch"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-MUT-lfo-adsr-control-swap",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Composed wiring mutation lfo-adsr-control-swap must fail its named composed rows on its gate case, preserve its intact rows, and localize to the declared module boundary.",
+      "unit": "1",
+      "applicability": "gate case per spec/FLOAT-VOICE.md (lfo-adsr-control-swap)",
+      "estimator": {
+        "name": "composed mutation harness",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the mutation is recorded failed=true; a non-failing mutation FAILs this row (metric defect).",
+      "failure_semantics": "an undetected fault is a metric defect (DR-0008 Section 10 M7), never a pass",
+      "assertions": [
+        {
+          "metric": "mutation_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "lfo-adsr-control-swap"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-FV-MUT-normalize-before-mix",
+      "family": "float-voice",
+      "level": 2,
+      "claim": "Composed wiring mutation normalize-before-mix must fail its named composed rows on its gate case, preserve its intact rows, and localize to the declared module boundary.",
+      "unit": "1",
+      "applicability": "gate case per spec/FLOAT-VOICE.md (normalize-before-mix)",
+      "estimator": {
+        "name": "composed mutation harness",
+        "version": "float-voice-v1"
+      },
+      "source_id": "float-voice-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the mutation is recorded failed=true; a non-failing mutation FAILs this row (metric defect).",
+      "failure_semantics": "an undetected fault is a metric defect (DR-0008 Section 10 M7), never a pass",
+      "assertions": [
+        {
+          "metric": "mutation_failed",
+          "op": "==",
+          "value": 1,
+          "unit": "1",
+          "source_id": "float-voice-v1",
+          "query": {
+            "path": "mutations",
+            "where": {
+              "mutation": "normalize-before-mix"
+            },
+            "field": "failed",
+            "equals": true,
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-EST-paired",
+      "family": "estimator-qualification",
+      "level": 2,
+      "claim": "Estimator family 'paired' (algorithm paired-metrics-v1) is qualified over its landed grid with recorded floors, validity predicate and refusals; census recomputed from validated raw rows: coverage {\"missing\": 0, \"present\": 510, \"qualified\": 2, \"refused\": 506, \"requested\": 510}, verdicts {\"FAIL\": 2, \"MISSING EVIDENCE\": 0, \"NO VERDICT\": 506, \"PASS\": 2}.",
+      "unit": "cases",
+      "applicability": "the landed paired qualification grid; preparation-dependent: False",
+      "estimator": {
+        "name": "estimator qualification ledger",
+        "version": "estimator-qualification-v1 (paired-metrics-v1)"
+      },
+      "source_id": "estimators-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the recomputed census equals the committed ledger; floor-limited comparisons refuse (NO VERDICT) and are never loosened to pass; a preparation failure forces every preparation-dependent family to NO VERDICT with a concrete reason.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "coverage_present",
+          "op": "==",
+          "value": 510,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/coverage/present"
+          }
+        },
+        {
+          "metric": "coverage_qualified",
+          "op": "==",
+          "value": 2,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/coverage/qualified"
+          }
+        },
+        {
+          "metric": "coverage_refused",
+          "op": "==",
+          "value": 506,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/coverage/refused"
+          }
+        },
+        {
+          "metric": "coverage_missing",
+          "op": "==",
+          "value": 0,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/coverage/missing"
+          }
+        },
+        {
+          "metric": "verdict_pass",
+          "op": "==",
+          "value": 2,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/verdicts/PASS"
+          }
+        },
+        {
+          "metric": "verdict_fail",
+          "op": "==",
+          "value": 2,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/verdicts/FAIL"
+          }
+        },
+        {
+          "metric": "verdict_no_verdict",
+          "op": "==",
+          "value": 506,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/verdicts/NO VERDICT"
+          }
+        },
+        {
+          "metric": "verdict_missing_evidence",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/paired/verdicts/MISSING EVIDENCE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-EST-periodic",
+      "family": "estimator-qualification",
+      "level": 2,
+      "claim": "Estimator family 'periodic' (algorithm periodic-v2) is qualified over its landed grid with recorded floors, validity predicate and refusals; census recomputed from validated raw rows: coverage {\"missing\": 0, \"present\": 1605, \"qualified\": 202, \"refused\": 119, \"requested\": 321}, verdicts {\"FAIL\": 6, \"MISSING EVIDENCE\": 0, \"NO VERDICT\": 665, \"PASS\": 934}.",
+      "unit": "cases",
+      "applicability": "the landed periodic qualification grid; preparation-dependent: True",
+      "estimator": {
+        "name": "estimator qualification ledger",
+        "version": "estimator-qualification-v1 (periodic-v2)"
+      },
+      "source_id": "estimators-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the recomputed census equals the committed ledger; floor-limited comparisons refuse (NO VERDICT) and are never loosened to pass; a preparation failure forces every preparation-dependent family to NO VERDICT with a concrete reason.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "coverage_present",
+          "op": "==",
+          "value": 1605,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/coverage/present"
+          }
+        },
+        {
+          "metric": "coverage_qualified",
+          "op": "==",
+          "value": 202,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/coverage/qualified"
+          }
+        },
+        {
+          "metric": "coverage_refused",
+          "op": "==",
+          "value": 119,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/coverage/refused"
+          }
+        },
+        {
+          "metric": "coverage_missing",
+          "op": "==",
+          "value": 0,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/coverage/missing"
+          }
+        },
+        {
+          "metric": "verdict_pass",
+          "op": "==",
+          "value": 934,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/verdicts/PASS"
+          }
+        },
+        {
+          "metric": "verdict_fail",
+          "op": "==",
+          "value": 6,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/verdicts/FAIL"
+          }
+        },
+        {
+          "metric": "verdict_no_verdict",
+          "op": "==",
+          "value": 665,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/verdicts/NO VERDICT"
+          }
+        },
+        {
+          "metric": "verdict_missing_evidence",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/periodic/verdicts/MISSING EVIDENCE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-EST-envelope",
+      "family": "estimator-qualification",
+      "level": 2,
+      "claim": "Estimator family 'envelope' (algorithm envelope-routes-qualification-v1) is qualified over its landed grid with recorded floors, validity predicate and refusals; census recomputed from validated raw rows: coverage {\"missing\": 0, \"present\": 2407, \"qualified\": 1158, \"refused\": 79, \"requested\": 387}, verdicts {\"FAIL\": 164, \"MISSING EVIDENCE\": 0, \"NO VERDICT\": 508, \"PASS\": 1735}.",
+      "unit": "cases",
+      "applicability": "the landed envelope qualification grid; preparation-dependent: True",
+      "estimator": {
+        "name": "estimator qualification ledger",
+        "version": "estimator-qualification-v1 (envelope-routes-qualification-v1)"
+      },
+      "source_id": "estimators-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the recomputed census equals the committed ledger; floor-limited comparisons refuse (NO VERDICT) and are never loosened to pass; a preparation failure forces every preparation-dependent family to NO VERDICT with a concrete reason.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "coverage_present",
+          "op": "==",
+          "value": 2407,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/coverage/present"
+          }
+        },
+        {
+          "metric": "coverage_qualified",
+          "op": "==",
+          "value": 1158,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/coverage/qualified"
+          }
+        },
+        {
+          "metric": "coverage_refused",
+          "op": "==",
+          "value": 79,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/coverage/refused"
+          }
+        },
+        {
+          "metric": "coverage_missing",
+          "op": "==",
+          "value": 0,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/coverage/missing"
+          }
+        },
+        {
+          "metric": "verdict_pass",
+          "op": "==",
+          "value": 1735,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/verdicts/PASS"
+          }
+        },
+        {
+          "metric": "verdict_fail",
+          "op": "==",
+          "value": 164,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/verdicts/FAIL"
+          }
+        },
+        {
+          "metric": "verdict_no_verdict",
+          "op": "==",
+          "value": 508,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/verdicts/NO VERDICT"
+          }
+        },
+        {
+          "metric": "verdict_missing_evidence",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/envelope/verdicts/MISSING EVIDENCE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-EST-spectral",
+      "family": "estimator-qualification",
+      "level": 2,
+      "claim": "Estimator family 'spectral' (algorithm spectral-noise-mix-v1) is qualified over its landed grid with recorded floors, validity predicate and refusals; census recomputed from validated raw rows: coverage {\"missing\": 26, \"present\": 2396, \"qualified\": 879, \"refused\": 1484, \"requested\": 150}, verdicts {\"FAIL\": 33, \"MISSING EVIDENCE\": 26, \"NO VERDICT\": 1458, \"PASS\": 879}.",
+      "unit": "cases",
+      "applicability": "the landed spectral qualification grid; preparation-dependent: True",
+      "estimator": {
+        "name": "estimator qualification ledger",
+        "version": "estimator-qualification-v1 (spectral-noise-mix-v1)"
+      },
+      "source_id": "estimators-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the recomputed census equals the committed ledger; floor-limited comparisons refuse (NO VERDICT) and are never loosened to pass; a preparation failure forces every preparation-dependent family to NO VERDICT with a concrete reason.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "coverage_present",
+          "op": "==",
+          "value": 2396,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/coverage/present"
+          }
+        },
+        {
+          "metric": "coverage_qualified",
+          "op": "==",
+          "value": 879,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/coverage/qualified"
+          }
+        },
+        {
+          "metric": "coverage_refused",
+          "op": "==",
+          "value": 1484,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/coverage/refused"
+          }
+        },
+        {
+          "metric": "coverage_missing",
+          "op": "==",
+          "value": 26,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/coverage/missing"
+          }
+        },
+        {
+          "metric": "verdict_pass",
+          "op": "==",
+          "value": 879,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/verdicts/PASS"
+          }
+        },
+        {
+          "metric": "verdict_fail",
+          "op": "==",
+          "value": 33,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/verdicts/FAIL"
+          }
+        },
+        {
+          "metric": "verdict_no_verdict",
+          "op": "==",
+          "value": 1458,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/verdicts/NO VERDICT"
+          }
+        },
+        {
+          "metric": "verdict_missing_evidence",
+          "op": "==",
+          "value": 26,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/spectral/verdicts/MISSING EVIDENCE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-EST-preparation",
+      "family": "estimator-qualification",
+      "level": 2,
+      "claim": "Estimator family 'preparation' (algorithm preparation-qualification) is qualified over its landed grid with recorded floors, validity predicate and refusals; census recomputed from validated raw rows: coverage {\"missing\": 0, \"present\": 70, \"qualified\": 70, \"refused\": 0, \"requested\": 70}, verdicts {\"FAIL\": 0, \"MISSING EVIDENCE\": 0, \"NO VERDICT\": 0, \"PASS\": 70}.",
+      "unit": "cases",
+      "applicability": "the landed preparation qualification grid; preparation-dependent: False",
+      "estimator": {
+        "name": "estimator qualification ledger",
+        "version": "estimator-qualification-v1 (preparation-qualification)"
+      },
+      "source_id": "estimators-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the recomputed census equals the committed ledger; floor-limited comparisons refuse (NO VERDICT) and are never loosened to pass; a preparation failure forces every preparation-dependent family to NO VERDICT with a concrete reason.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "coverage_present",
+          "op": "==",
+          "value": 70,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/coverage/present"
+          }
+        },
+        {
+          "metric": "coverage_qualified",
+          "op": "==",
+          "value": 70,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/coverage/qualified"
+          }
+        },
+        {
+          "metric": "coverage_refused",
+          "op": "==",
+          "value": 0,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/coverage/refused"
+          }
+        },
+        {
+          "metric": "coverage_missing",
+          "op": "==",
+          "value": 0,
+          "unit": "cases",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/coverage/missing"
+          }
+        },
+        {
+          "metric": "verdict_pass",
+          "op": "==",
+          "value": 70,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/verdicts/PASS"
+          }
+        },
+        {
+          "metric": "verdict_fail",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/verdicts/FAIL"
+          }
+        },
+        {
+          "metric": "verdict_no_verdict",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/verdicts/NO VERDICT"
+          }
+        },
+        {
+          "metric": "verdict_missing_evidence",
+          "op": "==",
+          "value": 0,
+          "unit": "rows",
+          "source_id": "estimators-v1",
+          "query": {
+            "path": "families/preparation/verdicts/MISSING EVIDENCE"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-MM-COVERAGE",
+      "family": "mutation-matrix",
+      "level": 2,
+      "claim": "Bidirectional mutation coverage: all 44 required injected faults are detected by at least one mandatory detector (24 mandatory detectors; missed_faults = 0); every mandatory test names the faults it must detect and every fault is detected; sensitivity-NO VERDICT rows (13) are never counted as passes or detections; no scalar mutation score replaces the rows.",
+      "unit": "faults",
+      "applicability": "the landed #31/#32/#33 fault families over the #30 apparatus; identity 14/14, signal 17/17, timing 13/13",
+      "estimator": {
+        "name": "mutation matrix",
+        "version": "mutation-matrix-v1"
+      },
+      "source_id": "mutation-matrix-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff missed_faults is zero under the frozen configuration; a mutation that does not fail is a metric defect (DR-0008 Section 10 M7), never a pass.",
+      "failure_semantics": "a released configuration with a missed fault is invalid regardless of any other row",
+      "assertions": [
+        {
+          "metric": "missed_faults",
+          "op": "==",
+          "value": 0,
+          "unit": "faults",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "counts/missed_faults"
+          }
+        },
+        {
+          "metric": "detected_rows",
+          "op": "==",
+          "value": 44,
+          "unit": "faults",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "counts/detected_rows"
+          }
+        },
+        {
+          "metric": "fault_rows",
+          "op": "==",
+          "value": 44,
+          "unit": "faults",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "counts/fault_rows"
+          }
+        },
+        {
+          "metric": "mandatory_detectors",
+          "op": "==",
+          "value": 24,
+          "unit": "detectors",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "counts/mandatory_detectors"
+          }
+        },
+        {
+          "metric": "sensitivity_no_verdict",
+          "op": "==",
+          "value": 13,
+          "unit": "rows",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "counts/sensitivity_no_verdict"
+          }
+        },
+        {
+          "metric": "faults_detected",
+          "op": "==",
+          "value": 44,
+          "unit": "faults",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "faults_to_tests",
+            "where": {
+              "validity": "detected"
+            },
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-MM-CI-SUBSET",
+      "family": "mutation-matrix",
+      "level": 2,
+      "claim": "CI mutation subset: the deterministic operator-prefix selection (20 rows over delay/gain/identity/interpolation/normalization categories) is all-detected.",
+      "unit": "rows",
+      "applicability": "CI regression gate (deterministic operator-prefix rule)",
+      "estimator": {
+        "name": "mutation matrix CI subset",
+        "version": "mutation-matrix-v1"
+      },
+      "source_id": "mutation-matrix-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff all_detected is true over the 20 committed subset rows; any undetected subset fault FAILs.",
+      "failure_semantics": "an undetected fault is a metric defect, never a pass",
+      "assertions": [
+        {
+          "metric": "all_detected",
+          "op": "==",
+          "value": true,
+          "unit": "1",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "ci_subset/all_detected"
+          }
+        },
+        {
+          "metric": "subset_rows",
+          "op": "==",
+          "value": 20,
+          "unit": "rows",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "ci_subset/rows",
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L2-MM-FAMILY-RERUNS",
+      "family": "mutation-matrix",
+      "level": 2,
+      "claim": "Family reruns: the five landed family validators (framework, identity, signal, timing, runtime-bridge) all report PASS on their committed publications.",
+      "unit": "families",
+      "applicability": "tools/qualify_mutations*.py --check publications committed with the matrix",
+      "estimator": {
+        "name": "mutation family validators",
+        "version": "mutation-matrix-v1"
+      },
+      "source_id": "mutation-matrix-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff all five family rerun statuses are PASS; any non-PASS rerun FAILs.",
+      "failure_semantics": "a family validator that does not pass invalidates its fault-family rows",
+      "assertions": [
+        {
+          "metric": "families_pass",
+          "op": "==",
+          "value": 5,
+          "unit": "families",
+          "source_id": "mutation-matrix-v1",
+          "query": {
+            "path": "family_reruns/*",
+            "field": "status",
+            "equals": "PASS",
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L3-M0",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M0 - Trace identity: control_upsample.vco_1_pitch (input) and vco_1.raw (output) match exactly the named traces, 176400 samples each, per fixture.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 coverage: source:vco_1 plus the directed overrides of reference/directed-voice-v1.json (392 preregistered patches); candidate fixed model not yet landed",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M0",
+        "version": "dr-0008-accepted-open"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the calibrated limit is preregistered in a landed artifact and bound into a rubric version; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "open_reason": "no composed fixed Voice emits the registry-named trace set per fixture yet: the v0 sweeps are module-level candidate models (declared boundary of PR #153); DR-0008 Section 15 keeps this row NO VERDICT"
+    },
+    {
+      "id": "R-L3-M1",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M1 - Max abs sample error E = max_i |x_f32[i] - x_fix[i]| banded by fixture f0, calibrated 2026-09-21 per the C10 rule (smallest power of two >= 2x the measured value per band) over the v0 sweeps; the bands absorb the float reference's own binary32 cumsum drift by the receipt's per-row attribution (reference drift, not fixed-model error). vco_1 (sine, amplification 1.0): f0<=1kHz E<=2^-9; 1kHz<f0<=5kHz E<=2^-7; 5kHz<f0<=12.6kHz E<=2^-6. vco_2 (distortion, partials-scale amplification, measured 16.21 at the 440 Hz fixtures): f0<=1kHz E<=2^-5; 5kHz<f0<=12.6kHz E<=2^-11; 1kHz<f0<=5kHz band defined but uncalibrated (no vco_2 fixture measured in that band). SNR floors stay NO VERDICT (the draft 100/80 dB floors are unreachable at the measured drift floor; the C10 rule does not produce dB floors); the E limits govern M1. Calibrated from the five committed directed fixtures plus the normalization-stress anchor; recalibration over the full preregistered fixture suite precedes any RTL freeze.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 M1 as amended 2026-09-21 (Section 15); candidate fixed model measured at the sweep level (sim/candidates/audio-sources-sweep-v1.json, config Q2.21+u32+4K-linear)",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M1",
+        "version": "dr-0008-accepted-calibrated-v1"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS per fixture when the measured E is within the calibrated band limit and the drift attribution row is present; a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "assertions": [
+        {
+          "metric": "m1_band1_vco1_measured_max_abs_error",
+          "op": "==",
+          "value": 0.0008856970816850662,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/boundary:vco_1.initial_phase:upper/configs/Q2.21+u32+4K-linear/rows/vco_1.raw/max_abs_error"
+          }
+        },
+        {
+          "metric": "m1_band1_vco2_measured_max_abs_error",
+          "op": "==",
+          "value": 0.014232311397790909,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/normalization-stress:anchor-3.9478583336/configs/Q2.21+u32+4K-linear/rows/vco_2.raw/max_abs_error"
+          }
+        },
+        {
+          "metric": "m1_band2_vco1_measured_max_abs_error",
+          "op": "==",
+          "value": 0.0030161067843437195,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/boundary:vco_1.tuning:upper/configs/Q2.21+u32+4K-linear/rows/vco_1.raw/max_abs_error"
+          }
+        },
+        {
+          "metric": "m1_band3_vco1_measured_max_abs_error",
+          "op": "==",
+          "value": 0.006843579933047295,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/boundary:vco_1.mod_depth:upper/configs/Q2.21+u32+4K-linear/rows/vco_1.raw/max_abs_error"
+          }
+        },
+        {
+          "metric": "m1_band3_vco2_measured_max_abs_error",
+          "op": "==",
+          "value": 0.00022582057863473892,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/boundary:vco_2.mod_depth:upper/configs/Q2.21+u32+4K-linear/rows/vco_2.raw/max_abs_error"
+          }
+        },
+        {
+          "metric": "m1_vco2_drift_amplification_measured",
+          "op": "==",
+          "value": 16.20604133605957,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "cases/boundary:vco_1.initial_phase:upper/configs/Q2.21+u32+4K-linear/rows/vco_2.raw/reference_wander_attribution/amplification"
+          }
+        },
+        {
+          "metric": "dr_0008_accepted",
+          "op": "==",
+          "value": "Accepted",
+          "unit": "1",
+          "source_id": "choices-register",
+          "query": {
+            "path": "dr_status"
+          }
+        },
+        {
+          "metric": "m1_calibrated_band_limits",
+          "op": "prose",
+          "value": true,
+          "unit": "1",
+          "source_id": "dr-0008-ratified",
+          "note": "DR-0008 Section 10 (as amended 2026-09-21) M1: calibrated per-class band limits 2^-9/2^-7/2^-6 (vco_1) and 2^-5/open/2^-11 (vco_2), the C10 rule's output over the measured per-band maxima bound above; bands absorb reference drift by attribution; SNR floors and vco_2 band 2 stay NO VERDICT (DR-0008 Section 15)."
+        }
+      ]
+    },
+    {
+      "id": "R-L3-M2",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M2 - Intrinsic waveform accuracy of the selected sine approximation vs float64 math.cos over the phase circle, measured per geometry (2^19-point bounded sweeps against the analytic bound): selected 4096x24 linear measures 2.45576012636306e-07 (PASS; within the declared measured target 2.6e-7); 1K-linear FAILS the draft 2^-21 limit so the pre-authorized fallback remains the 1K quadratic (2.531e-7, PASS). Calibrated threshold (C10 rule, smallest power of two >= 2x the measured value of the selected geometry): 2^-20 (9.537e-7), replacing the draft 2^-21 pre-freeze.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 M2 as amended 2026-09-21 (per-geometry measured table); sim/candidates/audio-sources-sweep-v1.json intrinsic.m2_lut_vs_cos",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M2",
+        "version": "dr-0008-accepted-calibrated-v1"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS when max |cos_LUT(phi) - cos_exact(phi)| is within the calibrated 2^-20 limit over the sweep grid and the analytic bound is recorded; a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "assertions": [
+        {
+          "metric": "m2_selected_geometry_measured",
+          "op": "==",
+          "value": 2.45576012636306e-07,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "intrinsic/m2_lut_vs_cos/4/max_abs_error_vs_cos"
+          }
+        },
+        {
+          "metric": "m2_selected_geometry_verdict",
+          "op": "==",
+          "value": "PASS",
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "intrinsic/m2_lut_vs_cos/4/verdict"
+          }
+        },
+        {
+          "metric": "m2_1k_linear_fails_draft_limit",
+          "op": "==",
+          "value": "FAIL",
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "intrinsic/m2_lut_vs_cos/0/verdict"
+          }
+        },
+        {
+          "metric": "dr_0008_accepted",
+          "op": "==",
+          "value": "Accepted",
+          "unit": "1",
+          "source_id": "choices-register",
+          "query": {
+            "path": "dr_status"
+          }
+        },
+        {
+          "metric": "m2_calibrated_limit",
+          "op": "prose",
+          "value": true,
+          "unit": "1",
+          "source_id": "dr-0008-ratified",
+          "note": "DR-0008 Section 10 (as amended 2026-09-21) M2: calibrated limit 2^-20 per the C10 rule over the measured selected geometry; per-geometry measured table and the 1K-linear M2 failure recorded there (DR-0008 Section 15)."
+        }
+      ]
+    },
+    {
+      "id": "R-L3-M3",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M3 - Intrinsic phase accuracy at constant f: fixed phase vs exact f*n/fs modulo 1 turn within 176400 * 2^-33 turns (= 2.05e-5 turns) over the whole clip. Measured 2026-09-21: the selected u32 width holds the declared bound (worst measured 1.691281795501709e-05 turns, margin 1.21x); u28 (2.983e-5) and u24 (2.899e-3) exceed it, confirming C2's width is load-bearing. The declared bound stands (M3 is not a C10-calibrated band; the policy names M1/M2).",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 M3 as amended 2026-09-21; sim/candidates/audio-sources-sweep-v1.json intrinsic.phase_resolution_m3_style",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M3",
+        "version": "dr-0008-accepted-calibrated-v1"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS when the measured whole-clip phase drift at constant f is within 176400 * 2^-33 turns for the selected u32 width; a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "assertions": [
+        {
+          "metric": "m3_u32_worst_measured_drift_turns_27_5hz",
+          "op": "==",
+          "value": 1.691281795501709e-05,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "intrinsic/phase_resolution_m3_style/6/max_drift_turns"
+          }
+        },
+        {
+          "metric": "m3_u32_measured_drift_turns_440hz",
+          "op": "==",
+          "value": 1.689419150352478e-05,
+          "unit": "1",
+          "source_id": "audio-sources-sweep-v1",
+          "query": {
+            "path": "intrinsic/phase_resolution_m3_style/7/max_drift_turns"
+          }
+        },
+        {
+          "metric": "dr_0008_accepted",
+          "op": "==",
+          "value": "Accepted",
+          "unit": "1",
+          "source_id": "choices-register",
+          "query": {
+            "path": "dr_status"
+          }
+        },
+        {
+          "metric": "m3_declared_bound_confirmed",
+          "op": "prose",
+          "value": true,
+          "unit": "1",
+          "source_id": "dr-0008-ratified",
+          "note": "DR-0008 Section 10 (as amended 2026-09-21) M3: the declared bound 176400 * 2^-33 turns stands for the selected u32 width (measured within, u24/u28 exceed); DR-0008 Section 15."
+        }
+      ]
+    },
+    {
+      "id": "R-L3-M4",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M4 - Modulation crosswalk: at MIDI + depth extremes the fixed output equals the analytic clamped-frequency prediction within the M1 band thresholds; zero samples outside the MIDI [0,127] clamp.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 coverage: source:vco_1 plus the directed overrides of reference/directed-voice-v1.json (392 preregistered patches); candidate fixed model not yet landed",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M4",
+        "version": "dr-0008-accepted-open"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the calibrated limit is preregistered in a landed artifact and bound into a rubric version; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "open_reason": "MIDI-domain fixed arithmetic was explicitly out of the swept budget (PR #153 policy note); no measured crosswalk at the MIDI + depth extremes exists; DR-0008 Section 15 keeps this row NO VERDICT"
+    },
+    {
+      "id": "R-L3-M5",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M5 - Pitch property: measured f0 of unmodulated fixtures within 1e-5 relative of requested, by the qualified periodic estimator grid; fundamental_in_band assertion for above-Nyquist cases.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 coverage: source:vco_1 plus the directed overrides of reference/directed-voice-v1.json (392 preregistered patches); candidate fixed model not yet landed",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M5",
+        "version": "dr-0008-accepted-open"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the calibrated limit is preregistered in a landed artifact and bound into a rubric version; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "open_reason": "the qualified periodic estimator grid has not run on fixed-model outputs (sweep estimator rows are null); DR-0008 Section 15 keeps this row NO VERDICT"
+    },
+    {
+      "id": "R-L3-M6",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M6 - Schedule: complete-clip execution asserted over 176400 samples; the concrete per-sample budget is a #63 deliverable, referenced, not invented.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 coverage: source:vco_1 plus the directed overrides of reference/directed-voice-v1.json (392 preregistered patches); candidate fixed model not yet landed",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M6",
+        "version": "dr-0008-accepted-open"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the calibrated limit is preregistered in a landed artifact and bound into a rubric version; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "open_reason": "the per-sample cycle budget remains a #63 deliverable, referenced, not invented (DR-0008 Section 9); DR-0008 Section 15 keeps this row NO VERDICT"
+    },
+    {
+      "id": "R-L3-M7",
+      "family": "fixed-numeric",
+      "level": 3,
+      "claim": "M7 - Negative controls: wrong LUT entry, dropped phase increment, un-clamped pitch and ZOH-instead-of-endpoint-aligned input each fail M0-M5; a mutation set that does not fail is a metric defect.",
+      "unit": "1",
+      "applicability": "DR-0008 Section 10 coverage: source:vco_1 plus the directed overrides of reference/directed-voice-v1.json (392 preregistered patches); candidate fixed model not yet landed",
+      "estimator": {
+        "name": "DR-0008 Section 10 metric M7",
+        "version": "dr-0008-accepted-open"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the calibrated limit is preregistered in a landed artifact and bound into a rubric version; never a pass by absence.",
+      "failure_semantics": "a miss is a mismatch, never a tolerance problem; thresholds are never increased after freeze (DR-0008 Section 10 calibration policy)",
+      "threshold_policy": "thresholds are preregistered by calibration: measured on the candidate fixed model over all fixtures, then preregistered as the smallest power of two >= 2x the measured value per band, before any RTL freeze; never increased after freeze",
+      "open_reason": "2 of the 4 preregistered mutation probes ran under the v0 sweeps (wrong LUT entry 1128x, dropped phase increment 2258x, both detected); the un-clamped-pitch and ZOH probes and the full M0-M5 failure demonstration are still owed; DR-0008 Section 15 keeps this row NO VERDICT"
+    },
+    {
+      "id": "R-L4-RTL",
+      "family": "rtl",
+      "level": 4,
+      "claim": "RTL correctness: fixed-model/RTL samples and states are bit-exact (sample-exact ladder authority; float tolerances are never reused for RTL), including sticky saturate/overflow counter agreement.",
+      "unit": "1",
+      "applicability": "the #63/#75 RTL deliverables over the frozen fixture set; per-sample cycle budget is a #63 deliverable (M6)",
+      "estimator": {
+        "name": "sample-exact comparison",
+        "version": "unlanded:#63"
+      },
+      "source_id": "dr-0008",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until the sample-exact comparison evidence lands; never a pass by absence.",
+      "failure_semantics": "a single differing sample or counter is FAIL; alignment, trimming, rescaling or gain-fitting never rescue a row",
+      "threshold_policy": "exactness only: no tolerance exists at this level; any difference is FAIL",
+      "open_reason": "no RTL, fixed-model bit-exact comparison artifact, or counter-agreement record is landed yet"
+    },
+    {
+      "id": "R-L5-PERCEPTUAL",
+      "family": "perceptual-appendix",
+      "level": 5,
+      "claim": "Auxiliary perceptual diagnostics (multires log-spectral, PEAQ, ViSQOL, CDPAM) are benchmarked against the landed objective paired diagnostics over the ratified corruption ladder, with pinned configurations, explicit unavailability refusals, and agreement reported as rows only - never an aggregate, never an acceptance oracle, never an optimization target.",
+      "unit": "1",
+      "applicability": "appendix reporting only; acceptance authority on Levels 0-4 is unaffected (#47 decision)",
+      "estimator": {
+        "name": "perceptual diagnostics benchmark",
+        "version": "perceptual-benchmark-v1"
+      },
+      "source_id": "perceptual-benchmark-v1",
+      "mandatory": false,
+      "status": "landed",
+      "verdict_rule": "Never gating: appendix rows are reported with full configuration and can never decide a release verdict; Level 5 is NO VERDICT by the #47 bounded-role decision.",
+      "failure_semantics": "a diagnostic flag raises a report line, never a threshold change (post-hoc tightening is forbidden)",
+      "assertions": [
+        {
+          "metric": "pairs_rederived_and_verified",
+          "op": "==",
+          "value": 84,
+          "unit": "pairs",
+          "source_id": "perceptual-benchmark-v1",
+          "query": {
+            "path": "binding/pairs_rederived_and_verified"
+          }
+        },
+        {
+          "metric": "human_comparison_verdict",
+          "op": "==",
+          "value": "NO VERDICT",
+          "unit": "1",
+          "source_id": "perceptual-benchmark-v1",
+          "query": {
+            "path": "human_comparison/verdict"
+          }
+        }
+      ],
+      "role": "appendix-auxiliary-flag-only"
+    },
+    {
+      "id": "R-L5-HUMAN",
+      "family": "perceptual-appendix",
+      "level": 5,
+      "claim": "Blinded human comparison is explicitly not collected: the receipt records a dedicated NO VERDICT row (status not_collected), which is a sibling output, never merged into candidate statistics, and may not promote any candidate.",
+      "unit": "1",
+      "applicability": "listening sessions on TorchSynth sounds (hidden references, explicit anchors)",
+      "estimator": {
+        "name": "human comparison row",
+        "version": "perceptual-benchmark-v1"
+      },
+      "source_id": "perceptual-benchmark-v1",
+      "mandatory": false,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until collected; lack of human data is explicit, never a pass.",
+      "failure_semantics": "a future collection cannot rewrite this v0 row; it enters a later rubric version",
+      "threshold_policy": "explicit refusal state; no threshold exists or may be invented for human judgment",
+      "open_reason": "listening not collected - operator declination of listening sessions (time cost), 2026-09-20; recorded in issue 44 closure comment 5753825121",
+      "role": "appendix-auxiliary-flag-only"
+    },
+    {
+      "id": "R-L6-STRATA",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Development-corpus strata audit: every family reconciles to the 96-case denominator (verdict QUALIFIED); normalization seam, raw audio facts, parameter strata and continuous regimes are measured 96/96 with frozen a-priori rules and no estimator executed.",
+      "unit": "1",
+      "applicability": "development corpus global indices 0-95; descriptive audit, no quality conclusion",
+      "estimator": {
+        "name": "corpus coverage audit",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the audit verdict is QUALIFIED over the full denominator; coverage minimums for release derive from this audit plus the case-registry inventory.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "assertions": [
+        {
+          "metric": "audit_verdict",
+          "op": "==",
+          "value": "QUALIFIED",
+          "unit": "1",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "verdict"
+          }
+        },
+        {
+          "metric": "denominator_observed",
+          "op": "==",
+          "value": 96,
+          "unit": "cases",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "denominator/observed_rows"
+          }
+        },
+        {
+          "metric": "gap_inventory",
+          "op": "==",
+          "value": 4,
+          "unit": "gaps",
+          "source_id": "development-corpus-coverage",
+          "query": {
+            "path": "coverage_gaps",
+            "count": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L6-DIRCOV",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Directed coverage manifest: 392 directed cases are preregistered and prepared; their audio_render is not_run, so prepared fixtures are never counted as rendered signal coverage.",
+      "unit": "cases",
+      "applicability": "spec/reference/directed-coverage-v1.json",
+      "estimator": {
+        "name": "directed coverage manifest",
+        "version": "directed-coverage-v1"
+      },
+      "source_id": "directed-coverage-v1",
+      "mandatory": true,
+      "status": "landed",
+      "verdict_rule": "PASS iff the manifest is present with the declared case count and the honest audio_render status; rendered directed coverage enters only through executed evidence rows.",
+      "failure_semantics": "prepared-but-unrendered coverage can never satisfy a rendered-coverage minimum",
+      "assertions": [
+        {
+          "metric": "directed_case_count",
+          "op": "==",
+          "value": 392,
+          "unit": "cases",
+          "source_id": "directed-coverage-v1",
+          "query": {
+            "path": "case_count"
+          }
+        },
+        {
+          "metric": "audio_render_status",
+          "op": "==",
+          "value": "not_run",
+          "unit": "1",
+          "source_id": "directed-coverage-v1",
+          "query": {
+            "path": "audio_render"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R-L6-GAP1",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Coverage gap (open row) - pitch_stability: no landed qualified pitch/periodic method covers mixed Voice audio (corpus captured audio-only).",
+      "unit": "cases",
+      "applicability": "all 96 development cases; linked directed families are planned intentions (audio_render not_run), not executed evidence",
+      "estimator": {
+        "name": "coverage audit gap register",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until landed; never a pass by absence; the gap never silently lowers a coverage minimum.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "threshold_policy": "a qualified method plus its landed qualification artifact must exist before this row can decide; thresholds follow the same measure-then-preregister policy",
+      "open_reason": "recorded as a coverage gap in the committed audit (coverage_gaps family pitch_stability); NO VERDICT until landed"
+    },
+    {
+      "id": "R-L6-GAP2",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Coverage gap (open row) - frequency_ranges_observed: no landed spectral method covers mixed Voice output, so observed frequency ranges are missing for all 96 cases.",
+      "unit": "cases",
+      "applicability": "all 96 development cases; linked directed families are planned intentions (audio_render not_run), not executed evidence",
+      "estimator": {
+        "name": "coverage audit gap register",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until landed; never a pass by absence; the gap never silently lowers a coverage minimum.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "threshold_policy": "a qualified method plus its landed qualification artifact must exist before this row can decide; thresholds follow the same measure-then-preregister policy",
+      "open_reason": "recorded as a coverage gap in the committed audit (coverage_gaps family frequency_ranges_observed); NO VERDICT until landed"
+    },
+    {
+      "id": "R-L6-GAP3",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Coverage gap (open row) - noise_contribution_observed: observed noise contribution is missing 96/96 (audio-only adapter; knob settings are intended controls, never measured contributions).",
+      "unit": "cases",
+      "applicability": "all 96 development cases; linked directed families are planned intentions (audio_render not_run), not executed evidence",
+      "estimator": {
+        "name": "coverage audit gap register",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until landed; never a pass by absence; the gap never silently lowers a coverage minimum.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "threshold_policy": "a qualified method plus its landed qualification artifact must exist before this row can decide; thresholds follow the same measure-then-preregister policy",
+      "open_reason": "recorded as a coverage gap in the committed audit (coverage_gaps family noise_contribution_observed); NO VERDICT until landed"
+    },
+    {
+      "id": "R-L6-GAP4",
+      "family": "coverage-strata",
+      "level": 6,
+      "claim": "Coverage gap (open row) - envelope_stages_observed: observed envelope stages are missing 96/96 (audio-only adapter; requested ADSR times are intended controls, never observed stages).",
+      "unit": "cases",
+      "applicability": "all 96 development cases; linked directed families are planned intentions (audio_render not_run), not executed evidence",
+      "estimator": {
+        "name": "coverage audit gap register",
+        "version": "audit-corpus-coverage-v1"
+      },
+      "source_id": "development-corpus-coverage",
+      "mandatory": true,
+      "status": "open",
+      "verdict_rule": "NO VERDICT until landed; never a pass by absence; the gap never silently lowers a coverage minimum.",
+      "failure_semantics": "refusals are never merged into pass/fail counts and unlike units are never averaged (DR-0004; scorecard contract v1)",
+      "threshold_policy": "a qualified method plus its landed qualification artifact must exist before this row can decide; thresholds follow the same measure-then-preregister policy",
+      "open_reason": "recorded as a coverage gap in the committed audit (coverage_gaps family envelope_stages_observed); NO VERDICT until landed"
+    },
+    {
+      "id": "R-L6-POP-DEMO",
+      "family": "population-appendix",
+      "level": 6,
+      "claim": "Population diagnostics are corpus-level auxiliary demonstrations only (provisional envelope embedding; machinery demonstration): never per-sound identity or implementation correctness, no acceptance verdict, no frozen threshold, never an optimization target; alerting is flag-only.",
+      "unit": "1",
+      "applicability": "appendix reporting only; per-index comparison remains an independent mandatory gate",
+      "estimator": {
+        "name": "population drift demonstration",
+        "version": "population-drift-demo (first + v2)"
+      },
+      "source_id": "population-drift-demo-v2",
+      "mandatory": false,
+      "status": "landed",
+      "verdict_rule": "Never gating: flag-only appendix under the narrow-role decision (2026-09-20) recorded in spec/POPULATION-METRICS.md; Level 6 population rows can never decide a release verdict.",
+      "failure_semantics": "a population flag raises a report line, never a threshold change",
+      "assertions": [
+        {
+          "metric": "first_receipt_complete",
+          "op": "==",
+          "value": "complete",
+          "unit": "1",
+          "source_id": "population-drift-demo-first",
+          "query": {
+            "path": "status"
+          }
+        },
+        {
+          "metric": "v2_populations",
+          "op": "==",
+          "value": 5,
+          "unit": "populations",
+          "source_id": "population-drift-demo-v2",
+          "query": {
+            "path": "populations/*",
+            "count": true
+          }
+        },
+        {
+          "metric": "v2_disclaimers",
+          "op": "==",
+          "value": 6,
+          "unit": "rows",
+          "source_id": "population-drift-demo-v2",
+          "query": {
+            "path": "disclaimers",
+            "count": true
+          }
+        }
+      ],
+      "role": "appendix-auxiliary-flag-only"
+    }
+  ],
+  "summary": {
+    "note": "navigation counts over rubric rows only - not a measurement score",
+    "rows_total": 73,
+    "rows_landed": 60,
+    "rows_open": 13,
+    "rows_mandatory": 70,
+    "rows_appendix": 3,
+    "by_level": {
+      "0": 3,
+      "1": 1,
+      "2": 51,
+      "3": 8,
+      "4": 1,
+      "5": 2,
+      "6": 7
+    },
+    "by_family": {
+      "provenance": 3,
+      "repeatability": 1,
+      "float-control-path": 24,
+      "float-sources": 7,
+      "float-mix": 6,
+      "float-voice": 6,
+      "estimator-qualification": 5,
+      "mutation-matrix": 3,
+      "fixed-numeric": 8,
+      "rtl": 1,
+      "perceptual-appendix": 2,
+      "coverage-strata": 6,
+      "population-appendix": 1
+    }
+  }
+}

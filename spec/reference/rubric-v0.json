@@ -180,7 +180,7 @@
   {
    "id": "dr-0008",
    "path": "spec/decision-records/0008-fixed-point-numeric-contract.md",
-   "sha256": "1501ff9a0e00b6d94f08b90ea33cdc9d3e4627c3a1e088671f5dba57632ea2af",
+   "sha256": "0655ea762bc9c8267ab97f3f06b53f6111c9b0ba138052d479cb0a4a56a9a720",
    "role": "preregistration discipline (Section 10 calibration policy; M0-M7 definitions)"
   },
   {
@@ -3650,5 +3650,6 @@
    "repeatability": 1,
    "rtl": 1
   }
- }
+ },
+ "provenance_note": "2026-09-21 (issue #53): the dr-0008 source digest was re-pinned to the record as amended by the ratification reviewed merge (status Accepted, Section 10 thresholds calibrated, Section 15 ratification record). No estimator, tolerance, coverage rule, or row of this frozen rubric is edited; the previous digest 1501ff9a0e00b6d94f08b90ea33cdc9d3e4627c3a1e088671f5dba57632ea2af remains the pin of the pre-ratification record. The ratification's rubric binding is rubric-v1."
 }

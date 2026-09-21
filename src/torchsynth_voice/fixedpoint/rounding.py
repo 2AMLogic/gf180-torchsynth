@@ -6,9 +6,9 @@ narrowing, interpolation and unit-conversion site in this package routes
 through it, so equivalent operations share one rounding implementation.
 
 ``RoundingMode.DEFAULT`` is half-even, per the DR-0008 Section 6 rounding
-choice (C6). That choice is `selected (operator ruling 2026-09-19); pending
-ratification` while DR-0008 stays Proposed: it is a library default, not an
-accepted contract term, and per-site exceptions stay expressible by passing
+choice (C6, accepted by reviewed merge, 2026-09-21 — see
+:mod:`torchsynth_voice.fixedpoint.choices`). It is a library default, not a
+hardcoded contract term: per-site exceptions stay expressible by passing
 an explicit mode.
 
 No floats participate: tie detection is exact integer comparison.

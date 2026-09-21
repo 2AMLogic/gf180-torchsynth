@@ -10,7 +10,9 @@ ints, always kept inside the declared representable range by explicit
 two's-complement modular reduction, never by relying on host wrap behavior.
 
 This module makes no RTL claim and implements no candidate instantiation;
-DR-0008 remains Proposed and its Section 12 choices are not accepted.
+word formats enter only as explicit data per the DR-0008 Section 12 choice
+register (Accepted by reviewed merge, 2026-09-21; see
+:mod:`torchsynth_voice.fixedpoint.choices`).
 """
 
 from __future__ import annotations

@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import validate_rubric  # noqa: E402
 
 RUBRIC_REL = "spec/reference/rubric-v0.json"
+RUBRIC_V1_REL = "spec/reference/rubric-v1.json"
 RUBRIC_ID = "R-L2-MM-COVERAGE"
 
 
@@ -199,6 +200,67 @@ class TestValidatorCatchesBreakage(unittest.TestCase):
             self.assertTrue(any("holdout_artifacts_read is not empty" in e for e in errors))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestRubricV1Ratification(unittest.TestCase):
+    """rubric-v1 (issue #53): binds the calibrated R-L3 rows from the
+    DR-0008 ratification; genuinely-open rows stay NO VERDICT."""
+
+    def test_committed_rubric_v1_validates(self) -> None:
+        self.assertEqual(validate_rubric.validate_rubric(ROOT, RUBRIC_V1_REL), [])
+
+    def test_identity_and_dr_binding(self) -> None:
+        with (ROOT / RUBRIC_V1_REL).open(encoding="utf-8") as fh:
+            document = json.load(fh)
+        self.assertEqual(document["schema"], "torchsynth-verification-rubric")
+        self.assertEqual(document["semantic_version"], "rubric-v1")
+        self.assertEqual(document["status"], "frozen")
+        self.assertEqual(document["dr_0008_status"].startswith("Accepted"), True)
+
+    def test_calibrated_rows_are_landed_with_source_backed_assertions(self) -> None:
+        with (ROOT / RUBRIC_V1_REL).open(encoding="utf-8") as fh:
+            document = json.load(fh)
+        rows = {r["id"]: r for r in document["rows"]}
+        for row_id in ("R-L3-M1", "R-L3-M2", "R-L3-M3"):
+            self.assertEqual(rows[row_id]["status"], "landed", row_id)
+            self.assertTrue(rows[row_id]["assertions"], row_id)
+            metrics = {a["metric"] for a in rows[row_id]["assertions"]}
+            self.assertIn("dr_0008_accepted", metrics, row_id)
+
+    def test_genuinely_open_rows_stay_no_verdict(self) -> None:
+        with (ROOT / RUBRIC_V1_REL).open(encoding="utf-8") as fh:
+            document = json.load(fh)
+        rows = {r["id"]: r for r in document["rows"]}
+        for row_id in ("R-L3-M0", "R-L3-M4", "R-L3-M5", "R-L3-M6", "R-L3-M7"):
+            self.assertEqual(rows[row_id]["status"], "open", row_id)
+            self.assertNotIn("assertions", rows[row_id], row_id)
+            self.assertIn("NO VERDICT", rows[row_id]["verdict_rule"], row_id)
+            self.assertTrue(rows[row_id]["open_reason"], row_id)
+
+    def test_m1_calibrated_bands_are_stated(self) -> None:
+        with (ROOT / RUBRIC_V1_REL).open(encoding="utf-8") as fh:
+            document = json.load(fh)
+        m1 = next(r for r in document["rows"] if r["id"] == "R-L3-M1")
+        self.assertIn("2^-9", m1["claim"])
+        self.assertIn("2^-7", m1["claim"])
+        self.assertIn("2^-6", m1["claim"])
+        self.assertIn("2^-5", m1["claim"])
+        self.assertIn("2^-11", m1["claim"])
+        self.assertIn("NO VERDICT", m1["claim"])  # SNR floors + vco_2 band 2
+
+    def test_summary_counts_recompute(self) -> None:
+        with (ROOT / RUBRIC_V1_REL).open(encoding="utf-8") as fh:
+            document = json.load(fh)
+        rows = document["rows"]
+        self.assertEqual(document["summary"]["rows_total"], len(rows))
+        self.assertEqual(
+            document["summary"]["rows_landed"],
+            sum(1 for r in rows if r["status"] == "landed"),
+        )
+        self.assertEqual(
+            document["summary"]["rows_open"],
+            sum(1 for r in rows if r["status"] == "open"),
+        )
 
 
 if __name__ == "__main__":

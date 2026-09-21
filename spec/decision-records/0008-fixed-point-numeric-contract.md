@@ -1,6 +1,6 @@
 # DR-0008: Fixed-point numeric contract for the default Voice
 
-- Status: Proposed (operator defaults accepted 2026-09-19; ratification pending reviewed merge)
+- Status: Accepted (reviewed merge ratifies per §13; thresholds calibrated from the v0 sweeps; ratified 2026-09-21)
 - Date: 2026-09-19
 - Decision owners: 2AM Logic
 - Scope: exactly the numeric-contract axes named in `AGENTS.md` — target,
@@ -17,13 +17,20 @@ approximations, rounding, saturation, and output word length are
 **unratified** until measurement. The operator ruling of 2026-09-19 (see
 "Operator ruling" below) accepted all nine open-question defaults, so the
 Choice Register (Section 12) marks C1–C10 `selected (operator ruling
-2026-09-19)`. The record's status remains Proposed: nothing is `accepted`
-until this record reaches Accepted through the normal review ladder
-(Proposed → Accepted, per `spec/decision-records/README.md`) by the
-reviewed merge of the PR that files it, and consumers must refuse
+2026-09-19)`. The record remained Proposed — with every register entry
+refused by the `require_accepted` gate — until the v0-sweep calibration
+evidence landed (issue #50 via PR #152, issue #51 via PR #153, issue #52
+via PR #150) and the record reached **Accepted** through the normal review
+ladder (Proposed → Accepted, per `spec/decision-records/README.md`) by the
+reviewed merge of the issue #53 ratification PR (2026-09-21). That reviewed
+merge is the acceptance event Section 13 defines; Section 15 records what
+it ratifies, per row, and what stays explicitly open. Consumers refuse
 not-yet-accepted or stale values wherever the contract requires accepted
-ones (issue #53, "Choices are data"). No RTL implementation may be called
-conformant to this record while its status is Proposed.
+ones (issue #53, "Choices are data"): any future register state that does
+not carry `dr_status: Accepted` plus per-entry `status: "accepted"` is
+refused by `torchsynth_voice.fixedpoint.choices.require_accepted`. No RTL
+implementation may be called conformant to this record on any basis other
+than this accepted status plus the Section 10 calibrated thresholds.
 
 All upstream claims below were verified at the pinned TorchSynth commit
 `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d` (declared at
@@ -198,8 +205,16 @@ This contract fixes only the numeric mechanics of that boundary:
 
 - the peak is measured on the 24-bit Q2.21 pre-normalization mix;
 - the replay gain `1 / peak` is a declared-precision reciprocal (site S5,
-  rounding half-even); reciprocal precision is measured before DR-0003
-  acceptance (`spec/decision-records/0003-host-boundary-and-normalization.md:40-44`);
+  rounding half-even); reciprocal precision **is measured**
+  (`sim/reference/normalization-reciprocal-v1.json`, issue #52 / PR #150):
+  the recommended mechanics are a reciprocal-multiply with a 22-fraction-bit
+  reciprocal and a U1.22 (width-23) gain word — the smallest swept width
+  whose calibrated threshold (2^-20, by the C10 rule) sits at or below the
+  draft strictest M1 band (2^-13) and whose worst case (524289/2^41 ≈
+  2.3842e-7) is within half an output LSB of the direct-division floor
+  (524287/2^41); F=12 misses the draft band and is rejected. Choice C9
+  carries these parameters; DR-0003 acceptance itself remains gated on its
+  own text (see Section 15);
 - no limiter, AGC, or constant headroom substitutes for conditional
   whole-clip normalization (DR-0003).
 
@@ -241,18 +256,77 @@ case (`spec/PERIODIC-ESTIMATORS.md:20-24`).
   176,400 samples each, per fixture (`spec/reference/trace-registry-v1.json:1091-1107`).
 - **M1 — max abs sample error** `E = max_i |x_f32[i] - x_fix[i]|`, banded
   by fixture f0 (bands absorb the float reference's own cumsum drift,
-  which grows with accumulated phase):
-  - f0 ≤ 1 kHz: `E ≤ 2^-13` (1.22e-4), SNR ≥ 100 dB;
-  - 1 kHz < f0 ≤ 5 kHz: `E ≤ 2^-10`, SNR ≥ 80 dB;
-  - 5 kHz < f0 ≤ 12.6 kHz: `E ≤ 2^-4` (bound set by the ≈ 0.05 rad float32
-    cumsum wander at clip end, not by fixed-model quality).
+  which grows with accumulated phase). **Calibrated 2026-09-21** per the
+  C10 rule (smallest power of two ≥ 2x the measured value per band) over
+  the sweep receipts, replacing the 2026-09-19 draft numbers pre-freeze;
+  the draft numbers were measured UNREACHABLE: the float reference's own
+  binary32 cumsum drift (increment-rounding bias + stored-partial wander,
+  ≈ 7.78e-4 rad at 440 Hz over the full clip, up to 6.92e-3 rad at the
+  depth fixture) exceeds the draft band-1/2 limits, so no candidate could
+  separate on them at any word width (`sim/candidates/audio-sources-sweep-v1.json`
+  policy notes and per-row `reference_wander_attribution`, issue #51 /
+  PR #153). The recalibrated bands absorb that reference drift by
+  attribution — they do not hide it: each band carries its measured floor
+  and the drift attribution row that justifies it. Per oscillator class:
+  - vco_1 (sine path, drift amplification 1.0):
+    - f0 ≤ 1 kHz: `E ≤ 2^-9` (1.953e-3; measured max 8.857e-4 at the
+      initial_phase fixture, drift floor 7.778e-4);
+    - 1 kHz < f0 ≤ 5 kHz: `E ≤ 2^-7` (7.813e-3; measured max 3.016e-3 at
+      the tuning fixture, drift floor 3.111e-3);
+    - 5 kHz < f0 ≤ 12.6 kHz: `E ≤ 2^-6` (1.563e-2; measured max 6.844e-3
+      at the depth fixture, drift floor 6.915e-3 — the draft 2^-4 rested
+      on the conservative ≈ 0.05 rad wander estimate; the measurement
+      binds tighter).
+  - vco_2 (distortion path; the reference's stored-partial wander is
+    amplified by the partials scale — amplification 16.21 at the 440 Hz
+    saw/square fixtures, 0.03 at the high-frequency depth fixture):
+    - f0 ≤ 1 kHz: `E ≤ 2^-5` (3.125e-2; measured max 1.423e-2, drift
+      attribution 7.913e-3 square-term wander);
+    - 1 kHz < f0 ≤ 5 kHz: **open / NO VERDICT** — no vco_2 fixture in
+      this band was measured by the v0 sweeps; the band is defined but
+      uncalibrated;
+    - 5 kHz < f0 ≤ 12.6 kHz: `E ≤ 2^-11` (4.883e-4; measured max
+      2.258e-4 at the high-frequency depth fixture).
+  - SNR sub-limits: the draft `SNR ≥ 100 dB` (band 1) and `≥ 80 dB`
+    (band 2) floors are unreachable at the reference drift floor
+    (measured 70.7/60.7 dB worst) and the C10 power-of-two rule does not
+    produce dB floors; they stay **open / NO VERDICT** pending the
+    composed-model calibration. The E limits above govern M1.
+  - Scope: calibrated from the five committed directed fixtures plus the
+    normalization-stress anchor (the v0 sweeps' coverage); re-calibration
+    over the full preregistered fixture suite precedes any RTL freeze
+    (thresholds never increase after freeze).
 - **M2 — intrinsic waveform accuracy** (generator-time, fixed model vs
-  float64 `math.cos` over the full 2^32 phase circle):
-  `max_phi |cos_LUT(phi) - cos_exact(phi)| ≤ 2^-21`; measured target
-  ≤ 2.6e-7 for the selected LUT (Section 5).
+  float64 `math.cos` over the full 2^32 phase circle). **Measured per
+  geometry** on 2^19-point bounded sweeps against the analytic bound
+  (`sim/candidates/audio-sources-sweep-v1.json`, `intrinsic.m2_lut_vs_cos`,
+  issue #51 / PR #153):
+
+  | Geometry | Measured max vs cos | Analytic bound | vs draft limit 2^-21 |
+  | --- | --- | --- | --- |
+  | 1024 x 24 linear | 5.057e-7 | 5.326e-7 | **FAIL** |
+  | 1024 x 24 quadratic (pre-authorized fallback) | 2.531e-7 | 5.326e-7 | PASS |
+  | 2048 x 24 linear | 3.018e-7 | 3.120e-7 | PASS |
+  | 2048 x 24 quadratic | 2.497e-7 | 3.120e-7 | PASS |
+  | **4096 x 24 linear (selected, C5)** | **2.456e-7** | 2.568e-7 | PASS |
+  | 4096 x 24 quadratic | 2.628e-7 | 2.568e-7 | PASS |
+
+  The selected geometry meets the declared measured target (≤ 2.6e-7).
+  1K-linear fails, so the pre-authorized fallback remains the **1K
+  quadratic** (measured 2.531e-7). Calibrated threshold (C10 rule,
+  smallest power of two ≥ 2x the measured value of the selected
+  geometry): `2^-20` (9.537e-7), replacing the draft `2^-21` pre-freeze
+  (2x the measured 2.456e-7 is 4.912e-7 > 2^-21).
 - **M3 — intrinsic phase accuracy** (constant f): fixed phase vs exact
   `f*n/fs` modulo 1 turn: `|dphi| ≤ 176400 * 2^-33 turns`
-  (= 2.05e-5 turns = 1.29e-4 rad over the whole clip).
+  (= 2.05e-5 turns = 1.29e-4 rad over the whole clip). **Measured
+  2026-09-21** (`sim/candidates/audio-sources-sweep-v1.json`,
+  `intrinsic.phase_resolution_m3_style`): the selected u32 width holds the
+  declared bound at all three probe frequencies (worst measured
+  1.6913e-5 turns at 27.5 Hz, vs bound 2.0536e-5); u28 (2.983e-5) and
+  u24 (2.899e-3) exceed it, confirming C2's width is load-bearing. The
+  declared bound stands (M3 is not a C10-calibrated band; the policy names
+  M1/M2), with measurement margin 1.21x.
 - **M4 — modulation crosswalk.** At MIDI + depth extremes the fixed output
   equals the analytic clamped-frequency prediction within the M1 band
   thresholds; zero samples fall outside the MIDI [0, 127] clamp.
@@ -270,7 +344,15 @@ case (`spec/PERIODIC-ESTIMATORS.md:20-24`).
 **Calibration policy (measure, then preregister):** after the candidate
 fixed model exists, run all fixtures, then preregister final thresholds as
 the smallest power of two ≥ 2x the measured M1/M2 value per band —
-**before any RTL freeze**. Thresholds are never increased after RTL
+**before any RTL freeze**. **Applied 2026-09-21** over the v0 sweeps
+(directed-fixture-plus-anchor coverage; the M1 scope note above states
+what that coverage is): the M1 bands, the M2 threshold, and the C9
+reciprocal threshold are that rule's outputs over
+`sim/reference/control-format-sweep-v1.json`,
+`sim/candidates/audio-sources-sweep-v1.json`, and
+`sim/reference/normalization-reciprocal-v1.json`; the composed-model,
+full-preregistered-suite run remains owed before any RTL freeze and may
+recalibrate pre-freeze. Thresholds are never increased after RTL
 freeze; a miss is a mismatch (`spec/PAIRED-METRICS.md:3-4`), never a
 tolerance problem. Insufficient evidence is `NO VERDICT`, never a pass
 (DR-0004).
@@ -296,23 +378,30 @@ Per issue #53, every choice is data: status is `proposed` / `selected` /
 `accepted` / `rejected`. `selected (operator ruling 2026-09-19)` records
 a choice fixed by the operator ruling of that date; it is still not
 `accepted` — a choice becomes `accepted` only when this record's status
-reaches Accepted by reviewed merge. Consumers must refuse `proposed`,
+reaches Accepted by reviewed merge. **This record reached Accepted by the
+reviewed merge of the issue #53 ratification PR (2026-09-21)**, so every
+register entry is now `accepted (reviewed merge; 2026-09-21)` and the
+machine-readable register
+(`spec/reference/fixedpoint-choices-v1.json`) carries
+`dr_status: "Accepted"` with per-entry `status: "accepted"`;
+`torchsynth_voice.fixedpoint.choices.require_accepted` admits them.
+Consumers must refuse `proposed`,
 stale, and any not-yet-`accepted` value where the contract requires
 `accepted`. Evidence artifact IDs are issue/comment or spec references;
 affected traces are registry names.
 
 | ID | Choice | Status | Evidence | Alternatives | Affected traces | Change trigger |
 | --- | --- | --- | --- | --- | --- | --- |
-| C1 | Audio word 24-bit Q2.21 [-4, +4) | selected (operator ruling 2026-09-19) | `spec/decision-records/0006-canonical-runtime.md:89` | 16-bit s1.15 (rejected for proposal: cannot hold measured peak 3.9478583336 without distortion); 32-bit (deferred: cost) | all audio-rate traces | new peak evidence outside [-4, +4) |
-| C2 | Phase: u32 wrapping, 2^32 units/turn | selected (operator ruling 2026-09-19) | #83 comment 5743848538; DR-0004 | float32-cumsum emulation (rejected for proposal) | `vco_1.raw`, `vco_2.raw`, phase ports | new phase-semantics evidence |
-| C3 | Frequency word Q16.15 | selected (operator ruling 2026-09-19) | #83 groundwork Section 3.1 | narrower f-word (rejected: cannot hold 50,174 Hz) | `control_upsample.vco_1_pitch` consumers | upstream clamp evidence change |
-| C4 | MIDI domain Q10.21 | selected (operator ruling 2026-09-19) | pinned `torchsynth/module.py:600` via #83 | float MIDI path (rejected: precision without bound) | keyboard/tuning/depth paths | fixture evidence of clamp mismatch |
-| C5 | Sine: 4096x24 quarter-wave LUT + linear interp; 1K quadratic fallback pre-authorized | selected (operator ruling 2026-09-19) | Section 5 table; M2 sweep | CORDIC; minimax polynomial | `vco_1.raw` | M2 sweep or #82 memory evidence |
-| C6 | Rounding: half-even at S1–S5 | selected (operator ruling 2026-09-19) | Section 6 | per-site half-away-from-zero | all narrowing sites | directed fixture requiring an exception |
-| C7 | Saturation + sticky counters; Nyquist clamp forbidden | selected (operator ruling 2026-09-19) | #83 groundwork Section 1 | clamp-to-Nyquist (rejected: not upstream) | saturate counters, `vco_*.raw` | upstream behavior change at pin |
-| C8 | Noise: host-fed exact stream, slot `sound_index % 32`, seed 13 | selected (operator ruling 2026-09-19) | `spec/VOICE-CONTRACT.md:75-77`; DR-0003 | on-chip generator (needs its own DR) | `noise.raw` | new noise-policy decision record |
-| C9 | Normalization replay gain `1/peak`, declared-precision reciprocal | selected (operator ruling 2026-09-19) | DR-0003; `spec/decision-records/0003-host-boundary-and-normalization.md:40-44` | limiter/AGC (rejected by DR-0003) | final output, replay traces | reciprocal precision measurement |
-| C10 | Thresholds: 2x-measured power-of-two, preregistered pre-freeze | selected (operator ruling 2026-09-19) | Section 10; DR-0004 | fixed a-priori thresholds | M1/M2 bands | new calibration-policy evidence |
+| C1 | Audio word 24-bit Q2.21 [-4, +4) | accepted (reviewed merge; 2026-09-21) | `spec/decision-records/0006-canonical-runtime.md:89`; anchor saturation zero at Q2.21 (`sim/candidates/audio-sources-sweep-v1.json`) | 16-bit s1.15 (rejected for proposal: cannot hold measured peak 3.9478583336 without distortion; measured: 26,158 saturated samples at the anchor); 32-bit (deferred: cost) | all audio-rate traces | new peak evidence outside [-4, +4) |
+| C2 | Phase: u32 wrapping, 2^32 units/turn | accepted (reviewed merge; 2026-09-21) | #83 comment 5743848538; DR-0004; measured M3-style rows: u32 within bound, u24/u28 exceed (`sim/candidates/audio-sources-sweep-v1.json`) | float32-cumsum emulation (rejected for proposal) | `vco_1.raw`, `vco_2.raw`, phase ports | new phase-semantics evidence |
+| C3 | Frequency word Q16.15 | accepted (reviewed merge; 2026-09-21) | #83 groundwork Section 3.1 | narrower f-word (rejected: cannot hold 50,174 Hz) | `control_upsample.vco_1_pitch` consumers | upstream clamp evidence change |
+| C4 | MIDI domain Q10.21 | accepted (reviewed merge; 2026-09-21) | pinned `torchsynth/module.py:600` via #83; midi-domain baseline member passes all sweep rows (`sim/reference/control-format-sweep-v1.json`) | float MIDI path (rejected: precision without bound) | keyboard/tuning/depth paths | fixture evidence of clamp mismatch |
+| C5 | Sine: 4096x24 quarter-wave LUT + linear interp; 1K quadratic fallback pre-authorized | accepted (reviewed merge; 2026-09-21) | Section 5 table; measured M2 per geometry (Section 10; `sim/candidates/audio-sources-sweep-v1.json` `intrinsic.m2_lut_vs_cos`) | CORDIC; minimax polynomial; 1K-linear (measured M2 FAIL) | `vco_1.raw` | M2 sweep or #82 memory evidence |
+| C6 | Rounding: half-even at S1–S5 | accepted (reviewed merge; 2026-09-21) | Section 6; rounding-mode axis (`sim/reference/control-format-sweep-v1.json`: truncation member loses to the half-even baseline) | per-site half-away-from-zero | all narrowing sites | directed fixture requiring an exception |
+| C7 | Saturation + sticky counters; Nyquist clamp forbidden | accepted (reviewed merge; 2026-09-21) | #83 groundwork Section 1; per-site sticky counters measured (`sim/candidates/audio-sources-sweep-v1.json`) | clamp-to-Nyquist (rejected: not upstream) | saturate counters, `vco_*.raw` | upstream behavior change at pin |
+| C8 | Noise: host-fed exact stream, slot `sound_index % 32`, seed 13 | accepted (reviewed merge; 2026-09-21) | `spec/VOICE-CONTRACT.md:75-77`; DR-0003; noise identity rows exact-bytes (`sim/candidates/audio-sources-sweep-v1.json`) | on-chip generator (needs its own DR) | `noise.raw` | new noise-policy decision record |
+| C9 | Normalization replay gain `1/peak`, declared-precision reciprocal — measured: reciprocal-multiply, 22 frac bits, gain word U1.22 (width 23), half-even at S5 | accepted (reviewed merge; 2026-09-21) | DR-0003; `spec/decision-records/0003-host-boundary-and-normalization.md:40-44`; measured recommendation (`sim/reference/normalization-reciprocal-v1.json`, issue #52 / PR #150) | limiter/AGC (rejected by DR-0003); F=12 (measured: misses draft band); direct division (costlier, same floor) | final output, replay traces | reciprocal precision measurement |
+| C10 | Thresholds: 2x-measured power-of-two, preregistered pre-freeze | accepted (reviewed merge; 2026-09-21) | Section 10; DR-0004; applied over the v0 sweeps (Section 10 as amended 2026-09-21) | fixed a-priori thresholds | M1/M2 bands | new calibration-policy evidence |
 
 ## 13. Change control
 
@@ -336,6 +425,21 @@ Which edits require what (issue #53 AC):
 - DR status must reach Accepted (reviewed merge; the Builder does not
   approve its own PR) before any RTL implementation is called conformant
   to this contract.
+
+**Emission record (2026-09-21).** With this record Accepted and every
+register entry `status: "accepted"`, the refusal-gated constants emitter
+(`tools/generate_rtl_constants.py` over
+`src/torchsynth_voice/fixedpoint/codegen.py`) emitted the RTL constants
+package for the first time:
+`tb/sv/gf180_rtl_constants_pkg.sv`, SHA-256
+`e6407c0af91d5e08cb49705f515e6d0d52852884c29e38616858338174107167`,
+covering all of C1–C10 with no per-choice refusals (C8 and C10 are
+interface/policy choices with no numeric parameters and correctly emit no
+constants). The emitted widths were verified against the register: C1
+width 24 (Q2.21), C2 width 32 (u32), C3 width 32 (Q16.15), C4 width 32
+(Q10.21), C5 4096x24 with 12 index + 18 interp bits on a 32-bit phase
+circle, C9 gain word width 23 (U1.22). `--check` mode now fails on any
+register/package divergence.
 
 ## 14. Open questions for the operator (answered 2026-09-19 — see Operator ruling)
 
@@ -388,6 +492,49 @@ Each: recommended default, alternative, and consequence of the answer.
    Impact: in M1 the float reference's own alias/cumsum behavior
    dominates; requiring it there needs a dedicated drift-dominated band or
    an extended M1 table.
+
+## 15. Ratification record (2026-09-21)
+
+This section records, per row, what the reviewed merge of the issue #53
+ratification PR accepts and what stays explicitly open. The evidence base
+is exactly the three v0 sweep receipts — `sim/reference/control-format-sweep-v1.json`
+(issue #50, PR #152), `sim/candidates/audio-sources-sweep-v1.json`
+(issue #51, PR #153), `sim/reference/normalization-reciprocal-v1.json`
+(issue #52, PR #150) — and nothing beyond them is ratified. Per-row
+honesty rule: ratify what the evidence supports; leave genuinely-open
+rows open as `NO VERDICT`, never force-ratified.
+
+| Row | Outcome | Evidence |
+| --- | --- | --- |
+| M1 (max abs sample error) | **Calibrated** E-limits per oscillator class and band (Section 10 as amended): vco_1 2^-9 / 2^-7 / 2^-6; vco_2 2^-5 / open / 2^-11. Bands absorb the measured reference cumsum drift by attribution (per-row `reference_wander_attribution`), not by hiding it. SNR floors and vco_2 band 2 stay **open / NO VERDICT**. | #153 drift-floor finding + attribution rows; calibrated by the C10 rule over the measured per-band maxima |
+| M2 (intrinsic waveform) | **Calibrated** threshold 2^-20 (per-geometry measured table in Section 10; selected geometry passes the declared measured target). | #153 `intrinsic.m2_lut_vs_cos` |
+| M3 (intrinsic phase) | **Confirmed** at the declared bound (176400 x 2^-33 turns) for the selected u32 width; u24/u28 measured exceeding it. | #153 `intrinsic.phase_resolution_m3_style` |
+| M4 (modulation crosswalk) | **Open / NO VERDICT** — MIDI-domain fixed arithmetic was explicitly out of the swept budget; no measured crosswalk exists. | #153 policy note 1 |
+| M5 (pitch property) | **Open / NO VERDICT** — the qualified periodic estimator grid has not run on fixed-model outputs. | sweep rows carry `estimator: null` |
+| M6 (schedule) | **Open / NO VERDICT** — the per-sample budget is a #63 deliverable, referenced, not invented. | Section 9 |
+| M7 (negative controls) | **Open / NO VERDICT** — 2 of the 4 preregistered mutation probes ran (wrong LUT entry 1128x, dropped phase increment 2258x, both detected); the un-clamped-pitch and ZOH probes and the full M0–M5 failure demonstration are still owed. | #153 `mutations` rows |
+| M0 (trace identity) | **Open / NO VERDICT** — the sweeps are module-level candidate models; no composed fixed Voice emits the registry-named trace set per fixture yet. | #153 declared boundaries |
+| C9 reciprocal precision | **Ratified** F=22 / U1.22 (width 23) with branch coverage below/at/above one, tie, late peak, extremum, silence. | #150 receipt `decision` block |
+
+**DR-0003 remains Proposed.** Its own acceptance text
+(`spec/decision-records/0003-host-boundary-and-normalization.md:38-44`)
+requires, before acceptance: replay determinism for every stateful module;
+cycle, SRAM, and energy cost of replay versus buffering; exact noise
+stream requirements; division/reciprocal precision; and the UI/transport
+cost of a 78-parameter resolved patch. The #52 receipt delivers the
+reciprocal-precision item (and noise-exactness evidence), but it explicitly
+defers replay-versus-buffering cost to #63 and makes no host-transport
+measurement; its own disclaimers state that no DR-0003 acceptance is
+performed and that the acceptance decision belongs to the operator.
+Issue #52 therefore stays open on exactly that residual scope.
+
+**Rubric binding.** `spec/reference/rubric-v0.json` remains frozen per its
+own bump rule; the calibrated R-L3-M1/M2/M3 rows are bound as
+`spec/reference/rubric-v1.json` (the bump target v0's `change_control`
+names), whose assertions cite these receipts by digest and recompute.
+R-L3-M0/M4/M5/M6/M7 stay `open` with `NO VERDICT` verdict rules. The
+holdout seal is unaffected: no holdout artifact is read, referenced, or
+unsealed by this ratification (Section 11).
 
 ## Citation basis
 

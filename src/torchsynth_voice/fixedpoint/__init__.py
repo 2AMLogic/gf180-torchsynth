@@ -22,10 +22,12 @@ Design invariants (issue #49):
 - LUT tables are generator-emitted, deterministically reproducible, and
   hash-linked to their canonical serialization (C5 pattern).
 - Candidate C1-C10 instantiations live only in
-  ``spec/reference/fixedpoint-choices-v1.json`` with status
-  ``selected (operator ruling 2026-09-19); pending ratification`` -- never
-  ``accepted`` -- and :mod:`torchsynth_voice.fixedpoint.choices` refuses
-  them wherever the contract requires accepted values.
+  ``spec/reference/fixedpoint-choices-v1.json``. Since the issue #53
+  ratification (DR-0008 Accepted by reviewed merge, 2026-09-21) they carry
+  ``status = "accepted"`` and :mod:`torchsynth_voice.fixedpoint.choices`
+  admits them through the same gate that refused them while the record was
+  Proposed; any future register edit that breaks that invariant is refused
+  again.
 
 All arithmetic is exact integer arithmetic plus explicit policies; results
 never depend on host integer overflow.
