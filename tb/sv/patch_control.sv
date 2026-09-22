@@ -106,8 +106,9 @@
 //     transaction, record it for ERR_TX_TIMEOUT continuation answers,
 //     -> ready). TIMEOUT_CYCLES must exceed every command's walk length
 //     so a commit can never expire mid-processing.
-//   - Responses are emitted in request-enqueue order (request queue ->
-//     serializer -> TX, one byte per cycle while rsp_ready).
+//   - Responses are emitted in request-enqueue order: the head request is
+//     latched from the queue and serialized one byte per cycle while
+//     rsp_ready (no flow control beyond the transport's own).
 // ---------------------------------------------------------------------
 //
 // PDK-free plain SystemVerilog for Icarus Verilog 13 (-g2012): no
@@ -170,9 +171,6 @@ module patch_control #(
 
     localparam integer PROFILE_WINDOW = 64;
     localparam integer REQ_SLOTS  = 8;
-    localparam integer DESC_SLOTS = 4;
-    localparam integer DESC_BYTES = 96;   // max response payload 71 + headroom
-    localparam integer FRAME_MAX  = DESC_BYTES + 11;
     localparam integer CACHE_BYTES = 178; // bound idempotent frame (HELLO 64/64)
     localparam integer CAPS_GRANTED = 3;  // name_keyed_patch_load | reset
 
@@ -278,13 +276,6 @@ module patch_control #(
     reg [7:0]  b_kind, b_cmd, b_code;
     reg [15:0] b_seq, b_paylen;
     reg [15:0] b_crc;
-    reg [3:0]  b_slot;
-
-    reg [7:0]  desc_ram [0:DESC_SLOTS*FRAME_MAX-1];
-    reg [7:0]  d_len [0:DESC_SLOTS-1];
-    reg [3:0]  d_head, d_count;
-    reg [7:0]  t_index;
-    reg        t_active;
 
     integer i;
 
@@ -646,12 +637,14 @@ module patch_control #(
         end
     end
 
+    // Direct serialization: the head request is latched and streamed one
+    // byte per cycle while rsp_ready; responses are emitted strictly in
+    // request-enqueue order (SESSION: no flow control beyond the
+    // transport's own).
     always @(posedge clk) begin
         if (rst) begin
             b_busy <= 1'b0; b_index <= 8'd0; b_paylen <= 16'd0;
             b_crc <= 16'hFFFF;
-            d_head <= 4'd0; d_count <= 4'd0;
-            t_index <= 8'd0; t_active <= 1'b0;
             req_rptr <= 4'd0;
         end else begin
             if (!b_busy) begin
@@ -663,45 +656,23 @@ module patch_control #(
                     b_paylen <= (req_kind[req_rptr] == KIND_ERR)
                         ? 16'd1 : {8'd0, req_plen[req_rptr]};
                     b_crc <= 16'hFFFF;
-                    b_slot <= (d_head + d_count) % DESC_SLOTS;
                     b_busy <= 1'b1;
                     b_index <= 8'd0;
                     req_rptr <= (req_rptr == REQ_SLOTS-1)
                         ? 4'd0 : req_rptr + 4'd1;
                 end
-            end else begin
-                desc_ram[b_slot*FRAME_MAX + b_index] <= ser_byte;
+            end else if (rsp_ready) begin
                 if ((b_index >= 8'd2) && (b_index < 9 + b_paylen[7:0]))
                     b_crc <= crc16_step(b_crc, ser_byte);
                 b_index <= b_index + 8'd1;
-                if (b_index == 10 + b_paylen[7:0]) begin
+                if (b_index == 10 + b_paylen[7:0])
                     b_busy <= 1'b0;
-                    d_count <= d_count + 4'd1;
-                    d_len[b_slot] <= 11 + b_paylen[7:0];
-                end
-            end
-
-            if (t_active) begin
-                if (rsp_ready) begin
-                    if (t_index == d_len[d_head] - 8'd1) begin
-                        t_active <= 1'b0;
-                        d_head <= (d_head == DESC_SLOTS-1) ? 4'd0 : d_head + 4'd1;
-                        d_count <= d_count - 4'd1;
-                    end
-                    t_index <= t_index + 8'd1;
-                end
-            end else if (d_count != 0) begin
-                t_active <= 1'b1;
-                t_index <= 8'd0;
             end
         end
     end
 
-    reg [7:0] t_byte_mux;
-    always @(*) t_byte_mux = desc_ram[d_head*FRAME_MAX + t_index];
-
-    assign rsp_valid = t_active;
-    assign rsp_byte = t_byte_mux;
+    assign rsp_valid = b_busy;
+    assign rsp_byte = ser_byte;
     assign cmd_ready = 1'b1;
     assign state_out = session;
     assign patch_active = patch_active_r;
@@ -709,7 +680,7 @@ module patch_control #(
     assign kbd_duration_word = kbd_dur_r;
     assign sound_identity_len = identity_len_r;
     assign sound_identity = identity_r;
-    assign idle_out = (e_state == E_IDLE) && !frame_full && (d_count == 4'd0);
+    assign idle_out = (e_state == E_IDLE) && !frame_full && !b_busy;
 
     // probe: active-bank word readout (AC 1 evidence surface)
     always @(*) probe_value = active_bank[probe_slot];
