@@ -1284,7 +1284,7 @@ module patch_control #(
                 off = c_fed - c_stream_len;  // padding region
                 if (off == 32'd0)
                     b = 8'h80;
-                else if (off < 9 + c_kpad)
+                else if (off < 1 + c_kpad)
                     b = 8'h00;
                 else begin
                     bitlen = {32'd0, c_stream_len} << 6;
