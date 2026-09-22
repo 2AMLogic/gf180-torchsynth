@@ -868,7 +868,7 @@ module patch_control #(
                     sha_h[1] <= sha_h[1] + c_a;
                     sha_h[2] <= sha_h[2] + c_b;
                     sha_h[3] <= sha_h[3] + c_c;
-                    sha_h[4] <= sha_h[4] + c_d;
+                    sha_h[4] <= sha_h[4] + c_d + r_t1;  // e carries +t1
                     sha_h[5] <= sha_h[5] + c_e;
                     sha_h[6] <= sha_h[6] + c_f;
                     sha_h[7] <= sha_h[7] + c_g;
