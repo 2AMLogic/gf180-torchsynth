@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   stored-evidence:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         python: ["3.11", "3.13"]
@@ -30,7 +30,7 @@ jobs:
     # Explicit numerical execution: regenerate every landed family grid from
     # this checkout and compare recomputed case/row/obligation identity.
     # Missing NumPy refuses; it never silently skips.
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
