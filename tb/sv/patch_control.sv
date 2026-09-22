@@ -451,6 +451,10 @@ module patch_control #(
             patch_active_r <= 1'b0;
             kbd_midi_r <= {C4_WIDTH{1'b0}}; kbd_dur_r <= 47'h0;
             identity_len_r <= 8'h0; identity_r <= 512'h0;
+            for (i = 0; i < NUM_PARAMS; i = i + 1) begin
+                active_bank[i] <= {C4_WIDTH{1'b0}};
+                staged_bank[i] <= {C4_WIDTH{1'b0}};
+            end
             patch_timer <= TIMEOUT_CYCLES;
         end
     endtask
