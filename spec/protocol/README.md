@@ -20,6 +20,7 @@ and code alone may not change it.
 | [PATCH-LOAD.md](PATCH-LOAD.md) | Name-keyed patch load transaction and the versioned canonical name table structure |
 | [TRANSPORTS.md](TRANSPORTS.md) | Transport-agnostic interface contract and UART/SPI/USB binding requirements |
 | [MOCK-HARNESS.md](MOCK-HARNESS.md) | The software mock round-trip harness: contract, numeric binding policy, acceptance-criteria mapping |
+| [CLIENT.md](CLIENT.md) | The host transport client (software lane) and the alternate explorer backend over the behavioral mock |
 
 ## Scope boundary
 
