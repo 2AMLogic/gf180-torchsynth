@@ -20,6 +20,9 @@ import gf180_rtl_constants::*;
 module tb;
 
     localparam integer MAX_BYTES = SCHED_SAMPLES_PER_PASS * 4;
+    // The duplicated-byte mutation feeds a few bytes past the clip length;
+    // the DUT (not the TB) must be the one that flags the overrun.
+    localparam integer OVERRUN_SLACK = 8;
     localparam integer MAX_RUNS  = 64;
 
     reg                        clk = 1'b0;
@@ -58,8 +61,9 @@ module tb;
 
     always #5 clk = ~clk;
 
-    // One clip of host-fed binary32 noise bytes (reloaded per run).
-    reg [7:0] bytes_mem [0:MAX_BYTES-1];
+    // One clip of host-fed binary32 noise bytes, plus overrun slack for
+    // the duplicated-byte mutation (reloaded per run).
+    reg [7:0] bytes_mem [0:MAX_BYTES+OVERRUN_SLACK-1];
 
     reg [1023:0] fname;
     integer cap_fd [0:MAX_RUNS-1];
@@ -93,8 +97,9 @@ module tb;
                 $display("TB-ERROR %0s must carry 3 integers", fname);
                 $finish;
             end
-            if (n_bytes <= 0 || n_bytes > MAX_BYTES) begin
-                $display("TB-ERROR byte count %0d outside 1..%0d", n_bytes, MAX_BYTES);
+            if (n_bytes <= 0 || n_bytes > MAX_BYTES + OVERRUN_SLACK) begin
+                $display("TB-ERROR byte count %0d outside 1..%0d",
+                         n_bytes, MAX_BYTES + OVERRUN_SLACK);
                 $finish;
             end
             $sformat(fname, "run%0d_bytes.txt", run);

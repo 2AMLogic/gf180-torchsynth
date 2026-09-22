@@ -418,8 +418,8 @@ NOISE_PATTERN_BITS = (
 NOISE_DUT_SV = TB_ROOT / "sv/noise_stream_dut.sv"
 NOISE_TB_SV = TB_ROOT / "sv/tb_noise_stream_dut.sv"
 #: Mutation seams (anchored; mutate_sv refuses if the anchor moved).
-NOISE_TRUNCATION_ANCHOR = "else rounded = q_rounded;"
-NOISE_TRUNCATION_MUTANT = "else rounded = q_raw;"
+NOISE_TRUNCATION_ANCHOR = "rounded = q_rounded;"
+NOISE_TRUNCATION_MUTANT = "rounded = q_raw;"
 NOISE_SLOT_RULE_ANCHOR = "wire [4:0] slot_expected = sound_index[4:0];"
 NOISE_SLOT_RULE_MUTANT = "wire [4:0] slot_expected = sound_index[4:0] ^ 5'd1;"
 #: Trace name from the canonical registry used for the synthetic stream.
@@ -4487,9 +4487,16 @@ def noise(workdir: Path, simulator: str) -> int:
         raw, _ = streams[sound_index]
         run_plan.append((case["id"], sound_index,
                          nsg.canonical_slot(sound_index), raw))
+    # The synthetic pattern stream rides in one full clip (the DUT's length
+    # contract is one clip per enabled stream; the edge patterns lead and
+    # +0.0 padding completes the clip).
     pattern_bytes = b"".join(
         struct.pack("<I", bits) for bits in NOISE_PATTERN_BITS
     )
+    pattern_bytes += b"\x00\x00\x00\x00" * (
+        nsg.EXPECTED_NOISE_BYTES // 4 - len(NOISE_PATTERN_BITS)
+    )
+    assert len(pattern_bytes) == nsg.EXPECTED_NOISE_BYTES
     run_plan.append(("synthetic-patterns", 0, 0, pattern_bytes))
     first, replay_index = NOISE_REPLAY_INDICES
     raw0, _ = streams[first]
@@ -4512,10 +4519,10 @@ def noise(workdir: Path, simulator: str) -> int:
 
     replay_positions = {}
     for run, (label, sound_index, slot, raw) in enumerate(run_plan):
-        if sound_index in streams:
-            mirror = streams[sound_index][1]
-        else:
+        if label == "synthetic-patterns" or sound_index not in streams:
             mirror = nsg.mirror_stream(raw)
+        else:
+            mirror = streams[sound_index][1]
         if label.startswith("replay-sound-"):
             replay_positions[label] = run
         captured = captures[run]
