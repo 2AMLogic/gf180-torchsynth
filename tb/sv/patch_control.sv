@@ -1287,7 +1287,7 @@ module patch_control #(
                 else if (off < 1 + c_kpad)
                     b = 8'h00;
                 else begin
-                    bitlen = {32'd0, c_stream_len} << 6;
+                    bitlen = {32'd0, c_stream_len} << 3;  // bits
                     b = bitlen >> (8*(7 - (off - 1 - c_kpad)));
                 end
             end
