@@ -46,6 +46,28 @@ Exit 0 only if every step passes. The declared shadow sites are replayed
 host-side exactly as DR-0008 declares them open items — no RTL claim is
 made for them, and nothing here claims synthesis, layout, signoff, or
 hardware anything.
+
+``adsr`` (issue #70) runs the bit-exact ADSR envelope engine
+(tb/sv/adsr_engine.sv, six concurrent instances) against the frozen fixed
+model's committed golden vectors (sim/reference/adsr-golden-v1/):
+
+1. load every committed vector through the landed loader and verify the
+   accepted-contract hash binding,
+2. re-derive each case's stage formation + per-tick ``**alpha`` shadow
+   streams from the model's own control path (``adsr_golden`` asserts the
+   host shadow equals the model's ``_ramp`` rows, and the committed traces
+   equal the live model's ``_adsr`` outputs),
+3. run the engine six instances wide, one case per invocation, and require
+   every envelope trace sample-exact against its vector,
+4. run two cases back-to-back in one simulation with no reset and require
+   the second run to reproduce its solo golden capture byte-for-byte
+   (a trigger cannot retain prior envelope state),
+5. hard-assert the exported op counters against the DR-0010 #70 owner row
+   (multiply-class ops, declared ``**alpha`` shadow sites per tick) plus
+   the emitted schedule constants, and
+6. plant three breakpoint mutations — wrong sustain level (RTL),
+   linear-vs-exponential curve confusion (vector side), off-by-one timing
+   (RTL) — and require every one to be DETECTED.
 """
 
 from __future__ import annotations
@@ -56,12 +78,14 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from fractions import Fraction
 from pathlib import Path
 
 TB_ROOT = Path(__file__).resolve().parent
 ROOT = TB_ROOT.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from torchsynth_voice import adsr_golden as ag  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
@@ -76,14 +100,25 @@ from torchsynth_voice.fixedpoint.ops import OverflowPolicy, mul, rescale  # noqa
 from torchsynth_voice.fixedpoint.rounding import (  # noqa: E402
     RoundingMode,
     div_round,
+    div_round_reported,
 )
 from torchsynth_voice.fixedpoint.schedule import ScheduleNotAccepted  # noqa: E402
+from torchsynth_voice.format_sweep import FixedControlPath  # noqa: E402
 
 DUT_SV = TB_ROOT / "sv/synth_dut.sv"
 TB_SV = TB_ROOT / "sv/tb_synth_dut.sv"
 ANCHOR_DUT_SV = TB_ROOT / "sv/lut_sine_dut.sv"
 ANCHOR_TB_SV = TB_ROOT / "sv/tb_lut_sine_dut.sv"
+ADSR_DUT_SV = TB_ROOT / "sv/adsr_engine.sv"
+ADSR_TB_SV = TB_ROOT / "sv/tb_adsr_engine.sv"
 CONSTANTS_PKG_SV = TB_ROOT / "sv/gf180_rtl_constants_pkg.sv"
+
+#: Committed ADSR golden vectors (issue #70).
+ADSR_VECTOR_DIR = ROOT / "sim/reference/adsr-golden-v1"
+#: The case mutations are demonstrated on (default-envelope sustain 0.75).
+ADSR_MUTATION_CASE = "frozen-envelope-receipt"
+#: Replay-independence pair: envelope state from run 0 must not leak into run 1.
+ADSR_REPLAY_PAIR = ("frozen-envelope-receipt", "boundary-tie")
 
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
@@ -487,6 +522,437 @@ def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
     return ok
 
 
+def adsr_load_vectors():
+    """Load and contract-verify every committed ADSR golden vector."""
+
+    vectors = {}
+    for path in sorted(ADSR_VECTOR_DIR.glob("*.json")):
+        vector = gv.load_vector(path)
+        gv.verify_accepted_contract(vector)
+        vectors[path.stem] = vector
+    if not vectors:
+        raise SystemExit("no ADSR golden vectors found in %s" % ADSR_VECTOR_DIR)
+    return vectors
+
+
+def adsr_derive_case(fcp, formats, vector):
+    """Model-derived stimulus for one case: formations + shadow streams.
+
+    Every value comes from the model's own code (``adsr_golden`` calls the
+    frozen composition's control path); the shadow rows are asserted equal
+    to ``FixedControlPath._ramp`` inside :func:`ag.mirror_ramp`.
+    """
+
+    counters = StickyCounters()
+    words = ag.quantize_entries(vector["parameters"], formats.midi, formats.mode, counters)
+    eps60 = ag.eps60_word(formats.mode)
+    cases = {}
+    for prefix in ag.ADSR_PREFIXES:
+        formation = ag.derive_formation(fcp, words, prefix)
+        shadow = {}
+        value_rows = {}
+        for stage in ("attack", "decay", "release"):
+            start_q = (
+                formation["attack_q"] if stage == "decay"
+                else (formation["duration_q"] if stage == "release" else 0)
+            )
+            values, shape_words = ag.mirror_ramp(
+                fcp,
+                formation[stage + "_q"],
+                formation[stage + "_exact"],
+                start_q,
+                stage != "attack",
+                formation["alpha"],
+            )
+            shadow[stage] = shape_words
+            value_rows[stage] = values
+        golden = fcp._adsr(words, prefix)
+        committed = None
+        for trace in vector["traces"]:
+            if trace["name"] == ag.trace_name(prefix):
+                committed = trace["values"]
+                break
+        if committed is None:
+            raise SystemExit("vector %r carries no %s trace" % (vector, prefix))
+        if committed != golden:
+            raise SystemExit(
+                "committed vector trace %s no longer matches the live model; "
+                "regenerate the vectors" % ag.trace_name(prefix)
+            )
+        # The combine-over-rows replication must reproduce _adsr exactly
+        # when fed the model's own rows (used only by the mutated-curve
+        # vector below, but proven on the clean case).
+        combined = ag.combine_from_shadow(
+            fcp, shadow["attack"], shadow["decay"], shadow["release"],
+            formation["sustain_q"],
+        )
+        if combined != golden:
+            raise SystemExit(
+                "combine-from-shadow replication drifted from _adsr on %s" % prefix
+            )
+        cases[prefix] = {
+            "formation": formation,
+            "shadow": shadow,
+            "value_rows": value_rows,
+            "golden": golden,
+            "sustain_entry": words[prefix + "sustain"],
+        }
+    return cases
+
+
+def _word_halves(word: int):
+    return word & 0xFFFFFFFF, word >> 32
+
+
+def adsr_write_case(workdir: Path, run: int, cases: dict, linear_curve: bool = False):
+    """Write one run's stimulus files (params + per-instance shadows)."""
+
+    prefixes = list(cases)
+    params = []
+    for prefix in prefixes:
+        f = cases[prefix]["formation"]
+        ints = []
+        for name in ("duration_q", "attack_q", "decay_q", "release_q"):
+            lo, hi = _word_halves(int(f[name]))
+            ints.extend((lo, hi))
+        ints.extend(
+            (
+                1 if f["duration_zero"] else 0,
+                1 if f["attack_zero"] else 0,
+                1 if f["decay_zero"] else 0,
+                1 if f["release_zero"] else 0,
+            )
+        )
+        ints.append(int(cases[prefix]["sustain_entry"]))
+        lo, hi = _word_halves(int(ag.eps60_word(RoundingMode.HALF_EVEN)))
+        ints.extend((lo, hi))
+        params.append(ints)
+    (workdir / ("run%d_params.txt" % run)).write_text(
+        "".join(" ".join(str(v) for v in row) + "\n" for row in params),
+        encoding="utf-8",
+    )
+    for index, prefix in enumerate(prefixes):
+        lines = []
+        for tick in range(gv.CANONICAL_CONTROL_COUNT):
+            if linear_curve:
+                row = [
+                    cases[prefix]["value_rows"][stage][tick] >> 30
+                    for stage in ("attack", "decay", "release")
+                ]
+            else:
+                row = [
+                    cases[prefix]["shadow"][stage][tick]
+                    for stage in ("attack", "decay", "release")
+                ]
+            lines.append("%d %d %d" % tuple(row))
+        (workdir / ("run%d_shadow%d.txt" % (run, index))).write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
+    return prefixes
+
+
+def adsr_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> list:
+    """Compile and run the six-instance tb; return per-run captured streams."""
+
+    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
+    if simulator == "iverilog":
+        vvp = workdir / "adsr_engine.vvp"
+        _run(
+            [
+                "iverilog", "-g2012", "-o", str(vvp),
+                str(CONSTANTS_PKG_SV), str(dut_sv), str(ADSR_TB_SV),
+            ],
+            cwd=workdir,
+        )
+        _run(["vvp", "-n", str(vvp)], cwd=workdir)
+    else:
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    captures = []
+    for run in range(runs):
+        streams = []
+        for index in range(6):
+            path = workdir / ("run%d_captured%d.txt" % (run, index))
+            streams.append(
+                [
+                    int(line)
+                    for line in path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
+            )
+        captures.append(streams)
+    return captures
+
+
+def adsr_ops(workdir: Path, runs: int):
+    """Per-run per-instance op counter totals from the tb's ops files."""
+
+    rows = []
+    for run in range(runs):
+        path = workdir / ("run%d_ops.txt" % run)
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append([int(v) for v in line.split()])
+    return rows
+
+
+def check_adsr_budget(schedule) -> bool:
+    """Op-count conformance to the DR-0010 #70 owner row + emission check.
+
+    DR-0010's owner row for #70: "control rate: <= ~30 multiply-class ops +
+    <= 18 declared ``**alpha`` shadow sites per tick across all 6
+    envelopes" (spec/decision-records/0010-one-shot-rtl-microarchitecture.md,
+    module table). The engine declares 4 multiply-class ops + 2 declared
+    narrowings + 3 shadow words + 3 ramp divisions per instance-tick, so
+    the six-instance totals are 24 / 12 / 18 / 18 per control tick. The tb
+    counts them as exported sticky counters and they are hard-asserted
+    here. The serialized single-MAC cycle mapping remains the integration
+    lanes; this is an op-count check, not a PPA/fit claim.
+    """
+
+    ok = True
+    per_tick = {
+        "multiply-class ops": (24, 30),
+        "declared narrowings": (12, 30),
+        "`**alpha` shadow words": (18, 18),
+        "ramp divisions (declared extra)": (18, None),
+    }
+    for name, (actual, limit) in per_tick.items():
+        verdict = "n/a (reported)"
+        if limit is not None:
+            verdict = "OK" if actual <= limit else "FAIL"
+            ok = ok and actual <= limit
+        print(
+            "  budget: %d %s per control tick vs DR-0010 owner-row cap %s -> %s"
+            % (actual, name, limit, verdict)
+        )
+    try:
+        emitted = codegen.emit(schedule_payload=schedule)
+        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+        matches = emitted.package_text == landed and (
+            sched.SCHEDULE_ID in emitted.emitted_ids
+        )
+        print(
+            "  budget constants: landed %s matches the live emission of both "
+            "accepted registers -> %s"
+            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        )
+        ok = ok and matches
+    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
+        print("  budget constants: emission failed -> %s" % error)
+        return False
+    return ok
+
+
+def mutate_sv(source: str, anchor: str, replacement: str, label: str) -> str:
+    """Plant one anchored RTL mutation; refuse loudly if the anchor moved."""
+
+    count = source.count(anchor)
+    if count != 1:
+        raise SystemExit(
+            "MUTATION %s: anchor occurs %d times (expected 1); the RTL "
+            "changed and the mutation seam must be re-anchored" % (label, count)
+        )
+    return source.replace(anchor, replacement)
+
+
+def adsr_detects(captures_run, cases, vector):
+    """True iff the captured streams mismatch the vector's expectations."""
+
+    captured_by_trace = {
+        ag.trace_name(prefix): captures_run[index]
+        for index, prefix in enumerate(cases)
+    }
+    return gv.first_mismatch(vector, captured_by_trace) is not None
+
+
+def adsr(workdir: Path, simulator: str) -> int:
+    """Issue #70 flow: the ADSR engine vs the frozen fixed model's vectors."""
+
+    try:
+        formats = AcceptedFormats()
+    except ChoiceNotAccepted as error:
+        print("ADSR REFUSED: accepted register refused: %s" % error)
+        return 1
+    try:
+        schedule = sched.require_accepted_schedule()
+    except ScheduleNotAccepted as error:
+        print("ADSR REFUSED: DR-0010 schedule register refused: %s" % error)
+        return 1
+    fcp = FixedControlPath(formats.control_spec)
+
+    vectors = adsr_load_vectors()
+    print(
+        "Loaded %d ADSR golden vectors (%s), contract bindings verified"
+        % (len(vectors), ", ".join(sorted(vectors)))
+    )
+
+    ok = True
+
+    # 1. Sample-exact engine runs, one committed case per invocation.
+    case_dirs = {}
+    for case_id in sorted(vectors):
+        case_dir = workdir / ("case-" + case_id)
+        case_dir.mkdir(parents=True, exist_ok=True)
+        cases = adsr_derive_case(fcp, formats, vectors[case_id])
+        adsr_write_case(case_dir, 0, cases)
+        captures = adsr_simulate(case_dir, simulator, 1, ADSR_DUT_SV)
+        prefixes = list(cases)
+        captured_by_trace = {
+            ag.trace_name(prefix): captures[0][index]
+            for index, prefix in enumerate(prefixes)
+        }
+        mismatch = gv.first_mismatch(vectors[case_id], captured_by_trace)
+        if mismatch is not None:
+            print(
+                "ADSR FAILED: RTL disagrees with the golden vector (%s):"
+                % case_id
+            )
+            print(gv.format_mismatch(mismatch))
+            ok = False
+        print(
+            "case %s: %d instances x %d control samples, RTL sample-exact "
+            "-> %s" % (case_id, len(prefixes), gv.CANONICAL_CONTROL_COUNT,
+                       "OK" if ok else "FAIL")
+        )
+        case_dirs[case_id] = (case_dir, cases)
+
+    # 2. Reset/replay: a second trigger cannot retain prior envelope state.
+    first, second = ADSR_REPLAY_PAIR
+    replay_dir = workdir / "replay"
+    replay_dir.mkdir(parents=True, exist_ok=True)
+    cases_first = adsr_derive_case(fcp, formats, vectors[first])
+    cases_second = adsr_derive_case(fcp, formats, vectors[second])
+    adsr_write_case(replay_dir, 0, cases_first)
+    adsr_write_case(replay_dir, 1, cases_second)
+    replay_captures = adsr_simulate(replay_dir, simulator, 2, ADSR_DUT_SV)
+    solo_dir = workdir / "solo"
+    solo_dir.mkdir(parents=True, exist_ok=True)
+    adsr_write_case(solo_dir, 0, cases_second)
+    solo_captures = adsr_simulate(solo_dir, simulator, 1, ADSR_DUT_SV)
+    replay_ok = True
+    second_prefixes = list(cases_second)
+    for index in range(6):
+        if replay_captures[1][index] != solo_captures[0][index]:
+            print(
+                "ADSR FAILED: run-after-run capture differs from the solo "
+                "run (instance %d) - prior envelope state leaked" % index
+            )
+            replay_ok = False
+    mismatch = gv.first_mismatch(
+        vectors[second],
+        {
+            ag.trace_name(prefix): replay_captures[1][index]
+            for index, prefix in enumerate(second_prefixes)
+        },
+    )
+    if mismatch is not None:
+        print("ADSR FAILED: replay run disagrees with the golden vector:")
+        print(gv.format_mismatch(mismatch))
+        replay_ok = False
+    print(
+        "reset/replay: trigger-to-trigger back-to-back runs (%s -> %s) "
+        "reproduce the solo golden run -> %s"
+        % (first, second, "OK" if replay_ok else "FAIL")
+    )
+    ok = ok and replay_ok
+
+    # 3. Budget: exported op counters per instance-run + emission check.
+    ops = adsr_ops(replay_dir, 2)
+    expected_totals = [4 * 1764, 2 * 1764, 3 * 1764, 3 * 1764]
+    counters_ok = all(row == expected_totals for row in ops)
+    print(
+        "budget: %d instance-runs of exported counters -> %s "
+        "(per instance-run %s, per tick x6: 24 mult / 12 narrow / 18 shadow)"
+        % (len(ops), "OK" if counters_ok else "FAIL", expected_totals)
+    )
+    ok = ok and counters_ok and check_adsr_budget(schedule)
+
+    # 4. Mutations: each planted fault MUST be detected (AC-6).
+    mutations_ok = True
+
+    # 4a. Wrong sustain level (RTL): sustain entry negated.
+    mut_dir = workdir / "mut-sustain"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        ADSR_DUT_SV.read_text(encoding="utf-8"),
+        "wire signed [C4_WIDTH-1:0] sustain_eff = sustain_entry;",
+        "wire signed [C4_WIDTH-1:0] sustain_eff = -sustain_entry;",
+        "wrong-sustain-level",
+    )
+    (mut_dir / "adsr_engine_mut.sv").write_text(mutated, encoding="utf-8")
+    adsr_write_case(mut_dir, 0, case_dirs[ADSR_MUTATION_CASE][1])
+    mut_captures = adsr_simulate(
+        mut_dir, simulator, 1, mut_dir / "adsr_engine_mut.sv"
+    )
+    detected = adsr_detects(
+        mut_captures[0],
+        case_dirs[ADSR_MUTATION_CASE][1],
+        vectors[ADSR_MUTATION_CASE],
+    )
+    print(
+        "mutation wrong-sustain-level (RTL): %s"
+        % ("DETECTED (test fails the mutant)" if detected else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 4b. Linear-vs-exponential curve confusion (vector side): regenerate
+    # the shadow stream with the linearized power and compare the true RTL
+    # against the corrupted expectation.
+    lin_dir = workdir / "mut-linear"
+    lin_dir.mkdir(parents=True, exist_ok=True)
+    adsr_write_case(lin_dir, 0, case_dirs[ADSR_MUTATION_CASE][1], linear_curve=True)
+    lin_captures = adsr_simulate(lin_dir, simulator, 1, ADSR_DUT_SV)
+    detected = adsr_detects(
+        lin_captures[0],
+        case_dirs[ADSR_MUTATION_CASE][1],
+        vectors[ADSR_MUTATION_CASE],
+    )
+    print(
+        "mutation linear-vs-exp curve (vector side): %s"
+        % ("DETECTED (vectors discriminate the curve)" if detected else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 4c. Off-by-one timing (RTL): first trigger tick lands on index 1.
+    mut_dir = workdir / "mut-timing"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        ADSR_DUT_SV.read_text(encoding="utf-8"),
+        "                index   <= {IDX_BITS{1'b0}};",
+        "                index   <= 11'd1;",
+        "off-by-one-timing",
+    )
+    (mut_dir / "adsr_engine_mut.sv").write_text(mutated, encoding="utf-8")
+    adsr_write_case(mut_dir, 0, case_dirs[ADSR_MUTATION_CASE][1])
+    mut_captures = adsr_simulate(
+        mut_dir, simulator, 1, mut_dir / "adsr_engine_mut.sv"
+    )
+    detected = adsr_detects(
+        mut_captures[0],
+        case_dirs[ADSR_MUTATION_CASE][1],
+        vectors[ADSR_MUTATION_CASE],
+    )
+    print(
+        "mutation off-by-one timing (RTL): %s"
+        % ("DETECTED (test fails the mutant)" if detected else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+    ok = ok and mutations_ok
+
+    if not ok:
+        print("ADSR RUN FAILED")
+        return 1
+    print(
+        "ADSR RUN PASSED (contract binding + %d cases sample-exact + "
+        "reset/replay independence + budget/op-count asserts + all "
+        "mutations detected)" % len(vectors)
+    )
+    return 0
+
+
 def anchor(workdir: Path, simulator: str) -> int:
     try:
         formats = AcceptedFormats()
@@ -632,9 +1098,11 @@ def main(argv=None) -> int:
         "command",
         nargs="?",
         default="selftest",
-        choices=["selftest", "anchor"],
+        choices=["selftest", "anchor", "adsr"],
         help="'selftest' proves the harness; 'anchor' runs the real "
-        "golden-vector flow through the format-true DUT",
+        "golden-vector flow through the format-true DUT; 'adsr' runs the "
+        "issue #70 ADSR engine against the frozen fixed model's golden "
+        "vectors",
     )
     parser.add_argument(
         "--simulator",
@@ -659,7 +1127,12 @@ def main(argv=None) -> int:
         )
         return 3
 
-    command = selftest if args.command == "selftest" else anchor
+    commands = {
+        "selftest": selftest,
+        "anchor": anchor,
+        "adsr": adsr,
+    }
+    command = commands[args.command]
 
     if args.workdir is not None:
         workdir = args.workdir
