@@ -1703,7 +1703,7 @@ def patch(workdir: Path, simulator: str) -> int:
             "s1-full",
         ),
     ]
-    for label, (anchor, replacement, scenario) in mutation_specs:
+    for label, (anchor, replacement), scenario in mutation_specs:
         mut_dir = workdir / ("mut-" + scenario)
         mut_dir.mkdir(parents=True, exist_ok=True)
         mutated_sv = mut_dir / "patch_control_mut.sv"
