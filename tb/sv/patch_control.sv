@@ -1203,7 +1203,7 @@ module patch_control #(
                     if (e_cnt == 16'd3) v_word[31:24] <= frame_ram[e_ptr];
                     e_ptr <= e_ptr + 16'd1;
                     e_cnt <= e_cnt + 16'd1;
-                    if (e_cnt + 16'd1 >= e_skip - 16'd2) begin
+                    if (e_cnt + 16'd1 >= e_skip) begin
                         e_phase <= 6'd4;
                         e_cnt <= 16'd0;
                         lu_slot <= 7'd0;
