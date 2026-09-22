@@ -728,13 +728,23 @@ module patch_control #(
            sha_blk[sha_round*4+1], sha_blk[sha_round*4]}
         : w_ext;
 
-    wire [31:0] r_s1 = sha_rotr(sha_e, 6'd6) ^ sha_rotr(sha_e, 6'd11) ^
-                       sha_rotr(sha_e, 6'd25);
-    wire [31:0] r_ch = (sha_e & sha_f) ^ (~sha_e & sha_g);
-    wire [31:0] r_t1 = sha_hh + r_s1 + r_ch + sha_k(sha_round) + w_cur;
-    wire [31:0] r_s0 = sha_rotr(sha_a, 6'd2) ^ sha_rotr(sha_a, 6'd13) ^
-                       sha_rotr(sha_a, 6'd22);
-    wire [31:0] r_maj = (sha_a & sha_b) ^ (sha_a & sha_c) ^ (sha_b & sha_c);
+    // Round 0 works on the block's initial state (sha_h) directly; later
+    // rounds work on the shifted working registers.
+    wire [31:0] c_a = (sha_round == 6'd0) ? sha_h[0] : sha_a;
+    wire [31:0] c_b = (sha_round == 6'd0) ? sha_h[1] : sha_b;
+    wire [31:0] c_c = (sha_round == 6'd0) ? sha_h[2] : sha_c;
+    wire [31:0] c_d = (sha_round == 6'd0) ? sha_h[3] : sha_d;
+    wire [31:0] c_e = (sha_round == 6'd0) ? sha_h[4] : sha_e;
+    wire [31:0] c_f = (sha_round == 6'd0) ? sha_h[5] : sha_f;
+    wire [31:0] c_g = (sha_round == 6'd0) ? sha_h[6] : sha_g;
+    wire [31:0] c_h = (sha_round == 6'd0) ? sha_h[7] : sha_hh;
+    wire [31:0] r_s1 = sha_rotr(c_e, 6'd6) ^ sha_rotr(c_e, 6'd11) ^
+                       sha_rotr(c_e, 6'd25);
+    wire [31:0] r_ch = (c_e & c_f) ^ (~c_e & c_g);
+    wire [31:0] r_t1 = c_h + r_s1 + r_ch + sha_k(sha_round) + w_cur;
+    wire [31:0] r_s0 = sha_rotr(c_a, 6'd2) ^ sha_rotr(c_a, 6'd13) ^
+                       sha_rotr(c_a, 6'd22);
+    wire [31:0] r_maj = (c_a & c_b) ^ (c_a & c_c) ^ (c_b & c_c);
     wire [31:0] r_t2 = r_s0 + r_maj;
 
     // ------------------------------------------------------------------
@@ -850,18 +860,18 @@ module patch_control #(
             if (sha_busy) begin
                 sha_w[sha_round[3:0]] <= w_cur;
                 sha_a <= r_t1 + r_t2;
-                sha_b <= sha_a; sha_c <= sha_b; sha_d <= sha_c;
-                sha_e <= sha_d + r_t1; sha_f <= sha_e; sha_g <= sha_f;
-                sha_hh <= sha_g;
+                sha_b <= c_a; sha_c <= c_b; sha_d <= c_c;
+                sha_e <= c_d + r_t1; sha_f <= c_e; sha_g <= c_f;
+                sha_hh <= c_g;
                 if (sha_round == 6'd63) begin
                     sha_h[0] <= sha_h[0] + r_t1 + r_t2;
-                    sha_h[1] <= sha_h[1] + sha_a;
-                    sha_h[2] <= sha_h[2] + sha_b;
-                    sha_h[3] <= sha_h[3] + sha_c;
-                    sha_h[4] <= sha_h[4] + sha_d;
-                    sha_h[5] <= sha_h[5] + sha_e;
-                    sha_h[6] <= sha_h[6] + sha_f;
-                    sha_h[7] <= sha_h[7] + sha_g;
+                    sha_h[1] <= sha_h[1] + c_a;
+                    sha_h[2] <= sha_h[2] + c_b;
+                    sha_h[3] <= sha_h[3] + c_c;
+                    sha_h[4] <= sha_h[4] + c_d;
+                    sha_h[5] <= sha_h[5] + c_e;
+                    sha_h[6] <= sha_h[6] + c_f;
+                    sha_h[7] <= sha_h[7] + c_g;
                     sha_busy <= 1'b0;
                 end
                 sha_round <= sha_round + 6'd1;
