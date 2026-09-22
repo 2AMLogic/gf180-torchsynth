@@ -724,8 +724,8 @@ module patch_control #(
         w_9 +
         (sha_rotr(w_14, 6'd17) ^ sha_rotr(w_14, 6'd19) ^ (w_14 >> 10));
     wire [31:0] w_cur = (sha_round < 6'd16)
-        ? {sha_blk[sha_round*4+3], sha_blk[sha_round*4+2],
-           sha_blk[sha_round*4+1], sha_blk[sha_round*4]}
+        ? {sha_blk[sha_round*4], sha_blk[sha_round*4+1],
+           sha_blk[sha_round*4+2], sha_blk[sha_round*4+3]}  // big-endian
         : w_ext;
 
     // Round 0 works on the block's initial state (sha_h) directly; later
