@@ -13,6 +13,8 @@ import time
 from collections import deque
 from enum import Enum
 
+from fractions import Fraction
+
 from .core_protocol import (
     CAP_NAME_KEYED_PATCH_LOAD,
     CAP_RESET,
@@ -41,6 +43,7 @@ from .core_protocol import (
     decode_patch_name,
     decode_patch_open,
     decode_patch_value,
+    encode_audio_payload,
     encode_frame,
     encode_ready,
     numeric_contract_version_bound,
@@ -79,6 +82,7 @@ class MockCore:
         rx_queue_depth: int = 2,
         patch_timeout_s: float = 5.0,
         clock=time.monotonic,
+        audio_source=None,
     ):
         self._name_table = frozenset(name_table)
         self._name_table_sha256 = bytes(name_table_sha256)
@@ -96,6 +100,9 @@ class MockCore:
         self.state = SessionState.CLOSED
         self.granted_capabilities = 0
         self.active_patch = None
+        self._audio_source = None
+        if audio_source is not None:
+            self.set_audio_source(audio_source)
         self._queue = deque()
         self._replay_cache = {}
         self._last_sequence = None
@@ -106,6 +113,40 @@ class MockCore:
     @property
     def pending(self) -> int:
         return len(self._queue)
+
+    def set_audio_source(self, samples) -> None:
+        """Source audio from fixed golden vectors (MOCK-HARNESS.md).
+
+        The samples are exact host-side reals; they are stored verbatim and
+        packed on demand through the bound C1 codec. This is a software data
+        source at the mock boundary, not RTL behavior and not a transfer
+        command: the audio transfer/streaming command set stays unallocated
+        pending issue #63.
+        """
+        validated = []
+        for sample in samples:
+            try:
+                value = Fraction(sample)
+            except (TypeError, ValueError, OverflowError) as error:
+                raise ValueError(
+                    "audio source samples must be finite reals"
+                ) from error
+            validated.append(value)
+        self._audio_source = tuple(validated)
+
+    @property
+    def audio_payload_bytes(self) -> bytes:
+        """The sourced audio packed per the bound 3-byte Q2.21 sample codec."""
+        if self._audio_source is None:
+            raise ValueError("no audio source; supply fixed golden vectors first")
+        return encode_audio_payload(self._audio_source)
+
+    @property
+    def audio_source_samples(self) -> tuple:
+        """The stored golden samples as exact rationals (readback)."""
+        if self._audio_source is None:
+            raise ValueError("no audio source; supply fixed golden vectors first")
+        return self._audio_source
 
     def submit(self, frame_bytes: bytes):
         try:

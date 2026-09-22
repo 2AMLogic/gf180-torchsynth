@@ -13,7 +13,12 @@ playback.
   codes: `src/torchsynth_voice/core_protocol.py`.
 - The mock core (session state machine, staged patch transactions,
   backpressure, timeouts, idempotency): `src/torchsynth_voice/core_protocol_mock.py`.
-- Tests: `tests/test_core_protocol.py`, `tests/test_core_protocol_mock.py`.
+- The host transport client over the [TRANSPORTS.md](TRANSPORTS.md) interface
+  contract, and the alternate explorer backend riding this mock:
+  [CLIENT.md](CLIENT.md), `src/torchsynth_voice/protocol_client.py`,
+  `src/torchsynth_voice/protocol_backend.py`.
+- Tests: `tests/test_core_protocol.py`, `tests/test_core_protocol_mock.py`,
+  `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`.
 
 The harness has no dependencies beyond the Python standard library, in line
 with the reference tooling package. It injects everything environment-shaped
