@@ -132,6 +132,45 @@ committed golden vectors (sim/reference/mod-matrix-golden-v1/):
    stimulus mutations — and require every one to be DETECTED, with the
    localization mutations confined to exactly the expected route's
    traces.
+
+``vco`` (issue #73) runs the bit-exact RTL sine VCO engine
+(tb/sv/sine_vco_engine.sv) against the frozen whole-voice receipt's
+``vco_1.raw`` traces (sim/reference/fixed-voice-golden-v1.json, the #54
+receipt; the directed vco_1 cases additionally carry committed sidecar
+bytes):
+
+1. load the receipt, verify its accepted-contract bindings (DR-0008
+   status, hash-linked LUT digest, constants-package digest), and select
+   the param-committed cases (the 8 development-corpus cases stay
+   digest-custody only, per the receipt's custody policy),
+2. re-derive each case's stimulus through the frozen composition's own
+   control path (keyboard word, S1 entry words, initial-phase turn word,
+   the #72 endpoint-aligned upsample pitch column — all pinned to the
+   receipt's digests), and re-walk the sine lane host-side with the
+   model's own primitives (the declared binary64 exp2 shadow replayed
+   host-side), requiring the mirror to reproduce the receipt's frozen
+   ``vco_1.raw`` digest,
+3. run the engine one case per invocation over the full 176,400-sample
+   clip and require every ``vco_1.raw`` word AND post-step phase word
+   sample-exact against the mirror,
+4. run two cases back-to-back in one simulation with no reset and
+   require the second run to reproduce its solo golden capture
+   byte-for-byte (the initial phase word and counters are per-trigger),
+5. hard-assert the exported op counters against the DR-0010 #73 owner
+   row (pitch path 3 mults / 6 adds / 3 narrows / 1 exp2 + phase+LUT
+   1/2/1; the engine declares 3/7/4 RTL ops per sample and the host
+   shadow supplies the 4th mult) and the complete clip schedule (walked
+   samples == emitted samples_per_pass), plus the emitted schedule
+   constants, and
+6. plant five breakpoint mutations — wrong LUT address, dropped phase
+   increment, and phase-wrap saturation (RTL, caught on trace rows),
+   plus the un-clamped pitch (the model's MIDI clamp band dropped from
+   the pitch formation) and the selector-vs-blend mod input (the
+   blended pitch column replaced by the control-rate selector pick),
+   both planted stimulus-side through the declared shadow — the mirror
+   re-derives the Q16.15 words from the mutated pitch exactly as the
+   integrated lane would consume them — and require every one to be
+   DETECTED against the pristine frozen truth.
 """
 
 from __future__ import annotations
@@ -158,6 +197,7 @@ from torchsynth_voice import adsr_golden as ag  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import lfo_golden as lgo  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
+from torchsynth_voice import vco_golden as vg  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     entry_quantize,
@@ -2449,6 +2489,673 @@ def anchor(workdir: Path, simulator: str) -> int:
 
 
 # ======================================================================
+# Sine VCO flow (issue #73): the bit-exact sine source lane against the
+# frozen whole-voice receipt's vco_1.raw traces.
+# ======================================================================
+
+VCO_DUT_SV = TB_ROOT / "sv/sine_vco_engine.sv"
+VCO_TB_SV = TB_ROOT / "sv/tb_sine_vco_engine.sv"
+#: The frozen whole-voice receipt (issue #54): per-case physical
+#: parameters + per-trace digests; the directed vco_1.raw sidecars carry
+#: the frozen words. The 8 development-corpus cases stay digest-custody
+#: only (their physical maps are never committed, per the receipt's
+#: custody policy), so the RTL lane consumes the param-committed cases.
+VCO_RECEIPT_PATH = ROOT / "sim/reference/fixed-voice-golden-v1.json"
+VCO_SIDECAR_DIR = ROOT / "sim/reference/fixed-voice-golden-v1-traces"
+#: Cases the RTL mutations are demonstrated on: the depth-driven case
+#: (measured MIDI clamps > 0, so the un-clamped-pitch mutant must bite)
+#: and the plain 440 Hz receipt (the phase/LUT mutants).
+VCO_MUTATION_CASE = "source:vco_1"
+VCO_CLAMP_MUTATION_CASE = "boundary:vco_1.mod_depth:upper"
+#: Mutation-simulation walk cap (+max_n): every mutation demonstrably
+#: bites within the first 24,000 audio samples (~0.54 s), so the five
+#: mutation sims walk a fraction of the grid. Committed-case runs always
+#: walk the full 176,400 samples.
+VCO_MUTATION_WALK_CAP = 24000
+#: Replay-independence pair: the initial phase word and per-run params
+#: are per-trigger; run 0 state must not leak into run 1 (the second
+#: case's initial phase is zero, so leaked phase state is visible).
+VCO_REPLAY_PAIR = ("boundary:vco_1.initial_phase:upper", "source:vco_1")
+
+VCO_PARAMS_LINE_ANCHORS = {
+    "wrong-lut-address": (
+        "    wire [C5_INDEX_BITS-1:0] a_index = i[C5_INDEX_BITS-1:0];",
+        "    wire [C5_INDEX_BITS-1:0] a_index = i[C5_INDEX_BITS-1:0] + 1'b1;"
+        "  // MUTANT: LUT address off-by-one",
+    ),
+    "dropped-phase-increment": (
+        "    wire [C2_WIDTH-1:0] phase_next = phase + k_word;",
+        "    wire [C2_WIDTH-1:0] phase_next = phase;"
+        "  // MUTANT: increment dropped",
+    ),
+    "phase-wrap-saturate": (
+        "    wire [C2_WIDTH-1:0] phase_next = phase + k_word;",
+        "    wire [C2_WIDTH-1:0] phase_next = ((phase + k_word) < phase)"
+        " ? {C2_WIDTH{1'b1}} : (phase + k_word);"
+        "  // MUTANT: forbidden phase saturation",
+    ),
+}
+
+
+def vco_load_receipt():
+    """Load the frozen whole-voice receipt and verify its bindings.
+
+    The receipt binds the accepted DR-0008 status, the hash-linked C5
+    table, and the emitted constants package; any drift refuses the run
+    exactly as the golden-vector flows do.
+    """
+
+    payload = json.loads(VCO_RECEIPT_PATH.read_text(encoding="utf-8"))
+    if payload.get("schema") != "gf180-torchsynth/fixed-voice-golden-v1":
+        raise SystemExit(
+            "receipt schema %r is not fixed-voice-golden-v1"
+            % (payload.get("schema"),)
+        )
+    bindings = payload["bindings"]
+    if not str(bindings.get("dr_0008_status", "")).startswith("Accepted"):
+        raise SystemExit(
+            "receipt dr_0008_status refused: %r"
+            % (bindings.get("dr_0008_status"),)
+        )
+    formats = AcceptedFormats()
+    live_lut = formats.table.sha256()
+    if bindings.get("lut_sha256") != live_lut:
+        raise SystemExit(
+            "accepted quarter-wave table hashes to %s but the receipt "
+            "binds %s" % (live_lut, bindings.get("lut_sha256"))
+        )
+    package_digest = hashlib.sha256(
+        CONSTANTS_PKG_SV.read_bytes()
+    ).hexdigest()
+    if bindings.get("constants_package_sha256") != package_digest:
+        raise SystemExit(
+            "landed constants package hashes to %s but the receipt binds "
+            "%s" % (package_digest, bindings.get("constants_package_sha256"))
+        )
+    cases = {
+        case["id"]: case for case in payload["cases"]
+        if case.get("parameters") is not None
+    }
+    if len(cases) != 26:
+        raise SystemExit(
+            "expected 26 param-committed cases in the receipt, found %d"
+            % len(cases)
+        )
+    for required in (VCO_MUTATION_CASE, VCO_CLAMP_MUTATION_CASE) \
+            + VCO_REPLAY_PAIR:
+        if required not in cases:
+            raise SystemExit("receipt carries no param-committed case %r"
+                             % required)
+    return payload, formats, cases
+
+
+def vco_derive_case(fcp, formats, case):
+    """Model-derived stimulus + frozen truth for one case.
+
+    The stimulus streams are regenerated through the frozen
+    composition's own control path (``render_words``) and pinned to the
+    receipt's digests; the expected output words are the live sine-lane
+    mirror's, pinned to the receipt's frozen ``vco_1.raw`` digest; and
+    where the receipt commits sidecar bytes (the directed vco_1 cases)
+    the unpacked words must equal the mirror. Any drift refuses.
+    """
+
+    control_words = fcp.render_words(case["parameters"])
+    midi_f0_word = control_words["keyboard.midi_f0"][0]
+    up_pitch = control_words["control_upsample.vco_1_pitch"]
+    matrix_pitch = control_words["mod_matrix.vco_1_pitch"]
+    for name, words in (
+        ("keyboard.midi_f0", [midi_f0_word]),
+        ("control_upsample.vco_1_pitch", up_pitch),
+        ("mod_matrix.vco_1_pitch", matrix_pitch),
+    ):
+        digest = vg.digest_words(words)
+        if digest != case["traces"][name]:
+            raise SystemExit(
+                "stimulus drift for %s on %s: regenerated %s but the "
+                "receipt declares %s" % (name, case["id"], digest,
+                                         case["traces"][name])
+            )
+
+    counters = StickyCounters()
+    tuning_word = entry_quantize(
+        float(case["parameters"]["vco_1.tuning"]), formats.midi, counters,
+        "tb.vco.entry:vco_1.tuning",
+    )
+    depth_word = entry_quantize(
+        float(case["parameters"]["vco_1.mod_depth"]), formats.midi, counters,
+        "tb.vco.entry:vco_1.mod_depth",
+    )
+    init_word = vg.initial_phase_word(
+        case["parameters"]["vco_1.initial_phase"], formats.phase_width
+    )
+    mirror, aux = vg.mirror_sine_lane(
+        formats, midi_f0_word, tuning_word, depth_word, init_word, up_pitch
+    )
+    frozen_digest = case["traces"]["vco_1.raw"]
+    mirror_digest = vg.digest_words(mirror["vco"])
+    if mirror_digest != frozen_digest:
+        raise SystemExit(
+            "sine-lane mirror diverges from the frozen model on %s: "
+            "mirror digest %s, receipt declares %s"
+            % (case["id"], mirror_digest, frozen_digest)
+        )
+    sidecar_path = VCO_SIDECAR_DIR / (case["id"] + ".vco_1.raw.f32le")
+    sidecar = None
+    if sidecar_path.exists():
+        words = mm.unpack_words_f32le(sidecar_path.read_bytes())
+        if vg.digest_words(words) != frozen_digest or words != mirror["vco"]:
+            raise SystemExit(
+                "sidecar bytes drifted for %s.vco_1.raw; regenerate the "
+                "vectors, do not recompile" % case["id"]
+            )
+        sidecar = True
+    tally = aux["counters"]
+    # The sticky counters carry per-site records: sum the saturation
+    # events across the declared sites the RTL exports as op_sats
+    # (depth-mod, pitch sum, S4).
+    sats = sum(
+        record["count"]
+        for record in tally["records"]
+        if record["kind"] == "saturation"
+    )
+    return {
+        "id": case["id"],
+        "params": [midi_f0_word, tuning_word, depth_word, init_word],
+        "up_pitch": up_pitch,
+        "matrix_pitch": matrix_pitch,
+        "mirror": mirror,
+        "clamps": aux["clamps"],
+        "sats": sats,
+        "sidecar": sidecar,
+    }
+
+
+def vco_write_case(workdir: Path, run: int, case: dict):
+    """Write one run's stimulus files (params + per-sample streams)."""
+
+    (workdir / ("run%d_params.txt" % run)).write_text(
+        " ".join(str(word & 0xFFFFFFFF) for word in case["params"]) + "\n",
+        encoding="utf-8",
+    )
+    fq = case["mirror"]["fq"]
+    pitch = case["up_pitch"]
+    lines = []
+    for n in range(len(pitch)):
+        lines.append("%d %d" % (pitch[n] & 0xFFFFFFFF, fq[n] & 0xFFFFFFFF))
+    (workdir / ("run%d_streams.txt" % run)).write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
+
+
+def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
+                 max_n: int = None) -> list:
+    """Compile and run the file-driven tb; return per-run captures."""
+
+    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
+    if simulator == "iverilog":
+        vvp = workdir / "sine_vco.vvp"
+        _run(
+            [
+                "iverilog", "-g2012", "-o", str(vvp),
+                str(CONSTANTS_PKG_SV), str(dut_sv), str(VCO_TB_SV),
+            ],
+            cwd=workdir,
+        )
+        lut_arg = "+lut=%s" % (workdir / "lut.memh")
+        if max_n is None:
+            _run(["vvp", "-n", str(vvp), lut_arg], cwd=workdir)
+        else:
+            _run(
+                ["vvp", "-n", str(vvp), lut_arg, "+max_n=%d" % max_n],
+                cwd=workdir,
+            )
+    else:
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    captures = []
+    for run in range(runs):
+        vco_words = []
+        phase_words = []
+        for line in (
+            workdir / ("run%d_captured.txt" % run)
+        ).read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            v_word, p_word = line.split()
+            try:
+                vco_words.append(int(v_word))
+                phase_words.append(int(p_word))
+            except ValueError:
+                vco_words.append(None)  # an x-state emission: a mismatch
+                phase_words.append(None)
+        cycles = int(
+            (workdir / ("run%d_cycles.txt" % run))
+            .read_text(encoding="utf-8").strip()
+        )
+        ops = None
+        for line in (
+            workdir / ("run%d_ops.txt" % run)
+        ).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                ops = []
+                for raw in line.split()[1:]:
+                    try:
+                        ops.append(int(raw))
+                    except ValueError:
+                        ops.append(None)  # an x-state counter: a mismatch
+        captures.append(
+            {"vco": vco_words, "phase": phase_words, "cycles": cycles,
+             "ops": ops}
+        )
+    return captures
+
+
+def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
+    """Sample-exact vco_1.raw + phase verification for one run.
+
+    The capture must equal the mirror (already pinned to the receipt's
+    frozen digest). With ``prefix`` (the capped mutation walks) a
+    shorter capture is not itself a mismatch, but any differing sample
+    inside the captured prefix is.
+    """
+
+    for stream_name in ("vco", "phase"):
+        got = capture[stream_name]
+        want = case["mirror"][stream_name]
+        if prefix:
+            want = want[: len(got)]
+        for index in range(max(len(got), len(want))):
+            a = got[index] if index < len(got) else None
+            b = want[index] if index < len(want) else None
+            if a != b:
+                print(
+                    "SINE-VCO FAILED: %s differs (%s %s[%d]: expected %s "
+                    "got %s)" % (stream_name, case_id, "vco_1.raw"
+                                 if stream_name == "vco" else "phase",
+                                 index, b, a)
+                )
+                return False
+    return True
+
+
+def vco_expected_ops(walked: int, case: dict) -> list:
+    """Expected exported counters for one full-or-capped walk.
+
+    Static per-sample owner-row ops (DR-0010 #73: pitch path 3 mults /
+    6 adds / 3 narrows / 1 exp2 + phase+LUT 1/2/1): the engine counts
+    3 mults, 7 adds/compares, 4 narrows, and 1 consumed shadow site per
+    sample; saturations and MIDI clamps are measured per case.
+    """
+
+    return [
+        3 * walked,
+        7 * walked,
+        4 * walked,
+        walked,
+        case["sats"],
+        case["clamps"],
+    ]
+
+
+def check_vco_budget(schedule, walked: int, case: dict, ops_row: list) -> bool:
+    """Op-count conformance to the DR-0010 #73 owner row + emission check.
+
+    DR-0010's owner rows for #73: "vco_1 pitch path (depth-mod, clamp,
+    MIDI->Hz, Q16.15 word, phase increment): 3 mults / 6 adds / 3
+    narrows / 1 exp2" and "vco_1 phase + quarter-wave LUT + S4: 1 mult /
+    2 adds / 1 narrow" — 4 mults / 8 adds / 4 narrows / 1 shadow per
+    audio sample. The engine declares 3 / 7 / 4 RTL ops per sample (the
+    interpolation product's two adds and the clamp compares land inside
+    the adds cap) and the host shadow supplies the fourth mult-class op
+    (the exp2 site, counted from the consumed fq stream). The complete
+    clip schedule is asserted: the walked sample count must equal the
+    emitted SCHED_SAMPLES_PER_PASS over one full pass. The serialized
+    single-MAC cycle mapping remains the integration lanes; this is an
+    op-count check, not a PPA/fit claim.
+    """
+
+    ok = True
+    per_sample = {
+        "multiply-class ops (3 RTL + 1 host shadow)": (4, 4),
+        "adds/compares": (7, 8),
+        "declared narrowings": (4, 4),
+        "exp2 shadow sites": (1, 1),
+    }
+    for name, (actual, limit) in per_sample.items():
+        verdict = "OK" if actual <= limit else "FAIL"
+        ok = ok and actual <= limit
+        print(
+            "  budget: %d %s per sample vs DR-0010 #73 owner-row cap %d -> %s"
+            % (actual, name, limit, verdict)
+        )
+    try:
+        emitted = codegen.emit(schedule_payload=schedule)
+        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+        matches = emitted.package_text == landed and (
+            sched.SCHEDULE_ID in emitted.emitted_ids
+        )
+        print(
+            "  budget constants: landed %s matches the live emission of "
+            "both accepted registers -> %s"
+            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        )
+        ok = ok and matches
+    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
+        print("  budget constants: emission failed -> %s" % error)
+        return False
+    samples_per_pass = sched.constant(schedule, "samples_per_pass")
+    complete = (walked == samples_per_pass == gv.CANONICAL_SAMPLE_COUNT)
+    print(
+        "  complete clip schedule: walked %d samples == emitted "
+        "samples_per_pass %d == canonical %d -> %s"
+        % (walked, samples_per_pass, gv.CANONICAL_SAMPLE_COUNT,
+           "OK" if complete else "FAIL")
+    )
+    ok = ok and complete
+    expected = vco_expected_ops(walked, case)
+    counters_ok = ops_row == expected
+    print(
+        "  exported counters over the walk: %r vs expected %r -> %s"
+        % (ops_row, expected, "OK" if counters_ok else "FAIL")
+    )
+    return ok and counters_ok
+
+
+def vco_run_mutation(workdir: Path, simulator: str, label: str, case_id: str,
+                     cases_by_id: dict):
+    """Plant one RTL mutation on one case and require it to be DETECTED.
+
+    A mutant fails on either surface the AC names: the captured trace
+    rows (sample-exact vs the frozen truth, over the capped prefix) or
+    the exported op-counter property rows (which must still equal the
+    model's measured counts). While the midi->Hz shadow is
+    host-replayed, the pitch path's trace effect completes host-side —
+    the RTL phase/LUT mutations are caught on trace rows; the pitch
+    formation mutations (un-clamped pitch, selector-vs-blend) are
+    planted stimulus-side through the declared shadow so they reach the
+    trace too.
+    """
+
+    anchor, replacement = VCO_PARAMS_LINE_ANCHORS[label]
+    mut_dir = workdir / ("mut-" + label)
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        VCO_DUT_SV.read_text(encoding="utf-8"), anchor, replacement, label
+    )
+    (mut_dir / "sine_vco_engine_mut.sv").write_text(mutated, encoding="utf-8")
+    (mut_dir / "lut.memh").write_bytes(
+        (workdir / "lut.memh").read_bytes()
+    )
+    case = cases_by_id[case_id]
+    vco_write_case(mut_dir, 0, case)
+    mut_captures = vco_simulate(
+        mut_dir, simulator, 1, mut_dir / "sine_vco_engine_mut.sv",
+        max_n=VCO_MUTATION_WALK_CAP,
+    )
+    capture = mut_captures[0]
+    trace_bad = not vco_check_case(capture, case, case_id, prefix=True)
+    walked = len(capture["vco"])
+    ops_bad = capture["ops"] != vco_expected_ops(walked, case)
+    detected = trace_bad or ops_bad
+    surface = (
+        "trace rows" if trace_bad
+        else ("property rows (counters %r)" % (capture["ops"],))
+        if ops_bad else "neither"
+    )
+    print(
+        "mutation %s (RTL, case %s): %s via %s"
+        % (
+            label,
+            case_id,
+            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
+            surface,
+        )
+    )
+    return detected
+
+
+def vco(workdir: Path, simulator: str) -> int:
+    """Issue #73 flow: the sine VCO engine vs the frozen model's traces."""
+
+    try:
+        receipt, formats, cases = vco_load_receipt()
+    except ChoiceNotAccepted as error:
+        print("SINE-VCO REFUSED: accepted register refused: %s" % error)
+        return 1
+    try:
+        schedule = sched.require_accepted_schedule()
+    except ScheduleNotAccepted as error:
+        print("SINE-VCO REFUSED: DR-0010 schedule register refused: %s" % error)
+        return 1
+    fcp = FixedControlPath(formats.control_spec)
+
+    print(
+        "Loaded the frozen whole-voice receipt (%d cases, %d "
+        "param-committed), bindings verified (DR-0008 %s, lut %s)"
+        % (len(receipt["cases"]), len(cases),
+           receipt["bindings"]["dr_0008_status"],
+           receipt["bindings"]["lut_sha256"][:12] + "...")
+    )
+
+    lut_memh = workdir / "lut.memh"
+    write_lut_memh(formats.table, lut_memh)
+
+    ok = True
+
+    # 1. Sample-exact engine runs, one committed case per invocation,
+    #    over the full 176,400-sample clip schedule. The exported
+    #    op-counter property row must equal the model-measured counts on
+    #    every clean run (an x-state counter is a named failure, never a
+    #    silent pass).
+    case_dirs = {}
+    sidecar_count = 0
+    for case_id in sorted(cases):
+        case_dir = workdir / ("case-" + case_id)
+        case_dir.mkdir(parents=True, exist_ok=True)
+        (case_dir / "lut.memh").write_bytes(lut_memh.read_bytes())
+        case = vco_derive_case(fcp, formats, cases[case_id])
+        vco_write_case(case_dir, 0, case)
+        captures = vco_simulate(case_dir, simulator, 1, VCO_DUT_SV)
+        case_ok = vco_check_case(captures[0], case, case_id)
+        expected_ops = vco_expected_ops(
+            len(case["mirror"]["vco"]), case
+        )
+        if captures[0]["ops"] != expected_ops:
+            case_ok = False
+            print(
+                "SINE-VCO FAILED: exported counters %r != expected %r "
+                "(%s)" % (captures[0]["ops"], expected_ops, case_id)
+            )
+        if not case_ok:
+            ok = False
+        if case["sidecar"]:
+            sidecar_count += 1
+        print(
+            "case %s: %d samples (clamps %d, sats %d, sidecar %s), "
+            "RTL sample-exact -> %s"
+            % (case_id, len(case["mirror"]["vco"]), case["clamps"],
+               case["sats"], bool(case["sidecar"]),
+               "OK" if case_ok else "FAIL")
+        )
+        case_dirs[case_id] = (case_dir, case)
+
+    # 2. Reset/replay: a second trigger cannot retain prior state (the
+    #    initial phase word and counters are per-trigger).
+    first, second = VCO_REPLAY_PAIR
+    replay_dir = workdir / "replay"
+    replay_dir.mkdir(parents=True, exist_ok=True)
+    (replay_dir / "lut.memh").write_bytes(lut_memh.read_bytes())
+    case_first = vco_derive_case(fcp, formats, cases[first])
+    case_second = vco_derive_case(fcp, formats, cases[second])
+    vco_write_case(replay_dir, 0, case_first)
+    vco_write_case(replay_dir, 1, case_second)
+    replay_captures = vco_simulate(replay_dir, simulator, 2, VCO_DUT_SV)
+    solo_dir = workdir / "solo"
+    solo_dir.mkdir(parents=True, exist_ok=True)
+    (solo_dir / "lut.memh").write_bytes(lut_memh.read_bytes())
+    vco_write_case(solo_dir, 0, case_second)
+    solo_captures = vco_simulate(solo_dir, simulator, 1, VCO_DUT_SV)
+    replay_ok = True
+    if replay_captures[1]["vco"] != solo_captures[0]["vco"] or \
+            replay_captures[1]["phase"] != solo_captures[0]["phase"]:
+        print(
+            "SINE-VCO FAILED: run-after-run capture differs from the solo "
+            "run - prior run state leaked"
+        )
+        replay_ok = False
+    if not vco_check_case(replay_captures[1], case_second, second):
+        replay_ok = False
+    print(
+        "reset/replay: trigger-to-trigger back-to-back runs (%s -> %s) "
+        "reproduce the solo golden run -> %s"
+        % (first, second, "OK" if replay_ok else "FAIL")
+    )
+    ok = ok and replay_ok
+
+    # 3. Budget: exported op counters + the DR-0010 #73 owner row over
+    #    the complete clip schedule.
+    budget_ok = check_vco_budget(
+        schedule, len(case_second["mirror"]["vco"]), case_second,
+        replay_captures[1]["ops"],
+    )
+    print(
+        "budget: %d runs of exported counters checked -> %s (per sample "
+        "4 mult / 7 adds / 4 narrow / 1 shadow within the 4/8/4/1 "
+        "owner-row cap; the 4th mult is the declared host exp2 shadow)"
+        % (2, "OK" if budget_ok else "FAIL")
+    )
+    ok = ok and budget_ok
+
+    # 4. Mutations: each planted fault MUST be detected (AC-5).
+    mutations_ok = True
+    cases_by_id = {cid: cd[1] for cid, cd in case_dirs.items()}
+
+    # 4a. Wrong LUT entry (RTL): the primary table read is off by one.
+    mutations_ok &= vco_run_mutation(
+        workdir, simulator, "wrong-lut-address", VCO_MUTATION_CASE,
+        cases_by_id,
+    )
+
+    # 4b. Dropped phase increment (RTL): the phase never advances.
+    mutations_ok &= vco_run_mutation(
+        workdir, simulator, "dropped-phase-increment", VCO_MUTATION_CASE,
+        cases_by_id,
+    )
+
+    # 4c. Phase-wrap error (RTL): the forbidden saturation replaces the
+    #     natural u32 wrap at the first overflow.
+    mutations_ok &= vco_run_mutation(
+        workdir, simulator, "phase-wrap-saturate", VCO_MUTATION_CASE,
+        cases_by_id,
+    )
+
+    # 4d. Un-clamped pitch (stimulus side, through the declared shadow):
+    #     the model's MIDI clamp band is dropped from the pitch
+    #     formation and the mirror re-derives the Q16.15 words from the
+    #     un-clamped pitch (exactly what an implementer's "cleaner"
+    #     un-clamped pitch would feed the lane). The clean RTL renders
+    #     the mutated stimulus and the trace must diverge from the
+    #     frozen truth within the capped walk; only meaningful on a case
+    #     with measured clamps.
+    clamp_case = case_dirs[VCO_CLAMP_MUTATION_CASE][1]
+    if clamp_case["clamps"] <= 0:
+        print(
+            "SINE-VCO FAILED: %s carries no clamps; the un-clamped-pitch "
+            "mutation would be vacuous" % VCO_CLAMP_MUTATION_CASE
+        )
+        mutations_ok = False
+    else:
+        mut_dir = workdir / "mut-un-clamped-pitch"
+        mut_dir.mkdir(parents=True, exist_ok=True)
+        (mut_dir / "lut.memh").write_bytes(lut_memh.read_bytes())
+        mutated_case = copy.deepcopy(clamp_case)
+        mutated_case["up_pitch"] = clamp_case["up_pitch"][
+            :VCO_MUTATION_WALK_CAP
+        ]
+        mutated_mirror, _ = vg.mirror_sine_lane(
+            formats, *clamp_case["params"], mutated_case["up_pitch"],
+            clamp_pitch=False,
+        )
+        mutated_case["mirror"] = mutated_mirror
+        vco_write_case(mut_dir, 0, mutated_case)
+        mut_captures = vco_simulate(mut_dir, simulator, 1, VCO_DUT_SV,
+                                    max_n=VCO_MUTATION_WALK_CAP)
+        # The expectations stay the PRISTINE frozen truth: the un-clamped
+        # stimulus must move the trace away from it.
+        detected = not vco_check_case(mut_captures[0], clamp_case,
+                                      VCO_CLAMP_MUTATION_CASE, prefix=True)
+        print(
+            "mutation un-clamped-pitch (stimulus side via the declared "
+            "shadow, case %s): %s"
+            % (VCO_CLAMP_MUTATION_CASE,
+               "DETECTED (vectors reject the un-clamped pitch)" if detected
+               else "NOT DETECTED")
+        )
+        mutations_ok = mutations_ok and detected
+
+    # 4e. Selector-vs-blend mod input (stimulus side): the audio-rate
+    #     blended pitch column becomes the control-rate selector pick.
+    #     The corruption flows through the pitch path's declared shadow:
+    #     the mirror re-derives the Q16.15 words from the mutated column
+    #     (exactly what the integrated lane would consume), the clean
+    #     RTL renders the mutated stimulus, and the output must diverge
+    #     from the frozen truth within the capped walk.
+    sel_case = case_dirs[VCO_CLAMP_MUTATION_CASE][1]
+    matrix = sel_case["matrix_pitch"]
+    selector = [
+        matrix[(n * 1763) // 176399] for n in range(VCO_MUTATION_WALK_CAP)
+    ]
+    if selector == sel_case["up_pitch"][:VCO_MUTATION_WALK_CAP]:
+        print(
+            "SINE-VCO FAILED: the selector stream equals the blended "
+            "column on %s; the selector-vs-blend mutation would be "
+            "vacuous" % VCO_CLAMP_MUTATION_CASE
+        )
+        mutations_ok = False
+    else:
+        mut_dir = workdir / "mut-selector-vs-blend"
+        mut_dir.mkdir(parents=True, exist_ok=True)
+        (mut_dir / "lut.memh").write_bytes(lut_memh.read_bytes())
+        mutated_case = copy.deepcopy(sel_case)
+        mutated_case["up_pitch"] = selector
+        mutated_mirror, _ = vg.mirror_sine_lane(
+            formats, *sel_case["params"], selector,
+            samples=VCO_MUTATION_WALK_CAP,
+        )
+        mutated_case["mirror"] = mutated_mirror
+        vco_write_case(mut_dir, 0, mutated_case)
+        mut_captures = vco_simulate(mut_dir, simulator, 1, VCO_DUT_SV,
+                                    max_n=VCO_MUTATION_WALK_CAP)
+        # The expectations stay the PRISTINE frozen truth: the mutated
+        # stimulus must move the trace away from it.
+        detected = not vco_check_case(mut_captures[0], sel_case,
+                                      VCO_CLAMP_MUTATION_CASE, prefix=True)
+        print(
+            "mutation selector-vs-blend (stimulus side via the declared "
+            "shadow, case %s): %s"
+            % (VCO_CLAMP_MUTATION_CASE,
+               "DETECTED (vectors discriminate the mod input)" if detected
+               else "NOT DETECTED")
+        )
+        mutations_ok = mutations_ok and detected
+    ok = ok and mutations_ok
+
+    if not ok:
+        print("SINE-VCO RUN FAILED")
+        return 1
+    print(
+        "SINE-VCO RUN PASSED (contract binding + %d cases sample-exact "
+        "(%d with committed sidecar bytes) + reset/replay independence + "
+        "complete-clip budget/op-count asserts + all mutations detected)"
+        % (len(cases), sidecar_count)
+    )
+    return 0
+
+
+# ======================================================================
 # Patch-control flow (issue #69): the RTL patch loader/identity/reset/
 # keyboard core against its cycle-exact Python mirror.
 # ======================================================================
@@ -3070,7 +3777,8 @@ def main(argv=None) -> int:
         "command",
         nargs="?",
         default="selftest",
-        choices=["selftest", "anchor", "adsr", "patch", "lfo", "modmatrix"],
+        choices=["selftest", "anchor", "adsr", "patch", "lfo", "modmatrix",
+                 "vco"],
         help="'selftest' proves the harness; 'anchor' runs the real "
         "golden-vector flow through the format-true DUT; 'adsr' runs the "
         "issue #70 ADSR engine against the frozen fixed model's golden "
@@ -3079,7 +3787,9 @@ def main(argv=None) -> int:
         "control-VCA engine against the frozen fixed model's golden "
         "vectors; 'modmatrix' runs the issue #72 modulation-matrix + "
         "endpoint-aligned upsample engines against the frozen fixed "
-        "model's golden vectors",
+        "model's golden vectors; 'vco' runs the issue #73 sine VCO "
+        "engine against the frozen whole-voice receipt's vco_1.raw "
+        "traces",
     )
     parser.add_argument(
         "--simulator",
@@ -3111,6 +3821,7 @@ def main(argv=None) -> int:
         "patch": patch,
         "lfo": lfo,
         "modmatrix": modmatrix,
+        "vco": vco,
     }
     command = commands[args.command]
 
