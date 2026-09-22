@@ -1364,7 +1364,8 @@ module patch_control #(
                 CMD_PATCH_OPEN: decide_open;
                 CMD_PATCH_NAME: decide_name;
                 CMD_PATCH_VALUE: decide_value;
-                default: decide_commit;
+                CMD_PATCH_COMMIT: decide_commit;
+                default: enq_rsp_err(e_cmd, e_seq, ERR_UNSUPPORTED);
             endcase
         end
     endtask
@@ -1501,7 +1502,7 @@ module patch_control #(
                     kbd_midi_r <= staged_bank[KBD_MIDI_SLOT];
                 if (tx_staged_mask[KBD_DUR_SLOT])
                     kbd_dur_r <= {staged_bank[KBD_DUR_SLOT][31:0], 9'd0};  // Q10.21 <<9 -> Q16.30
-                identity_r <= tx_identity;
+                identity_r <= tx_identity << (8*(64 - tx_identity_len));
                 identity_len_r <= tx_identity_len;
                 finish_tx;
                 session <= S_READY;
