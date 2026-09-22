@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   stdlib:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     strategy:
       matrix:
         python: ["3.11", "3.13"]
@@ -39,7 +39,7 @@ jobs:
     # and revalidates the committed timing publication against a fresh
     # rebuild on the same numerical host (the #34 matrix rerun gate executes
     # this check; drift must surface here first, never only in composition).
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
@@ -67,7 +67,7 @@ jobs:
     # BLAS, and revalidates the committed signal publication against a fresh
     # rebuild on the same numerical host (the #34 matrix rerun gate executes
     # this check; drift must surface here first, never only in composition).
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
@@ -95,7 +95,7 @@ jobs:
     # This job executes the bidirectional matrix composition and checks the
     # committed publication with the locked metrics extra and single-threaded
     # BLAS, mirroring the landed -numerical jobs.
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     env:
       OMP_NUM_THREADS: "1"
       OPENBLAS_NUM_THREADS: "1"
