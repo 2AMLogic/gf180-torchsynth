@@ -73,8 +73,11 @@ model's committed golden vectors (sim/reference/adsr-golden-v1/):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import math
+import random
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -103,7 +106,29 @@ from torchsynth_voice.fixedpoint.rounding import (  # noqa: E402
     div_round_reported,
 )
 from torchsynth_voice.fixedpoint.schedule import ScheduleNotAccepted  # noqa: E402
+from torchsynth_voice.core_protocol import (  # noqa: E402
+    CMD_HELLO,
+    CMD_PATCH_ABORT,
+    CMD_PATCH_COMMIT,
+    CMD_PATCH_NAME,
+    CMD_PATCH_OPEN,
+    CMD_PATCH_VALUE,
+    CMD_RESET,
+    KIND_COMMAND,
+    ErrorCode,
+    decode_frame,
+    encode_frame,
+    encode_hello,
+    encode_patch_commit,
+    encode_patch_name,
+    encode_patch_open,
+    encode_patch_value,
+    numeric_contract_version_bound,
+)
 from torchsynth_voice.format_sweep import FixedControlPath  # noqa: E402
+from torchsynth_voice.patch_control_model import (  # noqa: E402
+    decode_rsp_frames,
+)
 
 DUT_SV = TB_ROOT / "sv/synth_dut.sv"
 TB_SV = TB_ROOT / "sv/tb_synth_dut.sv"
@@ -1092,17 +1117,635 @@ def anchor(workdir: Path, simulator: str) -> int:
     return 0
 
 
+
+# ======================================================================
+# Patch-control flow (issue #69): the RTL patch loader/identity/reset/
+# keyboard core against its cycle-exact Python mirror.
+# ======================================================================
+
+PATCH_DUT_SV = TB_ROOT / "sv/patch_control.sv"
+PATCH_TB_SV = TB_ROOT / "sv/tb_patch_control.sv"
+#: Must equal the DUT's TIMEOUT_CYCLES parameter default.
+PATCH_TIMEOUT_CYCLES = 5000
+
+CORE_PROFILE_ID = b"torchsynth-1-voice-default"
+CORE_IDENTITY = b"identity-golden-0001"
+SOURCE_VERSION = b"torchsynth@2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+
+
+def patch_build_model():
+    """The mirror oracle bound to the pinned inventory + accepted register."""
+    from torchsynth_voice.patch_control_model import PatchControlModel
+
+    inventory = gv.load_inventory_document()
+    names = sorted(entry["name"] for entry in inventory["parameters"])
+    table_sha = hashlib.sha256(gv.INVENTORY_PATH.read_bytes()).digest()
+    return PatchControlModel(
+        names,
+        table_sha256=table_sha,
+        contract_version=numeric_contract_version_bound(),
+        profile_id=CORE_PROFILE_ID,
+        timeout_cycles=PATCH_TIMEOUT_CYCLES,
+    )
+
+
+def frame(command: int, seq: int, payload: bytes = b"") -> bytes:
+    return encode_frame(KIND_COMMAND, command, seq, payload)
+
+
+def frame_v1(command: int, seq: int) -> bytes:
+    """A complete, CRC-valid protocol version 1 frame (stale peer)."""
+    body = (
+        struct.pack("<BBBH", 1, KIND_COMMAND, command, seq)
+        + struct.pack("<H", 0)
+    )
+    return b"\x67\xf1" + body + struct.pack(
+        "<H", crc16_ccitt_false(body)
+    )
+
+
+def crc16_ccitt_false(data: bytes) -> int:
+    from torchsynth_voice.core_protocol import crc16_ccitt_false as crc
+
+    return crc(data)
+
+
+def paced(frames, gap: int = 300, after_commit: int = 4700) -> list:
+    """Interleave a conforming host's pacing gap after every frame.
+
+    The advertised rx_queue_depth is 1 and the core processes one frame at
+    a time, so a deterministic golden path leaves each frame uncontended.
+    A full 78-name commit's hash walk runs ~4.5k cycles, so the gap after
+    a COMMIT frame is longer (still below the 5000-cycle patch timeout the
+    mirror and DUT share). The backpressure scenario exercises the unpaced
+    burst on purpose.
+    """
+    items: list = []
+    for frame in frames:
+        items.append(frame)
+        if isinstance(frame, bytes):
+            items.append(
+                after_commit
+                if (len(frame) > 4 and frame[4] == CMD_PATCH_COMMIT) else gap
+            )
+    return items
+
+
+def schedule_of(items) -> list:
+    """A per-cycle schedule from frame bytes and idle-cycle counts."""
+    schedule: list = []
+    for item in items:
+        if isinstance(item, int):
+            schedule.extend([None] * item)
+        else:
+            schedule.extend(item)
+    return schedule
+
+
+def write_schedule(path: Path, schedule: list) -> None:
+    lines = ["B %d" % b if b is not None else "I" for b in schedule]
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def patch_simulate(workdir: Path, simulator: str, stim: Path,
+                   dut_sv: Path) -> tuple:
+    """Compile + run the tb; return (response byte list, final observables)."""
+    captured = workdir / "captured.txt"
+    final = workdir / "final.txt"
+    if simulator == "iverilog":
+        vvp = workdir / "patch_control.vvp"
+        _run(
+            [
+                "iverilog", "-g2012", "-I", str(TB_ROOT / "sv"),
+                "-o", str(vvp), str(CONSTANTS_PKG_SV), str(dut_sv),
+                str(PATCH_TB_SV),
+            ],
+            cwd=workdir,
+        )
+        _run(
+            [
+                "vvp", "-n", str(vvp),
+                "+stim=%s" % stim,
+                "+capture=%s" % captured,
+                "+final=%s" % final,
+            ],
+            cwd=workdir,
+        )
+    else:
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    rsp = [
+        int(line)
+        for line in captured.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    fields = final.read_text(encoding="utf-8").splitlines()
+    head = [int(v) for v in fields[0].split()]
+    obs = {
+        "session": head[0],
+        "patch_active": bool(head[1]),
+        "kbd_midi_word": head[2],
+        "kbd_duration_word": head[3],
+        "identity_len": head[4],
+        "identity_hex": fields[1].strip(),
+        "bank": [int(v) for v in fields[2 : 2 + 78]],
+    }
+    return rsp, obs
+
+
+def obs_from_mirror(obs: dict) -> dict:
+    identity = obs["identity"]
+    return {
+        "session": obs["session"],
+        "patch_active": obs["patch_active"],
+        "kbd_midi_word": obs["kbd_midi_word"],
+        "kbd_duration_word": obs["kbd_duration_word"],
+        "identity_len": len(identity),
+        "identity_hex": identity.hex(),
+        "bank": [obs["bank"][slot] for slot in range(78)],
+    }
+
+
+def _frame_summary(frame: tuple) -> str:
+    kind, cmd, seq, payload = frame
+    name = {2: "RSP", 3: "ERR"}.get(kind, "kind%d" % kind)
+    detail = ""
+    if kind == 3 and payload:
+        try:
+            detail = " " + ErrorCode(payload[0]).name
+        except ValueError:
+            detail = " code=0x%02x" % payload[0]
+    return "%s(cmd=0x%02x seq=%d%s)" % (name, cmd, seq, detail)
+
+
+def compare_run(label: str, schedule: list, workdir: Path, simulator: str,
+                model, dut_sv: Path, extra_checks=None) -> bool:
+    """Mirror vs RTL: exact response byte stream + exact final state."""
+    expected_rsp, mirror_obs = model.run(schedule)
+    if mirror_obs["session"] == 2:  # patch_open at end would drain-diverge
+        raise SystemExit(
+            "%s: scenario ends with an open transaction; end every "
+            "scenario in ready" % label
+        )
+    workdir.mkdir(parents=True, exist_ok=True)
+    stim = workdir / "stimulus.txt"
+    write_schedule(stim, schedule)
+    rsp, obs = patch_simulate(workdir, simulator, stim, dut_sv)
+
+    ok = True
+    if rsp != list(expected_rsp):
+        ok = False
+        print("%s: RESPONSE STREAM MISMATCH" % label)
+        expected_frames = decode_rsp_frames(bytes(expected_rsp))
+        try:
+            actual_frames = decode_rsp_frames(bytes(rsp))
+        except AssertionError:
+            actual_frames = []
+        for index, (want, got) in enumerate(
+            zip(expected_frames, actual_frames)
+        ):
+            if want != got:
+                print(
+                    "  first differing frame #%d: mirror %s vs rtl %s"
+                    % (index, _frame_summary(want), _frame_summary(got))
+                )
+                break
+        if len(expected_frames) != len(actual_frames):
+            print(
+                "  frame counts: mirror %d vs rtl %d"
+                % (len(expected_frames), len(actual_frames))
+            )
+    want_obs = obs_from_mirror(mirror_obs)
+    # the tb always dumps the full 64-byte identity window; only the
+    # declared length-prefix carries meaning
+    obs["identity_hex"] = obs["identity_hex"][: 2 * obs["identity_len"]]
+    for key in ("session", "patch_active", "kbd_midi_word",
+                "kbd_duration_word", "identity_len", "identity_hex"):
+        if obs[key] != want_obs[key]:
+            ok = False
+            print(
+                "%s: final state mismatch %s: mirror %r vs rtl %r"
+                % (label, key, want_obs[key], obs[key])
+            )
+    if obs["bank"] != want_obs["bank"]:
+        ok = False
+        first = next(
+            slot
+            for slot in range(78)
+            if obs["bank"][slot] != want_obs["bank"][slot]
+        )
+        print(
+            "%s: active bank mismatch at slot %d: mirror %d vs rtl %d"
+            % (label, first, want_obs["bank"][first], obs["bank"][first])
+        )
+    if extra_checks is not None:
+        ok = extra_checks(obs) and ok
+    print("%s: %s" % (label, "OK" if ok else "FAIL"))
+    return ok
+
+
+def patch_anchor_words():
+    """The 78 wire words from the anchor vector's own declared parameters."""
+    vector = gv.load_vector(gv.SENTINEL_VECTOR_PATH)
+    counters = StickyCounters()
+    words = {}
+    for name in sorted(vector["parameters"]):
+        words[name] = entry_quantize(
+            float(vector["parameters"][name]), formats_midi(), counters,
+            "tb.patch.entry:" + name,
+        )
+    return words, vector
+
+
+_formats_cache = None
+
+
+def formats_midi():
+    global _formats_cache
+    if _formats_cache is None:
+        _formats_cache = AcceptedFormats()
+    return _formats_cache.midi
+
+
+def word4(value: int) -> bytes:
+    return (value & 0xFFFFFFFF).to_bytes(4, "little", signed=True)
+
+
+def patch_hash_entries(model, entries: dict) -> bytes:
+    from torchsynth_voice.core_protocol import patch_hash
+
+    return patch_hash(entries, numeric_contract_version=model.contract_version)
+
+
+def build_scenarios(model, words: dict, vector: dict) -> dict:
+    """Every scenario's frame list + idle tail, keyed by scenario id."""
+    from torchsynth_voice.core_protocol import patch_hash
+
+    names = list(model.names)
+    hello = frame(
+        CMD_HELLO, 0,
+        encode_hello(CORE_PROFILE_ID, SOURCE_VERSION,
+                     model.contract_version, 3),
+    )
+    rng = random.Random(20260921)
+    shuffled = list(names)
+    rng.shuffle(shuffled)
+
+    def full_tx(first_seq: int, tx_id: bytes, order: list):
+        frames = [
+            frame(CMD_PATCH_OPEN, first_seq,
+                  encode_patch_open(tx_id, CORE_IDENTITY, model.table_sha256,
+                                    len(names)))
+        ]
+        seq = first_seq + 1
+        entries = {}
+        for name in order:
+            encoded = word4(words[name])
+            entries[name] = encoded
+            frames.append(frame(CMD_PATCH_NAME, seq,
+                                encode_patch_name(name)))
+            frames.append(frame(CMD_PATCH_VALUE, seq + 1,
+                                encode_patch_value(name, encoded)))
+            seq += 2
+        digest = patch_hash_entries(model, entries)
+        frames.append(frame(CMD_PATCH_COMMIT, seq,
+                            encode_patch_commit(digest)))
+        return frames, seq
+
+    # ---- s1: full shuffled load, RESET, sub-patch, full re-load --------
+    tx1, seq1 = full_tx(1, b"tx-full-0001", shuffled)
+    sub_names = ["adsr_1.alpha", "keyboard.midi_f0"]
+    sub_entries = {name: word4(words[name]) for name in sub_names}
+    sub_digest = patch_hash_entries(model, sub_entries)
+    base = seq1 + 1  # next free sequence after tx1's commit
+    sub_frames = [
+        frame(CMD_PATCH_OPEN, base + 1,
+              encode_patch_open(b"tx-sub-0002", CORE_IDENTITY,
+                                model.table_sha256, 2)),
+        frame(CMD_PATCH_NAME, base + 2, encode_patch_name(sub_names[0])),
+        frame(CMD_PATCH_VALUE, base + 3,
+              encode_patch_value(sub_names[0], sub_entries[sub_names[0]])),
+        frame(CMD_PATCH_NAME, base + 4, encode_patch_name(sub_names[1])),
+        frame(CMD_PATCH_VALUE, base + 5,
+              encode_patch_value(sub_names[1], sub_entries[sub_names[1]])),
+        frame(CMD_PATCH_COMMIT, base + 6, encode_patch_commit(sub_digest)),
+    ]
+    tx3, _seq3 = full_tx(base + 7, b"tx-full-0003", list(names))
+    s1_frames = (
+        [hello] + tx1
+        + [frame(CMD_RESET, base)]
+        + sub_frames + tx3
+    )
+
+    # ---- s2: negative battery ------------------------------------------
+    alpha_word = sub_entries["adsr_1.alpha"]
+    attack_word = word4(words["adsr_1.attack"])
+    pair_entries = {"adsr_1.alpha": alpha_word, "adsr_1.attack": attack_word}
+    pair_digest = patch_hash_entries(model, pair_entries)
+    alpha_only = {"adsr_1.alpha": alpha_word}
+    alpha_digest = patch_hash_entries(model, alpha_only)
+    neg = [hello]
+    neg += [
+        frame(CMD_PATCH_OPEN, 1, encode_patch_open(b"tx-neg-01", b"",
+                                                   model.table_sha256, 2)),
+        frame(CMD_PATCH_NAME, 2, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 3, encode_patch_value("adsr_1.alpha",
+                                                     alpha_word)),
+        frame(CMD_PATCH_NAME, 4, encode_patch_name("adsr_1.attack")),
+        frame(CMD_PATCH_VALUE, 5, encode_patch_value("adsr_1.attack",
+                                                     attack_word)),
+        frame(CMD_PATCH_COMMIT, 6, encode_patch_commit(bytes(32))),
+    ]
+    neg += [
+        frame(CMD_PATCH_OPEN, 7, encode_patch_open(b"tx-neg-02", b"",
+                                                   model.table_sha256, 2)),
+        frame(CMD_PATCH_NAME, 8, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 9, encode_patch_value("adsr_1.alpha",
+                                                     alpha_word)),
+        frame(CMD_PATCH_NAME, 10, encode_patch_name("adsr_1.attack")),
+        frame(CMD_PATCH_VALUE, 11, encode_patch_value("adsr_1.attack",
+                                                      attack_word)),
+        frame(CMD_PATCH_COMMIT, 12, encode_patch_commit(pair_digest)),
+    ]
+    neg += [
+        frame(CMD_PATCH_OPEN, 13, encode_patch_open(b"tx-neg-03", b"",
+                                                    model.table_sha256, 3)),
+        frame(CMD_PATCH_NAME, 14, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 15, encode_patch_value("adsr_1.alpha",
+                                                      alpha_word)),
+        frame(CMD_PATCH_NAME, 16, encode_patch_name("adsr_1.attack")),
+        frame(CMD_PATCH_VALUE, 17, encode_patch_value("adsr_1.attack",
+                                                      attack_word)),
+        frame(CMD_PATCH_NAME, 18, encode_patch_name("vco_1.tuning")),
+        frame(CMD_PATCH_COMMIT, 19, encode_patch_commit(pair_digest)),
+    ]
+    neg += [
+        frame(CMD_PATCH_OPEN, 20, encode_patch_open(b"tx-neg-04", b"",
+                                                    model.table_sha256, 1)),
+        frame(CMD_PATCH_VALUE, 21, encode_patch_value("keyboard.midi_f0",
+                                                      alpha_word)),
+        frame(CMD_PATCH_NAME, 22, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 23, encode_patch_value("adsr_1.alpha",
+                                                      b"\x01\x00\x00\x00")),
+        frame(CMD_PATCH_VALUE, 24, encode_patch_value("adsr_1.alpha",
+                                                      b"\x02\x00\x00\x00")),
+        frame(CMD_PATCH_VALUE, 25, encode_patch_value("adsr_1.alpha",
+                                                      b"\x01\x00\x00\x00")),
+        frame(CMD_PATCH_COMMIT, 26, encode_patch_commit(
+            patch_hash_entries(model, {"adsr_1.alpha": b"\x01\x00\x00\x00"}))),
+    ]
+    neg += [
+        frame(CMD_PATCH_OPEN, 27, encode_patch_open(b"tx-neg-05", b"",
+                                                    model.table_sha256, 1)),
+        frame(CMD_PATCH_OPEN, 28, encode_patch_open(b"tx-neg-06", b"",
+                                                    model.table_sha256, 1)),
+        frame(CMD_PATCH_ABORT, 29),
+        frame(CMD_PATCH_ABORT, 30),
+        frame(CMD_PATCH_VALUE, 3, encode_patch_value("adsr_1.alpha",
+                                                     alpha_word)),
+        frame(CMD_PATCH_OPEN, 31, encode_patch_open(b"tx-neg-07", b"",
+                                                    bytes(32), 1)),
+        frame(0x2A, 32),
+        frame(CMD_PATCH_NAME, 33, encode_patch_name("adsr_1.alpha")),
+    ]
+    neg += [
+        frame(CMD_PATCH_OPEN, 34, encode_patch_open(b"tx-neg-08", b"",
+                                                    model.table_sha256, 1)),
+        frame(CMD_PATCH_NAME, 35, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 36, encode_patch_value("adsr_1.alpha",
+                                                      b"\x03\x00\x00\x00")),
+        frame(CMD_PATCH_ABORT, 37),
+        frame(CMD_PATCH_OPEN, 38, encode_patch_open(b"tx-neg-09", b"",
+                                                    model.table_sha256, 1)),
+        frame(CMD_PATCH_NAME, 39, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 40, encode_patch_value("adsr_1.alpha",
+                                                      alpha_word)),
+        frame(CMD_PATCH_COMMIT, 41, encode_patch_commit(alpha_digest)),
+    ]
+
+    # ---- s3: fatal negotiation gate --------------------------------------
+    bad_hello = frame(
+        CMD_HELLO, 0,
+        encode_hello(CORE_PROFILE_ID, SOURCE_VERSION, bytes(32), 3),
+    )
+    s3_frames = [
+        bad_hello,
+        frame(CMD_PATCH_OPEN, 1, encode_patch_open(b"tx-fatal", b"",
+                                                   model.table_sha256, 1)),
+        hello,
+        frame_v1(CMD_RESET, 2),
+    ]
+
+    # ---- s4: backpressure ERR_BUSY + identical retry ----------------------
+    one_tx = [
+        frame(CMD_PATCH_OPEN, 1, encode_patch_open(b"tx-busy-01", b"",
+                                                   model.table_sha256, 1)),
+        frame(CMD_PATCH_NAME, 2, encode_patch_name("adsr_1.alpha")),
+        frame(CMD_PATCH_VALUE, 3, encode_patch_value("adsr_1.alpha",
+                                                     alpha_word)),
+        frame(CMD_PATCH_COMMIT, 4, encode_patch_commit(alpha_digest)),
+    ]
+    busy_hello = frame(
+        CMD_HELLO, 6,
+        encode_hello(CORE_PROFILE_ID, SOURCE_VERSION,
+                     model.contract_version, 3),
+    )
+    s4_frames = (
+        paced([hello] + one_tx[:3])
+        + [one_tx[3], frame(CMD_RESET, 5), busy_hello]
+        + [350]
+        + [busy_hello]
+    )
+
+    # ---- s5: patch timeout + continuation refusal + fresh tx --------------
+    fresh_entries = {"keyboard.duration": word4(words["keyboard.duration"])}
+    s5_frames = (
+        [hello]
+        + [frame(CMD_PATCH_OPEN, 1, encode_patch_open(b"tx-timeout-01", b"",
+                                                      model.table_sha256, 1)),
+           frame(CMD_PATCH_NAME, 2, encode_patch_name("adsr_1.alpha"))]
+        + [PATCH_TIMEOUT_CYCLES + 50]
+        + [frame(CMD_PATCH_NAME, 2, encode_patch_name("adsr_1.alpha"))]
+        + [frame(CMD_PATCH_OPEN, 3, encode_patch_open(b"tx-timeout-02", b"",
+                                                      model.table_sha256, 1)),
+           frame(CMD_PATCH_NAME, 4,
+                 encode_patch_name("keyboard.duration")),
+           frame(CMD_PATCH_VALUE, 5,
+                 encode_patch_value("keyboard.duration",
+                                    fresh_entries["keyboard.duration"])),
+           frame(CMD_PATCH_COMMIT, 6, encode_patch_commit(
+               patch_hash_entries(model, fresh_entries)))]
+    )
+
+    # ---- s6: bad frames + stale protocol version --------------------------
+    good_reset = frame(CMD_RESET, 1)
+    corrupt = bytearray(good_reset)
+    corrupt[-1] ^= 0xFF
+    s6_frames = [
+        hello, bytes(corrupt), good_reset, frame_v1(CMD_RESET, 2),
+        frame(CMD_RESET, 3),
+    ]
+
+    scenarios = {
+        "s1-full": (paced(s1_frames), [3000]),
+        "s2-negative": (paced(neg), [3000]),
+        "s3-fatal": (paced(s3_frames), [3000]),
+        "s4-busy": (s4_frames, [3000]),
+        "s5-timeout": (paced(s5_frames), [3000]),
+        "s6-badframe": (paced(s6_frames), [3000]),
+    }
+    return {
+        key: schedule_of(frames + tail)
+        for key, (frames, tail) in scenarios.items()
+    }
+
+
+def patch(workdir: Path, simulator: str) -> int:
+    """Issue #69 flow: loader/identity/reset/keyboard vs its mirror."""
+    model = patch_build_model()
+    words, vector = patch_anchor_words()
+    scenarios = build_scenarios(model, words, vector)
+    names = list(model.names)
+    ok = True
+
+    def check_s1(obs):
+        good = True
+        midi_trace = next(
+            t["values"][0] for t in vector["traces"]
+            if t["name"] == "keyboard.midi_f0"
+        )
+        if obs["kbd_midi_word"] != midi_trace:
+            print(
+                "  keyboard.midi_f0 word %d != anchor trace %d"
+                % (obs["kbd_midi_word"], midi_trace)
+            )
+            good = False
+        dur_wire = entry_quantize(
+            float(vector["parameters"]["keyboard.duration"]),
+            formats_midi(), StickyCounters(), "tb.patch.entry:duration",
+        )
+        expected_dur = (dur_wire << 9) & ((1 << 47) - 1)
+        if obs["kbd_duration_word"] != expected_dur:
+            print(
+                "  keyboard.duration word %d != exact wire-word widening %d"
+                % (obs["kbd_duration_word"], expected_dur)
+            )
+            good = False
+        if not obs["patch_active"]:
+            print("  full patch commit did not assert the render gate")
+            good = False
+        return good
+
+    def check_s2(obs):
+        good = True
+        if obs["patch_active"]:
+            print("  render gate asserted in a partial-only session")
+            good = False
+        alpha = int.from_bytes(word4(words["adsr_1.alpha"]), "little",
+                               signed=True)
+        if obs["bank"][names.index("adsr_1.alpha")] != alpha:
+            print("  stale-state control: adsr_1.alpha bank word wrong")
+            good = False
+        if obs["bank"][names.index("keyboard.midi_f0")] != 0:
+            print("  keyboard.midi_f0 leaked into the partial-only session")
+            good = False
+        return good
+
+    run_specs = [
+        ("full-78 shuffled load + reset + re-load", "s1-full", check_s1),
+        ("negative battery (13 controls)", "s2-negative", check_s2),
+        ("fatal negotiation gate", "s3-fatal", None),
+        ("backpressure ERR_BUSY + identical retry", "s4-busy", None),
+        ("patch timeout + continuation refusal", "s5-timeout", None),
+        ("bad-frame recovery + stale protocol version", "s6-badframe", None),
+    ]
+    for label, key, checks in run_specs:
+        ok = compare_run(label, scenarios[key], workdir / key, simulator,
+                         model, PATCH_DUT_SV, checks) and ok
+
+    # Mutations: every planted fault MUST be detected (AC 6).
+    mutations_ok = True
+    mutation_specs = [
+        (
+            "wrong-entry-byte-order (parameter-order hash walk)",
+            (
+                "b = name_rom[c_slot] >> ((NAME_BYTES - 1 - c_entry_off) * 8);",
+                "b = name_rom[c_slot] >> (c_entry_off * 8);",
+            ),
+            "s1-full",
+        ),
+        (
+            "stale-contract-version gate weakened",
+            (
+                "else if (cap_c != NUMERIC_CONTRACT_VERSION) begin",
+                "else if (cap_c == NUMERIC_CONTRACT_VERSION) begin",
+            ),
+            "s3-fatal",
+        ),
+        (
+            "partial load committed (render gate on every commit)",
+            (
+                "if (tx_want == NUM_PARAMS)\n"
+                "                    patch_active_r <= 1'b1;",
+                "if (1'b1)\n"
+                "                    patch_active_r <= 1'b1;",
+            ),
+            "s2-negative",
+        ),
+        (
+            "hash domain separation broken",
+            (
+                "b = PATCH_DOMAIN_TAG[(DOMAIN_TAG_LEN*8-1) - c_fed*8 -: 8];",
+                "b = 8'h00;",
+            ),
+            "s1-full",
+        ),
+    ]
+    for label, (anchor, replacement), scenario in mutation_specs:
+        mut_dir = workdir / ("mut-" + scenario)
+        mut_dir.mkdir(parents=True, exist_ok=True)
+        mutated_sv = mut_dir / "patch_control_mut.sv"
+        mutated_sv.write_text(
+            mutate_sv(PATCH_DUT_SV.read_text(encoding="utf-8"),
+                      anchor, replacement, label),
+            encoding="utf-8",
+        )
+        detected = not compare_run(
+            "mutation [%s] %s" % (scenario, label),
+            scenarios[scenario], mut_dir, simulator, model, mutated_sv,
+        )
+        print(
+            "mutation %s: %s"
+            % (label, "DETECTED (test fails the mutant)" if detected
+               else "NOT DETECTED")
+        )
+        mutations_ok = mutations_ok and detected
+    ok = ok and mutations_ok
+
+    if not ok:
+        print("PATCH RUN FAILED")
+        return 1
+    print(
+        "PATCH RUN PASSED (mirror-vs-RTL byte/cycle-exact on 6 scenarios + "
+        "4 mutations detected + keyboard golden words)"
+    )
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "command",
         nargs="?",
         default="selftest",
-        choices=["selftest", "anchor", "adsr"],
+        choices=["selftest", "anchor", "adsr", "patch"],
         help="'selftest' proves the harness; 'anchor' runs the real "
         "golden-vector flow through the format-true DUT; 'adsr' runs the "
         "issue #70 ADSR engine against the frozen fixed model's golden "
-        "vectors",
+        "vectors; 'patch' runs the issue #69 patch-control core against "
+        "its cycle-exact Python mirror",
     )
     parser.add_argument(
         "--simulator",
@@ -1131,6 +1774,7 @@ def main(argv=None) -> int:
         "selftest": selftest,
         "anchor": anchor,
         "adsr": adsr,
+        "patch": patch,
     }
     command = commands[args.command]
 
