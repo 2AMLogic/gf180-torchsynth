@@ -2709,9 +2709,9 @@ def vco_run_mutation(workdir: Path, simulator: str, formats, label: str,
     return detected
 
 
-def vco_run_vector_mutation(workdir: Path, simulator: str, label: str,
-                            case_id: str, case_dirs: dict, rewrite_stimulus,
-                            expect_traces: set):
+def vco_run_vector_mutation(workdir: Path, simulator: str, formats,
+                            label: str, case_id: str, case_dirs: dict,
+                            rewrite_stimulus, expect_traces: set):
     """Plant a stimulus-side mutation and require sharp localization.
 
     ``rewrite_stimulus(case)`` mutates the replayed stimulus words in place
@@ -2864,7 +2864,7 @@ def vco2(workdir: Path, simulator: str) -> int:
         )
 
     mutations_ok &= vco_run_vector_mutation(
-        workdir, simulator, "partials-constant-error",
+        workdir, simulator, formats, "partials-constant-error",
         VCO_VECTOR_MUTATION_CASE, case_dirs, _partials_ulp,
         {"vco_2.driven"},
     )
@@ -2876,7 +2876,7 @@ def vco2(workdir: Path, simulator: str) -> int:
         case["left_q"][VCO_SHADOW_MUTATION_INDEX] ^= 1
 
     mutations_ok &= vco_run_vector_mutation(
-        workdir, simulator, "shadow-word-corruption",
+        workdir, simulator, formats, "shadow-word-corruption",
         VCO_VECTOR_MUTATION_CASE, case_dirs, _shadow_flip,
         {"vco_2.raw"},
     )
