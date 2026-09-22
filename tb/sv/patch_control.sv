@@ -934,6 +934,11 @@ module patch_control #(
                         c_slot = slot;
                         c_entry_len = name_len_rom[slot] + 8'd7;
                         c_entry_off = 8'd0;
+                        // each commit hashes from the SHA-256 IV
+                        sha_h[0] <= 32'h6a09e667; sha_h[1] <= 32'hbb67ae85;
+                        sha_h[2] <= 32'h3c6ef372; sha_h[3] <= 32'ha54ff53a;
+                        sha_h[4] <= 32'h510e527f; sha_h[5] <= 32'h9b05688c;
+                        sha_h[6] <= 32'h1f83d9ab; sha_h[7] <= 32'h5be0cd19;
                         e_state <= E_WALK;
                     end
                 end
@@ -1495,7 +1500,7 @@ module patch_control #(
                 if (tx_staged_mask[KBD_MIDI_SLOT])
                     kbd_midi_r <= staged_bank[KBD_MIDI_SLOT];
                 if (tx_staged_mask[KBD_DUR_SLOT])
-                    kbd_dur_r <= {staged_bank[KBD_DUR_SLOT][31:0], 15'd0};
+                    kbd_dur_r <= {staged_bank[KBD_DUR_SLOT][31:0], 9'd0};  // Q10.21 <<9 -> Q16.30
                 identity_r <= tx_identity;
                 identity_len_r <= tx_identity_len;
                 finish_tx;
