@@ -842,7 +842,7 @@ module patch_control #(
 
                 E_CMP: begin
                     // digest byte i = sha_h[i/4] byte (3 - i%4), big-endian
-                    if (sha_h[e_cnt[4:2]] >> ((3 - e_cnt[1:0]) * 8) !=
+                    if ((sha_h[e_cnt[4:2]] >> ((3 - e_cnt[1:0]) * 8)) & 8'hFF !=
                         frame_ram[{1'b0, e_cnt[4:0]} + 16'd2])
                         digest_mismatch <= 1'b1;
                     e_cnt <= e_cnt + 16'd1;
