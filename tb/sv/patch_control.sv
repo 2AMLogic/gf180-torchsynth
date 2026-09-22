@@ -342,7 +342,8 @@ module patch_control #(
                 6'd54: sha_k = 32'h5b9cca4f;  6'd55: sha_k = 32'h682e6ff3;
                 6'd56: sha_k = 32'h748f82ee;  6'd57: sha_k = 32'h78a5636f;
                 6'd58: sha_k = 32'h84c87814;  6'd59: sha_k = 32'h8cc70208;
-                6'd60: sha_k = 32'h90befffa;  default: sha_k = 32'ha4506ceb;
+                6'd60: sha_k = 32'h90befffa;  6'd61: sha_k = 32'ha4506ceb;
+                6'd62: sha_k = 32'hbef9a3f7;  default: sha_k = 32'hc67178f2;
             endcase
         end
     endfunction
