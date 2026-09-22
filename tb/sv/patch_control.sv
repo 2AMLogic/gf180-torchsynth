@@ -249,7 +249,7 @@ module patch_control #(
     reg [31:0] c_kpad;
     reg [31:0] c_fed;
     reg [31:0] c_total;
-    reg [5:0]  c_slot;
+    reg [6:0]  c_slot;
     reg [7:0]  c_entry_off;
     reg [7:0]  c_entry_len;
     reg        c_stream_done;
@@ -766,7 +766,7 @@ module patch_control #(
                 active_bank[i] <= {C4_WIDTH{1'b0}};
                 staged_bank[i] <= {C4_WIDTH{1'b0}};
             end
-            c_slot <= 6'd0; c_entry_off <= 8'd0; c_entry_len <= 8'd0;
+            c_slot <= 7'd0; c_entry_off <= 8'd0; c_entry_len <= 8'd0;
             c_stream_done <= 1'b0;
             c_stream_len <= 32'd0; c_kpad <= 32'd0; c_total <= 32'd0;
             c_fed <= 32'd0;
@@ -873,7 +873,7 @@ module patch_control #(
     // straight to decide)
     task take_command(input [7:0] cmd);
         reg [31:0] stream;
-        reg [5:0]  slot;
+        reg [6:0]  slot;
         integer guard;
         begin
             case (cmd)
@@ -918,7 +918,7 @@ module patch_control #(
                         c_total = stream + 9 + c_kpad;
                         slot = 0;
                         while ((slot < NUM_PARAMS) && !tx_staged_mask[slot])
-                            slot = slot + 6'd1;
+                            slot = slot + 7'd1;
                         c_slot = slot;
                         c_entry_len = name_len_rom[slot] + 8'd7;
                         c_entry_off = 8'd0;
@@ -1299,10 +1299,10 @@ module patch_control #(
             if (c_entry_off == c_entry_len) begin
                 // advance to the next staged slot (blocking: same-cycle
                 // state for the next entry region)
-                c_slot = c_slot + 6'd1;
+                c_slot = c_slot + 7'd1;
                 guard = 0;
                 while ((guard < NUM_PARAMS) && !tx_staged_mask[c_slot]) begin
-                    c_slot = c_slot + 6'd1;
+                    c_slot = c_slot + 7'd1;
                     guard = guard + 1;
                 end
                 c_entry_len = name_len_rom[c_slot] + 8'd7;
