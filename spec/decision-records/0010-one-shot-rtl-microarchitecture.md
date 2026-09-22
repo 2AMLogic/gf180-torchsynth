@@ -2,8 +2,11 @@
 
 - Status: Accepted (reviewed merge; 2026-09-21) — completes and supersedes the
   2026-09-20 draft skeleton; P5 and the #82/#83 validations named below remain
-  explicitly open inside the accepted record
-- Date: 2026-09-20 (skeleton); amended 2026-09-21 (issue #63 ratification)
+  explicitly open inside the accepted record; amended 2026-09-22 (issue #74
+  remainder: the transcendental shadow lane ratified — see the Schedule
+  amendment note and DR-0008 §10 as amended)
+- Date: 2026-09-20 (skeleton); amended 2026-09-21 (issue #63 ratification);
+  amended 2026-09-22 (issue #74 remainder, tracking issue #172)
 - Decision owners: 2AM Logic
 - Scope: the one-shot RTL microarchitecture ratified by issue #63 — module
   interfaces and ownership, fixed formats (inherited, unchanged), the
@@ -146,7 +149,7 @@ numbers are the Epic #2 lanes; contracts are stated per sample (audio rate,
 | Mod matrix (4x5) | #72 | control rate: 20 MACs + 5 declared narrowings per tick (`src/torchsynth_voice/format_sweep.py:563-598`) |
 | Endpoint-aligned upsample (5 columns) | #72 | audio rate: 2 mults + 1 add + 1 half-even blend per column per sample; endpoints exact copies of control indices 0 and 1763 (`src/torchsynth_voice/format_sweep.py:600-687`, coordinate table `:207-228`); fraction word uQ.31 (`src/torchsynth_voice/fixed_voice.py:62`) |
 | Sine VCO (vco_1 path) | #73 | audio rate: pitch row 3 mults / 4 adds / 2 narrows / 1 exp2 shadow + phase add + LUT interp 1 mult / 2 adds / 1 S4 narrow (rows below) |
-| Square/saw VCO (vco_2 path) | #74 | audio rate: pitch row as vco_1 + shape row 6 mults / 5 adds / 5 narrows / 1 tanh shadow + second LUT interp (`src/torchsynth_voice/fixed_voice.py:390-426`); owns the declared exp2/tanh fixed-approximation items (the #74 declaration class, `src/torchsynth_voice/fixed_voice.py:15-27`) for both VCOs' pitch paths unless amended |
+| Square/saw VCO (vco_2 path) | #74 | audio rate: pitch row as vco_1 + shape row 6 mults / 5 adds / 5 narrows / 1 tanh shadow + second LUT interp (`src/torchsynth_voice/fixed_voice.py:390-426`); owned the declared exp2/tanh fixed-approximation items (the #74 declaration class, `src/torchsynth_voice/fixed_voice.py:15-27`) for both VCOs' pitch paths — amended 2026-09-22: those items are **ratified as host-replayed deterministic words** at the declared shadow boundary (DR-0008 §10 as amended); the RTL-approximation path is the recorded alternative, gated per the Schedule note below |
 | Noise source | #75 | audio rate: streaming host-fed binary32 → Q2.21 convert (exponent shift + half-even round, no multiplier) + sticky counter; exact stream per C8 |
 | Audio VCAs (3) + pre-normalization mixer | #76 | audio rate: 6 mults + 2 adds + 4 narrow sites; 48-bit-class accumulator; S4 rescale to the pre-normalization mix word |
 | Normalization replay controller + one-shot top | #77 | two-pass schedule (P4): pass 1 peak tracking (1 compare + 1 abs-select folded into the mixer output), branch decision at sample 176,400, pass 2 replay with the U1.22 gain multiply + S5 narrow (normalized branch) or identity (unity branch) |
@@ -218,6 +221,26 @@ stops there — no downstream artifact may claim this budget. Rubric row
 R-L3-M6 consumes a budget in exactly this form
 (`spec/reference/rubric-v1.json:3490-3497`); binding it into a rubric
 version is that document's own change control, not this amendment.
+
+**Amendment (2026-09-22, issue #74 remainder, tracking issue #172).** The
+ratified architecture does not exercise the on-chip `2x exp2 + 1x tanh`
+term: the transcendental sub-expressions — `exp2` on both VCOs' pitch
+paths, `partials_constant`, and `tanh` — are **host-replayed
+deterministic words** at the declared shadow boundary (ratified
+2026-09-22; the serialized schedule's shadow-site counts already carry
+them host-side, and the replayed words are the frozen model's own words,
+bit-exact by construction — PR #167's engine, digest-equal to
+`fixed-voice-golden-v1` on every public frozen case). T therefore stands
+solely as declared contingency headroom for the **recorded alternative**
+— RTL-internal approximations — which stays rejected-for-now on
+schedule/evidence grounds (no candidate has M2-style sweep evidence,
+while the shadow replay costs none) and remains gated: its own
+approximation decision record plus fresh M2-style sweeps plus M1/M2
+recalibration (DR-0008 §13 as amended) before any affected RTL change,
+with the refutable T ≤ 138 bound above applying to exactly that
+alternative path. This amendment changes no numeric value; the schedule
+register (`spec/reference/rtl-schedule-v1.json`) is untouched — T
+remains an elaboration-time parameter, not a ratified constant.
 
 **Worst-case resource estimate from the same counts** (issue #63 AC —
 estimates, no PPA/fit claim): 1 shared 24x24 multiplier + 1 narrow unit + 1
