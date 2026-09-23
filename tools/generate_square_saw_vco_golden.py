@@ -14,7 +14,7 @@ Two vector classes, both through the frozen model's own code:
    carry (intermediate shape mixes, half-even selector-word ties, the
    least-significant shape step, near-full-turn phase wrap). The digest of
    the model's own ``vco_2.raw`` render is the committed truth; at
-   generation time the host mirror (``torchsynth_voice.vco_golden``) is
+   generation time the host mirror (``torchsynth_voice.vco2_golden``) is
    required to reproduce every digest exactly, so the vectors carry the
    model's bits, not the mirror's.
 
@@ -39,7 +39,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import float_interfaces as fi  # noqa: E402
 from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
-from torchsynth_voice import vco_golden as vg  # noqa: E402
+from torchsynth_voice import vco2_golden as vg  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     FixedVoiceModel,

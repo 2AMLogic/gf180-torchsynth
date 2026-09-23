@@ -182,7 +182,7 @@ frozen fixed model's committed golden vectors
 2. re-derive each case's static words, per-sample pitch column, and the
    declared shadow replay words (midi->Hz exp2, partials constant, tanh
    fanout) from the frozen model's own lane
-   (``vco_golden.mirror_square_saw_vco``, proved by digest against the
+   (``vco2_golden.mirror_square_saw_vco``, proved by digest against the
    committed ``vco_2.raw`` evidence; frozen-binding vectors additionally
    bind the retained fixed-voice-golden-v1 sidecar words so the RTL is
    validated directly against the frozen word stream),
@@ -228,6 +228,7 @@ from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import lfo_golden as lgo  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
 from torchsynth_voice import vco_golden as vg  # noqa: E402
+from torchsynth_voice import vco2_golden as vc  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     entry_quantize,
@@ -327,9 +328,9 @@ MM_MUTATION_WALK_CAP = 24000
 MM_REPLAY_PAIR = ("frozen-mod-matrix-receipt", "mixed-sign-routes")
 
 #: Committed square/saw VCO golden vectors (issue #74).
-VCO_DUT_SV = TB_ROOT / "sv/square_saw_vco_engine.sv"
+VCO2_DUT_SV = TB_ROOT / "sv/square_saw_vco_engine.sv"
 VCO_LUT_SV = TB_ROOT / "sv/quarter_wave_lut.sv"
-VCO_TB_SV = TB_ROOT / "sv/tb_square_saw_vco.sv"
+VCO2_TB_SV = TB_ROOT / "sv/tb_square_saw_vco.sv"
 VCO_VECTOR_DIR = ROOT / "sim/reference/square-saw-vco-golden-v1"
 #: Frozen-binding vectors carry this prefix and bind the retained
 #: fixed-voice-golden-v1 vco_2.raw sidecar words (direct RTL-vs-frozen
@@ -348,10 +349,10 @@ VCO_SHADOW_MUTATION_INDEX = 12345
 #: Mutation-simulation walk cap: every mutation demonstrably bites within
 #: the first 24,000 samples, so the three mutation sims walk a fraction of
 #: the grid. Committed-case runs always walk the full 176,400 samples.
-VCO_MUTATION_WALK_CAP = 24000
+VCO2_MUTATION_WALK_CAP = 24000
 #: Replay-independence pair: static words, phase, and counters are
 #: per-trigger; run 0 state must not leak into run 1.
-VCO_REPLAY_PAIR = ("frozen:waveform:vco_2:saw", "shape:intermediate-half")
+VCO2_REPLAY_PAIR = ("frozen:waveform:vco_2:saw", "shape:intermediate-half")
 
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
@@ -2420,10 +2421,10 @@ def vco_load_vectors():
     return vectors
 
 
-def vco_derive_case(formats, vector):
+def vco2_derive_case(formats, vector):
     """Model-derived stimulus and truth for one square/saw VCO case.
 
-    The host mirror (``torchsynth_voice.vco_golden``) re-walks the frozen
+    The host mirror (``torchsynth_voice.vco2_golden``) re-walks the frozen
     model's vco_2 lane with the model's own primitives; its ``vco_2.raw``
     digest must equal the committed evidence row — and, on frozen-binding
     vectors, the frozen golden's trace digest plus the retained sidecar
@@ -2434,9 +2435,9 @@ def vco_derive_case(formats, vector):
     """
 
     provenance = vector["provenance"]
-    derivation = vg.derive_case(formats, vector["parameters"])
+    derivation = vc.derive_case(formats, vector["parameters"])
     streams = derivation["streams"]
-    digest = vg.voice_digest(streams["v2"])
+    digest = vc.voice_digest(streams["v2"])
     row = provenance["vco_2_raw"]
     if digest != row["words_sha256"]:
         raise SystemExit(
@@ -2460,8 +2461,8 @@ def vco_derive_case(formats, vector):
             raise SystemExit(
                 "frozen sidecar bytes drifted for %s" % provenance["case_id"]
             )
-        frozen_words = vg.unpack_words_f32le(payload)
-        if vg.voice_digest(frozen_words) != binding["trace_digest"]:
+        frozen_words = vc.unpack_words_f32le(payload)
+        if vc.voice_digest(frozen_words) != binding["trace_digest"]:
             raise SystemExit(
                 "frozen sidecar words digest drift for %s"
                 % provenance["case_id"]
@@ -2492,7 +2493,7 @@ def vco_derive_case(formats, vector):
     }
 
 
-def vco_write_case(workdir: Path, run: int, case: dict, walk_cap: int = None):
+def vco2_write_case(workdir: Path, run: int, case: dict, walk_cap: int = None):
     """Write one run's stimulus files (statics + per-sample stream)."""
 
     s = case["statics"]
@@ -2528,7 +2529,7 @@ def vco_write_case(workdir: Path, run: int, case: dict, walk_cap: int = None):
     )
 
 
-def vco_simulate(workdir: Path, simulator: str, runs: int, formats,
+def vco2_simulate(workdir: Path, simulator: str, runs: int, formats,
                  dut_sv: Path = None) -> list:
     """Compile and run the square/saw VCO tb; return per-run captures.
 
@@ -2546,7 +2547,7 @@ def vco_simulate(workdir: Path, simulator: str, runs: int, formats,
             [
                 "iverilog", "-g2012", "-o", str(vvp),
                 str(CONSTANTS_PKG_SV), str(VCO_LUT_SV),
-                str(dut_sv or VCO_DUT_SV), str(VCO_TB_SV),
+                str(dut_sv or VCO2_DUT_SV), str(VCO2_TB_SV),
             ],
             cwd=workdir,
         )
@@ -2637,7 +2638,7 @@ def vco_report_first_mismatch(capture_rows, case) -> None:
                 return
 
 
-def vco_check_case(capture, case, case_id: str) -> bool:
+def vco2_check_case(capture, case, case_id: str) -> bool:
     """Sample-exact verification for one run (mirror + frozen words)."""
 
     if not capture["rows"]:
@@ -2656,7 +2657,7 @@ def vco_check_case(capture, case, case_id: str) -> bool:
     return True
 
 
-def vco_expected_ops(sample_count: int, sat_total: int) -> list:
+def vco2_expected_ops(sample_count: int, sat_total: int) -> list:
     """The DR-0010 #74 owner-row op-count expectation for one run.
 
     Per sample: 8 multiply-class products (depth-mod, 2x LUT interp x2,
@@ -2676,22 +2677,22 @@ def vco_expected_ops(sample_count: int, sat_total: int) -> list:
     ]
 
 
-def vco_run_mutation(workdir: Path, simulator: str, formats, label: str,
+def vco2_run_mutation(workdir: Path, simulator: str, formats, label: str,
                      anchor: str, replacement: str, case_id: str,
                      case_dirs: dict):
     """Plant one RTL mutation on one case and require it to be DETECTED."""
 
     mut_dir = workdir / ("mut-" + label)
     mut_dir.mkdir(parents=True, exist_ok=True)
-    source = VCO_DUT_SV.read_text(encoding="utf-8")
+    source = VCO2_DUT_SV.read_text(encoding="utf-8")
     if anchor not in source:
         raise SystemExit("mutation anchor not found for %s" % label)
     (mut_dir / "square_saw_vco_engine_mut.sv").write_text(
         mutate_sv(source, anchor, replacement, label), encoding="utf-8"
     )
     case = case_dirs[case_id][1]
-    vco_write_case(mut_dir, 0, case, walk_cap=VCO_MUTATION_WALK_CAP)
-    capture = vco_simulate(
+    vco2_write_case(mut_dir, 0, case, walk_cap=VCO2_MUTATION_WALK_CAP)
+    capture = vco2_simulate(
         mut_dir, simulator, 1, formats,
         dut_sv=mut_dir / "square_saw_vco_engine_mut.sv"
     )[0]
@@ -2723,8 +2724,8 @@ def vco_run_vector_mutation(workdir: Path, simulator: str, formats,
     mut_dir.mkdir(parents=True, exist_ok=True)
     mutated = copy.deepcopy(case_dirs[case_id][1])
     rewrite_stimulus(mutated)
-    vco_write_case(mut_dir, 0, mutated, walk_cap=VCO_MUTATION_WALK_CAP)
-    capture = vco_simulate(mut_dir, simulator, 1, formats)[0]
+    vco2_write_case(mut_dir, 0, mutated, walk_cap=VCO2_MUTATION_WALK_CAP)
+    capture = vco2_simulate(mut_dir, simulator, 1, formats)[0]
     bad = vco_mismatch_trace_set(capture["rows"], mutated, prefix=True)
     detected = bool(bad)
     localization = ""
@@ -2783,27 +2784,27 @@ def vco2(workdir: Path, simulator: str) -> int:
     for case_id in sorted(vectors):
         case_dir = workdir / ("case-" + case_id.replace(":", "_"))
         case_dir.mkdir(parents=True, exist_ok=True)
-        case = vco_derive_case(formats, vectors[case_id])
-        vco_write_case(case_dir, 0, case)
-        captures = vco_simulate(case_dir, simulator, 1, formats)
-        if not vco_check_case(captures[0], case, case_id):
+        case = vco2_derive_case(formats, vectors[case_id])
+        vco2_write_case(case_dir, 0, case)
+        captures = vco2_simulate(case_dir, simulator, 1, formats)
+        if not vco2_check_case(captures[0], case, case_id):
             ok = False
         case_dirs[case_id] = (case_dir, case)
 
     # 2. Reset/replay: a second trigger cannot retain prior state (static
     #    words, phase, and op counters are per-trigger).
-    first, second = VCO_REPLAY_PAIR
+    first, second = VCO2_REPLAY_PAIR
     replay_dir = workdir / "replay"
     replay_dir.mkdir(parents=True, exist_ok=True)
-    case_first = vco_derive_case(formats, vectors[first])
-    case_second = vco_derive_case(formats, vectors[second])
-    vco_write_case(replay_dir, 0, case_first)
-    vco_write_case(replay_dir, 1, case_second)
-    replay_captures = vco_simulate(replay_dir, simulator, 2, formats)
+    case_first = vco2_derive_case(formats, vectors[first])
+    case_second = vco2_derive_case(formats, vectors[second])
+    vco2_write_case(replay_dir, 0, case_first)
+    vco2_write_case(replay_dir, 1, case_second)
+    replay_captures = vco2_simulate(replay_dir, simulator, 2, formats)
     solo_dir = workdir / "solo"
     solo_dir.mkdir(parents=True, exist_ok=True)
-    vco_write_case(solo_dir, 0, case_second)
-    solo_captures = vco_simulate(solo_dir, simulator, 1, formats)
+    vco2_write_case(solo_dir, 0, case_second)
+    solo_captures = vco2_simulate(solo_dir, simulator, 1, formats)
     replay_ok = True
     if replay_captures[1]["rows"] != solo_captures[0]["rows"]:
         print(
@@ -2811,7 +2812,7 @@ def vco2(workdir: Path, simulator: str) -> int:
             "solo run - prior run state leaked"
         )
         replay_ok = False
-    if not vco_check_case(replay_captures[1], case_second, second):
+    if not vco2_check_case(replay_captures[1], case_second, second):
         replay_ok = False
     print(
         "reset/replay: trigger-to-trigger back-to-back runs (%s -> %s) "
@@ -2825,7 +2826,7 @@ def vco2(workdir: Path, simulator: str) -> int:
     for run_index, case in enumerate((case_first, case_second)):
         parsed = replay_captures[run_index]["ops"][0]
         n = len(replay_captures[run_index]["rows"])
-        expected = vco_expected_ops(n, case["sat_total"])
+        expected = vco2_expected_ops(n, case["sat_total"])
         if parsed != [str(x) for x in expected]:
             print(
                 "SQUARE-SAW VCO FAILED: op counters %r != expected %r "
@@ -2847,7 +2848,7 @@ def vco2(workdir: Path, simulator: str) -> int:
 
     # 4a. Wrong shape mix (RTL): the right branch's shape coefficient is
     #     inverted to (1 - shape), the classic square/saw mix confusion.
-    mutations_ok &= vco_run_mutation(
+    mutations_ok &= vco2_run_mutation(
         workdir, simulator, formats, "wrong-shape-mix",
         "wire signed [95:0] right_prod = $signed(s_shape) * $signed(cos2);",
         "wire signed [95:0] right_prod = (96'sd2097152 - $signed(s_shape))"

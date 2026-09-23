@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
-from torchsynth_voice import vco_golden as vc  # noqa: E402
+from torchsynth_voice import vco2_golden as vc  # noqa: E402
 from torchsynth_voice.fixed_voice import AcceptedFormats  # noqa: E402
 
 TOOLS_DIR = ROOT / "tools"

@@ -384,7 +384,7 @@ frozen fixed model's committed golden vectors
   one-ULP partials-constant error (stimulus; must localize to the
   driven stream alone), and a shadow-word corruption in the replayed
   tanh fanout (stimulus; must localize to `vco_2.raw` alone).
-- **Host mirror** — `src/torchsynth_voice/vco_golden.py` re-walks the
+- **Host mirror** — `src/torchsynth_voice/vco2_golden.py` re-walks the
   model's vco_2 lane with the model's own primitives
   (`entry_quantize`, `mul`, `apply_policy`, `div_round`,
   `PhaseAccumulator`, the accepted C5 table) and computes the declared
