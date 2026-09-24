@@ -4,6 +4,7 @@ import contextlib
 import copy
 import io
 import json
+import math
 import struct
 import sys
 import tempfile
@@ -527,6 +528,28 @@ class ScalarProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "provenance"):
             probe.require_provenance({"runner": "old"}, {"runner": "new"})
 
+    def test_committed_receipt_binds_the_declared_dispatch_pins(self):
+        # DR-0009 amendment A1 (issue 151): the committed sentinel receipt must
+        # have been rendered under the dispatch tier the reference-scalar job
+        # declares. A capture recorded with unset (null) dispatch values is
+        # exactly the undeclared runtime this fix forbids, so it refuses here
+        # rather than drifting across the runner pool.
+        receipt = json.loads(
+            (probe.REPO / "sim" / "reference" / "scalar-execution.json").read_text()
+        )
+        self.assertEqual(
+            receipt["runtime"]["math_environment"],
+            {
+                "ATEN_CPU_CAPABILITY": "AVX2",
+                "MKL_ENABLE_INSTRUCTIONS": "AVX2",
+                "ONEDNN_MAX_CPU_ISA": "AVX2",
+                "MKL_CBWR": "COMPATIBLE",
+            },
+        )
+        self.assertEqual(receipt["scope"], "full-preregistered-cases")
+        self.assertEqual(receipt["status"], "PASS")
+        self.assertTrue(receipt["fresh_process_repeats_equal"])
+
     def test_artifact_path_hash_and_count_are_verified(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -554,6 +577,241 @@ class ScalarProtocolTests(unittest.TestCase):
             config["controls"]["wrong-noise"]["expected_seam"], "input.noise"
         )
 
+
+class EnvelopeMechanismTests(unittest.TestCase):
+    """DR-0009 amendment A1 (issue 151): per-seam declared guarantees."""
+
+    CASE_ID = "global-6"  # a real sentinel case id
+    SEAM = "mixer.peak"  # shape [1] per the capture manifest
+
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.manifest = dict(probe.capture_manifest())
+        self.runtime = dict.fromkeys(
+            (
+                "name",
+                "python",
+                "machine",
+                "packages",
+                "torch_build",
+                "device",
+                "dtype",
+                "threads",
+                "interop_threads",
+                "math_environment",
+            ),
+            "fixture",
+        )
+
+    def make_record(self, peak=1.25, coordinate=None):
+        return {
+            "id": self.CASE_ID,
+            "case_definition": {},
+            "corpus_coordinates":
+            coordinate
+            if coordinate is not None
+            else probe.identity(0),
+            "is_unmodified_corpus_sound": True,
+            "execution_width": 32,
+            "reproducible": True,
+            "configuration": {},
+            "normalized_by_name": {"a": 0.5},
+            "parameter_order": ["a"],
+            "selected_noise_sha256": "e" * 64,
+            "traces": [
+                {
+                    "name": name,
+                    "shape": list(shape),
+                    "file": self.CASE_ID + "." + name + ".f32le",
+                    "sha256": "d" * 64,
+                }
+                for name, shape in self.manifest.items()
+            ],
+            "passive_capture_invariant": True,
+            "no_hook_audio_sha256": "f" * 64,
+            "normalization": {"branch": "applied", "peak": peak},
+        }
+
+    def make_pair(self, expected_peak=1.25, observed_peak=1.25, observed_coordinate=None):
+        report = {
+            "status": "PASS",
+            "fresh_process_repeats_equal": True,
+            "runtime": copy.deepcopy(self.runtime),
+            "provenance": {"fixture": "same"},
+            "comparisons": [
+                {
+                    "id": self.CASE_ID,
+                    "byte_equivalence": "PASS",
+                    "first_divergence": None,
+                    "seams": [],
+                    "canonical": self.make_record(expected_peak),
+                    "scalar": self.make_record(
+                        observed_peak, observed_coordinate
+                    ),
+                }
+            ],
+        }
+        return copy.deepcopy(report)
+
+    def write_reference(self, value=1.25, name=None):
+        path = self.root / (
+            name if name else self.CASE_ID + "." + self.SEAM + ".f32le"
+        )
+        data = struct.pack("<f", value)
+        path.write_bytes(data)
+        return data
+
+    def write_run_samples(self, side, value):
+        directory = self.root / "run-1" / side
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / (self.CASE_ID + "." + self.SEAM + ".f32le")
+        path.write_bytes(struct.pack("<f", value))
+
+    def declare(self, bound=1e-4, data=None):
+        data = data if data is not None else self.write_reference()
+        return {
+            self.CASE_ID: {
+                self.SEAM: {
+                    "count": math.prod(self.manifest[self.SEAM]),
+                    "guarantee": "declared-bounded-deviation",
+                    "max_abs_difference": bound,
+                    "reference": self.CASE_ID + "." + self.SEAM + ".f32le",
+                    "reference_sha256": probe.sha256(data),
+                }
+            }
+        }
+
+    def write_envelope(self, regions):
+        path = self.root / "envelope.json"
+        path.write_text(json.dumps({"schema_version": 1, "regions": regions}))
+        return json.loads(path.read_text())
+
+    def verify(self, expected, observed, regions, runs_root=True):
+        probe.verify_expected(
+            observed,
+            expected,
+            [self.CASE_ID],
+            envelope=self.write_envelope(regions),
+            references_root=self.root,
+            runs_root=self.root if runs_root else None,
+        )
+
+    def test_committed_envelope_loads_as_empty_census(self):
+        self.assertEqual(probe.load_envelope()["regions"], {})
+
+    def test_envelope_declaration_rejects_unknown_or_unbounded(self):
+        good = self.declare(data=self.write_reference())
+        sentinel_cases = set(json.loads(probe.HERE.joinpath("scalar-cases.json").read_text())["sentinel"])
+        self.assertIn(self.CASE_ID, sentinel_cases)
+        count = math.prod(self.manifest[self.SEAM])
+        mutations = [
+            lambda r: r.update({"global-400": r[self.CASE_ID]}),
+            lambda r: r[self.CASE_ID].update({"vco_9.raw": r[self.CASE_ID][self.SEAM]}),
+            lambda r: r[self.CASE_ID][self.SEAM].update(guarantee="whatever"),
+            lambda r: r[self.CASE_ID][self.SEAM].update(max_abs_difference=0.0),
+            lambda r: r[self.CASE_ID][self.SEAM].update(max_abs_difference=1.5),
+            lambda r: r[self.CASE_ID][self.SEAM].update(max_abs_difference=float("inf")),
+            lambda r: r[self.CASE_ID][self.SEAM].update(max_abs_difference="1e-5"),
+            lambda r: r[self.CASE_ID][self.SEAM].update(count=count + 1),
+            lambda r: r[self.CASE_ID][self.SEAM].update(reference="other.f32le"),
+            lambda r: r[self.CASE_ID][self.SEAM].update(reference_sha256="0" * 63),
+            lambda r: r[self.CASE_ID][self.SEAM].update(extra="field"),
+        ]
+        for index, change in enumerate(mutations):
+            regions = copy.deepcopy(good)
+            change(regions)
+            path = self.root / "bad-envelope.json"
+            path.write_text(json.dumps({"schema_version": 1, "regions": regions}))
+            with self.subTest(mutation=index), self.assertRaises(ValueError):
+                probe.load_envelope(path)
+        with self.subTest(schema=2):
+            path = self.root / "bad-envelope.json"
+            path.write_text(json.dumps({"schema_version": 2, "regions": good}))
+            with self.assertRaises(ValueError):
+                probe.load_envelope(path)
+        with self.subTest(regions="not-object"):
+            path = self.root / "bad-envelope.json"
+            path.write_text(json.dumps({"schema_version": 1, "regions": []}))
+            with self.assertRaises(ValueError):
+                probe.load_envelope(path)
+        self.assertEqual(probe.load_envelope(), probe.load_envelope())
+
+    def test_declared_region_within_bound_verifies(self):
+        expected = self.make_pair(expected_peak=1.25, observed_peak=1.25003)
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", 1.25003)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.verify(expected, copy.deepcopy(expected), self.declare(bound=1e-4))
+
+    def test_declared_region_beyond_bound_fails(self):
+        expected = self.make_pair(expected_peak=1.25, observed_peak=1.5)
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", 1.5)
+        with self.assertRaisesRegex(ValueError, "declared envelope bound"):
+            self.verify(expected, copy.deepcopy(expected), self.declare(bound=1e-4))
+
+    def test_declared_region_requires_bounded_finite_samples(self):
+        expected = self.make_pair()
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", float("inf"))
+        with self.assertRaisesRegex(ValueError, "nonfinite"):
+            self.verify(expected, copy.deepcopy(expected), self.declare())
+
+    def test_declared_region_matches_committed_reference_bytes(self):
+        expected = self.make_pair()
+        committed = self.write_reference(value=1.25)
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", 1.25003)
+        # A different committed reference byte stream must be refused even
+        # though the deviation is inside the numeric bound.
+        self.write_reference(value=1.26)  # overwrite the committed bytes
+        with self.assertRaisesRegex(ValueError, "digest"):
+            self.verify(expected, copy.deepcopy(expected), self.declare(data=committed))
+
+    def test_undeclared_seam_stays_byte_exact_under_declaration(self):
+        expected = self.make_pair()
+        observed = copy.deepcopy(expected)
+        observed["comparisons"][0]["scalar"]["traces"][0]["sha256"] = "b" * 64
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", 1.25003)
+        with self.assertRaisesRegex(ValueError, "sentinel drift"):
+            self.verify(expected, observed, self.declare())
+
+    def test_identity_fields_stay_byte_exact_under_declaration(self):
+        expected = self.make_pair()
+        observed = copy.deepcopy(expected)
+        observed["comparisons"][0]["scalar"]["corpus_coordinates"] = probe.identity(6)
+        self.write_run_samples("canonical", 1.25)
+        self.write_run_samples("scalar", 1.25003)
+        with self.assertRaisesRegex(ValueError, "sentinel drift"):
+            self.verify(expected, observed, self.declare())
+
+    def test_declared_region_requires_the_run_root(self):
+        expected = self.make_pair()
+        with self.assertRaisesRegex(ValueError, "run root"):
+            self.verify(expected, copy.deepcopy(expected), self.declare(), runs_root=False)
+
+    def test_named_case_with_empty_regions_stays_byte_exact(self):
+        expected = self.make_pair()
+        self.verify(expected, copy.deepcopy(expected), {self.CASE_ID: {}})
+        observed = copy.deepcopy(expected)
+        observed["comparisons"][0]["scalar"]["traces"][0]["sha256"] = "b" * 64
+        with self.assertRaisesRegex(ValueError, "sentinel drift"):
+            self.verify(expected, observed, {self.CASE_ID: {}})
+        # An undeclared case under a nonempty census keeps the same rule.
+        with self.assertRaisesRegex(ValueError, "sentinel drift"):
+            probe.verify_expected(
+                expected,
+                observed,
+                [self.CASE_ID],
+                envelope=self.write_envelope(
+                    {"sine-bypass": self.declare()[self.CASE_ID]}
+                ),
+                references_root=self.root,
+                runs_root=self.root,
+            )
 
 if __name__ == "__main__":
     unittest.main()
