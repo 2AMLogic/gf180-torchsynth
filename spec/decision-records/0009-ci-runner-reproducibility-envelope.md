@@ -1,6 +1,8 @@
 # DR-0009: CI runner-pool reproducibility envelope for committed reference bytes
 
-- Status: Proposed (operator pre-approved landing; ratification pending reviewed merge)
+- Status: Proposed (operator pre-approved landing; ratification pending reviewed
+  merge). Amendment A1 (2026-09-24, issue #151) is recorded below and lands
+  with this record's ratification.
 - Date: 2026-09-20
 - Decision owners: 2AM Logic
 - Scope: exactly the CI jobs that compare committed reference bytes — the
@@ -205,6 +207,140 @@ three PR-branch (pull_request) runs on the same pool, labeled as such above —
 all with the pins verified active, establish that the pins are necessary but
 not sufficient on both sentinel workflows (scalar committed-seam and
 repeatability sides): the direct motivation for this record.
+
+Amendment A1 (2026-09-24) supersedes the "pins verified active in the
+failing logs" interpretation: those pins were active in the job shell, and
+that was the whole of their effect — see the root-cause refinement below,
+whose evidence log entries follow the table.
+
+## Amendment A1 (2026-09-24, issue #151)
+
+### Root-cause refinement
+
+The #127 pins set the four dispatch variables in the `reference-scalar`
+job shell (`.github/workflows/reference-scalar.yml:16-20`), but the render
+container never received them. The job builds the pinned linux/amd64 image
+and runs every render inside it
+(`env/release-era/qualify_scalar.sh`), and the wrapper forwarded into the
+container only `MKL_CBWR=COMPATIBLE`, and only when invoked with
+`--mkl-compatible`; `ATEN_CPU_CAPABILITY`, `MKL_ENABLE_INSTRUCTIONS` and
+`ONEDNN_MAX_CPU_ISA` stopped at the shell. The committed receipt's runtime
+record confirms it: `runtime/math_environment` shows
+`ATEN_CPU_CAPABILITY: null`, `MKL_ENABLE_INSTRUCTIONS: null`,
+`ONEDNN_MAX_CPU_ISA: null` for the 2026-09-21 capture — "pins active" in the
+job log was always "pins active where they had no effect." The same capture
+was also taken on a divergent substrate (macOS arm64 host, `linux/amd64`
+under Rosetta, MKL `MKL_NATIVE`), so the runner-pool machines (native x86,
+native MKL dispatch) had no dispatch-tier agreement with the committed bytes
+to hold against; the drift followed the transcendental-heavy seams exactly as
+this record's Problem section predicts (23 seam regions on `global-6`, 6 on
+`sine-bypass`, 6 on `noise-applied`; every other compared region byte-identical
+in the same runs).
+
+With the pins binding the tier inside the container, the pre-#151 receipt was
+simply the wrong reference: an under-pinned capture from an unratified-for-pool
+substrate, compared byte-exact against a pool whose tier was never pinned to
+match it.
+
+### Fix (assertion mechanics and evidence only)
+
+1. The wrapper forwards every set variable of the declared runtime's dispatch
+   set into the render container and appends `MKL_CBWR=COMPATIBLE` for the
+   `--mkl-compatible` profile; a runtime that does not set a pin is left
+   byte-for-byte as declared, with the unset values recorded as `null` in
+   `runtime/math_environment` (`env/release-era/qualify_scalar.sh`). An
+   undeclared runtime therefore cannot impersonate a pinned one: the receipt
+   comparison already bounds the whole `math_environment` object, and a
+   pin-less capture now fails verify explicitly instead of drifting.
+2. The committed sentinel receipt is recaptured in full scope (all 12
+   preregistered cases, both fresh-process repeats, three start-red controls)
+   under the enforced `release-mkl-compatible-v1` pins, single threaded,
+in the digest-pinned linux/amd64 image, on a native x86 host; the capture
+   carries a `recapture` annotation preserving the replaced receipt's
+   identity (issue #151, `sim/reference/scalar-execution.json`).
+3. The declared-envelope mechanism of Decision 1 is implemented and controlled:
+   `spec/reference/scalar-envelope-v1.json` declares the census; regions not
+   named in it assert byte-exact as today (Decision 1's default); a named
+   region asserts the `declared-bounded-deviation` guarantee — little-endian
+   binary32 format, declared count, sample finiteness, and per-sample absolute
+   deviation from the committed envelope-reference bytes bounded by a declared
+   maximum — with the reference bytes digest-bound to the declaration so a
+   bound is never re-anchored silently (issue 151,
+   `env/release-era/qualify_scalar.py:939-1043`). The stdlib controls exercise
+   the declared path end to end, including refusal cases, without any docker
+   or TorchSynth import (`env/release-era/test_qualify_scalar.py`).
+4. The workflow's verify step is unchanged in invocation
+   (`.github/workflows/reference-scalar.yml:38-39`); it now reads the
+   committed census and the committed receipt, both of which land with this
+   amendment. One line of the wrapper (`--progress plain`) was removed so the
+   same script runs unmodified on the CI pool's BuildKit docker and on a stock
+   Ubuntu `docker.io` legacy builder; the change is log cosmetics only.
+
+No target, arithmetic profile, normalization, parameter ordering, or clip
+timing changes: this amendment changes what the CI comparison asserts (and how
+the reference capture is produced), not what the float target is.
+
+### First census: no platform-variable region measured
+
+Measured under the enforced pins (all comparisons: run-1 sentinel bytes, both
+process sides, 216 f32le files per comparison):
+
+- x86 AWS instance (Intel Xeon 8259CL, Ice Lake, native AVX2, native MKL
+  build) versus the same host under the same pins in a second independent
+  process campaign: 0 of 216 files differ (byte-exact, cross-campaign).
+- The same pinned x86 capture versus an M-series macOS host running the
+  identical pinned linux/amd64 image under Rosetta (AVX2-emulated, MKL native
+  build): 0 of 216 files differ; maximum absolute sample deviation 0.0.
+- Same host, pins unset versus pins enforced, both `release-mkl-compatible-v1`
+  profiles: 0 of 216 files differ — on this substrate the pins bind the tier
+  the hardware already dispatches rather than changing it; their force is that
+  they bind it.
+
+Every compared sentinel region is therefore platform-invariant under the
+enforced pins, and the committed census is `regions: {}` — the Decision 1
+default, asserted byte-exact, with nothing relaxed. Disagreement was observed
+only between the pool runs and the pre-amendment under-pinned receipt, which
+is the root cause corrected above, not a region-class measurement. Per
+Decision 5 the named pool's own first measurement arrives with the merged
+pull request's CI runs; any pool event that measures a disagreement inside a
+currently byte-exact region classifies it in a further amendment with
+committed reference bytes (Decisions 1 and 2), never silently.
+
+### Evidence log additions (Decision 4)
+
+All entries: in-run gates passing, green on rerun at the identical head
+unless noted. The 09-21/09-22 scalar entries failed
+`ValueError: sentinel drift: global-6 canonical` from the committed-seam
+compare with the pins active in the job shell and unset in the container —
+the A1 root cause — and each captured run directory shows the
+transcendental-heavy seam signature with every other region byte-identical.
+The repeatability-side entries are logged for the evidence log's completeness;
+the repeatability lane's own fix is a sibling of issue #151, not part of it.
+Dates 2026.
+
+| Date (UTC) | Run | Head | Pins | Exoneration |
+| --- | --- | --- | --- | --- |
+| 09-21 | [35552390494](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35552390494) | `main` | job-shell active; container unset (A1) | root-caused by issue #151 (this amendment); no code change needed for the run itself |
+| 09-21 | [35557299034](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35557299034) | `main` | job-shell active; container unset (A1) | same signature; same root cause |
+| 09-22 | [35692233752](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35692233752) | `main` | job-shell active; container unset (A1) | 23/6/6 seam-drift set recorded from the captured run directory; root cause A1 |
+| 09-22 | [35788572974](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35788572974) | renovate PR branch | job-shell active; container unset (A1) | provenance-compare refusal, not sentinel drift: the branch changes a pinned definition file, so the branch's fresh provenance cannot equal the committed receipt's — the binding working as designed until a receipt regeneration lands on that branch |
+| 09-22 22:41 (repeatability side) | [35793687982](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35793687982) | `main` | repeat-lane pins (sibling lane) | logged for completeness; sibling of issue #151 |
+| 09-23 (repeatability side) | [35914237994](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/35914237994) | `feature/issue-75` PR branch | repeat-lane pins (sibling lane) | logged for completeness; sibling of issue #151 |
+
+### Follow-ups noted, out of this amendment's scope
+
+- The repeatability sentinel's committed-artifact compare has the same
+  structure (an un-pinned capture bound into the compare) and is deferred as
+  a sibling of issue #151; it amends this record through the same path when
+  it lands.
+- `spec/reference/scalar-envelope-v1.json` is a versioned census (a `-v1`
+  file), matching the repository's reference-publication convention; future
+  reclassifications amend it here first (Decision 2).
+- Pinning the render image's identity into the workflow (the receipt already
+  records the per-capture `image_id`; the image content follows the
+  digest-pinned Dockerfile and the committed `env/release-era/` tree) is a
+  possible further hardening and would need its own amendment step; not
+  required by, and not claimed by, this record.
 
 ## Ratification
 
