@@ -360,3 +360,93 @@ gf180mcu synthesis, layout, signoff, hardware playback, or sound-fidelity
 claim, and no claim that the declared envelope makes the committed bytes
 host-portable: it bounds what the named pool's comparisons assert, nothing
 more.
+
+## Amendment A2 (2026-09-24, issue #177) — the second sentinel workflow
+
+### Root cause (measured)
+
+`Reference repeatability` failed on `main` at `bea7564` (run 35951522637,
+2026-09-24T03:27Z) with seam byte divergence on the full-matrix
+`baseline_drift` report. The render ran on a pool host reporting
+**Intel Xeon Platinum 8573C (Emerald Rapids)** — an AVX512/AMX-class
+generation — while the frozen 128-cell baseline under audit was captured on a
+\<= AVX2 substrate. The sentinel renders inside the same pinned-image model as
+the scalar flow, but its container dispatch environment is not the job shell:
+it is the *active plan*. `env/release-era/repeatability-matrix.json`
+`profile_environment["release"]` declared exactly
+`{"MKL_CBWR": "COMPATIBLE", "ATEN_CPU_CAPABILITY": null}`, and the spawn path
+forwarded that generically into the container
+(`qualify_repeatability.py` — `--env k=v` for non-null values, `env -u k` for
+nulls, exact-assertion on the worker side). The red run's own receipt confirms
+it: `worker.runtime.math_environment = {"ATEN_CPU_CAPABILITY": null,
+"MKL_CBWR": "COMPATIBLE"}` — **no ISA-layer pin ever reached the container**.
+OneDNN/MKL then dispatched beyond AVX2 on that host and the math-heavy seam
+cells diverged from the <= AVX2-era base. This is the same disease as A1 on the
+scalar side, and the class this record anticipated on 2026-09-20: "the pins
+are necessary but not sufficient on both sentinel workflows (scalar
+committed-seam and repeatability sides)."
+
+### Fix (declared profile; zero code changes)
+
+`profile_environment["release"]` gains the canonical AVX2 tier pins, matching
+the tier established by `release-mkl-compatible-v1` and the job-shell
+`env:` block of `reference-repeatability.yml`:
+
+```json
+"ONEDNN_MAX_CPU_ISA": "AVX2",
+"MKL_ENABLE_INSTRUCTIONS": "AVX2"
+```
+
+The spawn/receipt/worker-assertion machinery is untouched; after the
+amendment, the shell, the plan, and the container describe the same
+four-variable environment on all three layers. `null` for
+`ATEN_CPU_CAPABILITY` is unchanged (the tier is pinned through the ISA-layer
+variables; the ATen capability selector stays at the image default, recorded
+as `null`, exactly as declared).
+
+### Cross-substrate evidence (2026-09-24, native-x86 AWS instance)
+
+A differential campaign ran the pinned-image sentinel on one physical host —
+Intel Xeon Platinum 8175M (Skylake-SP, AVX512F-present, no AMX), native
+`linux/amd64` — rendering the same pinned cell (release, batch 32, repeat 1,
+case `global-0`) under (pre) the original plan and (post) the amended plan:
+
+| quantity | pre (original plan) | post (amended plan) |
+|---|---|---|
+| `input_sha256` | `3e96e35f…4fb175649a` | identical |
+| `label_byte_hex` | `01` | identical |
+| 12/12 artifact `sha256` (adsr_1/2, audio, lfo_1/2, noise, normalized, physical, pre_normalization, vco_1/2) | equal to the frozen expected block | **byte-identical to pre** |
+| 78/78 normalized parameter values | equal to the frozen baseline | **bit-equal to pre** |
+| `plan_sha256` | `c4acd050…c00614ab` | `8510b636…aa690cd20a1d` (amended plan, repo `plan_hash` function; matches the post cell's own recorded hash) |
+
+The pre-amendment run against the frozen baseline was **PASS** on this host
+while the pool's pre-amendment run on the 8573C host was red (run
+35951522637): pre-amendment byte-stability was host-generation-dependent, which
+is precisely the drift class this sentinel exists to bound. The post-amendment
+render is byte-identical to the pre-amendment render on a <=AVX2-dispatch
+substrate (the pins select the kernel that substrate already used), and on
+>AVX2-dispatch substrates the pins *force* the <=AVX2 path by construction.
+The PR's own `Reference repeatability` CI run on the pool (8573C-class
+generation) is the recorded cross-host confirmation for the >AVX2 case.
+
+### Sentinel expectation re-pin (mechanical, the machinery's own prescription)
+
+`check_sentinel` (`qualify_repeatability.py`) binds the current plan to the
+frozen expectation by `plan_sha256`, so an authorized plan amendment
+re-registers the expectation from a sanctioned substrate run. The frozen
+record `sim/reference/repeatability-runtime.json` top-level `sentinel` block
+moves `plan_sha256` from `c4acd0500515a7cf45c1b84bf7a3bf4364925ef78c900937b1ca4184c00614ab`
+to `8510b636050fd1a30e07cd383849445679d1d7b481ccf22abf37aa690cd20a1d`; its other three fields are unchanged, and the campaign measures them
+unchanged. The historical 128-cell raw matrix and its digests
+(`baseline_plan_sha256`, `baseline_raw_report_sha256`) are untouched: the
+amendment declares the container *environment*, not the experiment — every
+other plan field (cases, seeds, shapes, dtype, threads, comparisons) is
+invariant. No synthetic re-capture of the historical matrix is performed or
+claimed.
+
+### Ratification
+
+As under A1: reviewed merge ratifies this amendment; until then it is
+Proposed and no consumer may treat the amended tier as ratifying on
+>AVX2-dispatch substrates. As under the record's Decision 2, this record
+makes no synthesis, layout, signoff, or playback claims.
