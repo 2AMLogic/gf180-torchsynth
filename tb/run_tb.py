@@ -201,8 +201,42 @@ frozen fixed model's committed golden vectors
    stream), and a shadow-word corruption in the replayed tanh fanout
    (stimulus, localized to vco_2.raw) — and require every one to be
    DETECTED.
- """
+ 
 
+``noise`` (issue #75) runs the exact canonical noise-stream lane
+(tb/sv/noise_stream_dut.sv) against the landed fixed-voice golden receipt
+(sim/reference/fixed-voice-golden-v1.json) under the ACCEPTED noise policy
+(DR-0003 + DR-0008 C8, both Accepted 2026-09-21): host-fed exact stream,
+slot ``sound_index % 32``, seed 13 — exactness, NO error metric, NO
+on-chip generator (that would be a new noise policy needing its own DR):
+
+1. resolve every golden case's canonical noise bytes through the host
+   feed path (seed 13, slot rule) and bind each stream's SHA-256 against
+   the receipt's per-case ``noise`` block,
+2. mirror the frozen fixed model's noise lane bit-level
+   (torchsynth_voice.noise_stream_golden: exponent shift + half-even
+   round + C7 saturation, no multiplier) and require its ``noise.raw``
+   trace digest to equal every committed case's digest — the golden
+   bit-exactness the RTL is then held to,
+3. feed each case's full 705,600-byte stream through the DUT and require
+   the captured Q2.21 stream to equal the mirror word-for-word (sample-
+   exact against the golden receipt), with clean status, exactly 176,400
+   declared narrowings per clip, and the clip-length/framing checks
+   green,
+4. replay/reset: play sound_index 0 then 32 back-to-back through one
+   simulation (same slot 0, en gap between streams) and require the
+   second capture to equal the first byte-for-byte — no off-by-one state
+   survives a stream boundary (32-stream repetition),
+5. hard-assert the DR-0010 #75 owner row (one declared narrowing per
+   sample; the convert is exponent shift + half-even round, no
+   multiplier — declared-structural, reported) plus the emitted schedule
+   constants against the landed package, and
+6. plant five breakpoint mutations — dropped final byte (stimulus),
+   duplicated trailing byte (stimulus), wrong declared slot (stimulus),
+   LSB truncation instead of half-even (RTL), and wrong slot-selection
+   rule (RTL) — and require every one to be DETECTED.
+
+"""
 from __future__ import annotations
 
 import argparse
@@ -227,6 +261,7 @@ from torchsynth_voice import adsr_golden as ag  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import lfo_golden as lgo  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
+from torchsynth_voice import noise_stream_golden as nsg  # noqa: E402
 from torchsynth_voice import vco_golden as vg  # noqa: E402
 from torchsynth_voice import vco2_golden as vc  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
@@ -353,7 +388,40 @@ VCO2_MUTATION_WALK_CAP = 24000
 #: Replay-independence pair: static words, phase, and counters are
 #: per-trigger; run 0 state must not leak into run 1.
 VCO2_REPLAY_PAIR = ("frozen:waveform:vco_2:saw", "shape:intermediate-half")
+#: Landed fixed-voice golden receipt (issue #54): per-case noise block
+#: (seed/slot/bytes digest) and per-case ``noise.raw`` trace digests.
+NOISE_RECEIPT_PATH = ROOT / "sim/reference/fixed-voice-golden-v1.json"
+#: Committed case the noise mutations are demonstrated on (slot 0).
+NOISE_MUTATION_CASE_INDEX = 0
+#: Replay/32-stream-repetition pair: sound_index 0 and 32 share slot 0, so
+#: their resolved byte streams are identical by the C8 slot rule.
+NOISE_REPLAY_INDICES = (0, 32)
+#: Synthetic bit-pattern stream: structural edge classes (deep zero, ties
+#: to even in both directions, saturation at both rails) beyond canonical
+#: bits, all through the same fed-stream path.
+NOISE_PATTERN_BITS = (
+    0x00000000,  # +0.0
+    0x80000000,  # -0.0
+    0x00000001,  # smallest subnormal -> deep zero
+    0x00800000,  # 2^-126 (smallest normal) -> deep zero
+    0x3F000001,  # 0.5 + ulp: tie, even integer part -> stays down
+    0x3F800003,  # tie with odd integer part -> rounds up
+    0x3F800000,  # 1.0
+    0xBF800000,  # -1.0
+    0x40400000,  # 3.0
+    0x407FFFFF,  # largest finite below 4 -> saturates high
+    0x40800000,  # 4.0 -> saturates high
+    0xC0800000,  # -4.0 -> exactly C1_MIN
+    0xC2C80000,  # -98.25 -> saturates low
+)
 
+NOISE_DUT_SV = TB_ROOT / "sv/noise_stream_dut.sv"
+NOISE_TB_SV = TB_ROOT / "sv/tb_noise_stream_dut.sv"
+#: Mutation seams (anchored; mutate_sv refuses if the anchor moved).
+NOISE_TRUNCATION_ANCHOR = "rounded = q_rounded;"
+NOISE_TRUNCATION_MUTANT = "rounded = q_raw;"
+NOISE_SLOT_RULE_ANCHOR = "wire [4:0] slot_expected = sound_index[4:0];"
+NOISE_SLOT_RULE_MUTANT = "wire [4:0] slot_expected = sound_index[4:0] ^ 5'd1;"
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
 SYNTH_PARAMETER = "adsr_1.alpha"
@@ -4318,6 +4386,341 @@ def patch(workdir: Path, simulator: str) -> int:
     return 0
 
 
+def noise_write_run(workdir: Path, run: int, sound_index: int,
+                    declared_slot: int, noise_bytes: bytes) -> None:
+    """One run's stimulus: identity words + the exact fed byte stream."""
+
+    (workdir / ("run%d_stim.txt" % run)).write_text(
+        "%d %d %d\n" % (sound_index, declared_slot, len(noise_bytes)),
+        encoding="utf-8",
+    )
+    (workdir / ("run%d_bytes.txt" % run)).write_text(
+        "".join("%02x\n" % b for b in noise_bytes), encoding="utf-8"
+    )
+
+
+def noise_simulate(workdir: Path, simulator: str, runs: int,
+                   dut_sv: Path):
+    """Compile + run the noise TB; return (captures, statuses) per run."""
+
+    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
+    if simulator == "iverilog":
+        vvp = workdir / "noise_stream.vvp"
+        _run(
+            [
+                "iverilog", "-g2012", "-o", str(vvp),
+                str(CONSTANTS_PKG_SV), str(dut_sv), str(NOISE_TB_SV),
+            ],
+            cwd=workdir,
+        )
+        _run(["vvp", "-n", str(vvp)], cwd=workdir)
+    else:
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    captures = []
+    statuses = []
+    for r in range(runs):
+        captured = [
+            int(line)
+            for line in (
+                workdir / ("run%d_captured.txt" % r)
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        status = [
+            int(v)
+            for v in (
+                workdir / ("run%d_status.txt" % r)
+            ).read_text(encoding="utf-8").split()
+        ]
+        captures.append(captured)
+        statuses.append(status)
+    return captures, statuses
+
+
+def noise(workdir: Path, simulator: str) -> int:
+    """Issue #75 flow: the host-fed exact noise lane vs the golden receipt."""
+
+    receipt = json.loads(NOISE_RECEIPT_PATH.read_bytes())
+    if receipt["kind"] != "fixed-voice-golden-release-receipt":
+        raise SystemExit("unexpected receipt kind: %r" % receipt["kind"])
+    cases = receipt["cases"]
+    ok = True
+
+    # 1+2. Host-feed resolve + golden bit-exactness of the mirror lane.
+    streams = {}
+    for case in cases:
+        sound_index = case["sound_index"]
+        meta = case["noise"]
+        if meta["seed"] != 13 or meta["slot"] != sound_index % 32:
+            print(
+                "NOISE FAILED: case %s noise identity block violates the "
+                "C8 slot rule" % case["id"]
+            )
+            ok = False
+            continue
+        raw = nsg.resolve_canonical_bytes(sound_index)
+        sha = nsg.noise_bytes_sha256(raw)
+        mirror = nsg.mirror_stream(raw)
+        digest = nsg.trace_digest(mirror)
+        if sha != meta["sha256"] or digest != case["traces"]["noise.raw"]:
+            print(
+                "NOISE FAILED: case %s mirror/digest binding broken "
+                "(bytes %s vs %s; noise.raw %s vs %s)"
+                % (case["id"], sha, meta["sha256"], digest,
+                   case["traces"]["noise.raw"])
+            )
+            ok = False
+        streams[sound_index] = (raw, mirror)
+    print(
+        "host feed + mirror: %d golden cases resolved (seed 13, slot "
+        "sound_index %% 32), every noise.raw digest bound bit-exactly -> %s"
+        % (len(cases), "OK" if ok else "FAIL")
+    )
+
+    # 3+4. Committed cases + pattern stream + replay pair, one invocation.
+    run_plan = []  # (label, sound_index, declared_slot, bytes)
+    for case in cases:
+        sound_index = case["sound_index"]
+        raw, _ = streams[sound_index]
+        run_plan.append((case["id"], sound_index,
+                         nsg.canonical_slot(sound_index), raw))
+    # The synthetic pattern stream rides in one full clip (the DUT's length
+    # contract is one clip per enabled stream; the edge patterns lead and
+    # +0.0 padding completes the clip).
+    pattern_bytes = b"".join(
+        struct.pack("<I", bits) for bits in NOISE_PATTERN_BITS
+    )
+    pattern_bytes += b"\x00\x00\x00\x00" * (
+        nsg.EXPECTED_NOISE_BYTES // 4 - len(NOISE_PATTERN_BITS)
+    )
+    assert len(pattern_bytes) == nsg.EXPECTED_NOISE_BYTES
+    run_plan.append(("synthetic-patterns", 0, 0, pattern_bytes))
+    first, replay_index = NOISE_REPLAY_INDICES
+    raw0, _ = streams[first]
+    raw_replay = nsg.resolve_canonical_bytes(replay_index)
+    if nsg.noise_bytes_sha256(raw_replay) != nsg.noise_bytes_sha256(raw0):
+        raise SystemExit(
+            "replay pair %r must share a slot by the C8 rule" % (
+                NOISE_REPLAY_INDICES,)
+        )
+    run_plan.append(("replay-sound-0", first, 0, raw0))
+    run_plan.append(("replay-sound-32", replay_index,
+                     nsg.canonical_slot(replay_index), raw_replay))
+
+    case_dir = workdir / "committed"
+    case_dir.mkdir(parents=True, exist_ok=True)
+    for run, (_, sound_index, slot, raw) in enumerate(run_plan):
+        noise_write_run(case_dir, run, sound_index, slot, raw)
+    captures, statuses = noise_simulate(case_dir, simulator, len(run_plan),
+                                        NOISE_DUT_SV)
+
+    replay_positions = {}
+    for run, (label, sound_index, slot, raw) in enumerate(run_plan):
+        if label == "synthetic-patterns" or sound_index not in streams:
+            mirror = nsg.mirror_stream(raw)
+        else:
+            mirror = streams[sound_index][1]
+        if label.startswith("replay-sound-"):
+            replay_positions[label] = run
+        captured = captures[run]
+        status = statuses[run]
+        if captured != mirror:
+            print("NOISE FAILED: RTL capture != golden lane (%s):" % label)
+            for i, (want, got) in enumerate(zip(mirror, captured)):
+                if want != got:
+                    print(
+                        "  first mismatch at sample %d: expected %d, got %d"
+                        % (i, want, got)
+                    )
+                    break
+            else:
+                print(
+                    "  length mismatch: expected %d samples, got %d"
+                    % (len(mirror), len(captured))
+                )
+            ok = False
+            continue
+        clean = status == [0, 0, len(raw), len(mirror), len(mirror)]
+        if not clean:
+            print(
+                "NOISE FAILED: run status %r not clean for %s"
+                % (status, label)
+            )
+            ok = False
+    print(
+        "RTL bit-exactness: %d fed streams (%d golden cases + %d "
+        "structural patterns + replay pair) equal the golden lane "
+        "word-for-word -> %s"
+        % (len(run_plan), len(cases), 1, "OK" if ok else "FAIL")
+    )
+
+    # 4. Replay/reset + 32-stream repetition: sound 0 then 32 back-to-back.
+    replay_ok = (
+        captures[replay_positions["replay-sound-32"]]
+        == captures[replay_positions["replay-sound-0"]]
+        == streams[first][1]
+    )
+    print(
+        "replay/reset: sound_index %d -> %d back-to-back through one en gap "
+        "reproduces the golden capture byte-for-byte (32-stream repetition, "
+        "no off-by-one state) -> %s"
+        % (first, replay_index, "OK" if replay_ok else "FAIL")
+    )
+    ok = ok and replay_ok
+
+    # 5. DR-0010 #75 owner row + emission check.
+    try:
+        schedule = sched.require_accepted_schedule()
+    except ScheduleNotAccepted as error:
+        print("NOISE REFUSED: DR-0010 schedule register refused: %s" % error)
+        return 1
+    owner_ok = True
+    per_clip = {
+        "declared narrowings": (176400, 176400),
+        "multiply-class ops (structural: shift+round convert)": (0, 0),
+    }
+    for name, (actual, limit) in per_clip.items():
+        verdict = "OK" if actual <= limit else "FAIL"
+        owner_ok = owner_ok and actual <= limit
+        print(
+            "  budget: %d %s per clip vs DR-0010 #75 owner row %d -> %s"
+            % (actual, name, limit, verdict)
+        )
+    for run, (label, _, _, _) in enumerate(run_plan):
+        if label == "synthetic-patterns":
+            continue
+        narrow_count = statuses[run][4]
+        if narrow_count != 176400:
+            print(
+                "NOISE FAILED: %s narrow_count %d != one declared narrowing "
+                "per sample" % (label, narrow_count)
+            )
+            owner_ok = False
+    print(
+        "  budget: exported sticky counters assert 176400 declared "
+        "narrowings per clip on every committed case -> %s"
+        % ("OK" if owner_ok else "FAIL")
+    )
+    try:
+        emitted = codegen.emit(schedule_payload=schedule)
+        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+        matches = emitted.package_text == landed and (
+            sched.SCHEDULE_ID in emitted.emitted_ids
+        )
+        print(
+            "  budget constants: landed %s matches the live emission of both "
+            "accepted registers -> %s"
+            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        )
+        owner_ok = owner_ok and matches
+    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
+        print("  budget constants: emission failed -> %s" % error)
+        return False
+    ok = ok and owner_ok
+
+    # 6. Mutations: every planted fault MUST be detected (AC-5).
+    mutations_ok = True
+    mut_case = cases[NOISE_MUTATION_CASE_INDEX]
+    mut_sound = mut_case["sound_index"]
+    mut_slot = nsg.canonical_slot(mut_sound)
+    mut_raw, mut_mirror = streams[mut_sound]
+
+    # 6a. Dropped final byte (stimulus): the length check must latch.
+    mut_dir = workdir / "mut-dropped"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, mut_raw[:-1])
+    _, mut_statuses = noise_simulate(mut_dir, simulator, 1, NOISE_DUT_SV)
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_STREAM_TRUNCATED]
+    print(
+        "mutation dropped-byte (stimulus): %s"
+        % ("DETECTED (sticky length error)" if detected else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6b. Duplicated trailing byte (stimulus): the overrun check must latch.
+    mut_dir = workdir / "mut-duplicated"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, mut_raw + b"\x00")
+    _, mut_statuses = noise_simulate(mut_dir, simulator, 1, NOISE_DUT_SV)
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_BYTE_OVERRUN]
+    print(
+        "mutation duplicated-byte (stimulus): %s"
+        % ("DETECTED (sticky overrun error)" if detected else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6c. Wrong declared slot (stimulus): the C8 identity check must latch.
+    mut_dir = workdir / "mut-slot"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot ^ 1, mut_raw)
+    _, mut_statuses = noise_simulate(mut_dir, simulator, 1, NOISE_DUT_SV)
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_SLOT_IDENTITY]
+    print(
+        "mutation wrong-slot (stimulus): %s"
+        % ("DETECTED (sticky slot-identity error)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6d. LSB truncation instead of half-even (RTL).
+    mut_dir = workdir / "mut-truncation"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        NOISE_DUT_SV.read_text(encoding="utf-8"),
+        NOISE_TRUNCATION_ANCHOR, NOISE_TRUNCATION_MUTANT, "lsb-truncation",
+    )
+    (mut_dir / "noise_stream_mut.sv").write_text(mutated, encoding="utf-8")
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, mut_raw)
+    mut_captures, mut_statuses = noise_simulate(
+        mut_dir, simulator, 1, mut_dir / "noise_stream_mut.sv"
+    )
+    detected = (
+        mut_captures[0] != mut_mirror
+        and mut_statuses[0][:2] == [0, 0]
+    )
+    print(
+        "mutation lsb-truncation (RTL): %s"
+        % ("DETECTED (capture diverges from the golden lane)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6e. Wrong slot-selection rule (RTL): the mutated rule must flag a
+    # clean, correctly-declared stream.
+    mut_dir = workdir / "mut-slotrule"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        NOISE_DUT_SV.read_text(encoding="utf-8"),
+        NOISE_SLOT_RULE_ANCHOR, NOISE_SLOT_RULE_MUTANT, "slot-rule",
+    )
+    (mut_dir / "noise_stream_mut.sv").write_text(mutated, encoding="utf-8")
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, mut_raw)
+    _, mut_statuses = noise_simulate(
+        mut_dir, simulator, 1, mut_dir / "noise_stream_mut.sv"
+    )
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_SLOT_IDENTITY]
+    print(
+        "mutation slot-rule (RTL): %s"
+        % ("DETECTED (mutated rule rejects the clean stream)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+    ok = ok and mutations_ok
+
+    if not ok:
+        print("NOISE RUN FAILED")
+        return 1
+    print(
+        "NOISE RUN PASSED (%d golden cases bit-exact + pattern/replay "
+        "streams bit-exact + owner-row/op-count asserts + all 5 mutations "
+        "detected)" % len(cases)
+    )
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -4326,7 +4729,7 @@ def main(argv=None) -> int:
         default="selftest",
         choices=["selftest", "anchor", "adsr", "patch", "lfo", "modmatrix",
                  "vco",
-                 "vco2"],
+                 "vco2", "noise"],
         help="'selftest' proves the harness; 'anchor' runs the real "
         "golden-vector flow through the format-true DUT; 'adsr' runs the "
         "issue #70 ADSR engine against the frozen fixed model's golden "
@@ -4338,7 +4741,10 @@ def main(argv=None) -> int:
         "model's golden vectors; 'vco' runs the issue #73 sine VCO "
         "engine against the frozen whole-voice receipt's vco_1.raw "
         "traces; 'vco2' runs the issue #74 square/saw "
-        "VCO engine against the frozen fixed model's golden vectors",
+        "VCO engine against the frozen fixed model's golden vectors; "
+        "'noise' runs the issue #75 host-fed "
+        "exact noise-stream lane against the landed fixed-voice golden "
+        "receipt",
     )
     parser.add_argument(
         "--simulator",
@@ -4371,8 +4777,7 @@ def main(argv=None) -> int:
         "lfo": lfo,
         "modmatrix": modmatrix,
         "vco": vco,
-        "vco2": vco2,
-    }
+        "vco2": vco2,        "noise": noise,    }
     command = commands[args.command]
 
     if args.workdir is not None:

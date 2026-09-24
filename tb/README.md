@@ -400,14 +400,74 @@ frozen fixed model's committed golden vectors
   determinism (`--check`), and the full tb flow (skipped where Icarus
   Verilog is absent).
 
+## Noise stream — the exact canonical noise lane (issue #75)
+
+`tb/run_tb.py noise` runs the host-fed exact noise-stream convert lane
+(`tb/sv/noise_stream_dut.sv` under `tb/sv/tb_noise_stream_dut.sv`) against
+the landed fixed-voice golden receipt
+(`sim/reference/fixed-voice-golden-v1.json`) under the ACCEPTED noise
+policy — DR-0003 (Accepted) + DR-0008 C8 (Accepted, 2026-09-21): the
+canonical stream is host/testbench-fed **bit-exactly**; slot
+`sound_index % 32`, seed 13; **no error metric — exactness**; and **no
+on-chip generator** (reproducing the CPU `torch.rand` bitstream would be a
+new noise policy requiring its own DR per DR-0008 §7/§13).
+
+- **DUT** — byte-serial host feed (little-endian binary32 reassembly),
+  one declared narrowing per sample (site `noise.source_q`): exponent
+  shift + half-even round + C7 saturation to the C1 Q2.21 word — the
+  DR-0010 #75 owner row's convert, with no multiplier and no floats. A
+  sticky error register validates the C8 slot identity
+  (`declared_slot != sound_index % 32`), the clip byte length
+  (overrun/truncation vs `SCHED_SAMPLES_PER_PASS * 4`), and a sticky
+  narrowing counter exports one count per sample. Between streams the
+  host drops `en` for a cycle and every per-stream counter clears
+  (replay/reset carries no off-by-one state); a raised error survives
+  every trigger and only reset clears it.
+- **Flow** — every committed golden case's bytes resolve through the
+  host-feed path (`noise_stream_golden.resolve_canonical_bytes`: seed 13,
+  slot rule) and bind against the receipt's per-case noise SHA-256; the
+  bit-level convert mirror's `noise.raw` digest must equal every case's
+  committed digest; the full 705,600-byte stream is then fed through the
+  DUT and the capture must equal the mirror word-for-word (sample-exact
+  against the golden receipt). A synthetic pattern stream exercises
+  structural edge classes (deep zeros, both tie directions, both
+  saturation rails) beyond the canonical bits. Replay/reset: sound_index
+  0 then 32 (same slot) play back-to-back through one simulation and must
+  reproduce the golden capture byte-for-byte — 32-stream repetition with
+  no off-by-one state. The DR-0010 #75 owner row (one declared narrowing
+  per sample; multiply-class ops = 0, declared-structural) and the
+  emitted schedule constants are asserted.
+- **Mutations** — five planted faults, each required to be DETECTED:
+  dropped final byte (sticky truncation error), duplicated trailing byte
+  (sticky overrun error), wrong declared slot (sticky slot-identity
+  error), LSB truncation instead of half-even rounding (RTL capture
+  diverges from the golden lane), and a wrong slot-selection rule (RTL
+  rejects a clean, correctly-declared stream).
+- **Host mirror** — `src/torchsynth_voice/noise_stream_golden.py` is the
+  bit-level convert mirror plus the host-feed resolve path and the
+  golden-receipt trace-digest binding, so the equivalence chain is model
+  → mirror → RTL with no harness-parallel implementation anywhere.
+- **Tests** — `tests/test_noise_stream.py`: mirror-vs-model-lane equality
+  over structured edge patterns and a 20k-word finite random sweep, all
+  34 golden cases' byte/slot/lane digest bindings, 32-stream repetition,
+  framing-validation refusals (dropped/duplicated/wrong-slot), the
+  truncation mutant's divergence, and the trace-digest serialization
+  binding against the receipt generator.
+- **Scope honesty** — the convert lane is the C8-accepted noise policy in
+  RTL; streaming-transport integration (how the bytes arrive over a real
+  link) belongs to the #66/#77 transport lanes. The DR-0003 re-feed
+  obligation (2 × 705,600 B per clip, digest-bound per pass) is cited,
+  not re-derived. Nothing here claims synthesis, layout, signoff, or
+  hardware playback.
+
 ## Gated, not in this increment
 
-The remaining audio-rate lanes (#75 noise/VCA,
-#76 mixer/normalization), the shadow exp2/tanh sites (a resident RTL
-approximation for either is the open DR-0008/DR-0010 item; #74 owns the
-declaration class and replays them host-side until a declared
-approximation is ratified), the serialized single-MAC
-schedule pipeline itself (the RTL consumer of the `SCHED_*` constants),
+The remaining audio-rate lanes (#76 mixer/normalization), any
+whole-source composition of the VCO/VCA audio-rate source lanes, the
+shadow exp2/tanh sites (a resident RTL approximation for either is
+the open DR-0008/DR-0010 item; #74 owns the declaration class and
+replays them host-side until a declared approximation is
+ratified), the serialized single-MACschedule pipeline itself (the RTL consumer of the `SCHED_*` constants),
 the integration of the #70/#71/#72 engines into the whole-voice one-shot top
 (the #78/#79 conformance lanes consume them there), a resident RTL
 implementation of the `**alpha` binary64 shadow (open DR-0008/DR-0010
