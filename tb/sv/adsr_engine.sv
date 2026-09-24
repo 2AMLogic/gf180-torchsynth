@@ -115,16 +115,19 @@ module adsr_engine #(
     endfunction
 
     // Exact half-even division of a non-negative numerator by a positive
-    // denominator (the ramp's canonical division). The caller guarantees
-    // quotient <= 2^60 (early clamp below), so the loop runs over the 61
-    // quotient bits aligned at the denominator's MSB. Numerator sized for
+    // denominator (the ramp's canonical division): restoring long division
+    // over every numerator bit — a subtraction at bit i sets quotient bit
+    // i — then the half-even tie decision on the exact remainder (the #71
+    // lfo_vca_engine structure; issue #165 corrected the #70 version, which
+    // stopped the scan at the denominator's MSB and offset the quotient by
+    // 2^den_msb). The caller guarantees quotient <= 2^60 (early clamp
+    // below), so the scan starts at bit den_msb + 60. Numerator sized for
     // the Q2.60 shadow domain: (x + eps) << 30 fits in 110 bits.
     function [141:0] div_half_even;
         input [141:0] numerator;
         input [46:0]  denominator;
         reg [141:0] num;
         reg [141:0] quo;
-        reg [46:0]  den;
         reg [141:0] rem;
         reg [141:0] den_z;
         reg [141:0] doubled;
@@ -132,19 +135,18 @@ module adsr_engine #(
         integer i;
         begin
             num = numerator;
-            den = denominator;
             quo = 142'd0;
             rem = 142'd0;
-            den_z = {95'd0, den};
+            den_z = {95'd0, denominator};
             den_msb = 0;
             for (i = 0; i < 47; i = i + 1)
-                if (den[i])
+                if (denominator[i])
                     den_msb = i;
-            for (i = den_msb + 60; i >= den_msb; i = i - 1) begin
+            for (i = den_msb + 60; i >= 0; i = i - 1) begin
                 rem = (rem << 1) | ((num >> i) & 142'd1);
                 if (rem >= den_z) begin
                     rem = rem - den_z;
-                    quo = quo | (142'd1 << (i - den_msb));
+                    quo = quo | (142'd1 << i);
                 end
             end
             doubled = rem << 142'd1;
