@@ -7,7 +7,9 @@
   "profile_environment": {
     "release": {
       "MKL_CBWR": "COMPATIBLE",
-      "ATEN_CPU_CAPABILITY": null
+      "ATEN_CPU_CAPABILITY": null,
+      "ONEDNN_MAX_CPU_ISA": "AVX2",
+      "MKL_ENABLE_INSTRUCTIONS": "AVX2"
     },
     "current": {
       "MKL_CBWR": null,
