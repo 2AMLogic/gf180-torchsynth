@@ -464,3 +464,15 @@ publication changed"). The pin is updated here to `611fe2121330a7a467ffab1deade5
 digest-pinned reference file must sweep the repository for every companion
 pin of that file before merge (the sentinel re-pin, the renderer
 publication gate, and any contract-mifest pin are distinct).
+
+### A2, note (recapture practice)
+
+The scalar sentinel receipt recapture must be (a) at the
+`full-preregistered-cases` scope required by the protocol-refusal tests,
+and (b) taken from the **current** main tree, i.e. after this amendment's
+re-pin of the runtime publication, since the receipt's provenance and the
+protocol gate both track the current tree. The initial recapture (#179),
+being sentinel-scoped and taken from a pre-A2 parent, is superseded by
+the full-scope republish from `d664805` carried here (replaced receipt:
+source tree `89aadc21`, file sha256 recorded in the receipt's
+`recapture` block).
