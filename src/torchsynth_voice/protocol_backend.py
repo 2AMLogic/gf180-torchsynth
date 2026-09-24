@@ -32,7 +32,7 @@ from .core_protocol_mock import MockCore
 from .explorer import FakePlayer, publish_fake_artifact
 from .explorer_session import ExplorerSession
 from .inventory import INVENTORY_PATH, load_json
-from .protocol_client import HostClient, MockTransport
+from .protocol_client import HostClient, MockTransport, Transport
 
 BACKEND_LABEL = "protocol-mock-v2-behavioral-synthetic-audio"
 AUDIO_SOURCE_LABEL = "fixed-golden-vectors-behavioral-mock"
@@ -75,7 +75,7 @@ def build_mock_core(*, audio_source=GOLDEN_AUDIO_VECTOR) -> MockCore:
 
 
 def build_mock_client(
-    core: MockCore, transport: MockTransport, **kwargs
+    core: MockCore, transport: Transport, **kwargs
 ) -> HostClient:
     """A host client bound to the same contract identity as the mock."""
     _, table_sha256 = name_table_reference()
@@ -106,7 +106,7 @@ class ProtocolMockRenderer:
     and never replaces a previous valid selection.
     """
 
-    def __init__(self, store, *, core: MockCore, transport: MockTransport):
+    def __init__(self, store, *, core: MockCore, transport: Transport):
         self.store = store
         self.core = core
         self.transport = transport

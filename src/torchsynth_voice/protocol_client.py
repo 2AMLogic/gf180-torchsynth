@@ -162,6 +162,14 @@ class FrameStream:
             del self._buffer[:total]
             return frame
 
+    def next_complete_frame(self) -> Frame | None:
+        """Non-blocking complement to ``next_frame``: return the next complete
+        frame already assembled in the buffer, or None without waiting for
+        more bytes. Used by the TRANSPORTS.md binding models to drain the
+        host→core stream on the core side (``transport_binding_models``).
+        """
+        return self._extract()
+
     def next_frame(self, recv, *, deadline: float, clock=time.monotonic) -> Frame:
         """Block on ``recv()`` until one valid frame is assembled."""
         while True:

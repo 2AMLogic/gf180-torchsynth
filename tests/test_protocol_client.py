@@ -498,6 +498,42 @@ class FramingAndRetryTests(unittest.TestCase, ClientHarness):
             },
         )
 
+    def test_expired_transaction_continuation_drops_client_stale_state(self):
+        class _Clock:
+            now = 0.0
+
+            def __call__(self):
+                return self.now
+
+            def advance(self, seconds):
+                self.now += seconds
+
+        clock = _Clock()
+        core, transport, client = self.make(
+            mock_kwargs={"clock": clock, "patch_timeout_s": 1.0}
+        )
+        client.negotiate()
+        client.open_patch(b"tx-exp", b"id", 2)
+        client.declare_name("keyboard.midi_f0")
+        # Silence past the core's patch_timeout_s expires the transaction (silent).
+        clock.advance(2.0)
+        # Continuing the expired transaction answers ERR_TX_TIMEOUT ...
+        with self.assertRaises(ProtocolError) as caught:
+            client.declare_name("lfo_1.rate")
+        self.assertIs(caught.exception.code, ErrorCode.TX_TIMEOUT)
+        # ... and the client tracks it as transaction-ending: ready, no stale state.
+        self.assertEqual(client.state, "ready")
+        self.assertIsNone(client.transaction_id)
+        # SESSION.md: resume only with a fresh transaction id and a full re-send.
+        word = struct.pack("<i", 1 << 20)
+        client.open_patch(b"tx-exp2", b"id", 1)
+        client.declare_name("keyboard.midi_f0")
+        client.stage_value("keyboard.midi_f0", word)
+        client.commit_patch({"keyboard.midi_f0": word})
+        self.assertEqual(client.state, "ready")
+        self.assertEqual(core.active_patch["transaction_id"], b"tx-exp2")
+        self.assertEqual(core.active_patch["values"], {"keyboard.midi_f0": word})
+
 
 class AudioGoldenVectorTests(unittest.TestCase):
     GOLDEN = (

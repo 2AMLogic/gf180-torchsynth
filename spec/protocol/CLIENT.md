@@ -30,7 +30,16 @@ behavior.
 - Alternate explorer backend: `src/torchsynth_voice/protocol_backend.py`
   (`build_protocol_mock_session`, `ProtocolMockRenderer`,
   `backend_contract_identity`, `backend_envelope`, `GOLDEN_AUDIO_VECTOR`).
-- Tests: `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`.
+- Transport binding models: `src/torchsynth_voice/transport_binding_models.py`
+  (`UartBindingTransport`, `SpiBindingTransport`, `UsbBindingTransport`):
+  in-process conformance doubles that shape delivery exactly as the
+  [TRANSPORTS.md](TRANSPORTS.md) binding sections do (continuous UART byte
+  stream with noise resync; half-duplex SPI CS periods; USB bulk IN/OUT
+  packet quantization). They are not physical drivers — physical bindings
+  are issue #81's deliverable — and they make no hardware claim; they exist
+  to show the product model is invariant to which binding carries the bytes.
+- Tests: `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`,
+  `tests/test_transport_bindings.py`.
 
 The client is standard-library only. Everything environment-shaped
 (transport, clocks, timeouts, retry budgets, contract identity) is injected as
@@ -103,8 +112,8 @@ library seam, and any CLI surface remains future work.
 | Criterion | Where verified |
 | --- | --- |
 | Golden protocol frames round-trip byte exactly across client/mock | pinned golden HELLO frame, reference-encoder comparisons, and byte-exact READY/transaction tests in `tests/test_protocol_client.py` |
-| Version/profile/patch-hash mismatch, partial write, timeout, stale state, corrupted audio fail | refusal tests: fatal contract negotiation gates, expected-profile refusal, hash-mismatch discard, one-byte-fragment delivery, identical-frame idempotent retry, stale sequence/transaction-id refusal, truncated/tampered audio payload |
+| Version/profile/patch-hash mismatch, partial write, timeout, stale state, corrupted audio fail | refusal tests: fatal contract negotiation gates, expected-profile refusal, hash-mismatch discard, one-byte-fragment delivery, identical-frame idempotent retry, stale sequence/transaction-id refusal, expired-transaction continuation → `ERR_TX_TIMEOUT` with the client dropping stale state, truncated/tampered audio payload |
 | Mock sources audio from fixed golden vectors, not pretending to be RTL | `GOLDEN_AUDIO_VECTOR` through `MockCore.set_audio_source`; decode/re-encode byte-exactness; audio block labeled as a mock-boundary data path |
 | Explorer shows backend and contract identity | `backend_envelope` backend label + `backend_contract_identity` in `tests/test_protocol_backend.py` |
-| Transport swap without changing the product model | same client session over `MockTransport` chunk sizes and the scripted lossy transport; identical frames and outcomes |
+| Transport swap without changing the product model | the same full canonical session over `MockTransport` and the UART/SPI/USB binding models (`tests/test_transport_bindings.py`): identical client frame streams, identical core response streams, identical final core state; mid-frame packet/CS cuts, multi-frame IN transfers and CS periods, and end-to-end UART noise resync |
 | Repeat/save identical across Python and mock backends when identities match | fake vs protocol-mock bookmark byte-equality and repeat reference equality |
