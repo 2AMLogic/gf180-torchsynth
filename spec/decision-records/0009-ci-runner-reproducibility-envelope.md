@@ -450,3 +450,17 @@ As under A1: reviewed merge ratifies this amendment; until then it is
 Proposed and no consumer may treat the amended tier as ratifying on
 >AVX2-dispatch substrates. As under the record's Decision 2, this record
 makes no synthesis, layout, signoff, or playback claims.
+
+### A2, note (companion republish pin)
+
+Amendment A2's republish of `sim/reference/repeatability-runtime.json`
+moved the whole-file digest that the artifact renderer pins at
+`src/torchsynth_voice/artifact_renderer.py:33` (`QUALIFICATION_SHA256`,
+the "ratified runtime publication" gate). The first republish left that
+companion pin behind, which the `Trace artifacts` job caught on main (run
+36044935976 at `2c4a20f`; `qualification()` -> "ratified runtime
+publication changed"). The pin is updated here to `611fe2121330a7a467ffab1deade50e59f6dd0ea25d4da86d129b9b501fa9cc3`
+(the digest of the A2 publication). Lesson: a republish of a
+digest-pinned reference file must sweep the repository for every companion
+pin of that file before merge (the sentinel re-pin, the renderer
+publication gate, and any contract-mifest pin are distinct).
