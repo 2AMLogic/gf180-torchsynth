@@ -6,7 +6,7 @@
   "sample_count": 176400,
   "sample_rate_hz": 44100
  },
- "content_hash": "5dc3848df49a7ca297cf8ff82b7ad21614e8252832d866ba43180fc86198f658",
+ "content_hash": "1ce5cd3ee2a6b73629074af6ebe2433b3ef83b210971cec9565ce2508f2208d8",
  "parameter_inventory_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
  "parameters": {
   "adsr_1.alpha": 0.1,
@@ -46,7 +46,7 @@
   "choices_register_sha256": "e46c25f9edd74e4490b2e6542cb702c70c2dccc7dd9f2d8b5537500544d7a1f9",
   "derivation": "FixedControlPath(accepted control_spec)._adsr over quantize_params(S1) entries; per-tick **alpha shadow words replayed host-side via torchsynth_voice.adsr_golden.mirror_ramp (asserted equal to the model's own _ramp rows)",
   "dr_0008_constants_package_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
-  "dr_0008_record_sha256": "0655ea762bc9c8267ab97f3f06b53f6111c9b0ba138052d479cb0a4a56a9a720",
+  "dr_0008_record_sha256": "4b380b591f888ccca72beaa9a801f3d71daefa4f21448be6b12cfbb140fca612",
   "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
   "generator": "tools/generate_adsr_golden.py",
   "issue": 70,

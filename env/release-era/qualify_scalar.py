@@ -21,6 +21,8 @@ from probe import identity, json_bytes, sha256, validate_source
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
+ENVELOPE_PATH = REPO / "spec/reference/scalar-envelope-v1.json"
+ENVELOPE_REFERENCES = REPO / "sim/reference/scalar-sentinel-v1"
 ROUTES = ("vco_1_pitch", "vco_1_amp", "vco_2_pitch", "vco_2_amp", "noise_amp")
 ENVELOPES = (
     "lfo_1_rate_adsr",
@@ -189,6 +191,7 @@ def provenance(source_root, plan):
             )
         ]
         + ["uv.lock"]
+        + ["spec/reference/scalar-envelope-v1.json"]
     )
     return {
         "source_commit": plan["source_commit"],
@@ -247,7 +250,13 @@ def runtime_identity(torch):
             )
         },
         "math_environment": {
-            k: os.environ.get(k) for k in ("ATEN_CPU_CAPABILITY", "MKL_CBWR")
+            k: os.environ.get(k)
+            for k in (
+                "ATEN_CPU_CAPABILITY",
+                "MKL_ENABLE_INSTRUCTIONS",
+                "ONEDNN_MAX_CPU_ISA",
+                "MKL_CBWR",
+            )
         },
         "lock_versions_verified": True,
     }
@@ -927,8 +936,127 @@ def aggregate(output, sentinel, *, write=True):
     return report
 
 
-def verify_expected(observed, expected, case_ids):
-    """An actual-render sentinel must retain the committed selected seam bytes."""
+def load_envelope(path=None):
+    """Load and validate the declared sentinel reproducibility envelope.
+
+    The census is data (DR-0009 amendment A1, issue 151): regions not named
+    here stay platform-invariant and are asserted byte-exact; a region named
+    here must hold its declared guarantee, and no comparison may relax a
+    byte-exact assertion without a committed envelope change plus a DR
+    amendment to this record.
+    """
+    envelope_path = Path(path) if path is not None else ENVELOPE_PATH
+    data = json.loads(envelope_path.read_text())
+    if data.get("schema_version") != 1:
+        raise ValueError("unknown scalar envelope schema")
+    sentinel_cases = set(json.loads((HERE / "scalar-cases.json").read_text())["sentinel"])
+    regions = data.get("regions")
+    if type(regions) is not dict:
+        raise ValueError("envelope regions must be an object")
+    manifest = {name: math.prod(shape) for name, shape in capture_manifest()}
+    for case_id in sorted(regions):
+        if case_id not in sentinel_cases:
+            raise ValueError("envelope names a non-sentinel case: " + case_id)
+        for seam, declaration in sorted(regions[case_id].items()):
+            label = case_id + " " + seam
+            if seam not in manifest:
+                raise ValueError("envelope names an unknown seam: " + label)
+            if not isinstance(declaration, dict) or set(declaration) != {
+                "count",
+                "guarantee",
+                "max_abs_difference",
+                "reference",
+                "reference_sha256",
+            }:
+                raise ValueError("envelope declaration fields malformed: " + label)
+            if declaration["guarantee"] != "declared-bounded-deviation":
+                raise ValueError("unknown envelope guarantee: " + label)
+            bound = declaration["max_abs_difference"]
+            if (
+                type(bound) is not float
+                or not math.isfinite(bound)
+                or not 0.0 < bound < 1.0
+            ):
+                raise ValueError("envelope bound not a finite float in (0, 1): " + label)
+            if declaration["reference"] != case_id + "." + seam + ".f32le":
+                raise ValueError("envelope reference name mismatch: " + label)
+            digest = declaration["reference_sha256"]
+            if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+                raise ValueError("envelope reference digest malformed: " + label)
+            if declaration["count"] != manifest[seam]:
+                raise ValueError("envelope reference count mismatch: " + label)
+    return data
+
+
+def read_envelope_reference(references_root, case_id, seam, declaration):
+    path = Path(references_root) / declaration["reference"]
+    data = path.read_bytes()
+    if sha256(data) != declaration["reference_sha256"]:
+        raise ValueError("envelope reference digest mismatch: " + path.name)
+    if len(data) != declaration["count"] * 4:
+        raise ValueError("envelope reference count mismatch: " + path.name)
+    return data
+
+
+def envelope_projection(record, region):
+    """Declared-region case projection.
+
+    Identity fields stay byte-exact; declared seams assert name, shape and
+    the declared guarantee (per-sample deviation is bounded against the
+    committed reference bytes by the caller); the audio-hash field of a
+    declared case is identity of the variable audio and is excluded; the
+    normalization peak keeps its threshold identity when its source trace
+    (mixer.peak) is declared, since the field is the unpacked identity of
+    that trace.
+    """
+    traces = []
+    for seam_record in record["traces"]:
+        name = seam_record["name"]
+        if name in region:
+            traces.append(
+                {
+                    "name": name,
+                    "shape": seam_record["shape"],
+                    "declared_guarantee": region[name]["guarantee"],
+                }
+            )
+        else:
+            traces.append(dict(seam_record))
+    normalization = dict(record["normalization"])
+    if "mixer.peak" in region:
+        normalization["peak"] = 1.0 if normalization["peak"] > 1.0 else 0.0
+    return {
+        "id": record["id"],
+        "case_definition": record["case_definition"],
+        "corpus_coordinates": record["corpus_coordinates"],
+        "is_unmodified_corpus_sound": record["is_unmodified_corpus_sound"],
+        "execution_width": record["execution_width"],
+        "reproducible": record["reproducible"],
+        "configuration": record["configuration"],
+        "normalized_by_name": record["normalized_by_name"],
+        "parameter_order": record["parameter_order"],
+        "selected_noise_sha256": record["selected_noise_sha256"],
+        "traces": traces,
+        "passive_capture_invariant": True,
+        "no_hook_audio_sha256": None,
+        "normalization": normalization,
+    }
+
+
+def verify_expected(
+    observed,
+    expected,
+    case_ids,
+    envelope=None,
+    references_root=None,
+    runs_root=None,
+):
+    """An actual-render sentinel must retain the committed selected seam bytes.
+
+    Cases named in the declared envelope (DR-0009 amendment A1) assert their
+    declared guarantees instead of byte equality; every other case and every
+    undeclared seam keeps the byte-exact assertion.
+    """
     for report in (observed, expected):
         if report["status"] != "PASS" or not report["fresh_process_repeats_equal"]:
             raise ValueError("sentinel requires completed repeat evidence")
@@ -946,6 +1074,7 @@ def verify_expected(observed, expected, case_ids):
     ):
         require_provenance(expected["runtime"][key], observed["runtime"][key])
     require_provenance(expected["provenance"], observed["provenance"])
+    regions = (envelope or {}).get("regions", {})
     for case_id in case_ids:
         selected = []
         for report in (expected, observed):
@@ -953,13 +1082,55 @@ def verify_expected(observed, expected, case_ids):
             if len(matching) != 1:
                 raise ValueError("missing or duplicate sentinel case: " + case_id)
             selected.append(matching[0])
+        region = regions.get(case_id)
         for side in ("canonical", "scalar"):
             a, b = [c[side] for c in selected]
             require_trace(a["traces"])
             require_trace(b["traces"])
             require_named(a["normalized_by_name"], b["normalized_by_name"])
-            if a != b:
+            if region is None:
+                if a != b:
+                    raise ValueError("sentinel drift: " + case_id + " " + side)
+                continue
+            if envelope_projection(a, region) != envelope_projection(b, region):
                 raise ValueError("sentinel drift: " + case_id + " " + side)
+        if not region:
+            continue
+        if runs_root is None:
+            raise ValueError("declared-envelope case requires the run root: " + case_id)
+        for seam, declaration in sorted(region.items()):
+            reference = read_envelope_reference(
+                references_root, case_id, seam, declaration
+            )
+            reference_samples = [v[0] for v in struct.iter_unpack("<f", reference)]
+            bound = declaration["max_abs_difference"]
+            for side in ("canonical", "scalar"):
+                path = Path(runs_root) / "run-1" / side / (
+                    case_id + "." + seam + ".f32le"
+                )
+                samples = [v[0] for v in struct.iter_unpack("<f", path.read_bytes())]
+                if len(samples) != declaration["count"]:
+                    raise ValueError(
+                        "sentinel reference count mismatch: " + case_id + " " + seam
+                    )
+                if not all(math.isfinite(v) for v in samples):
+                    raise ValueError("nonfinite sample: " + case_id + " " + seam)
+                if any(abs(s - r) > bound for s, r in zip(samples, reference_samples)):
+                    raise ValueError(
+                        "sentinel drift beyond declared envelope bound: "
+                        + case_id
+                        + " "
+                        + seam
+                    )
+            print(
+                "envelope verified: "
+                + case_id
+                + " "
+                + seam
+                + " (declared bound "
+                + repr(bound)
+                + ")"
+            )
 
 
 def main():
@@ -976,6 +1147,8 @@ def main():
     parser.add_argument(
         "--expected", type=Path, default=REPO / "sim/reference/scalar-execution.json"
     )
+    parser.add_argument("--envelope", type=Path, default=ENVELOPE_PATH)
+    parser.add_argument("--references", type=Path, default=ENVELOPE_REFERENCES)
     parser.add_argument("--sentinel", action="store_true")
     parser.add_argument(
         "--mutation", choices=("wrong-parameter", "wrong-noise", "fresh-randomization")
@@ -1010,7 +1183,14 @@ def main():
             "run_report_sha256",
         ):
             require_provenance(replayed[key], observed[key])
-        verify_expected(observed, expected, plan["sentinel"])
+        verify_expected(
+            observed,
+            expected,
+            plan["sentinel"],
+            envelope=load_envelope(args.envelope),
+            references_root=args.references,
+            runs_root=args.output,
+        )
         print("Committed sentinel seam bytes reproduced")
         return 0
     if args.action == "aggregate":

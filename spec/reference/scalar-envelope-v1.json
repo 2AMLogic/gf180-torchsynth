@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "envelope_id": "scalar-envelope-v1",
+  "decision_record": "spec/decision-records/0009-ci-runner-reproducibility-envelope.md (amendment A1)",
+  "guarantees": {
+    "declared-bounded-deviation": {
+      "asserts": [
+        "little-endian binary32 format and the declared sample count",
+        "finiteness of every sample",
+        "absolute deviation from the committed envelope reference bytes is no greater than max_abs_difference at every position",
+        "the committed envelope reference bytes are hash-bound to this declaration"
+      ],
+      "reference_captured_under": "release-mkl-compatible-v1 dispatch pins (ATEN_CPU_CAPABILITY, MKL_ENABLE_INSTRUCTIONS, ONEDNN_MAX_CPU_ISA, MKL_CBWR) enforced into the render container, single thread, pinned linux/amd64 image"
+    }
+  },
+  "regions": {}
+}
