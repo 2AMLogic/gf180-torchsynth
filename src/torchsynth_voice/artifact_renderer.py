@@ -31,7 +31,7 @@ from .storage import ArtifactStore, StoredArtifact
 
 PROFILE = "release-mkl-compatible-v1"
 QUALIFICATION_SHA256 = (
-    "5904089505c05c30a456cb5e162bde89e40218ec0d0151ffb27053ec1ac4cbe4"
+    "611fe2121330a7a467ffab1deade50e59f6dd0ea25d4da86d129b9b501fa9cc3"
 )
 RENDERER = "artifact-renderer-v1-release-mkl-compatible-v1"
 THREAD_ENV = {
