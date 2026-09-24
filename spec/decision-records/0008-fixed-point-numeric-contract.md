@@ -373,9 +373,12 @@ is closed by ratifying the **host-replay shadow boundary**, not by sweep:
 the transcendental sub-expressions — the `exp2` of both VCOs' pitch
 paths, `partials_constant`, and `tanh` (with its single-rounding fanout)
 — are host-replayed deterministic words at the declared shadow boundary
-(the #70/#71/#73 shadow-replay pattern, landed for this lane by PR #167,
-whose host mirror proves digest equality against `fixed-voice-golden-v1`
-for every public frozen case). The replayed words are the frozen model's
+(the #70/#71/#73 shadow-replay pattern, already landed and
+digest-equality-proven against `fixed-voice-golden-v1` for the ADSR,
+LFO/VCA, modulation-matrix, and sine-VCO lanes — PRs #161, #164, #166,
+#169; the square/saw lane that raised the #74 item is likewise
+landed, by merged PR #167). The replayed words are
+the frozen model's
 own words — bit-exact by construction — so no per-approximation
 intrinsic bound is owed for the shadow replay itself; the sin-reuse and
 cos-reuse bounds are likewise subsumed, because the RTL's LUT + linear
@@ -383,15 +386,23 @@ interp is the model's own integer C5 path, not an approximation of it
 (the `intrinsic.m2_lut_vs_cos` measurement stays the recorded C5
 intrinsic bound). The #74 sentence's non-approximation items (shape
 boundary behavior at 0 and 1; banded M1-style fixtures; directed
-spectral/alias negative control) were demonstrated on the merged engine
-(PR #167: half-even tie/LSB/boundary-selector vectors, clamp-riding
-alias-regime fixtures, detected mutations). The **recorded alternative**
+spectral/alias negative control) are demonstrated by PR #167's committed
+vectors (half-even tie/LSB/boundary-selector vectors, clamp-riding
+alias-regime fixtures, detected mutations), now merged into main via
+PR #167; the ratification gate for this record is this amendment's
+own reviewed merge. The **recorded alternative**
 — RTL-internal `exp2`/`tanh` approximation — stays **rejected-for-now**
 on schedule/evidence grounds: no candidate approximation has M2-style
 sweep evidence, while the shadow replay costs none. Any future adoption
 (a later nebula/hardware iteration) requires its **own approximation
 decision record plus fresh M2-style sweeps plus M1/M2 band recalibration
-per §13 before any affected RTL change**. The #75 declaration is
+per §13 before any affected RTL change**. This amendment edits this
+record's bytes only, so per §13 (as amended above) it triggers no
+numeric gate; the procedural contract-digest rebinding it does trigger
+is performed by this same change — every committed
+`dr_0008_record_sha256` pin (the frozen receipt's bindings and the
+per-case receipts, digest-field updates per the PR #159 precedent) is
+re-bound to this amended record's digest. The #75 declaration is
 unchanged.
 
 ## 11. Holdout
@@ -442,9 +453,17 @@ Which edits require what (issue #53 AC):
   a new "profile" for trace-registry consumers. A decision that moves a
   transcendental sub-expression across the declared host/RTL boundary
   without changing any numeric value (the 2026-09-22 shadow-lane
-  ratification, §10) triggers none of these gates — every committed
-  vector, LUT hash, and band applies verbatim; re-entering them is the
-  entry requirement of the recorded RTL-approximation alternative.
+  ratification, §10) does **not** trigger the numeric
+  approximation-selection gates just stated: no vector value, LUT hash,
+  or M1/M2 band changes, so every committed vector, LUT hash, and band
+  applies verbatim, and re-entering them is the entry requirement of
+  the recorded RTL-approximation alternative. It **does** trigger the
+  procedural contract-digest rebinding: the committed receipts pin
+  `dr_0008_record_sha256` to this file's bytes and refuse to validate
+  after any edit here, so the amending record re-pins those digest
+  fields to the amended record's digest — the machinery's own
+  "regenerate" prescription, discharged by rebinding alone when (as in
+  the §10 ratification) no frozen word changes.
 - Any change to rounding sites or modes (C6), saturation policy (C7), or
   the threshold calibration rule (C10): amended DR + rerun of all
   directed fixtures' affected metrics (new vectors) + updated rubric rows

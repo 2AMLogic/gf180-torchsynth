@@ -229,8 +229,11 @@ paths, `partials_constant`, and `tanh` — are **host-replayed
 deterministic words** at the declared shadow boundary (ratified
 2026-09-22; the serialized schedule's shadow-site counts already carry
 them host-side, and the replayed words are the frozen model's own words,
-bit-exact by construction — PR #167's engine, digest-equal to
-`fixed-voice-golden-v1` on every public frozen case). T therefore stands
+bit-exact by construction — digest-equality against
+`fixed-voice-golden-v1` on public frozen cases is landed and checkable
+from main for the ADSR, LFO/VCA, modulation-matrix, and sine-VCO
+engines (PRs #161, #164, #166, #169); the square/saw engine is
+likewise landed by merged PR #167). T therefore stands
 solely as declared contingency headroom for the **recorded alternative**
 — RTL-internal approximations — which stays rejected-for-now on
 schedule/evidence grounds (no candidate has M2-style sweep evidence,
