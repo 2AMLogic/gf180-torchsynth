@@ -284,10 +284,27 @@ class TestLanesCompileUnderTheIcarusCiInstalls(unittest.TestCase):
     without waiting on a multi-hour ``tb-sim.yml`` run to discover it.
     """
 
-    # `break` / `continue` as whole-word statements. Comments and
-    # identifiers containing the words (e.g. `break_flag`, "... break out
-    # of ...") are not matched: the statement form ends in `;`.
+    # `break` / `continue` as whole-word statements. Identifiers containing
+    # the words are not matched: a prefix form (`break_flag`) fails the
+    # trailing `\s*;`, and a suffix form (`do_break;`) fails the `(?<![\w$])`
+    # lookbehind. Prose inside a `//` comment is handled by
+    # ``_offending_keyword`` below, not by this pattern.
     _UNSUPPORTED_STMT = re.compile(r"(?<![\w$])(break|continue)\s*;")
+
+    @classmethod
+    def _offending_keyword(cls, line: str):
+        """Return the keyword ``line`` would trip the guard on, else ``None``.
+
+        This is the guard's entire per-line decision, and both the scan below
+        and the self-checks below it go through it. That sharing is the point
+        (issue #206): the `//` stripping lives here rather than in
+        ``_UNSUPPORTED_STMT``, so an ``assertNotRegex`` against the compiled
+        pattern alone cannot reach it — only a test calling this helper
+        exercises the same code path the scan actually uses.
+        """
+        code = line.split("//", 1)[0]
+        match = cls._UNSUPPORTED_STMT.search(code)
+        return match.group(1) if match else None
 
     def test_no_testbench_source_uses_break_or_continue(self):
         sv_dir = ROOT / "tb" / "sv"
@@ -301,10 +318,9 @@ class TestLanesCompileUnderTheIcarusCiInstalls(unittest.TestCase):
                 for lineno, line in enumerate(
                     source.read_text(encoding="utf-8").splitlines(), start=1
                 ):
-                    code = line.split("//", 1)[0]
-                    match = self._UNSUPPORTED_STMT.search(code)
-                    if match:
-                        offenders.append((lineno, match.group(1)))
+                    keyword = self._offending_keyword(line)
+                    if keyword:
+                        offenders.append((lineno, keyword))
                 self.assertEqual(
                     offenders,
                     [],
@@ -322,12 +338,50 @@ class TestLanesCompileUnderTheIcarusCiInstalls(unittest.TestCase):
 
     def test_guard_detects_a_reintroduced_break(self):
         # The guard must actually fire on the construct it claims to catch,
-        # and must not fire on a prose mention or an identifier.
-        self.assertRegex("            break;", self._UNSUPPORTED_STMT)
-        self.assertRegex("        continue ;", self._UNSUPPORTED_STMT)
-        self.assertNotRegex("reg break_flag;", self._UNSUPPORTED_STMT)
-        self.assertNotRegex("if (done) stim_done = 1'b1;",
-                            self._UNSUPPORTED_STMT)
+        # and must not fire on ordinary code or on an identifier that merely
+        # contains the word.
+        self.assertEqual(self._offending_keyword("            break;"),
+                         "break")
+        self.assertEqual(self._offending_keyword("        continue ;"),
+                         "continue")
+        self.assertIsNone(self._offending_keyword("reg break_flag;"))
+        self.assertIsNone(
+            self._offending_keyword("if (done) stim_done = 1'b1;")
+        )
+
+    def test_guard_ignores_identifiers_that_end_in_break_or_continue(self):
+        # Pins the `(?<![\w$])` lookbehind specifically (issue #206). A
+        # *prefix* identifier like `break_flag` is rejected by the trailing
+        # `\s*;` alone, so it stays clean even with the lookbehind deleted;
+        # only a suffix form distinguishes the two patterns. Dropping the
+        # lookbehind would make this guard fail `sim-lanes` on lines that
+        # compile fine.
+        self.assertIsNone(self._offending_keyword("x = do_break;"))
+        self.assertIsNone(self._offending_keyword("assign w = sig_continue;"))
+        # `$` is legal inside (though not at the start of) a SystemVerilog
+        # simple identifier, which is why the lookbehind excludes it too.
+        self.assertIsNone(self._offending_keyword("assign y = tmp$continue;"))
+
+    def test_guard_ignores_loop_control_words_inside_comments(self):
+        # Pins the `line.split("//", 1)[0]` stripping in
+        # ``_offending_keyword`` (issue #206). This lives outside
+        # ``_UNSUPPORTED_STMT``, so it is only reachable by going through the
+        # helper — an assertion against the compiled pattern cannot cover it,
+        # and no comment under tb/sv/ trips it today, so the clean-tree scan
+        # cannot either.
+        self.assertIsNone(
+            self._offending_keyword("// we break; out of the loop here")
+        )
+        self.assertIsNone(
+            self._offending_keyword("    stim_done = 1'b1;  // then break;")
+        )
+        # ...but stripping must only drop the comment: real code preceding
+        # one still has to fire, or the guard could be "fixed" by ignoring
+        # every line that happens to contain a `//`.
+        self.assertEqual(
+            self._offending_keyword("            break;  // exit the loop"),
+            "break",
+        )
 
 
 class TestGuardFailsIfALaneIsRemoved(unittest.TestCase):
