@@ -70,6 +70,7 @@ module tb_patch_control;
     reg [1023:0] line;
     integer code, value;
     integer cycle;
+    reg stim_eof;
 
     initial begin
         if (!$value$plusargs("stim=%s", stim_path)) begin
@@ -96,21 +97,24 @@ module tb_patch_control;
             $finish;
         end
         cycle = 0;
-        while (!$feof(stimf)) begin
+        stim_eof = 1'b0;
+        while (!$feof(stimf) && !stim_eof) begin
             code = $fgets(line, stimf);
-            if (code == 0)
-                break;
-            // Icarus $fgets right-justifies: the first character of the
-            // line sits at (code-1)*8 (code counts the newline)
-            if (line[((code-1)*8) +: 8] == "B") begin
-                $sscanf(line, "B %d", value);
-                cmd_valid <= 1'b1;
-                cmd_byte  <= value[7:0];
+            if (code == 0) begin
+                stim_eof = 1'b1;
             end else begin
-                cmd_valid <= 1'b0;
+                // Icarus $fgets right-justifies: the first character of the
+                // line sits at (code-1)*8 (code counts the newline)
+                if (line[((code-1)*8) +: 8] == "B") begin
+                    $sscanf(line, "B %d", value);
+                    cmd_valid <= 1'b1;
+                    cmd_byte  <= value[7:0];
+                end else begin
+                    cmd_valid <= 1'b0;
+                end
+                cycle = cycle + 1;
+                @(negedge clk);
             end
-            cycle = cycle + 1;
-            @(negedge clk);
         end
         $fclose(stimf);
         cmd_valid <= 1'b0;
