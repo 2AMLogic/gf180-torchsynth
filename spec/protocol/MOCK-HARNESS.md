@@ -18,7 +18,8 @@ playback.
   [CLIENT.md](CLIENT.md), `src/torchsynth_voice/protocol_client.py`,
   `src/torchsynth_voice/protocol_backend.py`.
 - Tests: `tests/test_core_protocol.py`, `tests/test_core_protocol_mock.py`,
-  `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`.
+  `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`,
+  `tests/test_transport_bindings.py`.
 
 The harness has no dependencies beyond the Python standard library, in line
 with the reference tooling package. It injects everything environment-shaped
