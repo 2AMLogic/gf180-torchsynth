@@ -7,10 +7,19 @@ issue #66: HELLO/READY negotiation, a full name-keyed patch-load transaction
 over the artifact's physical parameter values, and audio sourced from fixed
 golden vectors at the mock boundary.
 
+Which binding carries the bytes is a **configuration act, not a protocol
+change** (spec/protocol/TRANSPORTS.md substitutability): the backend selects
+one of the software-lane binding models by name
+(:data:`TRANSPORT_BINDINGS`) and nothing else in the product model — renderer,
+published artifact, bookmark, session vocabulary, contract identity — varies
+with the choice.
+
 This is the software lane. It adds no transport backend to the landed
 explorer MVP CLI (spec/EXPLORER-MVP.md exclusions stand) and makes no
 hardware, RTL, synthesis-fidelity or playback claim: the mock qualifies
-protocol behavior only (spec/protocol/MOCK-HARNESS.md), and the audio
+protocol behavior only (spec/protocol/MOCK-HARNESS.md), the binding models are
+in-process conformance doubles rather than physical drivers (physical
+UART/SPI/USB bindings are issue #81's deliverable), and the audio
 transfer/streaming command set remains unallocated pending issue #63.
 """
 
@@ -33,9 +42,40 @@ from .explorer import FakePlayer, publish_fake_artifact
 from .explorer_session import ExplorerSession
 from .inventory import INVENTORY_PATH, load_json
 from .protocol_client import HostClient, MockTransport, Transport
+from .transport_binding_models import (
+    SpiBindingTransport,
+    UartBindingTransport,
+    UsbBindingTransport,
+)
 
 BACKEND_LABEL = "protocol-mock-v2-behavioral-synthetic-audio"
 AUDIO_SOURCE_LABEL = "fixed-golden-vectors-behavioral-mock"
+
+# One frame bound for every binding: the product model configures each carrier
+# identically, so a difference in observed behavior can only come from the
+# binding's own delivery shape, never from a differently sized envelope.
+TRANSPORT_MAX_FRAME_BYTES = 256
+
+#: The carriers the product model may be configured with, by name. ``loopback``
+#: is the in-memory client↔core pipe; the other three are the TRANSPORTS.md
+#: binding models (continuous UART byte stream, half-duplex SPI CS periods, USB
+#: bulk IN/OUT packet quantization). Each shapes delivery differently and none
+#: is a physical driver — selecting among them is configuration, not protocol.
+TRANSPORT_BINDINGS = {
+    "loopback": lambda core: MockTransport(
+        core, max_frame_bytes=TRANSPORT_MAX_FRAME_BYTES, recv_chunk=7
+    ),
+    "uart": lambda core: UartBindingTransport(
+        core, max_frame_bytes=TRANSPORT_MAX_FRAME_BYTES, chunk_bytes=5
+    ),
+    "spi": lambda core: SpiBindingTransport(
+        core, max_frame_bytes=TRANSPORT_MAX_FRAME_BYTES, cs_period_bytes=7
+    ),
+    "usb": lambda core: UsbBindingTransport(
+        core, max_frame_bytes=TRANSPORT_MAX_FRAME_BYTES, packet_bytes=31
+    ),
+}
+DEFAULT_TRANSPORT_BINDING = "loopback"
 
 # Fixed golden audio vectors: exact rational host values within the C1 range
 # [-4, +4), committed here so mock sourcing is pinned, not generated. This is
@@ -72,6 +112,40 @@ def build_mock_core(*, audio_source=GOLDEN_AUDIO_VECTOR) -> MockCore:
         capabilities=KNOWN_CAPABILITIES,
         audio_source=audio_source,
     )
+
+
+def build_transport(
+    core: MockCore, binding: str = DEFAULT_TRANSPORT_BINDING
+) -> Transport:
+    """The named carrier, configured identically to every other carrier.
+
+    Refuses an unknown name by listing the known ones rather than silently
+    falling back: a transport nobody modeled must never look like one that was.
+    """
+    try:
+        factory = TRANSPORT_BINDINGS[binding]
+    except KeyError:
+        known = ", ".join(sorted(TRANSPORT_BINDINGS))
+        raise ValueError(
+            f"unknown transport binding {binding!r}; known bindings: {known}"
+        ) from None
+    return factory(core)
+
+
+def transport_binding_identity(binding: str = DEFAULT_TRANSPORT_BINDING) -> dict:
+    """What carrier ran, stated honestly (no physical link is involved)."""
+    if binding not in TRANSPORT_BINDINGS:
+        known = ", ".join(sorted(TRANSPORT_BINDINGS))
+        raise ValueError(
+            f"unknown transport binding {binding!r}; known bindings: {known}"
+        )
+    return {
+        "binding": binding,
+        "kind": "software-lane-binding-model",
+        "max_frame_bytes": TRANSPORT_MAX_FRAME_BYTES,
+        "physical_link": "none (issue #81)",
+        "hardware_claim": "none",
+    }
 
 
 def build_mock_client(
@@ -143,11 +217,23 @@ class ProtocolMockRenderer:
         client.reset()
 
 
-def build_protocol_mock_session(store_root, *, seed: int | None = None):
+def build_protocol_mock_session(
+    store_root,
+    *,
+    seed: int | None = None,
+    transport: str = DEFAULT_TRANSPORT_BINDING,
+):
     """Wire the protocol-mock backend; returns (session, probe).
 
+    ``transport`` names the carrier (:data:`TRANSPORT_BINDINGS`). It changes
+    only how bytes are delivered: the renderer, the published artifact, the
+    bookmark, the session vocabulary and the negotiated contract identity are
+    the same for every binding, which is exactly the TRANSPORTS.md
+    substitutability property this backend exists to exercise.
+
     The probe carries the client, mock and transport doubles for test and
-    diagnostic inspection, plus the contract identity the backend negotiated.
+    diagnostic inspection, plus the contract identity the backend negotiated
+    and the binding identity of the carrier that ran.
     """
     import random
 
@@ -155,8 +241,8 @@ def build_protocol_mock_session(store_root, *, seed: int | None = None):
 
     store = ArtifactStore(store_root)
     core = build_mock_core()
-    transport = MockTransport(core)
-    renderer = ProtocolMockRenderer(store, core=core, transport=transport)
+    link = build_transport(core, transport)
+    renderer = ProtocolMockRenderer(store, core=core, transport=link)
     player = FakePlayer()
     rng = random.Random() if seed is None else random.Random(seed)
     session = ExplorerSession(store, renderer=renderer, player=player, rng=rng)
@@ -166,7 +252,9 @@ def build_protocol_mock_session(store_root, *, seed: int | None = None):
         "renderer": renderer,
         "player": player,
         "mock": core,
-        "transport": transport,
+        "transport": link,
+        "transport_binding": transport,
+        "transport_identity": transport_binding_identity(transport),
         "contract": backend_contract_identity(),
     }
     return session, probe
@@ -191,6 +279,11 @@ def backend_envelope(session: ExplorerSession, probe: dict) -> dict:
     return {
         "backend": BACKEND_LABEL,
         "contract": probe["contract"],
+        # Which carrier ran. The contract identity above is deliberately
+        # independent of it: a transport swap is a configuration act.
+        "transport": probe.get(
+            "transport_identity", transport_binding_identity()
+        ),
         "session": session.show(),
         "audio": {
             "source": AUDIO_SOURCE_LABEL,

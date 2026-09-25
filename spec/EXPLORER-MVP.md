@@ -32,7 +32,11 @@ default nebula, four seconds, 44100 Hz one-shot.
   mock whose rules live in [protocol/CLIENT.md](protocol/CLIENT.md). It
   publishes this MVP's own synthetic fixture and changes no rendering path,
   bookmark schema, session vocabulary or holdout refusal here, and it remains
-  no physical transport and no hardware claim.
+  no physical transport and no hardware claim. Its `--transport` flag selects
+  among software-lane binding *models* (loopback/uart/spi/usb) for that
+  backend only; every one of them is an in-process conformance double, opens
+  no device, and leaves this MVP's published artifact and bookmark bytes
+  identical. Physical UART/SPI/USB bindings remain issue #81's deliverable.
 - **No holdout access.** Indices 96-127 are refused before renderer or store
   access on every path, including explicit requests and RNG choices. There is
   no unseal UI.

@@ -329,6 +329,7 @@ def build_session(
     seed: int | None = None,
     fake_fail_render: Sequence[int] = (),
     fake_fail_player: bool = False,
+    transport: str | None = None,
 ) -> tuple[ExplorerSession, dict]:
     """Wire the parent integrations into a session; returns (session, probe).
 
@@ -340,15 +341,40 @@ def build_session(
     renderer. `probe` carries the injected doubles for test and diagnostic
     inspection, plus `contract` (the negotiated contract identity) for the
     backends that speak the wire protocol.
+
+    `transport` names the carrier for a backend that speaks the wire protocol
+    (spec/protocol/TRANSPORTS.md binding models: "loopback", "uart", "spi",
+    "usb"). It is a configuration act only — the rendering path, published
+    artifact, bookmark and contract identity do not vary with it. A backend
+    that speaks no wire protocol has no carrier to name and refuses the
+    argument rather than accepting one it would ignore.
     """
 
     if backend == "protocol-mock":
         # Local import: protocol_backend builds on this module's fake mode.
-        from .protocol_backend import build_protocol_mock_session
+        from .protocol_backend import (
+            DEFAULT_TRANSPORT_BINDING,
+            TRANSPORT_BINDINGS,
+            build_protocol_mock_session,
+        )
 
-        session, probe = build_protocol_mock_session(store_root, seed=seed)
+        binding = DEFAULT_TRANSPORT_BINDING if transport is None else transport
+        if binding not in TRANSPORT_BINDINGS:
+            known = ", ".join(sorted(TRANSPORT_BINDINGS))
+            raise SessionError(
+                f"unknown transport binding {binding!r}; known bindings: {known}"
+            )
+        session, probe = build_protocol_mock_session(
+            store_root, seed=seed, transport=binding
+        )
         probe["session"] = session
         return session, probe
+
+    if transport is not None:
+        raise SessionError(
+            f"backend {backend!r} speaks no wire protocol; it has no transport "
+            "binding to select"
+        )
 
     store = ArtifactStore(store_root)
     probe: dict = {"store": store, "backend": backend}
