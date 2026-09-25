@@ -35,9 +35,11 @@ behavior.
   in-process conformance doubles that shape delivery exactly as the
   [TRANSPORTS.md](TRANSPORTS.md) binding sections do (continuous UART byte
   stream with noise resync; half-duplex SPI CS periods; USB bulk IN/OUT
-  packet quantization). They are not physical drivers — physical bindings
-  are issue #81's deliverable — and they make no hardware claim; they exist
-  to show the product model is invariant to which binding carries the bytes.
+  packet quantization), including the short write every binding can suffer
+  (`fail_next_write_after`). They are not physical drivers — physical
+  bindings are issue #81's deliverable — and they make no hardware claim;
+  they exist to show the product model is invariant to which binding carries
+  the bytes.
 - Tests: `tests/test_protocol_client.py`, `tests/test_protocol_backend.py`,
   `tests/test_transport_bindings.py`.
 
@@ -64,6 +66,16 @@ constructor arguments; no transport is implicitly configured.
   timeout re-sends the identical frame for idempotent commands
   (`HELLO`, `RESET`, `PATCH_ABORT`) only; a timed-out non-idempotent command
   raises instead of guessing, because a retry cannot reuse stale state.
+- **Partial write**: [TRANSPORTS.md](TRANSPORTS.md) requires `send` to return
+  only once the link has accepted every byte, or to raise. A transport that
+  placed only a prefix on the wire raises `TransportWriteError`, and the
+  client treats the command as **never delivered** — which it provably is,
+  because the receiver drops a truncated frame whole on the `sync`/CRC rule
+  and can therefore have applied nothing. Session state does not advance. The
+  identical frame (same sequence, same bytes) is re-sent for idempotent
+  commands within a bounded `write_retries` budget; a partially written
+  non-idempotent command raises to the host, which re-sends the whole
+  transaction on a fresh `transaction_id` rather than resuming staged state.
 - **Session state**: the client enforces the SESSION.md lifecycle table
   locally and fails loudly on violations (`patch` frames require
   `patch_open`, `PATCH_OPEN` requires `ready`, `RESET` requires a live
@@ -103,17 +115,32 @@ The backend envelope shows the honest labels: the backend name
 block identifying the source as fixed golden vectors at the mock boundary.
 Repeat/save behavior is identical to the Python fake backend when identities
 match: both publish the same deterministic synthetic fixture, and the bookmark
-documents are byte-identical. The landed explorer MVP CLI
-([../EXPLORER-MVP.md](../EXPLORER-MVP.md)) is unchanged; the backend is a
-library seam, and any CLI surface remains future work.
+documents are byte-identical.
+
+## Explorer display surface
+
+`build_session(store_root, backend="protocol-mock")` selects this backend from
+the explorer's own wiring seam, and `tools/explore.py --backend protocol-mock`
+exposes it on the shipped CLI ([../EXPLORER-MVP.md](../EXPLORER-MVP.md)). Every
+CLI envelope carries a `contract` field beside the existing `backend` label:
+the negotiated contract identity for this backend, and `null` for a backend
+that speaks no wire protocol (`docker`, `fake`, `none`) — a backend without a
+protocol never borrows this one's identity. The render-call counter is named
+for the renderer that actually ran
+(`protocol_mock_renderer_calls_this_process`, distinct from the fake mode's
+`fake_renderer_calls_this_process`). The rendering path, bookmark
+schema, session vocabulary and holdout refusals of the MVP are unchanged: the
+protocol-mock backend publishes the MVP's own synthetic fixture and adds the
+protocol round trip as verification, so repeat/save output is byte-identical
+to `--backend fake` for the same identity.
 
 ## Acceptance-criteria mapping (issue #66)
 
 | Criterion | Where verified |
 | --- | --- |
 | Golden protocol frames round-trip byte exactly across client/mock | pinned golden HELLO frame, reference-encoder comparisons, and byte-exact READY/transaction tests in `tests/test_protocol_client.py` |
-| Version/profile/patch-hash mismatch, partial write, timeout, stale state, corrupted audio fail | refusal tests: fatal contract negotiation gates, expected-profile refusal, hash-mismatch discard, one-byte-fragment delivery, identical-frame idempotent retry, stale sequence/transaction-id refusal, expired-transaction continuation → `ERR_TX_TIMEOUT` with the client dropping stale state, truncated/tampered audio payload |
+| Version/profile/patch-hash mismatch, partial write, timeout, stale state, corrupted audio fail | refusal tests: fatal contract negotiation gates, expected-profile refusal, hash-mismatch discard, one-byte-fragment delivery, identical-frame idempotent retry, stale sequence/transaction-id refusal, expired-transaction continuation → `ERR_TX_TIMEOUT` with the client dropping stale state, truncated/tampered audio payload. **Partial write** specifically (`PartialWriteTests` in `tests/test_protocol_client.py`, partial-write tests in `tests/test_transport_bindings.py`): a short write raises `TransportWriteError` at every truncation point of a frame, the truncated prefix never becomes a frame at the receiver, an idempotent command is re-sent byte-identically and a non-idempotent one is never retried, and after a short write on UART/SPI/USB the accepted frames, the core→host stream and the applied patch equal the clean run's |
 | Mock sources audio from fixed golden vectors, not pretending to be RTL | `GOLDEN_AUDIO_VECTOR` through `MockCore.set_audio_source`; decode/re-encode byte-exactness; audio block labeled as a mock-boundary data path |
-| Explorer shows backend and contract identity | `backend_envelope` backend label + `backend_contract_identity` in `tests/test_protocol_backend.py` |
+| Explorer shows backend and contract identity | the shipped CLI: `tools/explore.py --backend protocol-mock` prints `backend` and the negotiated `contract` identity in every envelope, and a backend with no wire protocol prints `contract: null` (`ExplorerBackendDisplayTests` in `tests/test_protocol_backend.py`); the library `backend_envelope` label + `backend_contract_identity` agree with it |
 | Transport swap without changing the product model | the same full canonical session over `MockTransport` and the UART/SPI/USB binding models (`tests/test_transport_bindings.py`): identical client frame streams, identical core response streams, identical final core state; mid-frame packet/CS cuts, multi-frame IN transfers and CS periods, and end-to-end UART noise resync |
-| Repeat/save identical across Python and mock backends when identities match | fake vs protocol-mock bookmark byte-equality and repeat reference equality |
+| Repeat/save identical across Python and mock backends when identities match | fake vs protocol-mock bookmark byte-equality and repeat reference equality at the library seam, and end to end through the CLI: the same seed gives an equal `show()` payload, byte-identical bookmark files and an equal `repeat` payload across `--backend fake` and `--backend protocol-mock`, with zero renderer calls on save/repeat |

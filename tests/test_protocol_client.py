@@ -51,6 +51,7 @@ from torchsynth_voice.protocol_client import (  # noqa: E402
     ProtocolError,
     ProtocolTimeout,
     TransportEmpty,
+    TransportWriteError,
 )
 
 BOUND = numeric_contract_version_bound()
@@ -533,6 +534,104 @@ class FramingAndRetryTests(unittest.TestCase, ClientHarness):
         self.assertEqual(client.state, "ready")
         self.assertEqual(core.active_patch["transaction_id"], b"tx-exp2")
         self.assertEqual(core.active_patch["values"], {"keyboard.midi_f0": word})
+
+
+class PartialWriteTests(unittest.TestCase, ClientHarness):
+    """A partial write must fail; it must never look like a delivered command.
+
+    TRANSPORTS.md: ``send`` "returns only when the bytes are accepted by the
+    physical link (or raises)". A truncated frame is dropped whole by the
+    receiver (FRAMING.md sync/CRC), so the command provably never took effect
+    and the client must say so rather than advancing session state.
+    """
+
+    def test_truncated_frame_is_dropped_whole_by_the_reassembler(self):
+        """The prefix a partial write leaves never becomes a frame.
+
+        The receiver resynchronizes solely by scanning for ``sync`` and
+        validating the CRC (TRANSPORTS.md UART rule). A truncated prefix
+        carries a length field the sender never meant, so the stream may have
+        to consume the following frame's bytes before the CRC rejects the
+        candidate — but it must never yield anything except the whole frames
+        actually written. Every truncation point is checked, so the property
+        does not depend on where the link happened to stop.
+        """
+        whole = ref_frame(PROTOCOL_VERSION, 0x01, CMD_RESET, 9)
+        for cut in range(1, len(whole)):
+            stream = FrameStream(max_frame_bytes=256)
+            stream.feed(whole[:cut])
+            self.assertIsNone(stream.next_complete_frame(), cut)
+            # The retry and the command after it, as the wire would carry them.
+            stream.feed(whole + whole)
+            emitted = []
+            while True:
+                frame = stream.next_complete_frame()
+                if frame is None:
+                    break
+                emitted.append(
+                    encode_frame(0x01, frame.command, frame.sequence, frame.payload)
+                )
+            # Nothing was partially applied and no frame was hallucinated: the
+            # prefix contributed none, and both whole frames survive verbatim.
+            self.assertEqual(emitted, [whole, whole], cut)
+            self.assertLessEqual(stream.bad_frames, 1, cut)
+
+    def test_partial_write_retries_the_identical_idempotent_frame(self):
+        core, transport, client = self.make()
+        client.negotiate()
+        transport.fail_next_write_after(3)
+        client.reset()
+        self.assertEqual(len(transport.truncated_writes), 1)
+        self.assertEqual(len(transport.truncated_writes[0]), 3)
+        self.assertEqual(len(client.partial_writes), 1)
+        # The retry is the same bytes and the same sequence, not a new command.
+        self.assertEqual(client.partial_writes[0], transport.sent_frames[-1])
+        self.assertEqual(client.state, "ready")
+        self.assertIs(core.state, SessionState.READY)
+
+    def test_partial_write_of_hello_beyond_the_budget_closes_the_session(self):
+        core, transport, client = self.make(client_kwargs={"write_retries": 0})
+        transport.fail_next_write_after(2)
+        with self.assertRaises(TransportWriteError) as caught:
+            client.negotiate()
+        self.assertEqual(caught.exception.written, 2)
+        self.assertEqual(client.state, "closed")
+        self.assertIsNone(client.ready)
+        # Nothing reached the core: it never left the closed state.
+        self.assertEqual(transport.sent_frames, [])
+        self.assertIs(core.state, SessionState.CLOSED)
+
+    def test_partial_write_of_a_non_idempotent_command_is_never_retried(self):
+        core, transport, client = self.make()
+        client.negotiate()
+        accepted = len(transport.sent_frames)
+        transport.fail_next_write_after(7)
+        with self.assertRaises(TransportWriteError):
+            client.open_patch(b"tx-pw", b"id", 1)
+        # One attempt only, and no transaction exists on either side.
+        self.assertEqual(len(client.partial_writes), 1)
+        self.assertEqual(len(transport.sent_frames), accepted)
+        self.assertIsNone(client.transaction_id)
+        self.assertEqual(client.state, "ready")
+        self.assertIs(core.state, SessionState.READY)
+        # SESSION.md recovery: the host re-sends the whole transaction itself.
+        word = struct.pack("<i", 1 << 19)
+        client.open_patch(b"tx-pw2", b"id", 1)
+        client.declare_name("keyboard.midi_f0")
+        client.stage_value("keyboard.midi_f0", word)
+        client.commit_patch({"keyboard.midi_f0": word})
+        self.assertEqual(core.active_patch["transaction_id"], b"tx-pw2")
+        self.assertEqual(core.active_patch["values"], {"keyboard.midi_f0": word})
+
+    def test_write_retries_must_be_non_negative(self):
+        with self.assertRaises(ClientError):
+            HostClient(
+                MockTransport(MockCore(name_table=NAMES, name_table_sha256=TABLE_SHA)),
+                profile_id=b"profile-x",
+                source_version=b"source-x",
+                name_table_sha256=TABLE_SHA,
+                write_retries=-1,
+            )
 
 
 class AudioGoldenVectorTests(unittest.TestCase):

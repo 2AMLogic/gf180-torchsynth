@@ -21,6 +21,12 @@ mock harness qualifies (the real link stand-in at byte-frame level):
   ``packet_bytes`` that may hold whole frames, several frames, or a partial
   frame. USB packet boundary is not framing.
 
+Every binding additionally models the **partial write** TRANSPORTS.md forbids
+a conforming ``send`` from reporting as success
+(:meth:`_BindingTransport.fail_next_write_after`): the accepted prefix goes on
+the wire and the write raises, so the receiver must drop the truncated frame
+whole and resynchronize while the session state stays exactly where it was.
+
 Scope honesty: these are software-lane conformance doubles, not physical
 drivers (physical UART/SPI/USB bindings are issue #81's deliverable) and they
 make no hardware, RTL, synthesis-fidelity, or playback claim. They exist to
@@ -33,7 +39,7 @@ configuration decision, not a protocol change" (TRANSPORTS.md). Tests:
 from __future__ import annotations
 
 from .core_protocol import encode_frame
-from .protocol_client import FrameStream, TransportEmpty
+from .protocol_client import FrameStream, TransportEmpty, TransportWriteError
 
 __all__ = [
     "SpiBindingTransport",
@@ -57,17 +63,41 @@ class _BindingTransport:
         self._delivered_response = bytearray()
         #: Byte count of each non-empty ``recv`` (boundary asserts).
         self.recv_chunk_sizes: list[int] = []
+        #: Truncated prefixes a partial write put on the wire, in order.
+        self.truncated_writes: list[bytes] = []
         self._sink = FrameStream(max_frame_bytes=max_frame_bytes)
         self._tx = bytearray()  # pending host→core write-phase bytes
         self._rx = bytearray()  # pending core→host bytes
+        self._write_budget: int | None = None
 
     @property
     def delivered_response(self) -> bytes:
         return bytes(self._delivered_response)
 
+    def fail_next_write_after(self, accepted_bytes: int) -> None:
+        """Model a link that accepts only ``accepted_bytes`` of the next frame.
+
+        Every binding can short-write: a UART stops mid-byte-stream, a CS
+        period ends early, a bulk OUT transfer stalls. The accepted prefix
+        really goes on the wire — the core-side receiver must drop it whole by
+        the ``sync``/CRC rule and resynchronize — and ``send`` then raises
+        :class:`~torchsynth_voice.protocol_client.TransportWriteError` rather
+        than returning as though the frame had been delivered.
+        """
+        if accepted_bytes < 0:
+            raise ValueError("accepted_bytes must be >= 0")
+        self._write_budget = accepted_bytes
+
     def send(self, data: bytes) -> None:
         if len(data) > self.max_frame_bytes:
             raise ValueError("frame exceeds transport max_frame_bytes")
+        if self._write_budget is not None and self._write_budget < len(data):
+            accepted, self._write_budget = self._write_budget, None
+            prefix = bytes(data[:accepted])
+            self.truncated_writes.append(prefix)
+            self._tx += prefix
+            raise TransportWriteError(accepted, len(data))
+        self._write_budget = None
         self.sent_frames.append(bytes(data))
         self._tx += data
 
@@ -127,8 +157,12 @@ class UartBindingTransport(_BindingTransport):
         self._chunk_bytes = chunk_bytes
 
     def send(self, data: bytes) -> None:
-        super().send(data)
-        self._feed_core_tx()
+        # Whatever the link accepted is already on the stream, partial write
+        # or not; the core-side receiver resynchronizes on sync/CRC.
+        try:
+            super().send(data)
+        finally:
+            self._feed_core_tx()
 
     def recv(self) -> bytes:
         return self._recv_or_empty(self._chunk_bytes)
@@ -179,8 +213,11 @@ class UsbBindingTransport(_BindingTransport):
         self._packet_bytes = packet_bytes
 
     def send(self, data: bytes) -> None:
-        super().send(data)
-        self._feed_core_tx()
+        # A stalled bulk OUT transfer still delivered the bytes it moved.
+        try:
+            super().send(data)
+        finally:
+            self._feed_core_tx()
 
     def recv(self) -> bytes:
         # One full bulk IN packet per poll (short only at drain tail).

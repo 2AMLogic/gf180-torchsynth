@@ -3,10 +3,14 @@
 
 Real rendering runs only through #15's qualified v1 adapter (#12 Docker
 backend); `--backend fake` runs clearly labeled synthetic fixtures for
-deterministic tests. Favorites, parameter locks and deterministic nearby
+deterministic tests, and `--backend protocol-mock` drives those same fixtures
+through the issue #66 host transport client against the behavioral mock core
+(spec/protocol/CLIENT.md), printing the negotiated contract identity beside
+the backend label. Favorites, parameter locks and deterministic nearby
 variations (issue #65) ride the same session via `favorite-save`,
 `favorite-recall`, `favorite-vary` and `favorite-inspect`. No hardware,
-transport or live-note claim is made here.
+physical transport, RTL or live-note claim is made here: the protocol-mock
+backend is software-only behavioral verification.
 """
 
 import argparse
@@ -20,11 +24,13 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import explorer_commands, favorites  # noqa: E402
 from torchsynth_voice.explorer import build_session, runtime_admission  # noqa: E402
 from torchsynth_voice.favorites import FavoriteError  # noqa: E402
+from torchsynth_voice.protocol_backend import BACKEND_LABEL  # noqa: E402
 
 BACKEND_LABELS = {
     "docker": "docker-qualified-release-mkl-compatible-v1",
     "fake": "fake-synthetic-fixtures-no-audio",
     "none": "no-renderer-selected-artifacts-only",
+    "protocol-mock": BACKEND_LABEL,
 }
 
 
@@ -35,9 +41,13 @@ def _parser():
     parser.add_argument("--store", type=Path, required=True)
     parser.add_argument(
         "--backend",
-        choices=("docker", "fake", "none"),
+        choices=("docker", "fake", "none", "protocol-mock"),
         default="docker",
-        help="docker: qualified real render; fake: labeled synthetic fixtures",
+        help=(
+            "docker: qualified real render; fake: labeled synthetic fixtures; "
+            "protocol-mock: the same fixtures driven over the protocol v2 "
+            "client against the behavioral mock core (software only)"
+        ),
     )
     parser.add_argument(
         "--producer-root",
@@ -181,6 +191,9 @@ def main(argv=None):
         envelope = {
             "session": shown,
             "backend": BACKEND_LABELS[args.backend],
+            # The contract identity the backend negotiated, or null for a
+            # backend that speaks no wire protocol (issue #66 display AC).
+            "contract": probe.get("contract"),
             "runtime_admission": (
                 runtime_admission(session.selection.inputs)
                 if session.selection
@@ -192,6 +205,12 @@ def main(argv=None):
             envelope["favorite"] = favorite_document
         if args.backend == "fake":
             envelope["fake_renderer_calls_this_process"] = len(probe["renderer"].calls)
+        elif args.backend == "protocol-mock":
+            # Named for the renderer that actually ran: the protocol-mock
+            # renderer publishes the same fixture but drives the protocol.
+            envelope["protocol_mock_renderer_calls_this_process"] = len(
+                probe["renderer"].calls
+            )
         print(json.dumps(envelope, indent=2, sort_keys=True, allow_nan=False))
     except (OSError, ValueError) as error:
         print(f"explore: {error}", file=sys.stderr)

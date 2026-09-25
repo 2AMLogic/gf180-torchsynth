@@ -75,6 +75,25 @@ class ClientError(ValueError):
     """Base error for client-side protocol and policy refusals."""
 
 
+class TransportWriteError(ClientError):
+    """The link accepted only a prefix of a frame: a partial write.
+
+    TRANSPORTS.md requires ``send`` to return only once every byte has been
+    accepted by the link, or to raise. A transport that could place only part
+    of a frame on the wire raises this instead of returning, so a truncated
+    frame is never mistaken for a delivered command: the receiver drops the
+    prefix whole on the ``sync``/CRC rule (FRAMING.md), therefore no core
+    state can have moved and nothing was partially applied.
+    """
+
+    def __init__(self, written: int, requested: int):
+        super().__init__(
+            f"partial write: transport accepted {written} of {requested} frame bytes"
+        )
+        self.written = written
+        self.requested = requested
+
+
 class ProtocolError(ClientError):
     """The core answered an error response (SESSION.md error codes)."""
 
@@ -193,7 +212,10 @@ class HostClient:
     identical sequence: immediately after ``ERR_BUSY`` (the command was never
     enqueued), and after a timeout only for idempotent commands — a timed-out
     non-idempotent command raises instead of guessing, because a retry cannot
-    reuse stale state (SESSION.md stale-state rule).
+    reuse stale state (SESSION.md stale-state rule). A **partial write**
+    (:class:`TransportWriteError`) follows the same shape: the truncated frame
+    is dropped whole by the receiver, so the command provably never took
+    effect, and the identical frame is re-sent for idempotent commands only.
     """
 
     def __init__(
@@ -209,6 +231,7 @@ class HostClient:
         sequence_start: int = 1,
         timeout_s: float = 5.0,
         busy_retries: int = 4,
+        write_retries: int = 1,
         clock=time.monotonic,
     ):
         self._transport = transport
@@ -226,13 +249,20 @@ class HostClient:
         self._capabilities = capabilities
         self._timeout_s = timeout_s
         self._busy_retries = busy_retries
+        if write_retries < 0:
+            raise ClientError("write_retries must be >= 0")
+        self._write_retries = write_retries
         self._clock = clock
         self._next_sequence = sequence_start & 0xFFFF
         self._stream = FrameStream(max_frame_bytes=transport.max_frame_bytes)
         self.state = "closed"
         self.ready: Ready | None = None
         self.transaction_id: bytes | None = None
+        #: Frames the transport accepted in full, in send order.
         self.frames_sent: list[bytes] = []
+        #: Frames a partial write truncated on the wire, in attempt order.
+        #: They are attempts, never deliveries: the receiver drops each one.
+        self.partial_writes: list[bytes] = []
 
     @property
     def numeric_contract_version(self) -> bytes:
@@ -282,11 +312,28 @@ class HostClient:
         return self._transact_bytes(command, frame_bytes)
 
     def _transact_bytes(self, command: int, frame_bytes: bytes) -> Frame:
+        idempotent = command in IDEMPOTENT_COMMANDS
         busy_left = self._busy_retries
-        timeout_left = 1 if command in IDEMPOTENT_COMMANDS else 0
+        timeout_left = 1 if idempotent else 0
+        write_left = self._write_retries if idempotent else 0
         while True:
+            try:
+                self._transport.send(frame_bytes)
+            except TransportWriteError:
+                # The frame is truncated on the wire, so the receiver drops it
+                # whole and the command never took effect. Re-send the
+                # identical frame for idempotent commands only; a partially
+                # written non-idempotent command is raised to the host, which
+                # re-sends the whole transaction on a fresh transaction id
+                # rather than resuming stale state (SESSION.md).
+                self.partial_writes.append(frame_bytes)
+                if write_left > 0:
+                    write_left -= 1
+                    continue
+                if command == CMD_HELLO:
+                    self.state = "closed"
+                raise
             self.frames_sent.append(frame_bytes)
-            self._transport.send(frame_bytes)
             deadline = self._clock() + self._timeout_s
             try:
                 response = self._stream.next_frame(
@@ -468,10 +515,31 @@ class MockTransport:
         self._recv_chunk = recv_chunk
         self._rx = bytearray()
         self.sent_frames: list[bytes] = []
+        #: Truncated prefixes this transport put on the wire, in attempt order.
+        self.truncated_writes: list[bytes] = []
+        self._write_budget: int | None = None
+
+    def fail_next_write_after(self, accepted_bytes: int) -> None:
+        """Model a link that accepts only ``accepted_bytes`` of the next frame.
+
+        The prefix reaches the wire and the write then fails
+        (:class:`TransportWriteError`). The core never sees it: a receiver
+        drops a truncated frame whole on the ``sync``/CRC rule, so this
+        transport models the receiver's post-drop state directly rather than
+        submitting a frame the core could not have decoded.
+        """
+        if accepted_bytes < 0:
+            raise ValueError("accepted_bytes must be >= 0")
+        self._write_budget = accepted_bytes
 
     def send(self, data: bytes) -> None:
         if len(data) > self.max_frame_bytes:
             raise ValueError("frame exceeds transport max_frame_bytes")
+        if self._write_budget is not None and self._write_budget < len(data):
+            accepted, self._write_budget = self._write_budget, None
+            self.truncated_writes.append(bytes(data[:accepted]))
+            raise TransportWriteError(accepted, len(data))
+        self._write_budget = None
         self.sent_frames.append(bytes(data))
         immediate = self.core.submit(data)
         if immediate is not None:

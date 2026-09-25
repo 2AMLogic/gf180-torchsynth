@@ -45,6 +45,7 @@ from torchsynth_voice.protocol_client import (  # noqa: E402
     ClientError,
     FrameStream,
     MockTransport,
+    TransportWriteError,
 )
 from torchsynth_voice.transport_binding_models import (  # noqa: E402
     SpiBindingTransport,
@@ -302,6 +303,96 @@ class BindingSubstitutabilityTests(unittest.TestCase):
         self.assertEqual(transport.sent_frames, clean_transport.sent_frames)
         self.assertEqual(bytes(transport.delivered_response), bytes(clean_transport.delivered_response))
         self.assertEqual(core.active_patch, clean_core.active_patch)
+
+    def test_partial_write_on_every_binding_leaves_the_product_model_intact(self):
+        """A short write on any binding is dropped whole and then resynced.
+
+        TRANSPORTS.md forbids a conforming ``send`` from reporting a partial
+        write as success. Every binding can short-write (a UART stops
+        mid-stream, a CS period ends early, a bulk OUT stalls): the accepted
+        prefix goes on the wire, the receiver must drop it by the sync/CRC
+        rule, and the identical idempotent frame re-sent afterwards must leave
+        the session exactly where the clean run left it.
+        """
+        clean_core, _, clean_transport = run_canonical_session(
+            lambda c: UartBindingTransport(c)
+        )
+        for label, factory in (
+            ("uart", lambda c: UartBindingTransport(c)),
+            ("spi", lambda c: SpiBindingTransport(c)),
+            ("usb", lambda c: UsbBindingTransport(c)),
+        ):
+            core = build_mock_core()
+            transport = factory(core)
+            client = build_mock_client(core, transport)
+            client.negotiate()
+            names, _ = name_table_reference()
+            values = {
+                name: encode_param_word(float(i) / 79.0 - 1.0)
+                for i, name in enumerate(names)
+            }
+            tx = hashlib.sha256(b"binding-parity").digest()[:16]
+            client.open_patch(tx, b"binding-parity-sound", len(values))
+            for name in names:
+                client.declare_name(name)
+            for name, word in values.items():
+                client.stage_value(name, word)
+            client.commit_patch(values)
+            # RESET is idempotent: the truncated attempt is re-sent verbatim.
+            transport.fail_next_write_after(6)
+            client.reset()
+
+            self.assertEqual(len(transport.truncated_writes), 1, label)
+            self.assertEqual(len(transport.truncated_writes[0]), 6, label)
+            self.assertEqual(len(client.partial_writes), 1, label)
+            # Byte-identical retry: same sequence, same bytes, no renegotiation.
+            self.assertEqual(
+                client.partial_writes[0], transport.sent_frames[-1], label
+            )
+            # The truncated prefix never became a frame: the accepted frames,
+            # the core→host stream and the applied patch match the clean run.
+            self.assertEqual(
+                transport.sent_frames, clean_transport.sent_frames, label
+            )
+            self.assertEqual(
+                bytes(transport.delivered_response),
+                bytes(clean_transport.delivered_response),
+                label,
+            )
+            self.assertEqual(core.active_patch, clean_core.active_patch, label)
+            self.assertIs(core.state, SessionState.READY, label)
+            self.assertEqual(client.state, "ready", label)
+
+    def test_partial_write_of_a_patch_command_never_applies_it(self):
+        """A short write mid-transaction is raised, never silently resumed.
+
+        PATCH_NAME is not idempotent, so the client refuses to guess: the
+        truncated frame is reported to the host and the core's staged state is
+        untouched, exactly as if the command had never been attempted.
+        """
+        core = build_mock_core()
+        transport = UartBindingTransport(core)
+        client = build_mock_client(core, transport)
+        client.negotiate()
+        names, _ = name_table_reference()
+        tx = hashlib.sha256(b"partial-write").digest()[:16]
+        client.open_patch(tx, b"partial-write-sound", 2)
+        client.declare_name(names[0])
+        accepted_frames = len(transport.sent_frames)
+
+        transport.fail_next_write_after(4)
+        with self.assertRaises(TransportWriteError) as caught:
+            client.declare_name(names[1])
+        self.assertEqual(caught.exception.written, 4)
+        self.assertGreater(caught.exception.requested, 4)
+        # Nothing was delivered: no new accepted frame, no new declaration.
+        self.assertEqual(len(transport.sent_frames), accepted_frames)
+        self.assertEqual(core._transaction["declared"], [names[0]])
+        self.assertEqual(client.state, "patch_open")
+        # The wire recovers: the host re-sends the whole command itself and
+        # the core's receiver resynchronizes past the truncated prefix.
+        client.declare_name(names[1])
+        self.assertEqual(core._transaction["declared"], [names[0], names[1]])
 
     def test_binding_transport_enforces_transport_bound(self):
         # 160 keeps the real HELLO (119 bytes at the canonical identities) on
