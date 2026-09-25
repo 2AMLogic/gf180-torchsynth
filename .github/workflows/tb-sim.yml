@@ -38,7 +38,10 @@ jobs:
     # 3-version matrix would triple already-bounded RTL wall-clock for no
     # verification value (issue #187).
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 330
+    # >= the sum of the per-step budgets below (370) plus install/checkout
+    # margin, so a single runaway lane is caught by its own step timeout
+    # rather than by the job cap.
+    timeout-minutes: 400
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,3 +67,19 @@ jobs:
       - name: "Square/saw VCO engine lane (issue 74, iverilog, PDK-free)"
         timeout-minutes: 120
         run: python3 tb/run_tb.py vco2
+      # Lanes below landed after issue #187 was scoped. They are gated by
+      # the same has_iverilog() skip as the six above (noise via its
+      # tb/run_tb.py lane, which tests/test_noise_stream.py explicitly
+      # defers the RTL to), so leaving them out would keep reporting them
+      # as "skipped" on every PR — the defect this job exists to close.
+      # Budgets are ~3-5x the measured wall-clock of a local Icarus 12.0
+      # run (noise 555s, mix 359s, normreplay 75s).
+      - name: "Host-fed noise-stream lane (issue 75, iverilog, PDK-free)"
+        timeout-minutes: 30
+        run: python3 tb/run_tb.py noise
+      - name: "Audio VCA + pre-normalization mixer lane (issue 76, iverilog, PDK-free)"
+        timeout-minutes: 30
+        run: python3 tb/run_tb.py mix
+      - name: "Normalization replay + one-shot top lane (issue 77, iverilog, PDK-free)"
+        timeout-minutes: 10
+        run: python3 tb/run_tb.py normreplay
