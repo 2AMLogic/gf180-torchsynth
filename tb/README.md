@@ -379,9 +379,12 @@ under `sim/reference/fixed-voice-golden-v1-traces/`):
 - **Tests** — `tests/test_vco_engine.py`: receipt structure + bindings,
   sidecar byte custody, full/prefix mirror-vs-frozen-digest equality,
   the half-even initial-phase turn word (including the negative-phase
-  modular wrap: `-pi` injects `2^31`), first-increment-first phase
-  dataflow, the directed matrix's completeness and its agreement with
-  the *inventory's own* declared parameter bands, per-vector DR-0008
+  modular wrap: `-pi` injects the exact modular negation of the `+pi`
+  word — `2^31 - 60` against `2^31 + 60`, the band ends being the
+  *binary32* pi, one rounding step off half a turn),
+  first-increment-first phase dataflow, the directed matrix's
+  completeness and its agreement with the *inventory's own* declared
+  parameter bands, per-vector DR-0008
   hash-linking, both static clamp corners, mirror-vs-committed-model
   equality on the (min frequency, min phase) cell, and the full tb flow
   (skipped where Icarus Verilog is absent). The generator's `--check`
