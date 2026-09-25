@@ -29,7 +29,8 @@ behavior.
   optional `audio_source` constructor argument).
 - Alternate explorer backend: `src/torchsynth_voice/protocol_backend.py`
   (`build_protocol_mock_session`, `ProtocolMockRenderer`,
-  `backend_contract_identity`, `backend_envelope`, `GOLDEN_AUDIO_VECTOR`).
+  `backend_contract_identity`, `backend_envelope`, `GOLDEN_AUDIO_VECTOR`,
+  `TRANSPORT_BINDINGS`, `build_transport`, `transport_binding_identity`).
 - Transport binding models: `src/torchsynth_voice/transport_binding_models.py`
   (`UartBindingTransport`, `SpiBindingTransport`, `UsbBindingTransport`):
   in-process conformance doubles that shape delivery exactly as the
@@ -97,6 +98,42 @@ source at the core boundary so the codec and its packing rule are testable
 before issue #63 allocates transfer commands; it is not RTL behavior and not a
 fidelity claim.
 
+## Transport selection is a configuration act
+
+[TRANSPORTS.md](TRANSPORTS.md) requires the framing and session layers to run
+unchanged on any conforming transport, so "choosing among UART/SPI/USB is a
+configuration act, not a protocol change". The software lane makes that
+checkable rather than asserted: the product model itself carries the choice.
+
+- `protocol_backend.TRANSPORT_BINDINGS` names every modeled carrier —
+  `loopback` (the in-memory `MockTransport` pipe) plus the `uart`, `spi` and
+  `usb` binding models. `build_transport(core, binding)` constructs one;
+  an unmodeled name is refused by listing the modeled ones, never silently
+  defaulted, so a carrier nobody modeled can never look like one that was.
+- Every carrier is configured with the same `max_frame_bytes`
+  (`TRANSPORT_MAX_FRAME_BYTES`), so any behavioral difference between them
+  could only come from delivery shape, never from a differently sized
+  envelope.
+- `build_protocol_mock_session(store_root, transport=…)` and
+  `explorer.build_session(…, transport=…)` accept the name;
+  `tools/explore.py --transport {loopback,uart,spi,usb}` exposes it on the
+  shipped CLI. A backend that speaks no wire protocol has no carrier to name
+  and **refuses** the argument rather than accepting one it would ignore.
+- The negotiated contract identity is deliberately independent of the
+  carrier: `transport` is a separate envelope field
+  (`binding`, `kind: software-lane-binding-model`,
+  `physical_link: none (issue #81)`, `hardware_claim: none`), reported beside
+  `contract`, never folded into it. It is `null` for a backend with no wire
+  protocol.
+
+Verified end to end in `tests/test_protocol_backend.py`
+(`TransportSubstitutabilityTests`, `ExplorerTransportCliTests`): the same
+seeded session over all four carriers yields the same published reference, the
+same `show()` payload, byte-identical bookmark files, the same `repeat`
+reference, the same 78-value applied patch, the same negotiated contract
+identity, and the **byte-identical client command-frame stream** — and each of
+those still equals the Python (`fake`) backend's, which has no carrier at all.
+
 ## Alternate explorer backend
 
 `build_protocol_mock_session(store_root)` wires an `ExplorerSession` whose
@@ -125,7 +162,9 @@ exposes it on the shipped CLI ([../EXPLORER-MVP.md](../EXPLORER-MVP.md)). Every
 CLI envelope carries a `contract` field beside the existing `backend` label:
 the negotiated contract identity for this backend, and `null` for a backend
 that speaks no wire protocol (`docker`, `fake`, `none`) — a backend without a
-protocol never borrows this one's identity. The render-call counter is named
+protocol never borrows this one's identity. A `transport` field sits beside it
+on the same rule: the binding identity of the carrier that actually moved the
+frames, `null` for a backend with no carrier. The render-call counter is named
 for the renderer that actually ran
 (`protocol_mock_renderer_calls_this_process`, distinct from the fake mode's
 `fake_renderer_calls_this_process`). The rendering path, bookmark
@@ -142,5 +181,5 @@ to `--backend fake` for the same identity.
 | Version/profile/patch-hash mismatch, partial write, timeout, stale state, corrupted audio fail | refusal tests: fatal contract negotiation gates, expected-profile refusal, hash-mismatch discard, one-byte-fragment delivery, identical-frame idempotent retry, stale sequence/transaction-id refusal, expired-transaction continuation → `ERR_TX_TIMEOUT` with the client dropping stale state, truncated/tampered audio payload. **Partial write** specifically (`PartialWriteTests` in `tests/test_protocol_client.py`, partial-write tests in `tests/test_transport_bindings.py`): a short write raises `TransportWriteError` at every truncation point of a frame, the truncated prefix never becomes a frame at the receiver, an idempotent command is re-sent byte-identically and a non-idempotent one is never retried, and after a short write on UART/SPI/USB the accepted frames, the core→host stream and the applied patch equal the clean run's |
 | Mock sources audio from fixed golden vectors, not pretending to be RTL | `GOLDEN_AUDIO_VECTOR` through `MockCore.set_audio_source`; decode/re-encode byte-exactness; audio block labeled as a mock-boundary data path |
 | Explorer shows backend and contract identity | the shipped CLI: `tools/explore.py --backend protocol-mock` prints `backend` and the negotiated `contract` identity in every envelope, and a backend with no wire protocol prints `contract: null` (`ExplorerBackendDisplayTests` in `tests/test_protocol_backend.py`); the library `backend_envelope` label + `backend_contract_identity` agree with it |
-| Transport swap without changing the product model | the same full canonical session over `MockTransport` and the UART/SPI/USB binding models (`tests/test_transport_bindings.py`): identical client frame streams, identical core response streams, identical final core state; mid-frame packet/CS cuts, multi-frame IN transfers and CS periods, and end-to-end UART noise resync |
+| Transport swap without changing the product model | two levels. **Protocol stack** (`tests/test_transport_bindings.py`): the same full canonical session over `MockTransport` and the UART/SPI/USB binding models gives identical client frame streams, identical core response streams and identical final core state, through mid-frame packet/CS cuts, multi-frame IN transfers and CS periods, and end-to-end UART noise resync. **Product model** (`TransportSubstitutabilityTests` / `ExplorerTransportCliTests` in `tests/test_protocol_backend.py`): selecting the carrier by name at the backend, explorer and `tools/explore.py --transport` seams leaves the published reference, `show()` payload, bookmark bytes, `repeat` reference, applied 78-value patch, contract identity and client frame stream identical across all four carriers and equal to the Python backend's; an unmodeled binding is refused by name and a backend without a wire protocol refuses the flag |
 | Repeat/save identical across Python and mock backends when identities match | fake vs protocol-mock bookmark byte-equality and repeat reference equality at the library seam, and end to end through the CLI: the same seed gives an equal `show()` payload, byte-identical bookmark files and an equal `repeat` payload across `--backend fake` and `--backend protocol-mock`, with zero renderer calls on save/repeat |

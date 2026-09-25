@@ -6,7 +6,11 @@ backend); `--backend fake` runs clearly labeled synthetic fixtures for
 deterministic tests, and `--backend protocol-mock` drives those same fixtures
 through the issue #66 host transport client against the behavioral mock core
 (spec/protocol/CLIENT.md), printing the negotiated contract identity beside
-the backend label. Favorites, parameter locks and deterministic nearby
+the backend label. `--transport` picks which software-lane binding model
+carries those bytes (loopback/uart/spi/usb); it changes delivery shape only,
+never the rendering path, artifact, bookmark or contract identity, which is
+the spec/protocol/TRANSPORTS.md substitutability property made visible on the
+shipped CLI. Favorites, parameter locks and deterministic nearby
 variations (issue #65) ride the same session via `favorite-save`,
 `favorite-recall`, `favorite-vary` and `favorite-inspect`. No hardware,
 physical transport, RTL or live-note claim is made here: the protocol-mock
@@ -24,7 +28,11 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import explorer_commands, favorites  # noqa: E402
 from torchsynth_voice.explorer import build_session, runtime_admission  # noqa: E402
 from torchsynth_voice.favorites import FavoriteError  # noqa: E402
-from torchsynth_voice.protocol_backend import BACKEND_LABEL  # noqa: E402
+from torchsynth_voice.protocol_backend import (  # noqa: E402
+    DEFAULT_TRANSPORT_BINDING,
+    TRANSPORT_BINDINGS,
+    BACKEND_LABEL,
+)
 
 BACKEND_LABELS = {
     "docker": "docker-qualified-release-mkl-compatible-v1",
@@ -47,6 +55,17 @@ def _parser():
             "docker: qualified real render; fake: labeled synthetic fixtures; "
             "protocol-mock: the same fixtures driven over the protocol v2 "
             "client against the behavioral mock core (software only)"
+        ),
+    )
+    parser.add_argument(
+        "--transport",
+        choices=tuple(sorted(TRANSPORT_BINDINGS)),
+        default=None,
+        help=(
+            "protocol backends only: which software-lane binding model carries "
+            "the frames (default: "
+            f"{DEFAULT_TRANSPORT_BINDING}). A configuration act, not a protocol "
+            "change — no physical link, driver or hardware claim is involved"
         ),
     )
     parser.add_argument(
@@ -162,6 +181,7 @@ def main(argv=None):
             seed=args.seed,
             fake_fail_render=args.fake_fail_render or (),
             fake_fail_player=args.fake_fail_player,
+            transport=args.transport,
         )
         if args.selected:
             index, artifact_id, sha256 = args.selected
@@ -194,6 +214,10 @@ def main(argv=None):
             # The contract identity the backend negotiated, or null for a
             # backend that speaks no wire protocol (issue #66 display AC).
             "contract": probe.get("contract"),
+            # The carrier that actually moved the frames, or null for a
+            # backend that speaks no wire protocol. Deliberately reported
+            # apart from `contract`: the identity does not vary with it.
+            "transport": probe.get("transport_identity"),
             "runtime_admission": (
                 runtime_admission(session.selection.inputs)
                 if session.selection
