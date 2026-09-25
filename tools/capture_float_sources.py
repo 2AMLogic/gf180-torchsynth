@@ -105,7 +105,7 @@ sys.path.insert(0, "/repo/env/release-era")
 sys.path.insert(0, "/repo/src/torchsynth_voice")
 
 import render_artifact as worker
-import trace_capture
+import trace_capture_provider
 import trace_registry
 
 CASES = json.loads(Path("/output/request-cases.json").read_text())
@@ -122,57 +122,6 @@ def f32(x):
 
 def sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
-
-
-class ProviderSession(object):
-    def __init__(self, factory, session, torch):
-        self.factory = factory
-        self.session = session
-        self.torch = torch
-
-    def __enter__(self):
-        self.session.__enter__()
-        return self.factory.payloads
-
-    def __exit__(self, exc_type, exc, tb):
-        result = self.session.__exit__(exc_type, exc, tb)
-        if exc_type is None:
-            for item in self.session.inventory:
-                name = item["name"]
-                data = trace_capture.tensor_bytes(
-                    self.session.values[name], self.torch
-                )
-                if hashlib.sha256(data).hexdigest() != item["sha256"]:
-                    raise ValueError(
-                        "serialized bytes disagree with capture: " + name
-                    )
-                self.factory.descriptors[name] = item
-                self.factory.payloads[name] = data
-        return result
-
-
-class ProviderFactory(object):
-    def __init__(self, document, requested, batch_size):
-        self.document = document
-        self.requested = requested
-        self.batch_size = batch_size
-        self.payloads = {}
-        self.descriptors = {}
-
-    def __call__(self, request, voice, slot):
-        import torch
-        from torchsynth.util import normalize_if_clipping
-
-        session = trace_capture.TraceCapture(
-            voice,
-            self.document,
-            torch,
-            normalize_if_clipping,
-            names=self.requested,
-            slot=slot,
-            batch_size=self.batch_size,
-        )
-        return ProviderSession(self, session, torch)
 
 
 def runtime_descriptor():
@@ -257,7 +206,7 @@ def render_case(case_id, request):
     document = trace_registry.load_registry()
     request = dict(request)
     request["locks_physical"] = patch
-    factory = ProviderFactory(
+    factory = trace_capture_provider.ProviderFactory(
         document, request["requested_traces"], request["execution"]["batch_size"]
     )
     with warnings.catch_warnings(record=True) as seen:
