@@ -110,9 +110,14 @@ MOD_DEPTH_BY_FREQ = {"min": 96.0, "mid": 96.0, "max": -96.0}
 #: *lower* ends of the signed mod_depth and tuning bands (the receipt
 #: only carries their upper ends) and both MIDI clamp arms.
 CORNER_CASES = (
-    # Negative mod_depth against an LFO-driven (bipolar) pitch column at
-    # the top of the keyboard band: the signed depth minimum, and the
-    # upper MIDI clamp arm.
+    # Negative mod_depth against the LFO-driven pitch column at the top
+    # of the keyboard band: the signed depth minimum (-96), which the
+    # frozen receipt does not carry. The LFO column measures
+    # non-negative at this setting (its minimum word is exactly zero),
+    # so -96 sweeps the pitch *downward* across the band interior and
+    # this case clamps no sample -- its committed measurement is 0 MIDI
+    # clamps, 0 saturations. The upper MIDI clamp arm is covered by
+    # corner:tuning-max-freq-max below, not here.
     (
         "corner:depth-min-lfo-freq-max",
         {
