@@ -18,4 +18,8 @@ DR-0008), verified sample-exact against both the frozen receipt's
 in `sim/reference/sine-vco-golden-v1/` — and the square/saw VCO engine
 (#74; the DR-0008/DR-0010
 exp2/tanh/partials approximation sites are declared open items replayed
-host-side — no RTL transcendental is implemented or claimed).
+host-side — no RTL transcendental is implemented or claimed), and the
+host-fed exact noise-stream lane (#75) — the C8-accepted noise policy,
+which carries no on-chip generator by declaration: the canonical stream
+is fed bit-exactly and the lane converts it, latches the bound trigger
+identity, and validates the clip framing.

@@ -204,6 +204,91 @@ class TestFramingValidation(unittest.TestCase):
             nsg.mirror_stream(None)
 
 
+class TestPreRenderIdentityGate(unittest.TestCase):
+    """The pre-render gate binds the fed stream's HASH, not just its shape.
+
+    DR-0008 C8 (Accepted) declares the noise stream exact: the canonical
+    bytes for a sound are fully determined by seed 13 and the slot rule.
+    Length and framing alone cannot catch a length-preserving corruption
+    (a dropped sample compensated by a duplicated one) or a wrong-stream
+    substitution, so ``check_fed_bytes`` — the validation the host owes
+    BEFORE a render begins (issue #75 AC-4) — binds the digest too.
+    """
+
+    def setUp(self):
+        self.raw = nsg.resolve_canonical_bytes(0)
+        self.sha = nsg.noise_bytes_sha256(self.raw)
+
+    def test_clean_stream_returns_its_digest(self):
+        self.assertEqual(
+            nsg.check_fed_bytes(self.raw, sound_index=0, declared_slot=0),
+            self.sha,
+        )
+        # 32-stream repetition: the same bytes are canonical for index 32.
+        self.assertEqual(
+            nsg.check_fed_bytes(self.raw, sound_index=32, declared_slot=0),
+            self.sha,
+        )
+
+    def test_declared_digest_must_match(self):
+        # A declared digest that disagrees with the fed bytes is refused
+        # before any sample is converted.
+        with self.assertRaises(ValueError):
+            nsg.check_fed_bytes(
+                self.raw, sound_index=0, declared_slot=0,
+                expected_sha256="0" * 64,
+            )
+        nsg.check_fed_bytes(
+            self.raw, sound_index=0, declared_slot=0,
+            expected_sha256=self.sha,
+        )
+
+    def test_length_preserving_slip_refused(self):
+        # Drop sample k and duplicate its predecessor: the byte count, the
+        # declared slot, and the framing all stay valid, so ONLY the hash
+        # binding can reject it.
+        slipped = nsg.slip_stream(self.raw, 1000)
+        self.assertEqual(len(slipped), len(self.raw))
+        self.assertNotEqual(slipped, self.raw)
+        with self.assertRaises(ValueError):
+            nsg.check_fed_bytes(slipped, sound_index=0, declared_slot=0)
+
+    def test_length_preserving_slip_corrupts_the_lane(self):
+        slipped = nsg.slip_stream(self.raw, 1000)
+        mirror = nsg.mirror_stream(self.raw)
+        mutant = nsg.mirror_stream(slipped)
+        self.assertNotEqual(mirror, mutant)
+        self.assertNotEqual(
+            nsg.trace_digest(mutant), RECEIPT["cases"][0]["traces"]["noise.raw"]
+        )
+
+    def test_wrong_stream_substitution_refused(self):
+        # Another slot's bytes, correctly framed and correctly declared:
+        # the shape checks pass, the canonical identity check must not.
+        other = nsg.resolve_canonical_bytes(1)
+        self.assertEqual(len(other), nsg.EXPECTED_NOISE_BYTES)
+        with self.assertRaises(ValueError):
+            nsg.check_fed_bytes(other, sound_index=0, declared_slot=0)
+        # ... and it is accepted under its own identity.
+        nsg.check_fed_bytes(other, sound_index=1, declared_slot=1)
+
+    def test_committed_cases_pass_the_gate(self):
+        # Every case's receipt-declared digest is the gate's expectation.
+        for case in RECEIPT["cases"][:4]:
+            sound_index = case["sound_index"]
+            with self.subTest(case=case["id"]):
+                raw = nsg.resolve_canonical_bytes(sound_index)
+                self.assertEqual(
+                    nsg.check_fed_bytes(
+                        raw,
+                        sound_index=sound_index,
+                        declared_slot=nsg.canonical_slot(sound_index),
+                        expected_sha256=case["noise"]["sha256"],
+                    ),
+                    case["noise"]["sha256"],
+                )
+
+
 class TestMutationsFail(unittest.TestCase):
     """The mutation set must fail against the golden lane (AC-5/M7 rule)."""
 
