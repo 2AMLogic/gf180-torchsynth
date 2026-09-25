@@ -1,14 +1,19 @@
 // File-driven testbench over the noise-stream DUT (issue #75).
 //
 // Reads runs.txt (one integer: the number of streams to play), then for
-// each run r: run<r>_stim.txt (three integers: sound_index, declared_slot,
-// n_bytes) and run<r>_bytes.txt (hex, one byte per line, in feed order =
-// little-endian sample order). Streams play back-to-back with `en` dropped
+// each run r: run<r>_stim.txt (six integers: sound_index, declared_slot,
+// n_bytes, switch_at, switch_sound_index, switch_slot) and
+// run<r>_bytes.txt (hex, one byte per line, in feed order = little-endian
+// sample order). A switch_at of -1 means the trigger identity is held for
+// the whole stream; any other value splices a different identity in at
+// that byte offset, which the DUT's DR-0010 identity binding must catch.
+// Streams play back-to-back with `en` dropped
 // for two cycles between runs — the DUT's per-stream state must clear
 // through that gap (replay/reset carries no off-by-one state). Captured
 // words are appended per run to run<r>_captured.txt; run<r>_status.txt
 // carries "<error> <error_code> <bytes_accepted> <samples_produced>
-// <narrow_count>". PDK-free: plain Icarus Verilog, no vendor or PDK cells.
+// <narrow_count> <bound_slot>". PDK-free: plain Icarus Verilog, no vendor
+// or PDK cells.
 // No floats participate anywhere; the Python runner (tb/run_tb.py 'noise')
 // owns all expectations from the model's own primitives and the golden
 // receipt.
@@ -40,6 +45,7 @@ module tb;
     wire [19:0]                bytes_accepted;
     wire [17:0]                samples_produced;
     wire [31:0]                narrow_count;
+    wire [4:0]                 bound_slot;
 
     noise_stream_dut dut (
         .clk             (clk),
@@ -56,7 +62,8 @@ module tb;
         .error_code      (error_code),
         .bytes_accepted  (bytes_accepted),
         .samples_produced(samples_produced),
-        .narrow_count    (narrow_count)
+        .narrow_count    (narrow_count),
+        .bound_slot      (bound_slot)
     );
 
     always #5 clk = ~clk;
@@ -74,6 +81,9 @@ module tb;
     integer n_bytes;
     integer s_index;
     integer d_slot;
+    integer switch_at;
+    integer sw_index;
+    integer sw_slot;
     integer fd;
     integer code;
 
@@ -91,10 +101,11 @@ module tb;
                 $display("TB-ERROR cannot open %0s", fname);
                 $finish;
             end
-            code = $fscanf(fd, "%d %d %d", s_index, d_slot, n_bytes);
+            code = $fscanf(fd, "%d %d %d %d %d %d", s_index, d_slot, n_bytes,
+                           switch_at, sw_index, sw_slot);
             $fclose(fd);
-            if (code != 3) begin
-                $display("TB-ERROR %0s must carry 3 integers", fname);
+            if (code != 6) begin
+                $display("TB-ERROR %0s must carry 6 integers", fname);
                 $finish;
             end
             if (n_bytes <= 0 || n_bytes > MAX_BYTES + OVERRUN_SLACK) begin
@@ -115,6 +126,12 @@ module tb;
             en            = 1'b1;
             // Feed one byte per enabled clock; the DUT samples at posedge.
             for (k = 0; k < n_bytes; k = k + 1) begin
+                // Trigger-identity splice (clip-mixing stimulus): from this
+                // byte on, a different sound's identity is presented.
+                if (switch_at >= 0 && k == switch_at) begin
+                    sound_index   = sw_index;
+                    declared_slot = sw_slot[4:0];
+                end
                 byte_in    = bytes_mem[k];
                 byte_valid = 1'b1;
                 @(negedge clk);
@@ -128,9 +145,9 @@ module tb;
             @(negedge clk);
             // Capture the run status while the state is still live — the en
             // gap below clears the per-stream counters.
-            $fwrite(status_fd[run], "%0d %0d %0d %0d %0d\n",
+            $fwrite(status_fd[run], "%0d %0d %0d %0d %0d %0d\n",
                     error, error_code, bytes_accepted, samples_produced,
-                    narrow_count);
+                    narrow_count, bound_slot);
             // The en gap: per-stream state must clear between runs.
             en = 1'b0;
             @(negedge clk);

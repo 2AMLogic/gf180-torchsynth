@@ -218,6 +218,9 @@ on-chip generator (that would be a new noise policy needing its own DR):
    round + C7 saturation, no multiplier) and require its ``noise.raw``
    trace digest to equal every committed case's digest — the golden
    bit-exactness the RTL is then held to,
+2b. run every stream through the pre-render gate (``check_fed_bytes``:
+   clip length, the receipt's declared digest, the slot framing, and the
+   canonical seed-13 identity) BEFORE a byte is fed,
 3. feed each case's full 705,600-byte stream through the DUT and require
    the captured Q2.21 stream to equal the mirror word-for-word (sample-
    exact against the golden receipt), with clean status, exactly 176,400
@@ -231,10 +234,15 @@ on-chip generator (that would be a new noise policy needing its own DR):
    sample; the convert is exponent shift + half-even round, no
    multiplier — declared-structural, reported) plus the emitted schedule
    constants against the landed package, and
-6. plant five breakpoint mutations — dropped final byte (stimulus),
+6. plant nine breakpoint mutations — dropped final byte (stimulus),
    duplicated trailing byte (stimulus), wrong declared slot (stimulus),
-   LSB truncation instead of half-even (RTL), and wrong slot-selection
-   rule (RTL) — and require every one to be DETECTED.
+   LSB truncation instead of half-even (RTL), wrong slot-selection rule
+   (RTL), a length-preserving drop/duplicate slip (stimulus; only the
+   pre-render hash gate can see it), a wrong-stream substitution
+   (stimulus; another slot's canonical bytes, correctly framed), a
+   mid-stream trigger-identity splice (stimulus; DR-0010 clip mixing),
+   and a wrong identity binding (RTL) — and require every one to be
+   DETECTED.
 
 ``mix`` (issue #76) runs the bit-exact audio VCA + pre-normalization
 mixer engine (tb/sv/audio_mix_engine.sv) against the frozen whole-voice
@@ -497,6 +505,13 @@ NOISE_TRUNCATION_ANCHOR = "rounded = q_rounded;"
 NOISE_TRUNCATION_MUTANT = "rounded = q_raw;"
 NOISE_SLOT_RULE_ANCHOR = "wire [4:0] slot_expected = sound_index[4:0];"
 NOISE_SLOT_RULE_MUTANT = "wire [4:0] slot_expected = sound_index[4:0] ^ 5'd1;"
+NOISE_IDENTITY_ANCHOR = "bound_slot        <= declared_slot;"
+NOISE_IDENTITY_MUTANT = "bound_slot        <= declared_slot ^ 5'd1;"
+#: Byte offset the clip-mixing stimulus splices a foreign trigger identity
+#: in at (sample-aligned, well inside one clip).
+NOISE_IDENTITY_SWITCH_BYTE = 4000
+#: Sample index the length-preserving drop/duplicate slip is planted at.
+NOISE_SLIP_SAMPLE = 1000
 
 NORMREPLAY_DUT_SV = TB_ROOT / "sv/normalization_replay_engine.sv"
 NORMREPLAY_TB_SV = TB_ROOT / "sv/tb_normalization_replay_engine.sv"
@@ -4950,11 +4965,21 @@ def patch(workdir: Path, simulator: str) -> int:
 
 
 def noise_write_run(workdir: Path, run: int, sound_index: int,
-                    declared_slot: int, noise_bytes: bytes) -> None:
-    """One run's stimulus: identity words + the exact fed byte stream."""
+                    declared_slot: int, noise_bytes: bytes,
+                    switch_at: int = -1, switch_sound_index: int = 0,
+                    switch_slot: int = 0) -> None:
+    """One run's stimulus: identity words + the exact fed byte stream.
+
+    ``switch_at >= 0`` splices a foreign trigger identity in at that byte
+    offset (the clip-mixing stimulus); the default holds one identity for
+    the whole stream, as a real trigger must.
+    """
 
     (workdir / ("run%d_stim.txt" % run)).write_text(
-        "%d %d %d\n" % (sound_index, declared_slot, len(noise_bytes)),
+        "%d %d %d %d %d %d\n" % (
+            sound_index, declared_slot, len(noise_bytes),
+            switch_at, switch_sound_index, switch_slot,
+        ),
         encoding="utf-8",
     )
     (workdir / ("run%d_bytes.txt" % run)).write_text(
@@ -5043,6 +5068,35 @@ def noise(workdir: Path, simulator: str) -> int:
         % (len(cases), "OK" if ok else "FAIL")
     )
 
+    # 2b. The pre-render gate (AC-4): length + declared digest + framing +
+    # canonical seed-13 identity, all checked BEFORE a stream is fed.
+    gate_ok = True
+    for case in cases:
+        sound_index = case["sound_index"]
+        raw, _ = streams[sound_index]
+        try:
+            gated = nsg.check_fed_bytes(
+                raw,
+                sound_index=sound_index,
+                declared_slot=nsg.canonical_slot(sound_index),
+                expected_sha256=case["noise"]["sha256"],
+            )
+        except ValueError as error:
+            print("NOISE FAILED: pre-render gate refused case %s: %s"
+                  % (case["id"], error))
+            gate_ok = False
+            continue
+        if gated != case["noise"]["sha256"]:
+            print("NOISE FAILED: pre-render gate digest mismatch on case %s"
+                  % case["id"])
+            gate_ok = False
+    print(
+        "pre-render gate: %d golden streams validated for length, declared "
+        "digest, slot framing, and canonical seed-13 identity before any "
+        "byte is fed -> %s" % (len(cases), "OK" if gate_ok else "FAIL")
+    )
+    ok = ok and gate_ok
+
     # 3+4. Committed cases + pattern stream + replay pair, one invocation.
     run_plan = []  # (label, sound_index, declared_slot, bytes)
     for case in cases:
@@ -5106,7 +5160,9 @@ def noise(workdir: Path, simulator: str) -> int:
                 )
             ok = False
             continue
-        clean = status == [0, 0, len(raw), len(mirror), len(mirror)]
+        # The 6th field is the bound trigger identity's slot: a clean run
+        # must have latched exactly the declared slot (DR-0010 lifecycle).
+        clean = status == [0, 0, len(raw), len(mirror), len(mirror), slot]
         if not clean:
             print(
                 "NOISE FAILED: run status %r not clean for %s"
@@ -5271,15 +5327,117 @@ def noise(workdir: Path, simulator: str) -> int:
            else "NOT DETECTED")
     )
     mutations_ok = mutations_ok and detected
+
+    # 6f. Length-preserving slip (stimulus): a dropped sample compensated
+    # by a duplicated predecessor. Byte count, framing, and declared slot
+    # all stay valid, so the DUT's shape checks structurally cannot see it
+    # — the pre-render hash gate must refuse it, and the RTL lane must
+    # diverge from the golden trace if it is fed anyway.
+    slipped = nsg.slip_stream(mut_raw, NOISE_SLIP_SAMPLE)
+    gate_refused = False
+    try:
+        nsg.check_fed_bytes(slipped, sound_index=mut_sound,
+                            declared_slot=mut_slot)
+    except ValueError:
+        gate_refused = True
+    mut_dir = workdir / "mut-slip"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, slipped)
+    mut_captures, mut_statuses = noise_simulate(
+        mut_dir, simulator, 1, NOISE_DUT_SV
+    )
+    detected = (
+        gate_refused
+        and mut_captures[0] != mut_mirror
+        and mut_statuses[0][:2] == [0, 0]
+    )
+    print(
+        "mutation length-preserving slip (stimulus): %s"
+        % ("DETECTED (pre-render hash gate refuses; fed anyway, the RTL "
+           "capture diverges while the shape checks stay clean)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6g. Wrong-stream substitution (stimulus): another slot's canonical
+    # bytes, correctly framed and correctly declared. Only the canonical
+    # seed-13 identity binding can reject it.
+    other_sound = mut_sound + 1
+    other_raw = nsg.resolve_canonical_bytes(other_sound)
+    gate_refused = False
+    try:
+        nsg.check_fed_bytes(other_raw, sound_index=mut_sound,
+                            declared_slot=mut_slot)
+    except ValueError:
+        gate_refused = True
+    mut_dir = workdir / "mut-substitution"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, other_raw)
+    mut_captures, mut_statuses = noise_simulate(
+        mut_dir, simulator, 1, NOISE_DUT_SV
+    )
+    detected = (
+        gate_refused
+        and mut_captures[0] != mut_mirror
+        and mut_statuses[0][:2] == [0, 0]
+    )
+    print(
+        "mutation wrong-stream substitution (stimulus): %s"
+        % ("DETECTED (pre-render canonical-identity gate refuses; fed "
+           "anyway, the RTL capture diverges)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6h. Clip mixing (stimulus): a foreign trigger identity spliced in
+    # mid-stream while the C8 slot rule still holds (sound_index 0 -> 32,
+    # both slot 0). DR-0010's clip lifecycle binds one trigger to one
+    # sound identity, so the DUT must latch it.
+    mut_dir = workdir / "mut-identity"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    noise_write_run(
+        mut_dir, 0, mut_sound, mut_slot, mut_raw,
+        switch_at=NOISE_IDENTITY_SWITCH_BYTE,
+        switch_sound_index=mut_sound + 32, switch_slot=mut_slot,
+    )
+    _, mut_statuses = noise_simulate(mut_dir, simulator, 1, NOISE_DUT_SV)
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_IDENTITY_CHANGED]
+    print(
+        "mutation clip-mixing identity splice (stimulus): %s"
+        % ("DETECTED (sticky identity-changed error)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
+
+    # 6i. Wrong identity binding (RTL): a mutated latch binds the wrong
+    # slot, so it must reject a clean, correctly-declared stream.
+    mut_dir = workdir / "mut-identity-rule"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated = mutate_sv(
+        NOISE_DUT_SV.read_text(encoding="utf-8"),
+        NOISE_IDENTITY_ANCHOR, NOISE_IDENTITY_MUTANT, "identity-binding",
+    )
+    (mut_dir / "noise_stream_mut.sv").write_text(mutated, encoding="utf-8")
+    noise_write_run(mut_dir, 0, mut_sound, mut_slot, mut_raw)
+    _, mut_statuses = noise_simulate(
+        mut_dir, simulator, 1, mut_dir / "noise_stream_mut.sv"
+    )
+    detected = mut_statuses[0][:2] == [1, nsg.ERROR_IDENTITY_CHANGED]
+    print(
+        "mutation identity-binding (RTL): %s"
+        % ("DETECTED (mutated binding rejects the clean stream)" if detected
+           else "NOT DETECTED")
+    )
+    mutations_ok = mutations_ok and detected
     ok = ok and mutations_ok
 
     if not ok:
         print("NOISE RUN FAILED")
         return 1
     print(
-        "NOISE RUN PASSED (%d golden cases bit-exact + pattern/replay "
-        "streams bit-exact + owner-row/op-count asserts + all 5 mutations "
-        "detected)" % len(cases)
+        "NOISE RUN PASSED (%d golden cases bit-exact + pre-render gate + "
+        "pattern/replay streams bit-exact + owner-row/op-count asserts + "
+        "all 9 mutations detected)" % len(cases)
     )
     return 0
 

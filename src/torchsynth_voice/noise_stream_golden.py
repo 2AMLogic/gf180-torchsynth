@@ -24,7 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .float_sources import AUDIO_SAMPLES, NOISE_SEED, NOISE_STREAMS, NoiseSource
 
@@ -43,6 +43,10 @@ ERROR_NONE = 0
 ERROR_SLOT_IDENTITY = 1
 ERROR_BYTE_OVERRUN = 2
 ERROR_STREAM_TRUNCATED = 3
+#: The bound trigger identity changed mid-stream (DR-0010 clip lifecycle:
+#: "a trigger is bound to one sound identity"; clip mixing is excluded
+#: structurally, not by convention).
+ERROR_IDENTITY_CHANGED = 4
 
 _PACK_F32 = struct.Struct("<f")
 _PACK_U32 = struct.Struct("<I")
@@ -55,24 +59,72 @@ def canonical_slot(sound_index: int) -> int:
     return sound_index % NOISE_STREAMS
 
 
+#: Digest memo keyed by canonical slot. Only ever written from the canonical
+#: resolver below, so it can never be poisoned with a non-canonical digest;
+#: it exists because resolving one slot replays up to 32 x 176,400 MT19937
+#: draws in pure Python, and the pre-render gate must not pay that twice.
+_CANONICAL_SHA_BY_SLOT: Dict[int, str] = {}
+
+
 def resolve_canonical_bytes(sound_index: int, seed: int = NOISE_SEED) -> bytes:
     """The host-feed path: the resolved bytes for one global sound index."""
 
     if seed != NOISE_SEED:
         raise ValueError("the canonical noise seed is 13")
-    return NoiseSource.resolve(sound_index)
+    resolved = NoiseSource.resolve(sound_index)
+    _CANONICAL_SHA_BY_SLOT.setdefault(
+        canonical_slot(sound_index), noise_bytes_sha256(resolved)
+    )
+    return resolved
+
+
+def canonical_stream_sha256(sound_index: int) -> str:
+    """SHA-256 of the canonical stream for one global sound index.
+
+    The canonical stream is a pure function of seed 13 and the slot rule
+    (DR-0008 C8), so the digest is memoized per slot: sound indices that
+    share a slot share a digest (32-stream repetition).
+    """
+
+    slot = canonical_slot(sound_index)
+    digest = _CANONICAL_SHA_BY_SLOT.get(slot)
+    if digest is None:
+        digest = noise_bytes_sha256(resolve_canonical_bytes(sound_index))
+        _CANONICAL_SHA_BY_SLOT[slot] = digest
+    return digest
 
 
 def noise_bytes_sha256(noise_bytes: bytes) -> str:
     return hashlib.sha256(noise_bytes).hexdigest()
 
 
-def check_fed_bytes(noise_bytes: bytes, sound_index: int, declared_slot: int) -> None:
-    """The pre-render framing/identity validation the host owes (C8).
+def check_fed_bytes(
+    noise_bytes: bytes,
+    sound_index: int,
+    declared_slot: int,
+    expected_sha256: Optional[str] = None,
+) -> str:
+    """The pre-render length/hash/framing validation the host owes (C8).
 
-    Length must be exactly one clip of binary32 samples, the declared slot
-    must equal ``sound_index % 32``, and the stream must carry the canonical
-    seed's identity (its bytes resolve from seed 13).
+    Four bindings, all checked BEFORE any sample of the clip is converted
+    (issue #75 AC-4), and returning the fed stream's digest:
+
+    1. **Length** — exactly one clip of binary32 samples.
+    2. **Framing/identity** — the declared slot equals ``sound_index % 32``.
+    3. **Declared digest** — when the caller carries one (the golden
+       receipt's per-case ``noise.sha256``, or the transport's declared
+       stream digest), the fed bytes must hash to it.
+    4. **Canonical identity** — the fed bytes must be the canonical seed-13
+       stream for that slot.
+
+    Binding 4 is what makes the declared exactness of DR-0008 C8 ("there is
+    no error metric for noise — exactness") checkable: length and framing
+    alone accept a length-preserving corruption (a dropped sample
+    compensated by a duplicated one) and a wrong-stream substitution, both
+    of which silently render a different clip. This is a host-side gate;
+    the RTL lane holds no generator and cannot re-derive the stream
+    (an on-chip generator would be a new noise policy needing its own
+    decision record, DR-0008 Sections 7/13).
     """
 
     if not isinstance(noise_bytes, (bytes, bytearray)):
@@ -87,6 +139,45 @@ def check_fed_bytes(noise_bytes: bytes, sound_index: int, declared_slot: int) ->
             "slot identity violation: declared slot %d != sound_index %d %% 32"
             % (declared_slot, sound_index)
         )
+    fed_sha = noise_bytes_sha256(bytes(noise_bytes))
+    if expected_sha256 is not None and fed_sha != expected_sha256:
+        raise ValueError(
+            "declared-digest mismatch: fed stream hashes to %s, declared %s"
+            % (fed_sha, expected_sha256)
+        )
+    canonical_sha = canonical_stream_sha256(sound_index)
+    if fed_sha != canonical_sha:
+        raise ValueError(
+            "canonical identity violation: fed stream hashes to %s, the "
+            "canonical seed-%d slot-%d stream hashes to %s"
+            % (fed_sha, NOISE_SEED, canonical_slot(sound_index), canonical_sha)
+        )
+    return fed_sha
+
+
+def slip_stream(noise_bytes: bytes, sample_index: int) -> bytes:
+    """A length-preserving drop/duplicate slip (negative control).
+
+    Drops the sample at ``sample_index`` and duplicates its predecessor, so
+    the byte count, the sample count, and the framing are all still exactly
+    one clip. The declared-exactness gate (:func:`check_fed_bytes`) must
+    reject it and the converted lane must diverge from the golden trace —
+    a mutation the DUT's length/framing checks structurally cannot catch.
+    """
+
+    if not isinstance(noise_bytes, (bytes, bytearray)):
+        raise ValueError("fed noise must be bytes")
+    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
+        raise ValueError(
+            "slip control needs exactly %d fed bytes" % EXPECTED_NOISE_BYTES
+        )
+    samples = EXPECTED_NOISE_BYTES // 4
+    if type(sample_index) is not int or not 1 <= sample_index < samples:
+        raise ValueError("sample_index must be in [1, %d)" % samples)
+    raw = bytes(noise_bytes)
+    cut = sample_index * 4
+    previous = raw[cut - 4:cut]
+    return raw[:cut] + previous + raw[cut + 4:]
 
 
 def narrow_f32_bits(bits: int) -> int:

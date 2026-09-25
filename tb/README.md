@@ -487,11 +487,28 @@ new noise policy requiring its own DR per DR-0008 §7/§13).
   DR-0010 #75 owner row's convert, with no multiplier and no floats. A
   sticky error register validates the C8 slot identity
   (`declared_slot != sound_index % 32`), the clip byte length
-  (overrun/truncation vs `SCHED_SAMPLES_PER_PASS * 4`), and a sticky
-  narrowing counter exports one count per sample. Between streams the
-  host drops `en` for a cycle and every per-stream counter clears
+  (overrun/truncation vs `SCHED_SAMPLES_PER_PASS * 4`), and the bound
+  trigger identity (code 4 `IDENTITY_CHANGED`: the sound identity is
+  latched on the first enabled cycle of a stream and every later cycle
+  must present it — DR-0010's "Clip lifecycle" binds one trigger to one
+  sound identity, so splicing sound_index 0 → 32 mid-stream, which still
+  satisfies the C8 slot rule, is caught here and nowhere else). A sticky
+  narrowing counter exports one count per sample, and the bound slot is
+  exported per run. Between streams the
+  host drops `en` for a cycle and every per-stream counter and the
+  identity binding clear
   (replay/reset carries no off-by-one state); a raised error survives
   every trigger and only reset clears it.
+- **Pre-render gate** — `noise_stream_golden.check_fed_bytes` is the
+  validation the host owes before a render begins (AC-4), and the flow
+  runs it on every stream before a byte is fed: clip length, the
+  receipt's declared digest, the slot framing, **and** the canonical
+  seed-13 identity of the fed bytes. The identity binding is what makes
+  C8's declared exactness checkable — length and framing alone accept a
+  length-preserving drop/duplicate slip and a wrong-stream substitution,
+  both of which silently render a different clip. The RTL lane holds no
+  generator and cannot re-derive the stream, so this binding is
+  host-side by construction.
 - **Flow** — every committed golden case's bytes resolve through the
   host-feed path (`noise_stream_golden.resolve_canonical_bytes`: seed 13,
   slot rule) and bind against the receipt's per-case noise SHA-256; the
@@ -506,25 +523,39 @@ new noise policy requiring its own DR per DR-0008 §7/§13).
   no off-by-one state. The DR-0010 #75 owner row (one declared narrowing
   per sample; multiply-class ops = 0, declared-structural) and the
   emitted schedule constants are asserted.
-- **Mutations** — five planted faults, each required to be DETECTED:
+- **Mutations** — nine planted faults, each required to be DETECTED:
   dropped final byte (sticky truncation error), duplicated trailing byte
   (sticky overrun error), wrong declared slot (sticky slot-identity
   error), LSB truncation instead of half-even rounding (RTL capture
-  diverges from the golden lane), and a wrong slot-selection rule (RTL
-  rejects a clean, correctly-declared stream).
+  diverges from the golden lane), a wrong slot-selection rule (RTL
+  rejects a clean, correctly-declared stream), a length-preserving
+  drop/duplicate slip (the pre-render hash gate refuses it; fed anyway,
+  the RTL capture diverges while every shape check stays clean — the
+  fault only the identity binding can see), a wrong-stream substitution
+  (another slot's canonical bytes, correctly framed and correctly
+  declared), a mid-stream trigger-identity splice (sticky
+  identity-changed error), and a mutated identity binding (RTL rejects a
+  clean, correctly-declared stream).
 - **Host mirror** — `src/torchsynth_voice/noise_stream_golden.py` is the
-  bit-level convert mirror plus the host-feed resolve path and the
-  golden-receipt trace-digest binding, so the equivalence chain is model
+  bit-level convert mirror plus the host-feed resolve path, the
+  pre-render validation gate, and the golden-receipt trace-digest
+  binding, so the equivalence chain is model
   → mirror → RTL with no harness-parallel implementation anywhere.
 - **Tests** — `tests/test_noise_stream.py`: mirror-vs-model-lane equality
   over structured edge patterns and a 20k-word finite random sweep, all
   34 golden cases' byte/slot/lane digest bindings, 32-stream repetition,
   framing-validation refusals (dropped/duplicated/wrong-slot), the
+  pre-render gate (declared-digest binding, canonical seed-13 identity,
+  length-preserving slip and wrong-stream substitution refusals), the
   truncation mutant's divergence, and the trace-digest serialization
   binding against the receipt generator.
 - **Scope honesty** — the convert lane is the C8-accepted noise policy in
   RTL; streaming-transport integration (how the bytes arrive over a real
-  link) belongs to the #66/#77 transport lanes. The DR-0003 re-feed
+  link) belongs to the #66/#77 transport lanes, and so does the
+  DR-0010 pass/digest binding a render trigger must carry — the DUT
+  latches the sound identity it is presented, it does not hash the fed
+  bytes on chip (a receiver-side digest over the noise stream is not
+  implemented and not claimed). The DR-0003 re-feed
   obligation (2 × 705,600 B per clip, digest-bound per pass) is cited,
   not re-derived. Nothing here claims synthesis, layout, signoff, or
   hardware playback.

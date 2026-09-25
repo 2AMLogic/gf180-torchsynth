@@ -17,6 +17,18 @@
 //   code 1 SLOT_IDENTITY   : declared_slot != sound_index % 32 (C8 rule)
 //   code 2 BYTE_OVERRUN    : a byte was fed after the clip's full length
 //   code 3 STREAM_TRUNCATED: in_done arrived before the clip's full length
+//   code 4 IDENTITY_CHANGED: the bound trigger identity moved mid-stream
+//
+// Code 4 is the DR-0010 "Clip lifecycle" obligation in the noise lane: "a
+// trigger is bound to one sound identity ... and no others may write the
+// output stream", so clip staleness/mixing is excluded structurally. The
+// identity words are latched on the first enabled cycle of a stream and
+// every later cycle of that stream must present the same ones; splicing a
+// different sound's bytes into a stream that still satisfies the C8 slot
+// rule (e.g. sound_index 0 -> 32, both slot 0) is caught here and nowhere
+// else. The binding costs C2_WIDTH + 6 flops of live state, inside the
+// DR-0010 P2 live-state budget, and adds no multiply-class operation to
+// the #75 owner row.
 //
 // The clip byte length is SCHED_SAMPLES_PER_PASS x 4 from the generated
 // constants package (DR-0010 Accepted schedule), not a hardcoded width.
@@ -60,7 +72,10 @@ module noise_stream_dut (
     output reg  [7:0]                  error_code,
     output reg  [19:0]                 bytes_accepted,
     output reg  [17:0]                 samples_produced,
-    output reg  [31:0]                 narrow_count
+    output reg  [31:0]                 narrow_count,
+    // The trigger identity latched at the start of the active stream
+    // (zero while no stream is bound).
+    output reg  [4:0]                  bound_slot
 );
 
     // One clip of host-fed binary32 noise = 4 bytes per audio sample.
@@ -73,6 +88,10 @@ module noise_stream_dut (
 
     reg [31:0] byte_acc;      // reassembled little-endian bytes (b0 = LSB)
     reg [1:0]  byte_phase;    // position within the current sample
+
+    // DR-0010 clip lifecycle: one trigger, one sound identity.
+    reg                identity_bound;
+    reg [C2_WIDTH-1:0] bound_sound_index;
 
     // --- binary32 -> Q2.21 convert (the one declared narrowing site) -------
     // `bits` is the sample word completed by THIS cycle's byte (bytes arrive
@@ -143,6 +162,9 @@ module noise_stream_dut (
             narrow_count     <= 32'd0;
             byte_acc         <= 32'd0;
             byte_phase       <= 2'd0;
+            identity_bound    <= 1'b0;
+            bound_sound_index <= {C2_WIDTH{1'b0}};
+            bound_slot        <= 5'd0;
         end else if (!en) begin
             // Between streams: per-stream state clears to zero; the sticky
             // error survives (only rst clears it).
@@ -152,12 +174,26 @@ module noise_stream_dut (
             narrow_count     <= 32'd0;
             byte_acc         <= 32'd0;
             byte_phase       <= 2'd0;
+            identity_bound    <= 1'b0;
+            bound_sound_index <= {C2_WIDTH{1'b0}};
+            bound_slot        <= 5'd0;
         end else begin
             sample_valid <= 1'b0;
             // C8 slot identity: sticky.
             if (!error && (declared_slot != slot_expected)) begin
                 error      <= 1'b1;
                 error_code <= 8'd1;  // SLOT_IDENTITY
+            end
+            // DR-0010 clip lifecycle: bind the trigger identity on the
+            // first enabled cycle, then hold every later cycle to it.
+            if (!identity_bound) begin
+                identity_bound    <= 1'b1;
+                bound_sound_index <= sound_index;
+                bound_slot        <= declared_slot;
+            end else if (!error && ((sound_index != bound_sound_index)
+                                    || (declared_slot != bound_slot))) begin
+                error      <= 1'b1;
+                error_code <= 8'd4;  // IDENTITY_CHANGED
             end
             // Length validation: the stream must carry exactly one clip.
             if (in_done && (bytes_accepted != EXPECTED_BYTES) && !error) begin
