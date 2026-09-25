@@ -31,3 +31,36 @@ jobs:
         run: python3 tb/run_tb.py anchor
       - name: Constants refusal-gate check
         run: python3 tools/generate_rtl_constants.py --check
+
+  sim-lanes:
+    # One Python version: these RTL comparisons don't depend on the
+    # interpreter version, and running them across the ci.yml-style
+    # 3-version matrix would triple already-bounded RTL wall-clock for no
+    # verification value (issue #187).
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: "ADSR envelope engine lane (issue 70, iverilog, PDK-free)"
+        timeout-minutes: 10
+        run: python3 tb/run_tb.py adsr
+      - name: "Patch-control core lane (issue 69, iverilog, PDK-free)"
+        timeout-minutes: 10
+        run: python3 tb/run_tb.py patch
+      - name: "LFO + control-VCA engine lane (issue 71, iverilog, PDK-free)"
+        timeout-minutes: 10
+        run: python3 tb/run_tb.py lfo
+      - name: "Modulation-matrix + upsample lane (issue 72, iverilog, PDK-free)"
+        timeout-minutes: 60
+        run: python3 tb/run_tb.py modmatrix
+      - name: "Sine VCO engine lane (issue 73, iverilog, PDK-free)"
+        timeout-minutes: 90
+        run: python3 tb/run_tb.py vco
+      - name: "Square/saw VCO engine lane (issue 74, iverilog, PDK-free)"
+        timeout-minutes: 120
+        run: python3 tb/run_tb.py vco2
