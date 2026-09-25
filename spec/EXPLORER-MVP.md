@@ -25,8 +25,14 @@ default nebula, four seconds, 44100 Hz one-shot.
   lane; this MVP is software-only and implements none of it.
 - **No #65 favorites/locks/variation/import-export/migrations.** The only
   persisted state is the minimal session bookmark v1.
-- **No #66 transport backend work.** The backend seam is the landed
-  `render_artifact` adapter; nothing transport-shaped is added.
+- **No #66 transport backend work in this MVP.** The MVP's own backend seam
+  is the landed `render_artifact` adapter; nothing transport-shaped was added
+  by this document. Issue #66 has since added the separate, explicitly
+  labeled `--backend protocol-mock` alongside it — a software-only behavioral
+  mock whose rules live in [protocol/CLIENT.md](protocol/CLIENT.md). It
+  publishes this MVP's own synthetic fixture and changes no rendering path,
+  bookmark schema, session vocabulary or holdout refusal here, and it remains
+  no physical transport and no hardware claim.
 - **No holdout access.** Indices 96-127 are refused before renderer or store
   access on every path, including explicit requests and RNG choices. There is
   no unseal UI.
@@ -105,6 +111,7 @@ python3 tools/explore.py --store STORE --backend docker \
   --producer-root /clean/producer --selected INDEX ARTIFACT_ID SHA256 save BOOKMARK
 python3 tools/explore.py --store STORE --bookmark BOOKMARK repeat
 python3 tools/explore.py --store STORE --backend none --bookmark BOOKMARK audition
+python3 tools/explore.py --store STORE --backend protocol-mock --seed 7 random
 ```
 
 Commands follow the session vocabulary: `next`, `random`, `request INDEX`,
@@ -112,6 +119,8 @@ Commands follow the session vocabulary: `next`, `random`, `request INDEX`,
 `save PATH`, `recall PATH`, with `--selected`/`--bookmark` initial state.
 Each invocation is one session; the bookmark carries selection across
 processes. Success prints one JSON envelope: `backend` (honest label),
+`contract` (the contract identity a protocol-speaking backend negotiated, and
+`null` for `docker`/`fake`/`none`, which speak no wire protocol),
 `session` (the verified session `show()` payload — profile, global sound
 index, recorded runtime/provenance and the exact artifact reference/hash),
 `runtime_admission` and `preview`. `--backend none` configures no renderer,

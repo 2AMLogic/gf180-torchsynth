@@ -334,9 +334,21 @@ def build_session(
 
     `backend` selects the honest label: "docker" uses the #12 qualified
     `DockerBackend` through #15's adapter, "fake" uses deterministic synthetic
-    fixtures and a labeled fake player, and "none" configures no renderer.
-    `probe` carries the injected doubles for test and diagnostic inspection.
+    fixtures and a labeled fake player, "protocol-mock" drives the same
+    synthetic fixtures through the issue #66 host transport client against the
+    behavioral mock core (spec/protocol/CLIENT.md), and "none" configures no
+    renderer. `probe` carries the injected doubles for test and diagnostic
+    inspection, plus `contract` (the negotiated contract identity) for the
+    backends that speak the wire protocol.
     """
+
+    if backend == "protocol-mock":
+        # Local import: protocol_backend builds on this module's fake mode.
+        from .protocol_backend import build_protocol_mock_session
+
+        session, probe = build_protocol_mock_session(store_root, seed=seed)
+        probe["session"] = session
+        return session, probe
 
     store = ArtifactStore(store_root)
     probe: dict = {"store": store, "backend": backend}
