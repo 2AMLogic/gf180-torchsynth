@@ -460,22 +460,132 @@ new noise policy requiring its own DR per DR-0008 §7/§13).
   not re-derived. Nothing here claims synthesis, layout, signoff, or
   hardware playback.
 
+## Normalization replay controller + one-shot top (issue #77)
+
+`tb/run_tb.py normreplay` runs the bit-exact RTL normalization replay
+controller + the one-shot top's own two-pass sequencer
+(`tb/sv/normalization_replay_engine.sv` under
+`tb/sv/tb_normalization_replay_engine.sv`) against the frozen fixed
+model's own `normalize_words()` (`src/torchsynth_voice/fixed_voice.py:
+195-235`) — DR-0010's P4-decided architecture: two-pass re-render, no clip
+buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
+259-322`).
+
+- **DUT** — a synchronous FSM (idle → pass 1 → pass 2 → done, `rst`/`abort`
+  return to idle and discard render state) that owns exactly the module's
+  DR-0010 row: pass 1 peak tracking (an unconditional sign+magnitude
+  abs-select plus a compare every sample, folded into the mixer output per
+  the owner row's own wording), the branch decision at the declared clip
+  boundary (strict `peak_int > 2^21`), a once-per-clip U1.22 reciprocal
+  gain word (a combinational restoring long division, half-even at the
+  remainder — generalizing `tb/sv/adsr_engine.sv`'s `div_half_even` to an
+  unsigned numerator/denominator), and pass 2 replay: the gain multiply +
+  S5 half-even narrow with C7 saturation (normalized branch) or exact
+  identity passthrough (bypass branch), with `audio_out_valid` only ever
+  asserted in pass 2 (output release begins only after the branch
+  decision — AC3). Framing mirrors the #75 noise engine's sticky-error
+  register exactly: the host feeds `mix_valid` for the declared per-pass
+  sample count then pulses `mix_done`; an extra sample raises
+  `ERR_SAMPLE_OVERRUN`, a short pass raises `ERR_PASS_TRUNCATED`, and a
+  raised error survives every later trigger (only `rst` clears it, mirroring
+  the noise engine's `en`-drop-vs-`rst` distinction with `abort`/`rst`
+  here). Every op counter is exported sticky since `rst`.
+- **Fixtures** — two sources, per the issue's own fixture mapping: (1) the
+  isolated directed Q2.21 case grid from issue #52
+  (`torchsynth_voice.normalization_replay.directed_cases`/
+  `anchored_cases`) — below/at/above-one, peak tie, silence, the Q2.21
+  extremum, a late unique peak (index 176,399), tied maxima, and the two
+  DR-0006 release anchors; this is the grid that actually names "silence"
+  and "extrema" at this module's own boundary. (2) the frozen
+  `fixed-voice-golden-v1` receipt's four normalization-family full-voice
+  cases (`normalization:above/below/tie`,
+  `normalization-stress:anchor-3.9478583336`), regenerated through
+  `FixedVoiceModel.render()` exactly as
+  `tools/generate_fixed_voice_golden.py` constructs them and bound against
+  the receipt's own `mixer.pre_normalization`/`mixer.peak`/`mixer.gain`/
+  `mixer.output` trace digests before use — this module's own declared
+  RTL input interface (DR-0010's mixer-output interface), with no
+  dependency on issue #76's RTL landing. (Verified finding, not the
+  curated body's paraphrase: at the FIXED-model level all four full-voice
+  cases bypass — `branch.fixed` is `false` in the frozen receipt for every
+  one of them, including the anchor case; the isolated grid supplies every
+  divide-branch/extremum/silence case this issue's AC1 requires.)
+- **Flow** — every fixture case feeds its pre-normalization mix stream
+  through the DUT twice (pass 1, then pass 2 re-fed identically — the
+  two-pass re-render's own bit-identical-replay contract) and the captured
+  pass-2 output plus every status register (peak word, gain word, branch)
+  must equal the host mirror sample-exactly; one case (`fixed:above-one-min`)
+  is additionally rendered twice back-to-back with no reset between
+  triggers and must reproduce its own capture byte-for-byte (AC2: no
+  per-sample intermediate survives across passes or triggers); the DR-0010
+  #77 owner row's declared per-sample op counts (1 compare + 1 abs-select
+  per pass-1 sample; 1 gain multiply + 1 declared narrowing per pass-2
+  sample on the normalized branch, measured on the `fixed:extremum` case)
+  are hard-asserted, the schedule profile fields
+  (`SCHED_PASSES_PER_CLIP=2`, `SCHED_SAMPLES_PER_PASS=176400`,
+  `SCHED_CLIP_SAMPLE_SLOTS=352800`) are cross-checked for internal
+  consistency, and the emitted schedule constants are checked against the
+  landed package — the once-per-clip reciprocal division and the pass-1/
+  pass-2 transition are combinational (one clock edge), reported as a
+  PARTIAL-DUT headroom measurement against `SCHED_PASS2_FOLDED_CYCLES_MAX`
+  (no schedule-conformance or PPA/fit claim).
+- **Mutations** — five planted RTL faults, each required to be DETECTED:
+  always-on (the divide/multiply path applies even when `peak <= 1`,
+  demonstrated on `fixed:below-one-max`), always-off (the path never
+  applies even when `peak > 1`, on `fixed:above-one-min`), wrong-peak (the
+  tracker keeps the *last* sample fed instead of the max, on
+  `fixed:above-one-min`), wrong-reciprocal (the U1.22 gain word off by one
+  ULP at site S5, on a dedicated near-full-scale synthetic clip — the
+  committed directed grid's bodies stay three decades below unity by
+  design, so a 1-ULP gain error is invisible on them), and off-by-one (the
+  pass-1 sample-count boundary decided one sample early, dropping the true
+  peak from tracking — demonstrated on `fixed:late-peak`, whose unique
+  peak sits at the very last sample, index 176,399).
+- **Host mirror** — `src/torchsynth_voice/normalization_replay_golden.py`
+  adds no reimplemented normalization algorithm: `mirror_normalize` is
+  `fixed_voice.normalize_words()` itself, and `resolve_full_voice_case`
+  rebuilds one of the frozen receipt's normalization-family cases through
+  the composed model, so the equivalence chain is frozen model → RTL
+  directly, with no harness-parallel implementation anywhere.
+- **Tests** — `tests/test_normalization_replay_engine.py`: the mirror
+  wrapper's equality with `normalize_words` on every directed case, the
+  digest convention, every full-voice case's trace-digest binding against
+  the frozen receipt (plus its recorded branch decision), the unknown-case
+  refusal, and the full tb flow (skipped where Icarus Verilog is absent).
+- **Scope honesty** — this module owns the internal two-pass state machine
+  (idle → pass 1 → pass 2 → done) and the pass/digest *binding obligation*
+  the DR-0010 clip lifecycle contract states; it implements none of the
+  render-trigger/noise-stream wire transport commands themselves (the #66
+  lane) and makes no claim about issue #76's eventual mixer RTL interface
+  beyond the single Q2.21 word per sample DR-0010 already declares.
+  Nothing here claims synthesis, layout, signoff, hardware playback, or
+  sound fidelity.
+
 ## Gated, not in this increment
 
-The remaining audio-rate lanes (#76 mixer/normalization), any
-whole-source composition of the VCO/VCA audio-rate source lanes, the
-shadow exp2/tanh sites (a resident RTL approximation for either is
-the open DR-0008/DR-0010 item; #74 owns the declaration class and
-replays them host-side until a declared approximation is
-ratified), the serialized single-MACschedule pipeline itself (the RTL consumer of the `SCHED_*` constants),
-the integration of the #70/#71/#72 engines into the whole-voice one-shot top
-(the #78/#79 conformance lanes consume them there), a resident RTL
-implementation of the `**alpha` binary64 shadow (open DR-0008/DR-0010
-item; replayed host-side until a declared approximation is ratified),
-the concrete clock selection (#82/#83 timing evidence amends DR-0010), the
-#82/#83 area/fit/PPA validations, and any synthesis/PDK step. Nothing
-landed here claims synthesis, layout, signoff, or hardware conformance of
-any kind.
+Issue #76 (audio VCAs + the pre-normalization mixer) is the one remaining
+audio-rate lane not yet landed — DR-0010's module-ownership table splits it
+from #77 (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
+154-155`: #76 owns "Audio VCAs (3) + pre-normalization mixer", #77 owns
+"Normalization replay controller + one-shot top"), and #77's own section
+above lands independently of it by driving its declared mixer-output
+interface directly. Also still gated: any whole-source composition of the
+VCO/VCA audio-rate source lanes into a single top-level module (the actual
+integration of #70/#71/#72/#73/#74/#75/#76's RTL outputs — the #78/#79
+conformance lanes consume that composition), the shadow exp2/tanh sites (a
+resident RTL approximation for either is the open DR-0008/DR-0010 item;
+#74 owns the declaration class and replays them host-side until a
+declared approximation is ratified), the serialized single-MAC schedule
+pipeline itself (the RTL consumer of the `SCHED_*` constants at
+`SCHED_COUNTED_CYCLES_PER_SAMPLE` granularity — every landed engine above,
+including #77, runs its own sub-block at one sample per cycle and reports
+a PARTIAL-DUT headroom measurement against it, never a conformance claim),
+a resident RTL implementation of the `**alpha` binary64 shadow (open
+DR-0008/DR-0010 item; replayed host-side until a declared approximation is
+ratified), the concrete clock selection (#82/#83 timing evidence amends
+DR-0010), the #82/#83 area/fit/PPA validations, and any synthesis/PDK
+step. Nothing landed here claims synthesis, layout, signoff, or hardware
+conformance of any kind.
 
 ## Vector file shape (v1)
 
