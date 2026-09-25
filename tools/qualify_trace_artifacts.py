@@ -10,7 +10,8 @@ referenced byte, and records the bounded publication. ``--check-inputs`` and
 
 This tool owns the #24 process integration: the stock landed Docker backend
 accepts audio-only requests only, so the traced launch is implemented here and
-attaches the container-side capture provider built on ``trace_capture``.
+attaches the shared container-side capture provider,
+``trace_capture_provider.ProviderFactory``, which is built on ``trace_capture``.
 """
 
 import argparse
@@ -61,8 +62,9 @@ INDICES = [0, 1]
 
 # Python 3.9 driver executed inside the qualified image. It imports the landed
 # worker and the #23 capture modules directly from the read-only repository
-# mount, attaches a TraceCapture provider around the single Voice call, and
-# writes the selected-sound trace bytes plus their validated descriptors.
+# mount, attaches the shared trace_capture_provider.ProviderFactory around the
+# single Voice call, and writes the selected-sound trace bytes plus their
+# validated descriptors.
 DRIVER_SOURCE = '''\
 """Container-side #24 traced provider; Python 3.9, offline, writes /output."""
 import hashlib
@@ -75,64 +77,13 @@ sys.path.insert(0, "/repo/env/release-era")
 sys.path.insert(0, "/repo/src/torchsynth_voice")
 
 import render_artifact as worker
-import trace_capture
+import trace_capture_provider
 import trace_registry
 
 # Literal copy of trace_artifacts.NORMALIZATION_SEAMS: this driver runs on the
 # release image's Python 3.9, which cannot import the >=3.11 root package.
 # check_inputs asserts this copy matches the module constant.
 NORMALIZATION_SEAMS = ("mixer.pre_normalization", "mixer.peak", "mixer.gain")
-
-
-class ProviderSession(object):
-    def __init__(self, factory, session, torch):
-        self.factory = factory
-        self.session = session
-        self.torch = torch
-
-    def __enter__(self):
-        self.session.__enter__()
-        return self.factory.payloads
-
-    def __exit__(self, exc_type, exc, tb):
-        result = self.session.__exit__(exc_type, exc, tb)
-        if exc_type is None:
-            for item in self.session.inventory:
-                name = item["name"]
-                data = trace_capture.tensor_bytes(
-                    self.session.values[name], self.torch
-                )
-                if hashlib.sha256(data).hexdigest() != item["sha256"]:
-                    raise ValueError(
-                        "serialized bytes disagree with capture: " + name
-                    )
-                self.factory.descriptors[name] = item
-                self.factory.payloads[name] = data
-        return result
-
-
-class ProviderFactory(object):
-    def __init__(self, document, requested, batch_size):
-        self.document = document
-        self.requested = requested
-        self.batch_size = batch_size
-        self.payloads = {}
-        self.descriptors = {}
-
-    def __call__(self, request, voice, slot):
-        import torch
-        from torchsynth.util import normalize_if_clipping
-
-        session = trace_capture.TraceCapture(
-            voice,
-            self.document,
-            torch,
-            normalize_if_clipping,
-            names=self.requested,
-            slot=slot,
-            batch_size=self.batch_size,
-        )
-        return ProviderSession(self, session, torch)
 
 
 def main():
@@ -151,7 +102,7 @@ def main():
         raise ValueError(
             "normalization seams are worker-observed, not re-captured"
         )
-    factory = ProviderFactory(
+    factory = trace_capture_provider.ProviderFactory(
         document, requested, request["execution"]["batch_size"]
     )
     with warnings.catch_warnings(record=True) as seen:
