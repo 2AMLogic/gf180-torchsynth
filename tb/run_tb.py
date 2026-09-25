@@ -313,7 +313,13 @@ P4-decided two-pass re-render, no clip buffer):
    (last-sample-wins instead of max), wrong-reciprocal (off-by-one-ULP at
    S5), and off-by-one (the pass-1 framing boundary decided one sample
    early, demonstrated on the late-peak case) — and require every one to
-   be DETECTED.
+   be DETECTED, and
+6. exercise the pass/digest binding hook (issue #188,
+   spec/protocol/RENDER-TRIGGER.md): a ``bind_reject`` pulse at the
+   pass-1/pass-2 boundary, mid pass 2 and mid pass 1 must raise the sticky
+   ERR_BINDING_REJECTED (3), release no further sample, never assert
+   ``done``, and refuse a following clean trigger while sticky; a sixth
+   mutant that ignores ``bind_reject`` must be DETECTED by those scenarios.
 
 """
 from __future__ import annotations
@@ -557,6 +563,15 @@ NORMREPLAY_DIVIDE_MUTATION_CASE = "fixed:above-one-min"
 #: whose unique peak sits at the very last sample (index 176,399) — the
 #: natural vector for a pass-boundary-decided-one-sample-early fault.
 NORMREPLAY_OFF_BY_ONE_CASE = "fixed:late-peak"
+# Issue #188: the receiver's pass/digest binding rejection must discard the
+# clip entire. The mutant ignores bind_reject.
+NORMREPLAY_BIND_REJECT_ANCHOR = (
+    "end else if (bind_reject && (pass_index == P_PASS1 || "
+    "pass_index == P_PASS2)) begin"
+)
+NORMREPLAY_BIND_REJECT_MUTANT = "end else if (1'b0) begin"
+NORMREPLAY_BIND_REJECT_CASE = "fixed:above-one-min"
+NORMREPLAY_ERR_BINDING_REJECTED = 3
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
 SYNTH_PARAMETER = "adsr_1.alpha"
@@ -6289,12 +6304,20 @@ def normreplay_hexword(value: int) -> str:
 
 
 def normreplay_write_run(
-    workdir: Path, run: int, n1: int, n2: int, mix1, mix2
+    workdir: Path, run: int, n1: int, n2: int, mix1, mix2, reject=None
 ) -> None:
-    """One run's stimulus: pass-1/pass-2 declared counts + the two streams."""
+    """One run's stimulus: pass-1/pass-2 declared counts + the two streams.
 
+    ``reject`` is an optional ``(pass, sample)`` point at which the testbench
+    pulses the engine's ``bind_reject`` (issue #188's pass/digest binding,
+    spec/protocol/RENDER-TRIGGER.md) just before that sample is fed.
+    """
+
+    stim = "%d %d" % (n1, n2)
+    if reject is not None:
+        stim += " %d %d" % reject
     (workdir / ("run%d_stim.txt" % run)).write_text(
-        "%d %d\n" % (n1, n2), encoding="utf-8"
+        stim + "\n", encoding="utf-8"
     )
     (workdir / ("run%d_mix1.hex" % run)).write_text(
         "\n".join(normreplay_hexword(v) for v in mix1) + "\n", encoding="utf-8"
@@ -6360,6 +6383,63 @@ def normreplay_expected_status(diag: dict) -> list:
         1,
         3,
     ]
+
+
+def normreplay_binding_reject(
+    workdir: Path, simulator: str, formats, dut_sv: Path, *, report: bool
+) -> bool:
+    """Issue #188: a pass/digest binding rejection discards the clip entire.
+
+    DR-0010 "Clip lifecycle": one trigger is bound to one sound identity +
+    one noise-stream digest; a pass-2 mismatch discards the clip entire. The
+    receiver (spec/protocol/RENDER-TRIGGER.md) compares the transport-
+    declared digest at the pass-2 trigger and pulses ``bind_reject``. Each
+    scenario runs in its own simulation because the error is sticky until
+    ``rst``. Returns True only if every scenario behaves as specified.
+    """
+
+    clip = nr.directed_cases()[NORMREPLAY_BIND_REJECT_CASE]
+    out, _diag = nrg.mirror_normalize(clip, formats)
+    mid = 5
+    # (label, reject point, expected capture, extra clean run after it)
+    scenarios = [
+        ("pass-2 boundary (declared-digest check)", (2, 0), [], True),
+        ("mid pass 2 (noise-stream fault)", (2, mid), out[:mid], False),
+        ("mid pass 1 (noise-stream fault)", (1, 3), [], False),
+    ]
+    all_ok = True
+    for index, (label, point, want_capture, then_clean) in enumerate(scenarios):
+        sdir = workdir / ("scenario%d" % index)
+        sdir.mkdir(parents=True, exist_ok=True)
+        normreplay_write_run(sdir, 0, len(clip), len(clip), clip, clip, point)
+        runs = 1
+        if then_clean:
+            # A later clean trigger must NOT render while the reject is
+            # sticky: the discard is never hidden by the next clip.
+            normreplay_write_run(sdir, 1, len(clip), len(clip), clip, clip)
+            runs = 2
+        captures, statuses = normreplay_simulate(sdir, simulator, runs, dut_sv)
+        # error, error_code, done, pass_index
+        want_status = [1, NORMREPLAY_ERR_BINDING_REJECTED, 0, 0]
+        got_status = [statuses[0][0], statuses[0][1], statuses[0][5], statuses[0][6]]
+        ok = captures[0] == want_capture and got_status == want_status
+        if then_clean:
+            got_after = [statuses[1][0], statuses[1][1], statuses[1][5], statuses[1][6]]
+            ok = ok and captures[1] == [] and got_after == want_status
+        if report:
+            print(
+                "  binding reject @ %s: %d sample(s) released (expected %d), "
+                "status (error, error_code, done, pass_index) %r (expected %r)%s -> %s"
+                % (
+                    label, len(captures[0]), len(want_capture), got_status,
+                    want_status,
+                    "; a following clean trigger renders nothing while the "
+                    "reject is sticky" if then_clean else "",
+                    "OK" if ok else "FAIL",
+                )
+            )
+        all_ok = all_ok and ok
+    return all_ok
 
 
 def normreplay(workdir: Path, simulator: str) -> int:
@@ -6642,13 +6722,46 @@ def normreplay(workdir: Path, simulator: str) -> int:
     )
     ok = ok and mutations_ok
 
+    # 6. Pass/digest binding (issue #188, DR-0010 "Clip lifecycle"): the
+    #    receiver's bind_reject discards the clip entire, and a mutant that
+    #    ignores it must be caught by the same scenarios.
+    print("binding rejection (issue #188, spec/protocol/RENDER-TRIGGER.md):")
+    reject_ok = normreplay_binding_reject(
+        workdir / "bind-reject", simulator, formats, NORMREPLAY_DUT_SV,
+        report=True,
+    )
+    print("binding rejection -> %s" % ("OK" if reject_ok else "FAIL"))
+    ok = ok and reject_ok
+    mut_dir = workdir / "mut-ignore-bind-reject"
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated_sv = mut_dir / "normalization_replay_engine_mut.sv"
+    mutated_sv.write_text(
+        mutate_sv(
+            NORMREPLAY_DUT_SV.read_text(encoding="utf-8"),
+            NORMREPLAY_BIND_REJECT_ANCHOR, NORMREPLAY_BIND_REJECT_MUTANT,
+            "ignore-bind-reject",
+        ),
+        encoding="utf-8",
+    )
+    reject_detected = not normreplay_binding_reject(
+        mut_dir, simulator, formats, mutated_sv, report=False
+    )
+    print(
+        "mutation ignore-bind-reject (RTL, case %s): %s"
+        % (NORMREPLAY_BIND_REJECT_CASE,
+           "DETECTED (binding-rejection scenarios fail)" if reject_detected
+           else "NOT DETECTED")
+    )
+    ok = ok and reject_detected
+
     if not ok:
         print("NORMREPLAY RUN FAILED")
         return 1
     print(
         "NORMREPLAY RUN PASSED (%d isolated + full-voice cases bit-exact "
-        "+ replay pair bit-exact + owner-row/op-count asserts + all 5 "
-        "mutations detected)" % len(cases)
+        "+ replay pair bit-exact + owner-row/op-count asserts + binding "
+        "rejection discards the clip entire + all 6 mutations detected)"
+        % len(cases)
     )
     return 0
 

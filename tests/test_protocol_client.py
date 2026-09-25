@@ -344,11 +344,14 @@ class RefusalTests(unittest.TestCase, ClientHarness):
         self.assertIs(caught.exception.code, ErrorCode.BAD_SEQUENCE)
         self.assertIs(core.state, SessionState.READY)
 
-    def test_unallocated_render_command_refused(self):
-        # The audio transfer/render command set is unallocated (issue #63).
+    def test_unallocated_command_refused(self):
+        # Only RENDER_TRIGGER/NOISE_STREAM (0x15/0x16, RENDER-TRIGGER.md) are
+        # allocated on the render side; the audio output transfer set and
+        # every other reserved code stay unallocated.
         _, _, client = self.make()
-        with self.assertRaises(ClientStateError):
-            client.transact(0x30)
+        for code in (0x17, 0x30):
+            with self.assertRaises(ClientStateError):
+                client.transact(code)
 
     def test_frame_larger_than_transport_refused(self):
         _, transport, client = self.make()

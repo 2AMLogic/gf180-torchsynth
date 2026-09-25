@@ -22,9 +22,24 @@ from torchsynth_voice.core_protocol import (  # noqa: E402
     CMD_PATCH_NAME,
     CMD_PATCH_OPEN,
     CMD_PATCH_VALUE,
+    CMD_NOISE_STREAM,
     CMD_READY,
+    CMD_RENDER_TRIGGER,
     CMD_RESET,
+    CAP_NAME_KEYED_PATCH_LOAD,
+    CAP_RENDER,
+    CAP_RESET,
     COMMAND_NAMES,
+    KNOWN_CAPABILITIES,
+    NOISE_STREAM_CLIP_BYTES,
+    NOISE_STREAM_DIGEST_BYTES,
+    NoiseChunk,
+    PayloadError,
+    RenderTrigger,
+    decode_noise_stream,
+    decode_render_trigger,
+    encode_noise_stream,
+    encode_render_trigger,
     ErrorCode,
     KIND_COMMAND,
     KIND_RESPONSE,
@@ -360,10 +375,27 @@ class RegistryTests(unittest.TestCase):
                 CMD_PATCH_VALUE,
                 CMD_PATCH_COMMIT,
                 CMD_PATCH_ABORT,
+                CMD_RENDER_TRIGGER,
+                CMD_NOISE_STREAM,
                 CMD_RESET,
                 CMD_ERROR,
             },
         )
+
+    def test_render_codes_are_pinned(self):
+        # spec/protocol/RENDER-TRIGGER.md (issue #188).
+        self.assertEqual(CMD_RENDER_TRIGGER, 0x15)
+        self.assertEqual(CMD_NOISE_STREAM, 0x16)
+        self.assertEqual(COMMAND_NAMES[0x15], "RENDER_TRIGGER")
+        self.assertEqual(COMMAND_NAMES[0x16], "NOISE_STREAM")
+        self.assertEqual(CAP_RENDER, 0x0004)
+        self.assertEqual(
+            KNOWN_CAPABILITIES, CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET | CAP_RENDER
+        )
+
+    def test_reserved_codes_stay_unallocated(self):
+        for code in list(range(0x17, 0x20)) + list(range(0x21, 0xFE)) + [0xFF]:
+            self.assertNotIn(code, COMMAND_NAMES)
 
     def test_no_live_note_commands_exist(self):
         for name in COMMAND_NAMES.values():
@@ -383,6 +415,8 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(ErrorCode.DUPLICATE_NAME, 0x0B)
         self.assertEqual(ErrorCode.TX_TIMEOUT, 0x0C)
         self.assertEqual(ErrorCode.PAYLOAD_LENGTH, 0x0D)
+        self.assertEqual(ErrorCode.RENDER_BINDING, 0x0E)
+        self.assertEqual(ErrorCode.NOISE_STREAM, 0x0F)
 
     def test_remaining_placeholders_are_exactly_the_unbound_three(self):
         by_name = {entry.name: entry for entry in PLACEHOLDER_WIDTHS}
@@ -408,6 +442,71 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(AUDIO_SAMPLE_BYTES, 3)
         self.assertEqual(PARAM_VALUE_BYTES, 4)
         self.assertEqual(PATCH_HASH_BYTES, 32)
+
+
+class RenderCodecTests(unittest.TestCase):
+    """RENDER_TRIGGER / NOISE_STREAM payloads (RENDER-TRIGGER.md)."""
+
+    DIGEST = hashlib.sha256(b"noise").digest()
+
+    def test_clip_length_is_the_profile_noise_length(self):
+        from torchsynth_voice import noise_stream_golden as nsg
+        from torchsynth_voice.fixedpoint import schedule as sched
+
+        schedule = sched.require_accepted_schedule()
+        self.assertEqual(NOISE_STREAM_CLIP_BYTES, nsg.EXPECTED_NOISE_BYTES)
+        self.assertEqual(
+            NOISE_STREAM_CLIP_BYTES, 4 * sched.constant(schedule, "samples_per_pass")
+        )
+        self.assertEqual(NOISE_STREAM_DIGEST_BYTES, 32)
+
+    def test_render_trigger_wire_bytes(self):
+        payload = encode_render_trigger(2, b"sound-7", self.DIGEST)
+        self.assertEqual(
+            payload,
+            b"\x02" + b"\x07\x00sound-7" + b"\x20\x00" + self.DIGEST,
+        )
+        self.assertEqual(
+            decode_render_trigger(payload), RenderTrigger(2, b"sound-7", self.DIGEST)
+        )
+
+    def test_render_trigger_rejects_bad_pass_and_digest_width(self):
+        with self.assertRaises(ValueError):
+            encode_render_trigger(3, b"s", self.DIGEST)
+        with self.assertRaises(ValueError):
+            encode_render_trigger(1, b"s", self.DIGEST[:31])
+        good = encode_render_trigger(1, b"s", self.DIGEST)
+        for bad in (
+            b"\x00" + good[1:],          # pass 0
+            b"\x03" + good[1:],          # pass 3
+            good[:-1],                   # truncated digest
+            good + b"\x00",              # trailing byte
+            b"\x01\x01\x00s\x1f\x00" + self.DIGEST[:31],  # 31-byte digest
+        ):
+            with self.assertRaises(PayloadError):
+                decode_render_trigger(bad)
+
+    def test_noise_stream_wire_bytes(self):
+        payload = encode_noise_stream(1, 0x01020304, b"\xaa\xbb")
+        self.assertEqual(payload, b"\x01\x04\x03\x02\x01\x02\x00\xaa\xbb")
+        self.assertEqual(
+            decode_noise_stream(payload), NoiseChunk(1, 0x01020304, b"\xaa\xbb")
+        )
+
+    def test_noise_stream_rejects_malformed(self):
+        with self.assertRaises(ValueError):
+            encode_noise_stream(1, 0, b"")
+        with self.assertRaises(ValueError):
+            encode_noise_stream(0, 0, b"x")
+        good = encode_noise_stream(2, 5, b"xy")
+        for bad in (
+            b"\x04" + good[1:],          # pass 4
+            good[:-1],                   # truncated data
+            good + b"\x00",              # trailing byte
+            b"\x01\x00\x00\x00\x00\x00\x00",  # empty data region
+        ):
+            with self.assertRaises(PayloadError):
+                decode_noise_stream(bad)
 
 
 if __name__ == "__main__":

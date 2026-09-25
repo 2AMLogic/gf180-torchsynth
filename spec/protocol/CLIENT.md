@@ -15,9 +15,12 @@ behavior.
   UART/SPI/USB bindings are issue #81's deliverable and are unimplemented by
   construction; nothing here is evidence of hardware, RTL, synthesis fidelity,
   or sound playback.
-- The audio transfer/streaming and render-trigger command set stays
-  **unallocated** (issue #63). The client refuses any command outside the
-  landed registry. Audio sourcing is a mock-boundary data path packed with the
+- The render trigger and host-fed noise stream are defined in
+  [RENDER-TRIGGER.md](RENDER-TRIGGER.md) (issue #188): `HostClient.render_clip`
+  drives both passes of one trigger under one sound identity and one declared
+  noise-stream digest, computed over the exact bytes it sends. The audio
+  output transfer/streaming command set stays **unallocated**. The client
+  refuses any command outside the landed registry. Audio sourcing is a mock-boundary data path packed with the
   bound C1 sample codec, never a protocol command.
 
 ## Location and shape
@@ -95,7 +98,7 @@ packs them on demand through the bound C1 codec (`encode_audio_payload`,
 3-byte little-endian Q2.21, half-even, saturating). The source is validated as
 finite reals; a truncated or padded payload fails decode. This models a data
 source at the core boundary so the codec and its packing rule are testable
-before issue #63 allocates transfer commands; it is not RTL behavior and not a
+before any output transfer command is allocated; it is not RTL behavior and not a
 fidelity claim.
 
 ## Transport selection is a configuration act

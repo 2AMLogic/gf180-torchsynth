@@ -686,7 +686,13 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   `ERR_SAMPLE_OVERRUN`, a short pass raises `ERR_PASS_TRUNCATED`, and a
   raised error survives every later trigger (only `rst` clears it, mirroring
   the noise engine's `en`-drop-vs-`rst` distinction with `abort`/`rst`
-  here). Every op counter is exported sticky since `rst`.
+  here). Every op counter is exported sticky since `rst`. A `bind_reject`
+  pulse during pass 1 or pass 2 (the protocol receiver's DR-0010
+  pass/digest binding failure, issue #188,
+  `spec/protocol/RENDER-TRIGGER.md`) raises the sticky
+  `ERR_BINDING_REJECTED` (3), returns to idle, releases no further sample
+  and never asserts `done`: the clip is discarded entire. It is ignored
+  with no render open.
 - **Fixtures** — two sources, per the issue's own fixture mapping: (1) the
   isolated directed Q2.21 case grid from issue #52
   (`torchsynth_voice.normalization_replay.directed_cases`/
@@ -726,7 +732,14 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   pass-2 transition are combinational (one clock edge), reported as a
   PARTIAL-DUT headroom measurement against `SCHED_PASS2_FOLDED_CYCLES_MAX`
   (no schedule-conformance or PPA/fit claim).
-- **Mutations** — five planted RTL faults, each required to be DETECTED:
+- **Binding rejection (issue #188)** — three dedicated simulations on
+  `fixed:above-one-min` pulse `bind_reject` at the pass-1/pass-2 boundary
+  (where the receiver's declared-digest comparison happens: zero samples
+  released, and a following clean trigger renders nothing while the error
+  is sticky), after five pass-2 samples (exactly those five released, the
+  rest withheld), and mid pass 1 (zero released); each must end with
+  `error=1`, `error_code=3`, `done=0`, idle.
+- **Mutations** — six planted RTL faults, each required to be DETECTED:
   always-on (the divide/multiply path applies even when `peak <= 1`,
   demonstrated on `fixed:below-one-max`), always-off (the path never
   applies even when `peak > 1`, on `fixed:above-one-min`), wrong-peak (the
@@ -737,7 +750,9 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   design, so a 1-ULP gain error is invisible on them), and off-by-one (the
   pass-1 sample-count boundary decided one sample early, dropping the true
   peak from tracking — demonstrated on `fixed:late-peak`, whose unique
-  peak sits at the very last sample, index 176,399).
+  peak sits at the very last sample, index 176,399), and
+  ignore-bind-reject (the `bind_reject` branch never taken; the three
+  binding-rejection scenarios must then fail).
 - **Host mirror** — `src/torchsynth_voice/normalization_replay_golden.py`
   adds no reimplemented normalization algorithm: `mirror_normalize` is
   `fixed_voice.normalize_words()` itself, and `resolve_full_voice_case`
@@ -751,9 +766,13 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   refusal, and the full tb flow (skipped where Icarus Verilog is absent).
 - **Scope honesty** — this module owns the internal two-pass state machine
   (idle → pass 1 → pass 2 → done) and the pass/digest *binding obligation*
-  the DR-0010 clip lifecycle contract states; it implements none of the
-  render-trigger/noise-stream wire transport commands themselves (the #66
-  lane) and makes no claim about issue #76's eventual mixer RTL interface
+  the DR-0010 clip lifecycle contract states, through `bind_reject`; it
+  implements none of the render-trigger/noise-stream wire transport
+  commands themselves (specified in `spec/protocol/RENDER-TRIGGER.md` and
+  implemented only in the software mock; the RTL receiver that would drive
+  `bind_reject` is not implemented), holds no digest and computes none
+  (declared-digest binding only; a receiver-side digest is open, issue
+  #207), and makes no claim about issue #76's eventual mixer RTL interface
   beyond the single Q2.21 word per sample DR-0010 already declares.
   Nothing here claims synthesis, layout, signoff, hardware playback, or
   sound fidelity.

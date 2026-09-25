@@ -50,6 +50,21 @@
 // (tb/sv/noise_stream_dut.sv, tb/README.md's noise section). Backpressure
 // is host-side only: the core never blocks mid-clip on its own.
 //
+// Pass/digest binding (DR-0010 "Clip lifecycle", issue #188,
+// spec/protocol/RENDER-TRIGGER.md): the protocol receiver binds one trigger
+// to one sound identity + one transport-declared noise-stream digest and
+// checks the pass-2 RENDER_TRIGGER against it. When it answers
+// ERR_RENDER_BINDING or ERR_NOISE_STREAM for the open render it pulses
+// ``bind_reject``: while a render is open (PASS1/PASS2) the engine raises
+// the sticky ``ERR_BINDING_REJECTED``, returns to idle, releases no further
+// ``audio_out_valid`` and never asserts ``done`` for that render — the clip
+// is discarded entire. A rejection at the pass-1/pass-2 boundary (where
+// the declared-digest check happens) therefore releases zero samples. With
+// no render open (IDLE/DONE) ``bind_reject`` is ignored: no clip exists to
+// discard. This module holds no digest and computes none; the digest
+// comparison lives in the receiver (declared-digest binding only; whether
+// the core should also hash received bytes is open, issue #207).
+//
 // Framing (AC3 — exactly 176,400 samples, no stale/missing/duplicate
 // sample): the host feeds ``mix_valid`` for exactly
 // ``SCHED_SAMPLES_PER_PASS`` cycles per pass, then (with ``mix_valid``
@@ -88,6 +103,7 @@ module normalization_replay_engine (
 
     input  wire start,   // idle/done, no sticky error: begin a new render
     input  wire abort,   // any state: -> idle, discard live render state
+    input  wire bind_reject, // open render: sticky ERR_BINDING_REJECTED, discard
 
     input  wire signed [C1_WIDTH-1:0] mix_in,
     input  wire        mix_valid,  // one pre-normalization mix sample
@@ -124,6 +140,7 @@ module normalization_replay_engine (
     localparam [7:0] ERR_NONE            = 8'd0;
     localparam [7:0] ERR_SAMPLE_OVERRUN  = 8'd1;
     localparam [7:0] ERR_PASS_TRUNCATED  = 8'd2;
+    localparam [7:0] ERR_BINDING_REJECTED = 8'd3;
 
     localparam [1:0] P_IDLE  = 2'd0;
     localparam [1:0] P_PASS1 = 2'd1;
@@ -236,6 +253,16 @@ module normalization_replay_engine (
             gain_word          <= {C9_WIDTH{1'b0}};
             audio_out_valid    <= 1'b0;
             // error/error_code and every op counter are sticky since rst.
+        end else if (bind_reject && (pass_index == P_PASS1 || pass_index == P_PASS2)) begin
+            // DR-0010: a pass/digest binding failure discards the clip
+            // entire. Sticky until rst, so no later trigger hides it.
+            error              <= 1'b1;
+            error_code         <= ERR_BINDING_REJECTED;
+            pass_index         <= P_IDLE;
+            samples_this_pass  <= 18'd0;
+            busy               <= 1'b0;
+            done               <= 1'b0;
+            audio_out_valid    <= 1'b0;
         end else begin
             audio_out_valid <= 1'b0;  // default; PASS2's valid branch overrides
             case (pass_index)

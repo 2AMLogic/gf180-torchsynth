@@ -6,7 +6,14 @@
 // SCHED_SAMPLES_PER_PASS, deliberately off by one for the framing-fault
 // demonstrations), run<r>_mix1.hex and run<r>_mix2.hex ($readmemh, one
 // 24-bit two's-complement Q2.21 word per line, feed order == sample
-// order). Each run: `start` for one cycle from idle/done, feed n1 mix
+// order). run<r>_stim.txt may carry two more integers, "rp ra": pulse
+// ``bind_reject`` for one cycle (mix_valid low) in pass rp (1 or 2) just
+// before sample ra of that pass is fed (ra = 0 in pass 2 is the pass-1/
+// pass-2 boundary, where the receiver's declared-digest check happens —
+// issue #188, spec/protocol/RENDER-TRIGGER.md); the remaining samples are
+// still fed, so the capture proves nothing is released after the reject.
+// rp = 0 (or the two-integer form) means no reject. Each run: `start` for
+// one cycle from idle/done, feed n1 mix
 // words with mix_valid held (one every cycle), one cycle with mix_valid
 // low + mix_done high (the #75 noise engine's byte/in_done handshake
 // shape, at sample granularity), then the same for n2 pass-2 words.
@@ -36,6 +43,7 @@ module tb;
     reg                        rst = 1'b1;
     reg                        start = 1'b0;
     reg                        abort = 1'b0;
+    reg                        bind_reject = 1'b0;
     reg  signed [C1_WIDTH-1:0] mix_in = {C1_WIDTH{1'b0}};
     reg                        mix_valid = 1'b0;
     reg                        mix_done = 1'b0;
@@ -63,6 +71,7 @@ module tb;
         .rst               (rst),
         .start             (start),
         .abort             (abort),
+        .bind_reject       (bind_reject),
         .mix_in            (mix_in),
         .mix_valid         (mix_valid),
         .mix_done          (mix_done),
@@ -96,6 +105,7 @@ module tb;
     integer RUNS;
     integer r;
     integer n1, n2;
+    integer rp, ra;
     integer fd;
     integer code;
 
@@ -113,10 +123,20 @@ module tb;
                 $display("TB-ERROR cannot open %0s", fname);
                 $finish;
             end
-            code = $fscanf(fd, "%d %d", n1, n2);
+            rp = 0;
+            ra = 0;
+            code = $fscanf(fd, "%d %d %d %d", n1, n2, rp, ra);
             $fclose(fd);
-            if (code != 2) begin
-                $display("TB-ERROR %0s must carry 2 integers", fname);
+            if (code != 2 && code != 4) begin
+                $display("TB-ERROR %0s must carry 2 or 4 integers", fname);
+                $finish;
+            end
+            if (code == 2) begin
+                rp = 0;
+                ra = 0;
+            end
+            if (rp < 0 || rp > 2 || ra < 0) begin
+                $display("TB-ERROR reject point (%0d, %0d) invalid", rp, ra);
                 $finish;
             end
             if (n1 < 0 || n1 > MAX_SAMPLES || n2 < 0 || n2 > MAX_SAMPLES) begin
@@ -131,10 +151,21 @@ module tb;
         end
     endtask
 
+    task pulse_reject;
+        begin
+            mix_valid   = 1'b0;
+            bind_reject = 1'b1;
+            @(negedge clk);
+            bind_reject = 1'b0;
+        end
+    endtask
+
     task feed_pass1;
         integer k;
         begin
             for (k = 0; k < n1; k = k + 1) begin
+                if (rp == 1 && ra == k)
+                    pulse_reject;
                 mix_in    = mix1_mem[k];
                 mix_valid = 1'b1;
                 @(negedge clk);
@@ -152,6 +183,8 @@ module tb;
         integer k;
         begin
             for (k = 0; k < n2; k = k + 1) begin
+                if (rp == 2 && ra == k)
+                    pulse_reject;
                 mix_in    = mix2_mem[k];
                 mix_valid = 1'b1;
                 @(negedge clk);
@@ -209,6 +242,7 @@ module tb;
         rst   = 1'b1;
         start = 1'b0;
         abort = 1'b0;
+        bind_reject = 1'b0;
         @(negedge clk);
         @(negedge clk);
         rst = 1'b0;

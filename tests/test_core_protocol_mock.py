@@ -545,10 +545,14 @@ class InventoryNameTableTests(HarnessTestCase):
         self.assertEqual(core.active_patch["values"], {target: encode_param_word(Fraction(1, 2))})
 
     def test_registry_has_no_note_or_streaming_commands(self):
+        # The one STREAM-named command is the host-fed NOISE input stream
+        # (spec/protocol/RENDER-TRIGGER.md, issue #188); the audio OUTPUT
+        # transfer/streaming set stays unallocated and live-note is absent.
         for name in COMMAND_NAMES.values():
             self.assertNotIn("NOTE", name)
-            self.assertNotIn("STREAM", name)
             self.assertNotIn("AUDIO", name)
+            if name != "NOISE_STREAM":
+                self.assertNotIn("STREAM", name)
 
     def test_every_inventory_name_carries_a_bound_word(self):
         inventory = json.loads(INVENTORY_PATH.read_text())
