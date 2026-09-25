@@ -2,7 +2,6 @@
 
 This repository uses **Loom** for AI-powered development orchestration.
 
-**Loom Version**: 0.19.344
 **Installation Date**: 2026-09-18
 
 > **This file is the operating core** — only what an agent must know to act
