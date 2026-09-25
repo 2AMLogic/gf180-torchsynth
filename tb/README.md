@@ -526,6 +526,103 @@ new noise policy requiring its own DR per DR-0008 §7/§13).
   not re-derived. Nothing here claims synthesis, layout, signoff, or
   hardware playback.
 
+## Audio VCAs + pre-normalization mixer (issue #76)
+
+`tb/run_tb.py mix` runs the bit-exact audio VCA + pre-normalization mixer
+engine (`tb/sv/audio_mix_engine.sv` under
+`tb/sv/tb_audio_mix_engine.sv`) against the frozen whole-voice receipt
+(`sim/reference/fixed-voice-golden-v1.json`) and the declared directed
+fixture manifest (`spec/reference/directed-voice-v1.json`):
+
+- **Engine core** — the frozen model's VCA/mixer tail as exact integer
+  RTL: three C1 Q2.21 products (`raw x amp`) with ONE declared half-even
+  narrowing each (sites `vca_1.S4`/`vca_2.S4`/`vca_3.S4`) and C7
+  saturation; three level products accumulated exactly in the model's own
+  Q6.42 48-bit-class accumulator with **no intermediate rounding**
+  (DR-0008 §2 / DR-0010 A8); one declared half-even narrowing to the C1
+  `mixer.pre_normalization` word (site `mixer.S4`) with C7 saturation;
+  and the pre-normalization peak feed (`|mix|` plus the running magnitude
+  maximum under a strict `>`, so the earliest maximal sample wins —
+  exactly `fixed_voice.normalize_words`' reduction). **This lane has no
+  declared shadow site**: no transcendental and no binary64 value
+  participates anywhere, so it is trace-load-bearing in full. Every width
+  is imported from the emitted constants package (`ACC_FRAC_BITS =
+  2 * C1_FRAC_BITS`); nothing is register-invented.
+- **Mixer gains and the noise curve** — the three level words are the S1
+  entry quantizations (site `mixer.level_q`) of the **observed physical**
+  `mixer.vco_1`/`mixer.vco_2`/`mixer.noise` levels. The recorded upstream
+  input curves (`[1.0, 1.0, 0.025]`, i.e. `physical = normalized **
+  (1/curve)` — linear for both oscillators, power-40 for noise) live at
+  the measured-observation seam and are **never** reimplemented in RTL:
+  the noise lane's gain enters through exactly the same entry site as the
+  oscillator gains. The flow reads each lane's curve exponent
+  independently out of that lane's own recorded (normalized, physical)
+  pair and binds the manifest pair to the receipt case's committed
+  parameter, and the gain mutations below prove a wrong curve is caught.
+- **Scope boundary** — the C9 normalization replay (the strict `peak > 1`
+  branch, the U1.22 reciprocal, the S5 gain multiply) is **#77's** owner
+  row and is absent here; the engine only produces what #77 consumes. The
+  peak-feed compare is exported but charged to #77's row, never folded
+  into this lane's adds.
+- **Cases** — all 26 param-committed receipt cases (the 8
+  development-corpus cases stay digest-custody only) plus the declared
+  `special:silence` / `special:near-silence` / `special:stress` directed
+  fixtures, each walked over the full 176,400-sample clip. The declared
+  fixture classes the AC names are asserted against the cases that carry
+  them: **silence** (`special:silence` — every mixer level zero, an
+  identically zero mix, peak 0, and the VCAs still running: a zero level
+  gates the SUM, never the VCA), **single-source** (`source:vco_1` /
+  `source:vco_2` / `source:noise`, exactly one nonzero level each),
+  **all-source** (`special:stress`, all three levels at 1.0),
+  **high-depth** (`boundary:vco_1.mod_depth:upper`,
+  `boundary:vco_2.mod_depth:upper`, plus `special:stress`'s twenty routes
+  and every modulation/rate depth at 1.0), and **stress**
+  (`normalization-stress:anchor-3.9478583336` and `special:stress`, whose
+  accumulator drives 4,334 measured C7 saturations at both rails).
+- **Flow** — contract binding (receipt DR-0008 status, hash-linked LUT
+  digest, constants-package digest; the directed manifest through its own
+  identity/upstream-pin validator) + per-case sample-exact RTL runs of
+  all six captured streams (three post-VCA words, the mix word, its
+  magnitude, the running peak), back-to-back trigger replay (no reset
+  between runs; the second run must reproduce its solo golden capture
+  byte-for-byte — the level words, the peak register, and the counters are
+  per-trigger), exported op counters asserted against the DR-0010 #76
+  owner row (6 mults + 2 adds + 4 narrowings per sample, the measured C7
+  saturation and C6 rounding totals at the four declared sites, one
+  peak-feed compare reported against #77's row, and zero Q6.42
+  accumulator-band faults — the band is a model *contract*, not a
+  saturation site, and the model refuses if a sum leaves it), the complete
+  clip schedule (walked samples == emitted `samples_per_pass`), and the
+  emitted schedule constants checked against their live emission.
+- **Mutations** — nine planted faults, each required to be DETECTED **and
+  localized to exactly the traces its fault can reach**: mixer level route
+  swap, vco_2 VCA polarity flip, a mix-word DC offset (caught on the
+  silence fixture), truncation instead of half-even at the mixer
+  narrowing, dropped C7 saturation (caught on the stress fixture), and a
+  dropped noise source term (all RTL); plus the noise input curve dropped
+  (the case's own normalized level fed as though the lane were linear), a
+  one-ULP noise gain error, and an amplitude-column route swap
+  (stimulus). The polarity flip is deliberately asserted to be invisible
+  to the magnitude feed — `|mix|` and the running peak are sign-blind — so
+  it must be caught on the signed lane and mix words; a lane that only
+  checked the peak would miss it.
+- **Host mirror** — `src/torchsynth_voice/mix_golden.py` re-walks the lane
+  with the model's own primitives and `derive_case` **refuses** unless the
+  mirror reproduces the composed model's own `*.post_vca` /
+  `mixer.pre_normalization` / `mixer.peak` rows and its per-site sticky
+  counter records; the receipt's frozen per-trace digests then pin the
+  model's rows. The equivalence chain is frozen receipt -> model -> mirror
+  -> RTL with no harness-parallel implementation anywhere.
+- **Tests** — `tests/test_audio_mix_engine.py`: the declared accumulator
+  format/sites, the RTL's imported-constants and no-normalization-here
+  properties, fixture-class availability, per-lane curve-exponent
+  independence, peak-feed semantics (earliest maximal index, silence has
+  none), structural mirror edges (unity gain, both saturation rails,
+  half-even ties, signs, a negative level word, the accumulator band),
+  mirror-vs-model row equality pinned to the frozen digests, the silence
+  fixture's properties, and the full tb flow (skipped where Icarus Verilog
+  is absent).
+
 ## Normalization replay controller + one-shot top (issue #77)
 
 `tb/run_tb.py normreplay` runs the bit-exact RTL normalization replay
@@ -629,13 +726,13 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
 
 ## Gated, not in this increment
 
-Issue #76 (audio VCAs + the pre-normalization mixer) is the one remaining
-audio-rate lane not yet landed — DR-0010's module-ownership table splits it
-from #77 (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
-154-155`: #76 owns "Audio VCAs (3) + pre-normalization mixer", #77 owns
-"Normalization replay controller + one-shot top"), and #77's own section
-above lands independently of it by driving its declared mixer-output
-interface directly. Also still gated: any whole-source composition of the
+Both audio-rate lanes DR-0010's module-ownership table splits
+(`spec/decision-records/0010-one-shot-rtl-microarchitecture.md: 154-155`: #76
+owns "Audio VCAs (3) + pre-normalization mixer", #77 owns "Normalization
+replay controller + one-shot top") have now landed, and #77's section above
+still stands on its own: it drives its declared mixer-output interface
+directly rather than #76's RTL, so neither lane's evidence depends on the
+other's. Still gated: any whole-source composition of the
 VCO/VCA audio-rate source lanes into a single top-level module (the actual
 integration of #70/#71/#72/#73/#74/#75/#76's RTL outputs — the #78/#79
 conformance lanes consume that composition), the shadow exp2/tanh sites (a
