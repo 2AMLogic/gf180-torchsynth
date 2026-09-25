@@ -236,6 +236,38 @@ on-chip generator (that would be a new noise policy needing its own DR):
    LSB truncation instead of half-even (RTL), and wrong slot-selection
    rule (RTL) — and require every one to be DETECTED.
 
+``normreplay`` (issue #77) runs the bit-exact RTL normalization replay
+controller + one-shot top's two-pass sequencer
+(tb/sv/normalization_replay_engine.sv) against the frozen fixed model's own
+``normalize_words()`` (src/torchsynth_voice/fixed_voice.py:195-235; DR-0010's
+P4-decided two-pass re-render, no clip buffer):
+
+1. run the isolated directed Q2.21 case grid (issue #52's own boundary
+   fixtures: below/at/above-one, peak tie, silence, the Q2.21 extremum, a
+   late unique peak, tied maxima, and the two release anchors) plus the
+   frozen fixed-voice-golden-v1 receipt's four normalization-family
+   full-voice cases (regenerated through FixedVoiceModel.render() and
+   bound against the receipt's own mixer.pre_normalization/peak/gain/
+   output trace digests before use — no dependency on issue #76's RTL),
+2. feed every case's pre-normalization mix stream through the DUT twice
+   (pass 1 peak tracking, pass 2 replay) and require the captured pass-2
+   output plus every status register (peak word, U1.22 gain word, branch
+   decision) to equal the host mirror sample-exactly, with output release
+   only after the branch decision,
+3. render one case twice back-to-back with no reset between triggers and
+   require the second capture to reproduce the first byte-for-byte (AC2:
+   no per-sample intermediate is retained across passes or triggers),
+4. hard-assert the DR-0010 #77 owner row's declared per-sample op counts
+   (1 compare + 1 abs-select per pass-1 sample folded into the mixer
+   output; 1 gain multiply + 1 declared narrowing per pass-2 sample on
+   the normalized branch) plus the emitted schedule constants against the
+   landed package, and
+5. plant five breakpoint mutations — always-on, always-off, wrong-peak
+   (last-sample-wins instead of max), wrong-reciprocal (off-by-one-ULP at
+   S5), and off-by-one (the pass-1 framing boundary decided one sample
+   early, demonstrated on the late-peak case) — and require every one to
+   be DETECTED.
+
 """
 from __future__ import annotations
 
@@ -262,6 +294,8 @@ from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import lfo_golden as lgo  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
 from torchsynth_voice import noise_stream_golden as nsg  # noqa: E402
+from torchsynth_voice import normalization_replay as nr  # noqa: E402
+from torchsynth_voice import normalization_replay_golden as nrg  # noqa: E402
 from torchsynth_voice import vco_golden as vg  # noqa: E402
 from torchsynth_voice import vco2_golden as vc  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
@@ -422,6 +456,51 @@ NOISE_TRUNCATION_ANCHOR = "rounded = q_rounded;"
 NOISE_TRUNCATION_MUTANT = "rounded = q_raw;"
 NOISE_SLOT_RULE_ANCHOR = "wire [4:0] slot_expected = sound_index[4:0];"
 NOISE_SLOT_RULE_MUTANT = "wire [4:0] slot_expected = sound_index[4:0] ^ 5'd1;"
+
+NORMREPLAY_DUT_SV = TB_ROOT / "sv/normalization_replay_engine.sv"
+NORMREPLAY_TB_SV = TB_ROOT / "sv/tb_normalization_replay_engine.sv"
+#: The isolated case the AC2 back-to-back replay pair is demonstrated on
+#: (a divide-branch case: replay must reproduce the gain-word computation
+#: and the applied narrowing identically the second time, with no
+#: per-sample intermediate retained across the pair).
+NORMREPLAY_REPLAY_CASE = "fixed:above-one-min"
+#: Mutation seams (anchored; mutate_sv refuses if the anchor moved).
+NORMREPLAY_ALWAYS_ON_ANCHOR = "if (peak_word > UNITY_INT) begin"
+NORMREPLAY_ALWAYS_ON_MUTANT = "if (1'b1) begin"
+NORMREPLAY_ALWAYS_OFF_MUTANT = "if (1'b0) begin"
+NORMREPLAY_WRONG_PEAK_ANCHOR = (
+    "if (mix_mag > peak_word)\n"
+    "                                peak_word <= mix_mag;"
+)
+NORMREPLAY_WRONG_PEAK_MUTANT = (
+    "if (1'b1)\n"
+    "                                peak_word <= mix_mag;"
+)
+NORMREPLAY_WRONG_RECIPROCAL_ANCHOR = (
+    "gain_word         <= recip_quo[C9_WIDTH-1:0];"
+)
+NORMREPLAY_WRONG_RECIPROCAL_MUTANT = (
+    "gain_word         <= recip_quo[C9_WIDTH-1:0] + 1'b1;"
+)
+NORMREPLAY_OFF_BY_ONE_ANCHOR = (
+    "P_PASS1: begin\n"
+    "                    if (mix_valid) begin\n"
+    "                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin"
+)
+NORMREPLAY_OFF_BY_ONE_MUTANT = (
+    "P_PASS1: begin\n"
+    "                    if (mix_valid) begin\n"
+    "                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS - 18'd1) begin"
+)
+#: Cases the always-on/always-off/wrong-peak/wrong-reciprocal mutations are
+#: demonstrated on (mirrors tests/test_normalization_replay.py's own
+#: ForbiddenSubstitutesMustFail case choices where named there).
+NORMREPLAY_BYPASS_MUTATION_CASE = "fixed:below-one-max"
+NORMREPLAY_DIVIDE_MUTATION_CASE = "fixed:above-one-min"
+#: The off-by-one framing mutation is demonstrated on the one directed case
+#: whose unique peak sits at the very last sample (index 176,399) — the
+#: natural vector for a pass-boundary-decided-one-sample-early fault.
+NORMREPLAY_OFF_BY_ONE_CASE = "fixed:late-peak"
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
 SYNTH_PARAMETER = "adsr_1.alpha"
@@ -4721,6 +4800,396 @@ def noise(workdir: Path, simulator: str) -> int:
     return 0
 
 
+def normreplay_wrong_reciprocal_clip() -> list:
+    """A near-full-scale divide-branch clip for the wrong-reciprocal mutant.
+
+    ``normalization_replay.directed_cases()``'s bodies stay three decades
+    below unity (by the module's own design, so the inserted peak stays
+    unique) — a 1-ULP U1.22 gain error moves the narrowed output of a tiny
+    sample by an immeasurable fraction of an output LSB, so none of those
+    committed cases can demonstrate this mutation. This synthetic clip
+    (not part of the committed golden grid) instead holds every sample at
+    magnitude ``peak_int - 1`` (alternating sign), so a 1-ULP gain error
+    moves nearly every sample's narrowed output — the mutation this
+    module's own S5 narrow site must never silently pass.
+    """
+    peak_int = nr.UNITY_INT + 1  # the smallest peak that divides
+    body = peak_int - 1
+    clip = [body if i % 2 == 0 else -body for i in range(nr.CLIP_SAMPLES)]
+    clip[100] = peak_int
+    return clip
+
+
+def normreplay_hexword(value: int) -> str:
+    """One C1_WIDTH (24-bit) two's-complement word, $readmemh-ready."""
+    return "%06x" % (value & 0xFFFFFF)
+
+
+def normreplay_write_run(
+    workdir: Path, run: int, n1: int, n2: int, mix1, mix2
+) -> None:
+    """One run's stimulus: pass-1/pass-2 declared counts + the two streams."""
+
+    (workdir / ("run%d_stim.txt" % run)).write_text(
+        "%d %d\n" % (n1, n2), encoding="utf-8"
+    )
+    (workdir / ("run%d_mix1.hex" % run)).write_text(
+        "\n".join(normreplay_hexword(v) for v in mix1) + "\n", encoding="utf-8"
+    )
+    (workdir / ("run%d_mix2.hex" % run)).write_text(
+        "\n".join(normreplay_hexword(v) for v in mix2) + "\n", encoding="utf-8"
+    )
+
+
+def normreplay_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path):
+    """Compile + run the normreplay TB; return (captures, statuses) per run."""
+
+    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
+    if simulator == "iverilog":
+        vvp = workdir / "normreplay.vvp"
+        _run(
+            [
+                "iverilog", "-g2012", "-o", str(vvp),
+                str(CONSTANTS_PKG_SV), str(dut_sv), str(NORMREPLAY_TB_SV),
+            ],
+            cwd=workdir,
+        )
+        _run(["vvp", "-n", str(vvp)], cwd=workdir)
+    else:
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    captures = []
+    statuses = []
+    for r in range(runs):
+        captured = [
+            int(line)
+            for line in (
+                workdir / ("run%d_captured.txt" % r)
+            ).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        status = [
+            int(v)
+            for v in (
+                workdir / ("run%d_status.txt" % r)
+            ).read_text(encoding="utf-8").split()
+        ]
+        captures.append(captured)
+        statuses.append(status)
+    return captures, statuses
+
+
+def normreplay_expected_status(diag: dict) -> list:
+    """The clean-run status row the host mirror's diagnostics predict.
+
+    Matches tb_normalization_replay_engine.sv's status line order: error,
+    error_code, peak_word, gain_word, branch_normalized, done, pass_index
+    (P_DONE == 3) — the prefix every clean run must share.
+    """
+
+    return [
+        0, 0,
+        diag["peak_word"],
+        diag["gain_word"],
+        1 if diag["normalized_branch"] else 0,
+        1,
+        3,
+    ]
+
+
+def normreplay(workdir: Path, simulator: str) -> int:
+    """Issue #77 flow: the normalization replay controller + one-shot top's
+    two-pass sequencer vs the frozen model's own ``normalize_words()``."""
+
+    try:
+        formats = AcceptedFormats()
+    except ChoiceNotAccepted as error:
+        print("NORMREPLAY REFUSED: accepted register refused: %s" % error)
+        return 1
+
+    ok = True
+
+    # 1. The isolated directed Q2.21 case grid (issue #52's own boundary
+    #    fixtures): below/at/above-one, peak tie, silence, extrema,
+    #    late-peak, tied-max, plus the two release anchors — this is the
+    #    grid that actually names "silence" and "extrema" (AC1).
+    cases = []
+    directed = nr.directed_cases()
+    for label in sorted(directed):
+        cases.append((label, directed[label]))
+    anchored = nr.anchored_cases()
+    for label in sorted(anchored):
+        cases.append((label, anchored[label][0]))
+
+    # 2. Full-voice normalization-family cases (fixture mapping source 1):
+    #    regenerated through the composed fixed model and bound against the
+    #    frozen fixed-voice-golden-v1 receipt's own per-trace digests before
+    #    use as this module's own declared RTL input interface
+    #    (mixer.pre_normalization) — no dependency on issue #76's RTL.
+    receipt = json.loads(NOISE_RECEIPT_PATH.read_bytes())
+    receipt_cases = {c["id"]: c for c in receipt["cases"]}
+    fixture_ok = True
+    for case_id in nrg.FULL_VOICE_CASES:
+        fixed, _diag = nrg.resolve_full_voice_case(case_id, formats)
+        want = receipt_cases[case_id]
+        for trace in (
+            "mixer.pre_normalization", "mixer.peak", "mixer.gain", "mixer.output",
+        ):
+            if nrg.digest_words(fixed[trace]) != want["traces"][trace]:
+                print(
+                    "NORMREPLAY FAILED: %s regenerated %s diverges from the "
+                    "frozen fixed-voice-golden-v1 receipt" % (case_id, trace)
+                )
+                fixture_ok = False
+        cases.append((case_id, fixed["mixer.pre_normalization"]))
+    print(
+        "fixture regeneration: %d isolated boundary cases + %d full-voice "
+        "cases, every full-voice trace digest bound to the frozen receipt "
+        "-> %s" % (len(directed) + len(anchored), len(nrg.FULL_VOICE_CASES),
+                   "OK" if fixture_ok else "FAIL")
+    )
+    ok = ok and fixture_ok
+
+    # AC2: back-to-back replay pair — the same case rendered twice with no
+    # reset in between must reproduce its own capture byte-for-byte (no
+    # per-sample intermediate survives across passes OR across triggers).
+    replay_clip = directed[NORMREPLAY_REPLAY_CASE]
+    cases.append((NORMREPLAY_REPLAY_CASE + "[replay-a]", replay_clip))
+    cases.append((NORMREPLAY_REPLAY_CASE + "[replay-b]", replay_clip))
+
+    # 3. Host mirror expectations (normalize_words() itself, no
+    #    reimplementation) + the committed-case RTL run.
+    case_dir = workdir / "committed"
+    case_dir.mkdir(parents=True, exist_ok=True)
+    expected = {}
+    for index, (label, mix_words) in enumerate(cases):
+        out, diag = nrg.mirror_normalize(mix_words, formats)
+        expected[label] = (out, diag)
+        normreplay_write_run(
+            case_dir, index, len(mix_words), len(mix_words), mix_words, mix_words
+        )
+    captures, statuses = normreplay_simulate(
+        case_dir, simulator, len(cases), NORMREPLAY_DUT_SV
+    )
+
+    bitexact_ok = True
+    replay_positions = {}
+    for index, (label, mix_words) in enumerate(cases):
+        out, diag = expected[label]
+        captured = captures[index]
+        status = statuses[index]
+        if label.endswith("[replay-a]") or label.endswith("[replay-b]"):
+            replay_positions[label] = index
+        if captured != out:
+            print("NORMREPLAY FAILED: %s capture != host mirror output:" % label)
+            for i, (want, got) in enumerate(zip(out, captured)):
+                if want != got:
+                    print(
+                        "  first mismatch at sample %d: expected %d, got %d"
+                        % (i, want, got)
+                    )
+                    break
+            else:
+                print(
+                    "  length mismatch: expected %d samples, got %d"
+                    % (len(out), len(captured))
+                )
+            bitexact_ok = False
+            continue
+        want_status = normreplay_expected_status(diag)
+        if status[:7] != want_status:
+            print(
+                "NORMREPLAY FAILED: %s status %r != expected %r "
+                "(error, error_code, peak_word, gain_word, "
+                "branch_normalized, done, pass_index)"
+                % (label, status[:7], want_status)
+            )
+            bitexact_ok = False
+    print(
+        "RTL bit-exactness: %d cases (isolated + full-voice) match the "
+        "host mirror sample-exactly, status registers clean -> %s"
+        % (len(cases), "OK" if bitexact_ok else "FAIL")
+    )
+    ok = ok and bitexact_ok
+
+    replay_ok = (
+        captures[replay_positions[NORMREPLAY_REPLAY_CASE + "[replay-a]"]]
+        == captures[replay_positions[NORMREPLAY_REPLAY_CASE + "[replay-b]"]]
+        == expected[NORMREPLAY_REPLAY_CASE + "[replay-a]"][0]
+    )
+    print(
+        "replay/reset (AC2): %r rendered twice back-to-back (no reset "
+        "between triggers) reproduces its own capture byte-for-byte -> %s"
+        % (NORMREPLAY_REPLAY_CASE, "OK" if replay_ok else "FAIL")
+    )
+    ok = ok and replay_ok
+
+    # 4. DR-0010 #77 owner row (op counts, reported) + AC3 framing +
+    #    schedule-constants emission check, from a dedicated single-render
+    #    run so "since rst" counters equal exactly this one clip's counts.
+    try:
+        schedule = sched.require_accepted_schedule()
+    except ScheduleNotAccepted as error:
+        print("NORMREPLAY REFUSED: DR-0010 schedule register refused: %s" % error)
+        return 1
+    budget_dir = workdir / "budget"
+    budget_dir.mkdir(parents=True, exist_ok=True)
+    budget_clip = nr.directed_cases()["fixed:extremum"]  # divide branch
+    normreplay_write_run(
+        budget_dir, 0, len(budget_clip), len(budget_clip), budget_clip, budget_clip
+    )
+    _, budget_statuses = normreplay_simulate(
+        budget_dir, simulator, 1, NORMREPLAY_DUT_SV
+    )
+    (
+        b_error, b_error_code, b_peak, b_gain, b_branch, b_done, b_pass,
+        b_compares, b_selects, b_recip_divs, b_mults, b_narrows, b_sats,
+    ) = budget_statuses[0]
+
+    def sc(name: str):
+        return sched.constant(schedule, name)
+
+    samples_per_pass = sc("samples_per_pass")
+    passes_per_clip = sc("passes_per_clip")
+    clip_sample_slots = sc("clip_sample_slots")
+    pass2_folded_cycles_max = sc("pass2_folded_cycles_max")
+
+    owner_ok = (
+        b_error == 0 and b_branch == 1
+        and b_compares == samples_per_pass
+        and b_selects == samples_per_pass
+        and b_recip_divs == 1
+        and b_mults == samples_per_pass
+        and b_narrows == samples_per_pass
+    )
+    per_clip = {
+        "pass-1 compares (1/sample, folded into the mixer output)": (
+            b_compares, samples_per_pass,
+        ),
+        "pass-1 abs-selects (1/sample, folded into the mixer output)": (
+            b_selects, samples_per_pass,
+        ),
+        "per-clip reciprocal divisions (declared extra, 0 or 1)": (
+            b_recip_divs, None,
+        ),
+        "pass-2 gain multiplies (normalized branch, 1/sample)": (
+            b_mults, samples_per_pass,
+        ),
+        "pass-2 declared narrowings (normalized branch, 1/sample)": (
+            b_narrows, samples_per_pass,
+        ),
+    }
+    for name, (actual, limit) in per_clip.items():
+        if limit is None:
+            print("  budget: %d %s -> n/a (reported)" % (actual, name))
+            continue
+        verdict = "OK" if actual == limit else "FAIL"
+        owner_ok = owner_ok and actual == limit
+        print(
+            "  budget: %d %s vs DR-0010 #77 owner-row count %d -> %s"
+            % (actual, name, limit, verdict)
+        )
+    slots_consistent = clip_sample_slots == passes_per_clip * samples_per_pass
+    print(
+        "  budget: passes_per_clip=%d, samples_per_pass=%d, "
+        "clip_sample_slots=%d (== passes x samples_per_pass) -> %s"
+        % (
+            passes_per_clip, samples_per_pass, clip_sample_slots,
+            "OK" if (passes_per_clip == 2 and slots_consistent) else "FAIL",
+        )
+    )
+    owner_ok = owner_ok and passes_per_clip == 2 and slots_consistent
+    print(
+        "  budget: the once-per-clip reciprocal division and the pass-1/"
+        "pass-2 transition are combinational (one clock edge) -> within "
+        "pass2_folded_cycles_max=%d headroom (PARTIAL-DUT measurement, no "
+        "schedule-conformance or PPA/fit claim)" % pass2_folded_cycles_max
+    )
+    try:
+        emitted = codegen.emit(schedule_payload=schedule)
+        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+        matches = emitted.package_text == landed and (
+            sched.SCHEDULE_ID in emitted.emitted_ids
+        )
+        print(
+            "  budget constants: landed %s matches the live emission of both "
+            "accepted registers -> %s"
+            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        )
+        owner_ok = owner_ok and matches
+    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
+        print("  budget constants: emission failed -> %s" % error)
+        return 1
+    ok = ok and owner_ok
+
+    # 5. Mutations (AC6): every planted fault MUST be detected.
+    mutations_ok = True
+
+    def run_mutation(label, anchor, replacement, case_id, clip=None):
+        mut_dir = workdir / ("mut-" + label)
+        mut_dir.mkdir(parents=True, exist_ok=True)
+        mutated_sv = mut_dir / "normalization_replay_engine_mut.sv"
+        mutated_sv.write_text(
+            mutate_sv(
+                NORMREPLAY_DUT_SV.read_text(encoding="utf-8"),
+                anchor, replacement, label,
+            ),
+            encoding="utf-8",
+        )
+        if clip is None:
+            clip = nr.directed_cases()[case_id]
+        normreplay_write_run(mut_dir, 0, len(clip), len(clip), clip, clip)
+        mut_captures, mut_statuses = normreplay_simulate(
+            mut_dir, simulator, 1, mutated_sv
+        )
+        pristine_out, _pristine_diag = nrg.mirror_normalize(clip, formats)
+        detected = (
+            mut_captures[0] != pristine_out
+            or mut_statuses[0][0] != 0  # a sticky error is also a divergence
+        )
+        print(
+            "mutation %s (RTL, case %s): %s"
+            % (label, case_id, "DETECTED (diverges from the pristine golden "
+               "capture)" if detected else "NOT DETECTED")
+        )
+        return detected
+
+    mutations_ok &= run_mutation(
+        "always-on", NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_ON_MUTANT,
+        NORMREPLAY_BYPASS_MUTATION_CASE,
+    )
+    mutations_ok &= run_mutation(
+        "always-off", NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_OFF_MUTANT,
+        NORMREPLAY_DIVIDE_MUTATION_CASE,
+    )
+    mutations_ok &= run_mutation(
+        "wrong-peak", NORMREPLAY_WRONG_PEAK_ANCHOR, NORMREPLAY_WRONG_PEAK_MUTANT,
+        NORMREPLAY_DIVIDE_MUTATION_CASE,
+    )
+    mutations_ok &= run_mutation(
+        "wrong-reciprocal", NORMREPLAY_WRONG_RECIPROCAL_ANCHOR,
+        NORMREPLAY_WRONG_RECIPROCAL_MUTANT, "synthetic:near-full-scale",
+        clip=normreplay_wrong_reciprocal_clip(),
+    )
+    mutations_ok &= run_mutation(
+        "off-by-one", NORMREPLAY_OFF_BY_ONE_ANCHOR, NORMREPLAY_OFF_BY_ONE_MUTANT,
+        NORMREPLAY_OFF_BY_ONE_CASE,
+    )
+    ok = ok and mutations_ok
+
+    if not ok:
+        print("NORMREPLAY RUN FAILED")
+        return 1
+    print(
+        "NORMREPLAY RUN PASSED (%d isolated + full-voice cases bit-exact "
+        "+ replay pair bit-exact + owner-row/op-count asserts + all 5 "
+        "mutations detected)" % len(cases)
+    )
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -4729,7 +5198,7 @@ def main(argv=None) -> int:
         default="selftest",
         choices=["selftest", "anchor", "adsr", "patch", "lfo", "modmatrix",
                  "vco",
-                 "vco2", "noise"],
+                 "vco2", "noise", "normreplay"],
         help="'selftest' proves the harness; 'anchor' runs the real "
         "golden-vector flow through the format-true DUT; 'adsr' runs the "
         "issue #70 ADSR engine against the frozen fixed model's golden "
@@ -4744,7 +5213,9 @@ def main(argv=None) -> int:
         "VCO engine against the frozen fixed model's golden vectors; "
         "'noise' runs the issue #75 host-fed "
         "exact noise-stream lane against the landed fixed-voice golden "
-        "receipt",
+        "receipt; 'normreplay' runs the issue #77 normalization replay "
+        "controller + one-shot top's two-pass sequencer against the "
+        "frozen fixed model's own normalize_words()",
     )
     parser.add_argument(
         "--simulator",
@@ -4777,7 +5248,10 @@ def main(argv=None) -> int:
         "lfo": lfo,
         "modmatrix": modmatrix,
         "vco": vco,
-        "vco2": vco2,        "noise": noise,    }
+        "vco2": vco2,
+        "noise": noise,
+        "normreplay": normreplay,
+    }
     command = commands[args.command]
 
     if args.workdir is not None:
