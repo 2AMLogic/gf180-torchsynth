@@ -286,30 +286,90 @@ under `sim/reference/fixed-voice-golden-v1-traces/`):
   receipt's per-trace digests; the expected output is the host mirror's
   sine-lane re-walk, pinned to the receipt's frozen `vco_1.raw` digest;
   the directed sidecar bytes must unpack word-exactly to the mirror.
-  Coverage spans unmodulated 440 Hz, upper tuning, upper mod depth with
-  67,370 measured MIDI clamps (the min/mid/max frequency sweep), upper
-  initial phase, and the whole directed/calibration case set.
+  Receipt coverage spans unmodulated 440 Hz, upper tuning, upper mod
+  depth with 67,370 measured MIDI clamps, upper initial phase, and the
+  whole directed/calibration case set — but every receipt case sits at
+  keyboard MIDI 69 and only at the *upper* end of each vco_1 parameter,
+  so the band extrema come from the directed vector set below.
+- **Directed min/mid/max matrix** —
+  `sim/reference/sine-vco-golden-v1/`, emitted by
+  `tools/generate_sine_vco_golden.py`. Twenty-six committed vectors in
+  two classes, following the #74 square/saw generator's convention:
+  - *frozen-binding* (`frozen:*`, 4): the receipt cases whose
+    `vco_1.raw` f32le sidecars are retained. The vector binds the frozen
+    trace digest and the sidecar bytes, so the RTL is validated directly
+    against the frozen word stream with no harness mirror in the loop.
+  - *directed regime* (22): the full `keyboard.midi_f0` {0, 63.5, 127} x
+    `vco_1.initial_phase` {-pi, 0, +pi} matrix, each cell both
+    unmodulated (`mod_depth = 0`, no pitch route) and modulated (full
+    depth through the ADSR-2 pitch route, the receipt's own route). The
+    composition's vco_1 pitch column is unipolar, so the modulated cell
+    is directed *into* the band: `+96` semitones from the bottom and
+    middle of the keyboard band, `-96` from the top — at `+96` the top
+    cell would saturate the MIDI clamp on every sample and render a
+    trace identical to its unmodulated sibling. Both the generator and
+    the tb **assert** that non-vacuity (every modulated cell's
+    `vco_1.raw` must differ from its unmodulated sibling's), so a
+    degenerate fixture fails rather than counting as coverage. Four
+    corners the matrix cannot reach follow: `mod_depth = -96` against an
+    LFO-driven pitch column at the top of the band and against the ADSR
+    column at the bottom (the lower MIDI clamp arm, 75,043 measured
+    clamps), and `tuning` at both band ends held outside the MIDI band
+    for all 176,400 samples (`0 - 24` below, `127 + 24` above). The
+    committed truth for these is
+    `FixedVoiceModel.render()`'s own `vco_1.raw` words (digest + jitter
+    pins); the host mirror is required to reproduce every digest
+    exactly at generation time, so the vectors carry the model's bits,
+    not the mirror's. `tools/generate_sine_vco_golden.py --check`
+    regenerates them in memory and refuses any drift.
+
+  The tb *asserts* matrix completeness: a missing (frequency, phase,
+  modulation) cell, or a missing signed-minimum corner, fails the run
+  rather than quietly narrowing the acceptance criterion.
 - **Flow** — contract binding (receipt DR-0008 status, hash-linked LUT
-  digest, constants-package digest) + per-case sample-exact RTL runs
-  over the full 176,400-sample clip (every `vco_1.raw` word AND
-  post-step phase word), back-to-back trigger replay (no reset between
-  runs; the second run must reproduce its solo golden capture
-  byte-for-byte — the initial phase word and counters are
-  per-trigger), exported op counters asserted against the DR-0010 #73
-  owner rows (pitch path 3 mults / 6 adds / 3 narrows / 1 exp2 +
+  digest, constants-package digest; every directed vector additionally
+  passes `verify_accepted_contract`, which refuses a stale constants
+  package or choice register with "regenerate, don't recompile") +
+  per-case sample-exact RTL runs over the full 176,400-sample clip
+  (every `vco_1.raw` word AND post-step phase word) for both the 26
+  receipt cases and the 26 directed vectors, back-to-back trigger
+  replay (no reset between runs; the second run must reproduce its solo
+  golden capture byte-for-byte — the initial phase word and counters
+  are per-trigger), exported op counters asserted against the DR-0010
+  #73 owner rows (pitch path 3 mults / 6 adds / 3 narrows / 1 exp2 +
   phase+LUT 1/2/1: the engine declares 3/7/4 RTL ops per sample and the
   host shadow supplies the fourth mult; the complete clip schedule is
-  asserted: walked samples == emitted samples_per_pass), the emitted
-  schedule constants checked against their live emission, and five
-  planted mutations each required to be DETECTED against the pristine
-  frozen truth — wrong LUT address, dropped phase increment, and
-  phase-wrap saturation (RTL, caught on trace rows), plus the
-  un-clamped pitch (the model's MIDI clamp band dropped from the pitch
-  formation) and the selector-vs-blend mod input (the blended pitch
-  column replaced by the control-rate selector pick), both planted
-  stimulus-side through the declared shadow: the mirror re-derives the
-  Q16.15 words from the mutated pitch exactly as the integrated lane
-  would consume them, so the fault reaches the trace the AC names.
+  asserted twice — on the receipt replay case and on the heaviest
+  directed cell `freq:max-phase:max-mod` — walked samples == emitted
+  samples_per_pass == the canonical clip), the emitted schedule
+  constants checked against their live emission, and eight planted
+  mutations each required to be DETECTED against the pristine frozen
+  truth:
+  - **RTL, caught on trace rows** — wrong LUT address, dropped phase
+    increment, phase-wrap saturation, and the **zeroed initial phase**
+    (the one-time turn-word injection dropped, demonstrated on a
+    `phase = +pi` cell; non-vacuity is asserted — the case's
+    initial-phase word must be nonzero).
+  - **RTL, caught on property rows** — the **dropped tuning term** (the
+    pitch sum loses `tuning`). Because the `midi->Hz exp2` is
+    host-replayed, the in-RTL pitch path's observable surface today is
+    the exported counters, not the trace: the mutation is planted on
+    the statically clamped `127 + 24` corner, where dropping tuning
+    takes the measured clamp count from 176,400 to 0. Non-vacuity is
+    asserted — the case must carry a nonzero tuning word *and* clamps
+    on every sample.
+  - **Stimulus side through the declared shadow** — the un-clamped
+    pitch (the model's MIDI clamp band dropped from the pitch
+    formation), the selector-vs-blend mod input (the blended pitch
+    column replaced by the control-rate selector pick), and the
+    **dropped tuning term again on the trace surface** (the mirror
+    re-derives the Q16.15 words with `tuning = 0`, exactly what an
+    implementer who forgot tuning would feed the lane, on the unclamped
+    `69 + 24` case). The mirror re-derives the words as the integrated
+    lane would consume them, so these faults reach the trace the AC
+    names. This split is the honest consequence of the declared shadow
+    boundary, not a weaker check: the tuning fault is required to be
+    detected on *both* surfaces.
 - **Host mirror** — `src/torchsynth_voice/vco_golden.py` re-walks the
   sine lane through the model's own primitives (the exp2 shadow
   replayed host-side like the anchor flow); the frozen receipt's
@@ -318,9 +378,15 @@ under `sim/reference/fixed-voice-golden-v1-traces/`):
   harness-parallel implementation anywhere.
 - **Tests** — `tests/test_vco_engine.py`: receipt structure + bindings,
   sidecar byte custody, full/prefix mirror-vs-frozen-digest equality,
-  the half-even initial-phase turn word, first-increment-first phase
-  dataflow, and the full tb flow (skipped where Icarus Verilog is
-  absent).
+  the half-even initial-phase turn word (including the negative-phase
+  modular wrap: `-pi` injects `2^31`), first-increment-first phase
+  dataflow, the directed matrix's completeness and its agreement with
+  the *inventory's own* declared parameter bands, per-vector DR-0008
+  hash-linking, both static clamp corners, mirror-vs-committed-model
+  equality on the (min frequency, min phase) cell, and the full tb flow
+  (skipped where Icarus Verilog is absent). The generator's `--check`
+  determinism gate is a slow test, skipped unless `GF180_SLOW_TESTS=1`
+  (it re-renders every directed case through the fixed model).
 
 ## Square/saw VCO engine (issue #74)
 

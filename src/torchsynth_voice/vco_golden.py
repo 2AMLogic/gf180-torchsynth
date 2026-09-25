@@ -36,7 +36,7 @@ from fractions import Fraction
 from typing import Dict, List, Tuple
 
 from .float_interfaces import AUDIO_RATE_HZ
-from .fixed_voice import shadow_half_even
+from .fixed_voice import entry_quantize, shadow_half_even
 from .fixedpoint.counters import StickyCounters
 from .fixedpoint.ops import OverflowPolicy, apply_policy, mul, rescale
 from .fixedpoint.rounding import RoundingMode, div_round
@@ -45,6 +45,7 @@ __all__ = [
     "SineVcoGoldenError",
     "initial_phase_word",
     "mirror_sine_lane",
+    "derive_case",
     "digest_words",
     "MIDI_CLAMP_MIN",
     "MIDI_CLAMP_MAX",
@@ -181,3 +182,58 @@ def mirror_sine_lane(
         {"vco": vco, "phase": phases, "fq": fqs},
         {"counters": tally, "clamps": clamps},
     )
+
+
+def derive_case(formats, physical: Dict[str, float], samples: int = None):
+    """Stimulus + mirror truth for one case from its physical parameters.
+
+    The pitch column and the keyboard word come from the frozen
+    composition's own control path (``FixedControlPath.render_words`` --
+    the exact class ``FixedVoiceModel`` instantiates); the S1 entry
+    words use the model's own entry sites; the lane re-walk is
+    :func:`mirror_sine_lane`. Callers prove model-equality by digest
+    against committed ``vco_1.raw`` evidence (the frozen receipt's
+    per-case trace digests, or a fresh ``FixedVoiceModel`` render for
+    the directed regime cases) -- this helper never *is* the truth.
+
+    ``samples`` caps the walk (a prefix) for the fast checks.
+    """
+
+    from .format_sweep import FixedControlPath
+
+    counters = StickyCounters()
+    control = FixedControlPath(formats.control_spec)
+    control_words = control.render_words(physical)
+    words = {
+        "keyboard.midi_f0": control_words["keyboard.midi_f0"][0],
+        "vco_1.tuning": entry_quantize(
+            float(physical["vco_1.tuning"]), formats.midi, counters,
+            "s1.entry:vco_1.tuning",
+        ),
+        "vco_1.mod_depth": entry_quantize(
+            float(physical["vco_1.mod_depth"]), formats.midi, counters,
+            "s1.entry:vco_1.mod_depth",
+        ),
+    }
+    init_word = initial_phase_word(
+        physical["vco_1.initial_phase"], formats.phase_width
+    )
+    up_pitch = control_words["control_upsample.vco_1_pitch"]
+    streams, aux = mirror_sine_lane(
+        formats,
+        words["keyboard.midi_f0"],
+        words["vco_1.tuning"],
+        words["vco_1.mod_depth"],
+        init_word,
+        up_pitch,
+        samples=samples,
+    )
+    return {
+        "words": words,
+        "init_word": init_word,
+        "up_pitch": up_pitch,
+        "matrix_pitch": control_words["mod_matrix.vco_1_pitch"],
+        "streams": streams,
+        "clamps": aux["clamps"],
+        "counters": aux["counters"],
+    }
