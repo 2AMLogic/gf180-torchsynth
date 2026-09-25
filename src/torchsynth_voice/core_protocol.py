@@ -41,6 +41,10 @@ CMD_PATCH_NAME = 0x11
 CMD_PATCH_VALUE = 0x12
 CMD_PATCH_COMMIT = 0x13
 CMD_PATCH_ABORT = 0x14
+# Render trigger + host-fed noise stream (spec/protocol/RENDER-TRIGGER.md,
+# issue #188): the DR-0010 pass/digest binding on the transport lane.
+CMD_RENDER_TRIGGER = 0x15
+CMD_NOISE_STREAM = 0x16
 CMD_RESET = 0x20
 CMD_ERROR = 0xFE
 
@@ -52,13 +56,32 @@ COMMAND_NAMES = {
     CMD_PATCH_VALUE: "PATCH_VALUE",
     CMD_PATCH_COMMIT: "PATCH_COMMIT",
     CMD_PATCH_ABORT: "PATCH_ABORT",
+    CMD_RENDER_TRIGGER: "RENDER_TRIGGER",
+    CMD_NOISE_STREAM: "NOISE_STREAM",
     CMD_RESET: "RESET",
     CMD_ERROR: "ERROR",
 }
 
 CAP_NAME_KEYED_PATCH_LOAD = 1 << 0
 CAP_RESET = 1 << 1
-KNOWN_CAPABILITIES = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET
+CAP_RENDER = 1 << 2
+KNOWN_CAPABILITIES = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET | CAP_RENDER
+
+# Render pass indices carried by RENDER_TRIGGER / NOISE_STREAM.
+RENDER_PASS_1 = 1
+RENDER_PASS_2 = 2
+RENDER_PASSES = (RENDER_PASS_1, RENDER_PASS_2)
+
+# Declared noise-stream digest: SHA-256 (32 bytes) over the clip's complete
+# host-fed byte stream — the digest noise_stream_golden.noise_bytes_sha256
+# produces and check_fed_bytes verifies. The core binds the DECLARED digest;
+# it does not hash the bytes it receives (open question, issue #207).
+NOISE_STREAM_DIGEST_BYTES = 32
+
+# Per-pass noise-stream length of the product profile: one binary32 sample
+# per audio sample, SCHED_SAMPLES_PER_PASS x 4 = 176,400 x 4 (DR-0003
+# acceptance item 3, DR-0010 schedule). Tests pin it to both sources.
+NOISE_STREAM_CLIP_BYTES = 705_600
 
 # Pre-binding protocol version 1 advertised this reserved ASCII marker in the
 # numeric_contract_version field. It is carried only so stale peers can be
@@ -103,6 +126,8 @@ class ErrorCode(IntEnum):
     DUPLICATE_NAME = 0x0B
     TX_TIMEOUT = 0x0C
     PAYLOAD_LENGTH = 0x0D
+    RENDER_BINDING = 0x0E
+    NOISE_STREAM = 0x0F
 
 
 @dataclass(frozen=True)
@@ -232,6 +257,9 @@ class PayloadReader:
 
     def take_u16(self) -> int:
         return struct.unpack("<H", self.take(2))[0]
+
+    def take_u32(self) -> int:
+        return struct.unpack("<I", self.take(4))[0]
 
     def take_opaque(self) -> bytes:
         return self.take(self.take_u16())
@@ -477,6 +505,70 @@ def decode_patch_commit(payload: bytes) -> bytes:
     if len(digest) != PATCH_HASH_BYTES:
         raise PayloadError("patch_hash_width")
     return digest
+
+
+@dataclass(frozen=True)
+class RenderTrigger:
+    pass_index: int
+    sound_identity: bytes
+    noise_stream_sha256: bytes
+
+
+def encode_render_trigger(
+    pass_index: int, sound_identity: bytes, noise_stream_sha256: bytes
+) -> bytes:
+    """RENDER_TRIGGER (0x15) payload (spec/protocol/RENDER-TRIGGER.md)."""
+    if pass_index not in RENDER_PASSES:
+        raise ValueError("pass_index must be 1 or 2")
+    if len(noise_stream_sha256) != NOISE_STREAM_DIGEST_BYTES:
+        raise ValueError("noise_stream_sha256 must be 32 bytes")
+    return (
+        struct.pack("<B", pass_index)
+        + pack_opaque(sound_identity)
+        + pack_opaque(noise_stream_sha256)
+    )
+
+
+def decode_render_trigger(payload: bytes) -> RenderTrigger:
+    reader = PayloadReader(payload)
+    trigger = RenderTrigger(
+        reader.take_u8(), reader.take_opaque(), reader.take_opaque()
+    )
+    reader.require_end()
+    if trigger.pass_index not in RENDER_PASSES:
+        raise PayloadError("render_pass_index")
+    if len(trigger.noise_stream_sha256) != NOISE_STREAM_DIGEST_BYTES:
+        raise PayloadError("noise_stream_digest_width")
+    return trigger
+
+
+@dataclass(frozen=True)
+class NoiseChunk:
+    pass_index: int
+    offset: int
+    data: bytes
+
+
+def encode_noise_stream(pass_index: int, offset: int, data: bytes) -> bytes:
+    """NOISE_STREAM (0x16) payload (spec/protocol/RENDER-TRIGGER.md)."""
+    if pass_index not in RENDER_PASSES:
+        raise ValueError("pass_index must be 1 or 2")
+    if not 0 <= offset <= 0xFFFFFFFF:
+        raise ValueError("offset must fit u32")
+    if not data:
+        raise ValueError("a noise chunk carries at least one byte")
+    return struct.pack("<BI", pass_index, offset) + pack_opaque(data)
+
+
+def decode_noise_stream(payload: bytes) -> NoiseChunk:
+    reader = PayloadReader(payload)
+    chunk = NoiseChunk(reader.take_u8(), reader.take_u32(), reader.take_opaque())
+    reader.require_end()
+    if chunk.pass_index not in RENDER_PASSES:
+        raise PayloadError("render_pass_index")
+    if not chunk.data:
+        raise PayloadError("noise_chunk_empty")
+    return chunk
 
 
 def patch_hash(entries: Mapping[str, bytes], *, numeric_contract_version: bytes) -> bytes:

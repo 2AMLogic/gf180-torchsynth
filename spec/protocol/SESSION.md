@@ -9,8 +9,9 @@ arithmetic-independent.
 | State | Entered by | Allowed host commands | Exits by |
 | --- | --- | --- | --- |
 | `closed` | power-up, fatal error, host silence after close | `HELLO` | `READY` sent → `ready` |
-| `ready` | `HELLO` negotiation, transaction end, `RESET` | `HELLO`, `RESET`, `PATCH_OPEN` | per command |
+| `ready` | `HELLO` negotiation, transaction end, `RESET`, clip completed or discarded | `HELLO`, `RESET`, `PATCH_OPEN`, `RENDER_TRIGGER` (pass 1) | per command |
 | `patch_open` | `PATCH_OPEN` accepted | `PATCH_NAME`, `PATCH_VALUE`, `PATCH_COMMIT`, `PATCH_ABORT`, `RESET` | commit/abort/timeout/error → `ready` |
+| `rendering` | `RENDER_TRIGGER` pass 1 accepted (capability `render`) | `NOISE_STREAM`, `RENDER_TRIGGER` (pass 2), `RESET`, `HELLO` | pass 2 complete, render error, or `RESET` → `ready` ([RENDER-TRIGGER.md](RENDER-TRIGGER.md)) |
 
 Rules:
 
@@ -109,6 +110,8 @@ one-byte error code as the entire payload.
 | `0x0B` | `ERR_DUPLICATE_NAME` | name staged twice with conflicting bytes, or duplicate in the declaration | host re-sends the intended single value |
 | `0x0C` | `ERR_TX_TIMEOUT` | attempt to continue an expired transaction | fresh `PATCH_OPEN` required |
 | `0x0D` | `ERR_PAYLOAD_LENGTH` | payload not the shape the command defines | host corrects the frame; core state unchanged |
+| `0x0E` | `ERR_RENDER_BINDING` | render trigger's sound identity or declared noise-stream digest differs from the binding ([RENDER-TRIGGER.md](RENDER-TRIGGER.md)) | open clip discarded entire; host re-triggers from pass 1 |
+| `0x0F` | `ERR_NOISE_STREAM` | noise-stream framing fault: wrong pass, non-contiguous offset, overrun, or pass 2 before pass 1 is complete ([RENDER-TRIGGER.md](RENDER-TRIGGER.md)) | open clip discarded entire; host re-triggers from pass 1 |
 
 All errors are control-plane outcomes. They are distinct from, and define
 nothing about, the numeric arithmetic error contract that DR-0008 ratifies;

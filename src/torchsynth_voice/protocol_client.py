@@ -10,26 +10,33 @@ binding rule, so the same client runs unchanged on any conforming transport.
 Scope honesty: this module and :class:`MockTransport` are software-lane
 verification tooling against the behavioral mock. Physical UART/SPI/USB
 bindings are issue #81's deliverable; nothing here is evidence of hardware,
-RTL, synthesis fidelity, or sound playback. The audio transfer/streaming
-command set stays unallocated (issue #63): the client refuses any command
-outside the landed registry, and audio sourcing is a mock-boundary data path
-per MOCK-HARNESS.md, not a protocol command.
+RTL, synthesis fidelity, or sound playback. The render trigger and the
+host-fed noise stream (spec/protocol/RENDER-TRIGGER.md, issue #188) are the
+only render-side commands: :meth:`HostClient.render_clip` drives both passes of
+one trigger under one sound identity and one declared noise-stream digest,
+derived from the exact bytes it sends. The audio output transfer/streaming
+command set stays unallocated: the client refuses any command outside the
+landed registry, and audio sourcing is a mock-boundary data path per
+MOCK-HARNESS.md, not a protocol command.
 """
 
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass
 from typing import Protocol
 
 from .core_protocol import (
     CMD_HELLO,
+    CMD_NOISE_STREAM,
     CMD_PATCH_ABORT,
     CMD_PATCH_COMMIT,
     CMD_PATCH_NAME,
     CMD_PATCH_OPEN,
     CMD_PATCH_VALUE,
     CMD_READY,
+    CMD_RENDER_TRIGGER,
     CMD_RESET,
     COMMAND_NAMES,
     ErrorCode,
@@ -40,16 +47,19 @@ from .core_protocol import (
     KIND_RESPONSE,
     MIN_FRAME_LEN,
     PROTOCOL_VERSION,
+    RENDER_PASSES,
     SYNC,
     Ready,
     decode_frame,
     decode_ready,
     encode_frame,
     encode_hello,
+    encode_noise_stream,
     encode_patch_commit,
     encode_patch_name,
     encode_patch_open,
     encode_patch_value,
+    encode_render_trigger,
     numeric_contract_version_bound,
     patch_hash,
 )
@@ -380,6 +390,11 @@ class HostClient:
                     # the core is back in ready. Track it, never reuse stale state.
                     self.state = "ready"
                     self.transaction_id = None
+                if code in (ErrorCode.RENDER_BINDING, ErrorCode.NOISE_STREAM):
+                    # RENDER-TRIGGER.md: the open clip was discarded entire and
+                    # the core is back in ready; nothing of it may be kept.
+                    if self.state == "rendering":
+                        self.state = "ready"
                 raise ProtocolError(code, command, response.sequence)
             if response.kind != KIND_RESPONSE:
                 raise ProtocolError(
@@ -391,8 +406,17 @@ class HostClient:
         if command == CMD_HELLO:
             return
         if command == CMD_RESET:
-            if self.state not in ("ready", "patch_open"):
-                raise ClientStateError(f"RESET requires ready or patch_open, not {self.state}")
+            if self.state not in ("ready", "patch_open", "rendering"):
+                raise ClientStateError(
+                    f"RESET requires ready, patch_open or rendering, not {self.state}"
+                )
+            return
+        if command in (CMD_RENDER_TRIGGER, CMD_NOISE_STREAM):
+            if self.state not in ("ready", "rendering"):
+                raise ClientStateError(
+                    f"render command 0x{command:02X} requires ready or rendering, "
+                    f"not {self.state}"
+                )
             return
         if command == CMD_PATCH_OPEN:
             if self.state != "ready":
@@ -490,6 +514,79 @@ class HostClient:
         self._expect_success(self.transact(CMD_PATCH_ABORT))
         self.state = "ready"
         self.transaction_id = None
+
+    def render_trigger(
+        self, pass_index: int, sound_identity: bytes, noise_stream_sha256: bytes
+    ) -> None:
+        """Send one RENDER_TRIGGER (RENDER-TRIGGER.md)."""
+        payload = encode_render_trigger(
+            pass_index, sound_identity, noise_stream_sha256
+        )
+        self._expect_success(self.transact(CMD_RENDER_TRIGGER, payload))
+        self.state = "rendering"
+
+    def send_noise(self, pass_index: int, offset: int, data: bytes) -> None:
+        """Send one NOISE_STREAM chunk (RENDER-TRIGGER.md)."""
+        self._expect_success(
+            self.transact(CMD_NOISE_STREAM, encode_noise_stream(pass_index, offset, data))
+        )
+
+    def noise_chunk_limit(self) -> int:
+        """Largest NOISE_STREAM ``data`` region one frame can carry here.
+
+        Bounded by the transport's ``max_frame_bytes`` and by the core's
+        negotiated ``max_payload``; the payload overhead is ``pass_index``
+        (1) + ``offset`` (4) + the ``data`` length prefix (2).
+        """
+        overhead = 1 + 4 + 2
+        limit = self._transport.max_frame_bytes - MIN_FRAME_LEN - overhead
+        if self.ready is not None:
+            limit = min(limit, self.ready.max_payload - overhead)
+        if limit < 1:
+            raise ClientError("transport/core limits leave no room for noise bytes")
+        return limit
+
+    def render_clip(
+        self,
+        sound_identity: bytes,
+        noise_bytes: bytes,
+        *,
+        chunk_size: int | None = None,
+        pass2_noise_stream_sha256: bytes | None = None,
+    ) -> bytes:
+        """Drive both passes of one trigger; return the declared digest.
+
+        The declared digest is SHA-256 over ``noise_bytes`` — the exact bytes
+        this client sends — so the declaration is true by construction. Pass
+        2 re-sends the identical bytes under the identical binding (DR-0010
+        noise re-feed obligation). ``pass2_noise_stream_sha256`` overrides the
+        pass-2 declaration and exists only so tests can drive the mismatch
+        path; production callers never pass it.
+
+        On ``ERR_RENDER_BINDING`` / ``ERR_NOISE_STREAM`` the core has
+        discarded the clip entire and the :class:`ProtocolError` propagates;
+        the caller re-triggers from pass 1, never resumes.
+        """
+        noise_bytes = bytes(noise_bytes)
+        if not noise_bytes:
+            raise ClientError("a clip's noise stream carries at least one byte")
+        if self.state != "ready":
+            raise ClientStateError(f"render_clip requires ready, not {self.state}")
+        digest = hashlib.sha256(noise_bytes).digest()
+        step = self.noise_chunk_limit() if chunk_size is None else chunk_size
+        if step < 1:
+            raise ClientError("chunk_size must be >= 1")
+        declared = {1: digest, 2: digest}
+        if pass2_noise_stream_sha256 is not None:
+            declared[2] = bytes(pass2_noise_stream_sha256)
+        for pass_index in RENDER_PASSES:
+            self.render_trigger(pass_index, sound_identity, declared[pass_index])
+            for offset in range(0, len(noise_bytes), step):
+                self.send_noise(
+                    pass_index, offset, noise_bytes[offset : offset + step]
+                )
+        self.state = "ready"
+        return digest
 
     def _expect_success(self, response: Frame) -> Frame:
         if response.kind != KIND_RESPONSE:

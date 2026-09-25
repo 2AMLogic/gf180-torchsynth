@@ -133,6 +133,7 @@ zero, and a core must clear reserved bits it grants):
 | --- | --- | --- |
 | 0 | `name_keyed_patch_load` | the PATCH transaction of [PATCH-LOAD.md](PATCH-LOAD.md) is supported |
 | 1 | `reset` | the RESET command of [SESSION.md](SESSION.md) is supported |
+| 2 | `render` | the `RENDER_TRIGGER`/`NOISE_STREAM` pass/digest binding of [RENDER-TRIGGER.md](RENDER-TRIGGER.md) is supported |
 
 Negotiation rules:
 
@@ -166,15 +167,20 @@ Negotiation rules:
 | `0x12` | `PATCH_VALUE` | host→core | [PATCH-LOAD.md](PATCH-LOAD.md) |
 | `0x13` | `PATCH_COMMIT` | host→core | [PATCH-LOAD.md](PATCH-LOAD.md) |
 | `0x14` | `PATCH_ABORT` | host→core | [PATCH-LOAD.md](PATCH-LOAD.md) |
+| `0x15` | `RENDER_TRIGGER` | host→core | [RENDER-TRIGGER.md](RENDER-TRIGGER.md) |
+| `0x16` | `NOISE_STREAM` | host→core | [RENDER-TRIGGER.md](RENDER-TRIGGER.md) |
 | `0x20` | `RESET` | host→core | [SESSION.md](SESSION.md) |
 | `0xFE` | `ERROR` | core→host (as `kind = 0x03`) | [SESSION.md](SESSION.md) |
 
-Codes `0x15–0x1F`, `0x21–0xFD`, and `0xFF` are reserved. Render trigger and
-status, trace/debug readout, normalization result, and audio
+Codes `0x17–0x1F`, `0x21–0xFD`, and `0xFF` are reserved. The render
+trigger and the host-fed noise stream (`0x15`/`0x16`) carry DR-0010's
+pass/digest binding, which DR-0010 assigned to the transport lane
+([RENDER-TRIGGER.md](RENDER-TRIGGER.md), issue #188). Render status,
+trace/debug readout, normalization result, and audio output
 transfer/streaming commands remain unallocated: their numeric wire formats
-are now bound (the sample payload packing above; the normalization gain word
-is DR-0008 C9), and the command set that carries them is an architecture
-decision record deliverable (issue #63). A receiver must answer any
+are bound (the sample payload packing above; the normalization gain word is
+DR-0008 C9), but no landed record or issue allocates the commands that carry
+them (DR-0010, the issue #63 record, did not). A receiver must answer any
 unreserved but undefined code with `ERR_UNSUPPORTED_COMMAND`. There is no
 live-note command and none may be allocated in this subset
 ([SESSION.md](SESSION.md)).

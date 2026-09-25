@@ -21,6 +21,7 @@ and code alone may not change it.
 | [TRANSPORTS.md](TRANSPORTS.md) | Transport-agnostic interface contract and UART/SPI/USB binding requirements |
 | [MOCK-HARNESS.md](MOCK-HARNESS.md) | The software mock round-trip harness: contract, numeric binding policy, acceptance-criteria mapping |
 | [CLIENT.md](CLIENT.md) | The host transport client (software lane) and the alternate explorer backend over the behavioral mock |
+| [RENDER-TRIGGER.md](RENDER-TRIGGER.md) | The render trigger and host-fed noise stream commands carrying DR-0010's pass/digest binding (transport-declared digest) |
 
 ## Scope boundary
 
@@ -42,8 +43,12 @@ and the software mock round-trip harness) is unchanged in structure. Version
 
 Still **not** specified here:
 
-- the audio transfer/streaming command set (its numeric format is bound;
-  the commands belong to the architecture decision record, issue #63);
+- the audio output transfer/streaming command set (its numeric format is
+  bound; no landed record allocates the commands — DR-0010, the issue #63
+  record, did not);
+- whether the core computes a digest over the noise bytes it receives, in
+  addition to binding the transport-declared digest (open, issue #207;
+  requires a DR-0010 amendment if answered receiver-side);
 - per-parameter wire widths and numeric IDs (the name table's `numeric_id`
   and `width` columns stay reserved);
 - the global sound identity binding (issues #12/#88), the product profile
@@ -56,5 +61,6 @@ Still **not** specified here:
 These documents specify control-plane behavior plus the numeric wire binding
 consumed from the accepted DR-0008 register. They qualify the protocol only:
 they are not evidence of synthesis fidelity, RTL equivalence, or hardware
-playback, and they implement no architecture decision (issue #63 owns the
-audio transfer/streaming and render-trigger command sets).
+playback. The render-trigger/noise-stream commands implement the transport
+lane's share of DR-0010 ("Noise re-feed obligation", "Clip lifecycle"); the
+audio output transfer/streaming command set stays unallocated.
