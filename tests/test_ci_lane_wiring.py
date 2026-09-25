@@ -26,6 +26,11 @@ run must never be reported as a pass"). It intentionally avoids depending
 on a YAML parser: ``.github/workflows/ci.yml`` (which runs this module)
 never installs one, and the wiring being checked is a small, line-oriented
 shape, so plain-text regex checks are the more honest tool for the job.
+
+For the same reason — a lane that cannot even compile on CI is a lane that
+never runs — ``TestLanesCompileUnderTheIcarusCiInstalls`` below also guards
+``tb/sv/`` against the SystemVerilog loop-control statements the Icarus
+version ``tb-sim.yml`` installs cannot build.
 """
 
 import ast
@@ -257,6 +262,72 @@ class TestEveryLaneWiredIntoCi(unittest.TestCase):
             "tb/run_tb.py %s is not wired into any step in %s"
             % (subcommand, WORKFLOW_PATH)
         )
+
+
+class TestLanesCompileUnderTheIcarusCiInstalls(unittest.TestCase):
+    """The lanes must be buildable by the Icarus ``apt-get`` actually gives CI.
+
+    ``tb-sim.yml`` installs Icarus with a bare
+    ``apt-get install -y iverilog``, which on the ``ubuntu-2404`` runner is
+    Icarus 12.0. Icarus 12 rejects the SystemVerilog loop-control
+    statements ``break;``/``continue;`` outright
+    ("sorry: break statements not supported") at *compile* time, so a
+    single such statement anywhere in a lane's sources aborts that lane's
+    step — and, because no lane step is ``continue-on-error``, every later
+    lane in the job never runs at all. That is exactly how the ``patch``
+    lane failed when issue #187 first wired these lanes in: a ``break;``
+    in ``tb/sv/tb_patch_control.sv`` compiled fine under the locally
+    installed Icarus 13 and not at all on CI.
+
+    This is a text guard, not a compile: it runs in ``ci.yml``, which has
+    no Icarus at all. It keeps the construct from being reintroduced
+    without waiting on a multi-hour ``tb-sim.yml`` run to discover it.
+    """
+
+    # `break` / `continue` as whole-word statements. Comments and
+    # identifiers containing the words (e.g. `break_flag`, "... break out
+    # of ...") are not matched: the statement form ends in `;`.
+    _UNSUPPORTED_STMT = re.compile(r"(?<![\w$])(break|continue)\s*;")
+
+    def test_no_testbench_source_uses_break_or_continue(self):
+        sv_dir = ROOT / "tb" / "sv"
+        sources = sorted(sv_dir.glob("*.sv")) + sorted(sv_dir.glob("*.svh"))
+        self.assertTrue(
+            sources, "no SystemVerilog sources found under %s" % sv_dir
+        )
+        for source in sources:
+            with self.subTest(source=source.name):
+                offenders = []
+                for lineno, line in enumerate(
+                    source.read_text(encoding="utf-8").splitlines(), start=1
+                ):
+                    code = line.split("//", 1)[0]
+                    match = self._UNSUPPORTED_STMT.search(code)
+                    if match:
+                        offenders.append((lineno, match.group(1)))
+                self.assertEqual(
+                    offenders,
+                    [],
+                    "%s uses loop-control statement(s) Icarus 12 (the "
+                    "version tb-sim.yml's apt-get installs) cannot compile: "
+                    "%s. Restructure the loop with a sentinel flag instead "
+                    "(see tb_patch_control.sv's stimulus read loop)."
+                    % (
+                        source.name,
+                        ", ".join(
+                            "line %d: %s;" % (n, kw) for n, kw in offenders
+                        ),
+                    ),
+                )
+
+    def test_guard_detects_a_reintroduced_break(self):
+        # The guard must actually fire on the construct it claims to catch,
+        # and must not fire on a prose mention or an identifier.
+        self.assertRegex("            break;", self._UNSUPPORTED_STMT)
+        self.assertRegex("        continue ;", self._UNSUPPORTED_STMT)
+        self.assertNotRegex("reg break_flag;", self._UNSUPPORTED_STMT)
+        self.assertNotRegex("if (done) stim_done = 1'b1;",
+                            self._UNSUPPORTED_STMT)
 
 
 class TestGuardFailsIfALaneIsRemoved(unittest.TestCase):
