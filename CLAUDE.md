@@ -21,6 +21,31 @@ Open-source canary for a hardware implementation of TorchSynth's default
 - Keep `AGENTS.md` and `CLAUDE.md` substantively identical outside their
   Loom-managed marker blocks.
 
+## Remote compute (AWS box)
+
+Heavy builds/simulation that the dev Mac and CI cannot finish run on the
+project's pinned AWS box, which is also the sanctioned full-coverage
+substrate host for release-era campaign work:
+
+- Instance `i-018841ef4169207ba` (tag `repo-remote`, us-east-1), SSH
+  only, alias `repo-remote-gf180-torchsynth`. 8 vCPU / Intel Xeon 8175M
+  (Skylake-SP, AVX512F); Docker 29 + buildx 0.30.1; python3.11 + uv;
+  no apt; sudo present. `/home/ubuntu` sits on a 100G volume.
+- The box auto-stops after ~120 minutes idle and **`/tmp` is wiped on
+  restart**. Keep persistent state under `/home/ubuntu` and re-add git
+  worktrees after any restart (a killed `git worktree add` leaves a
+  partial tree — always verify `tools/run_fast_tests.py` exists after
+  adding).
+- Policy: us-east-1 region only; `ec2:RunInstances` allowed only with
+  the `repo-remote` tag attached; no SSM/S3/IAM/AMI changes; no key
+  material in the repo, chat, or this file (the credential index lives
+  outside the repo at `~/.config/repo/README.md`). Escalate AWS issues
+  to Robb (2AM #999).
+- Box test invocation: `python3.11 tools/run_fast_tests.py ...` from the
+  worktree root (direct file path). Both
+  `python3.11 -m tools.run_fast_tests` and `-m tools.run_fast_tests.py`
+  fail on the box.
+
 <!-- BEGIN LOOM ORCHESTRATION -->
 This repository uses [Loom](https://github.com/rjwalters/loom) for AI-powered development orchestration — see the Loom repository for the full guide (roles, labels, worktrees, configuration). When installed, Loom also writes a locally-substituted copy of that guide to `.loom/CLAUDE.md`.
 <!-- END LOOM ORCHESTRATION -->
