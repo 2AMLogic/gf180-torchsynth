@@ -30,6 +30,7 @@
 .loom/exit-codes/
 .loom/sweep-checkpoint/
 .loom/sweep-run/
+.loom/concierge/
 .loom/stats/
 .loom/diagnostics/
 .loom/guide-docs-state.json
@@ -39,8 +40,10 @@
 .loom/metrics/
 .loom/usage-cache.json
 .loom/claude-config/
+.loom/native-tools/
 .loom/tokens/
 .loom/accounts.env
+.loom/api-keys/
 .loom/account-health.json
 .loom/account-health.lock
 .loom/CANARY
@@ -53,6 +56,7 @@
 .loom/.resync-in-progress
 .loom/gh-config/
 .loom/gh-config-by-owner/
+.loom-local/
 # <<< loom-managed <<<
 
 # Project-local development and generated evidence

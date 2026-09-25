@@ -270,7 +270,7 @@ Local verification:
 - [ ] Commits are signed off if required (`commit.signoff: true` in `.loom/config.json`, or a DCO/`sign-off` requirement — `git commit --signoff`; see "DCO sign-off" above)
 - [ ] Relevant tests pass
 - [ ] Each criterion has explicit verification (not "I think it works")
-- [ ] Ran the "defaults/ Version-Bearing-Files Gate" command block below (not just read it) — exited 0. It fails if this PR hand-edits any version-bearing file's value (`package.json`, `mcp-loom/package.json`, `Cargo.toml`, `CLAUDE.md`, `VERSION`) — those are now bumped automatically at merge time (#7743), never by hand in a feature PR.
+- [ ] Ran the "defaults/ Version-Bearing-Files Gate" command block below (not just read it) — exited 0. It fails if this PR hand-edits any version-bearing file's value (`package.json`, `mcp-loom/package.json`, `Cargo.toml`, `VERSION`) — those are now bumped automatically at merge time (#7743), never by hand in a feature PR.
 ```
 
 **Run the defaults/ Version-Bearing-Files Gate locally — an actual command, not a checklist bullet to read (#6675, recurring Judge rejection: #6598, #6599, #6610, #6611, #6630, #6668 all hit this in CI because it was never run pre-PR). A single automated workflow (`.github/workflows/version-bump-on-merge.yml`, #7743) now owns bumping `VERSION` and the other version-bearing files, once, right after any merge that touched `defaults/` — a feature PR must not carry its own edit to any of them. `./.loom/scripts/create-pr.sh` also runs a version-bearing-file consistency check (`version-check-gate.sh`, #6730) before creating the PR, so running the block below by hand is defense-in-depth, not the only line of defense; still run it locally to catch a hand-edit before pushing rather than at CI time:**
@@ -288,7 +288,7 @@ MERGE_BASE="$(git merge-base origin/main HEAD)"
 
 # Exit 0 = no version-bearing file's VALUE changed anywhere in your diff;
 # exit 1 = your PR hand-edits one of package.json/mcp-loom/package.json/
-# Cargo.toml/CLAUDE.md/VERSION. Do NOT "fix" a failure here by running
+# Cargo.toml/VERSION. Do NOT "fix" a failure here by running
 # ./scripts/version.sh bump patch -- that command is now exclusively the
 # post-merge workflow's job; a Builder should never run it. Revert the
 # edit(s) to the flagged file(s) instead.
@@ -744,6 +744,21 @@ Contributes to #123
 ```
 
 `Part of #N` references the issue (keeping the PR discoverable) but does NOT trigger auto-close, so the family/epic issue survives the merge. Only the **final increment** that completes the family uses `Closes #N`.
+
+**Write the trailer as PLAIN TEXT — never in backticks (#8796).** A trailer inside an inline
+code span (or a fenced block) is **silently ignored**: merge-pr.sh's partial-increment parser
+blanks code spans before matching, deliberately (#5234 — so a hypothetical mid-sentence mention
+is not read as a declaration). The PR then looks correct to a reviewer and to Judge while the
+`loom:building` → `loom:issue` reset (#3667) never fires and the family issue is stranded at
+`loom:building` with nothing logged anywhere — the rjwalters/kicad-tools PR #5686 / #5240 incident.
+
+```markdown
+Part of #123              <- declaration: parsed, the label reset fires on merge
+`Part of #123`            <- code span: NOT a declaration, reset silently skipped
+```
+
+merge-pr.sh warns (non-blocking) on a whole-line backticked trailer, but that warning reaches
+only whoever runs the merge — get it right in the body.
 
 **Both the PR body and the commit message must carry the same reference.** This repo squash-merges, and GitHub harvests closing keywords from the squash commit message as well as the PR body — a stray `Closes #N` in the commit body will auto-close the family issue even when the PR body says `Part of #N`. When in doubt on a `loom:epic` issue, prefer `Part of #N`.
 
