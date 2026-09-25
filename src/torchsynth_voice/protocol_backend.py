@@ -14,13 +14,19 @@ one of the software-lane binding models by name
 published artifact, bookmark, session vocabulary, contract identity — varies
 with the choice.
 
-This is the software lane. It adds no transport backend to the landed
-explorer MVP CLI (spec/EXPLORER-MVP.md exclusions stand) and makes no
-hardware, RTL, synthesis-fidelity or playback claim: the mock qualifies
-protocol behavior only (spec/protocol/MOCK-HARNESS.md), the binding models are
-in-process conformance doubles rather than physical drivers (physical
-UART/SPI/USB bindings are issue #81's deliverable), and the audio
-transfer/streaming command set remains unallocated pending issue #63.
+This is the software lane. It is reachable from the explorer MVP CLI as the
+separate, explicitly labeled ``--backend protocol-mock``, which
+spec/EXPLORER-MVP.md's exclusions section names as an addition alongside the
+MVP's own ``render_artifact`` seam rather than a change to it: it publishes the
+MVP's synthetic fixture and alters no rendering path, bookmark schema, session
+vocabulary or holdout refusal, and its ``--transport`` flag names one of the
+binding models above for that backend only, leaving those same surfaces
+identical. It remains no physical transport and makes no hardware, RTL,
+synthesis-fidelity or playback claim: the mock qualifies protocol behavior
+only (spec/protocol/MOCK-HARNESS.md), the binding models are in-process
+conformance doubles rather than physical drivers (physical UART/SPI/USB
+bindings are issue #81's deliverable), and the audio transfer/streaming
+command set remains unallocated pending issue #63.
 """
 
 from __future__ import annotations
