@@ -577,6 +577,15 @@ class PartialWriteTests(unittest.TestCase, ClientHarness):
             self.assertLessEqual(stream.bad_frames, 1, cut)
 
     def test_partial_write_retries_the_identical_idempotent_frame(self):
+        # No core-side resync count is asserted here, deliberately:
+        # MockTransport is frame-oriented and has no core-side FrameStream to
+        # count drops on — it models the receiver's post-drop state directly by
+        # never submitting the truncated prefix (see its
+        # ``fail_next_write_after`` docstring). The wire-level property — the
+        # prefix really goes out and the receiver must resynchronize past it —
+        # is pinned instead on the byte-oriented binding models, via
+        # ``_BindingTransport.core_bad_frames`` in
+        # tests/test_transport_bindings.py.
         core, transport, client = self.make()
         client.negotiate()
         transport.fail_next_write_after(3)

@@ -74,6 +74,20 @@ class _BindingTransport:
     def delivered_response(self) -> bytes:
         return bytes(self._delivered_response)
 
+    @property
+    def core_bad_frames(self) -> int:
+        """How many frames the **core-side** receiver dropped and resynced past.
+
+        The discriminating observable for the partial-write rule: a truncated
+        prefix really goes on the wire, so the core-side ``FrameStream`` has to
+        reject it on the ``sync``/CRC rule and resynchronize onto the next
+        ``sync``. Every other observable this module exposes (``sent_frames``,
+        ``delivered_response``, the core's applied patch) is satisfied
+        *vacuously* by a transport that never put the prefix on the wire at
+        all, so tests assert this counter to pin the property itself.
+        """
+        return self._sink.bad_frames
+
     def fail_next_write_after(self, accepted_bytes: int) -> None:
         """Model a link that accepts only ``accepted_bytes`` of the next frame.
 

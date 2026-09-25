@@ -317,6 +317,9 @@ class BindingSubstitutabilityTests(unittest.TestCase):
         clean_core, _, clean_transport = run_canonical_session(
             lambda c: UartBindingTransport(c)
         )
+        # A session with no short write gives the core-side receiver nothing to
+        # resynchronize past: this is the comparator for the per-binding count.
+        self.assertEqual(clean_transport.core_bad_frames, 0)
         for label, factory in (
             ("uart", lambda c: UartBindingTransport(c)),
             ("spi", lambda c: SpiBindingTransport(c)),
@@ -345,6 +348,11 @@ class BindingSubstitutabilityTests(unittest.TestCase):
             self.assertEqual(len(transport.truncated_writes), 1, label)
             self.assertEqual(len(transport.truncated_writes[0]), 6, label)
             self.assertEqual(len(client.partial_writes), 1, label)
+            # The prefix really went on the wire, so the core-side receiver had
+            # to drop exactly one truncated frame and resynchronize past it.
+            # Every assertion below this one holds vacuously for a transport
+            # that never put the prefix on the wire; this one does not.
+            self.assertEqual(transport.core_bad_frames, 1, label)
             # Byte-identical retry: same sequence, same bytes, no renegotiation.
             self.assertEqual(
                 client.partial_writes[0], transport.sent_frames[-1], label
