@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "generated_by": "tools/qualify_rtl_modules.py --update-baseline",
+  "policy": "spec/RTL-MODULE-QUALIFICATION.md",
+  "excluded_classes": {
+    "DECLFILENAME": "gf180_rtl_constants_pkg.sv deliberately carries the _pkg suffix; renaming it would churn every lane's compile list",
+    "IMPORTSTAR": "import gf180_rtl_constants::* at $unit scope is the declared convention for the generated constants package",
+    "IVERILOG-TIMESCALE": "Icarus's own no-explicit-time-unit report for the constants package; the Verilator counterpart is TIMESCALEMOD above",
+    "PINCONNECTEMPTY": "render_binding_top deliberately leaves declared-but-unused ports unconnected so the wiring seam issue #211 mutates stays visible",
+    "PROCASSINIT": "testbench initial blocks seed variables the stimulus loop then drives; this is bench scaffolding, not synthesised logic",
+    "TIMESCALEMOD": "the constants package declares no timescale because a package has no time behaviour; Icarus reports the same thing under -Wtimescale",
+    "UNUSEDPARAM": "every engine imports the single generated gf180_rtl_constants package wholesale and uses a subset; the package is the refusal-gated single source of truth (tools/generate_rtl_constants.py)",
+    "UNUSEDSIGNAL": "testbench scaffolding and exported op-counter taps are read by the Python side through files, not by the SV hierarchy",
+    "VARHIDDEN": "loop variables shadowed inside testbench generate/for scopes"
+  },
+  "waivers": {
+    "iverilog|tb/sv/patch_control.sv|IVERILOG-SENSITIVITY": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "Icarus reports that an @* block is sensitive to every word of an array; that whole-array sensitivity is what the decode is supposed to have, and the lane's cycle-exact Python mirror arbitrates it",
+      "example": "@* is sensitive to all N words in array 'active_bank'."
+    },
+    "lane|adsr|TB-WARN": {
+      "count": 6,
+      "tier": "runtime",
+      "units": [
+        "adsr"
+      ],
+      "reason": "tb_adsr_engine.sv:194 / tb_lfo_vca_engine.sv:181 print TB-WARN when out_valid stays low, which is exactly what the planted off-by-one timing mutation makes happen; these lines come from the lane's own negative-control runs, whose failure is the point",
+      "example": "TB-WARN inst N out_valid low at tick N"
+    },
+    "lane|normreplay|SIM-WARNING": {
+      "count": 66,
+      "tier": "runtime",
+      "units": [
+        "normreplay"
+      ],
+      "reason": "the observed instances are Icarus's own runtime 'WARNING: <file>:<line>: $readmemh(...): Not enough words in the file for the requested range' report: tb_normalization_replay_engine.sv declares its mix-stream buffers at the canonical 176,400-sample clip length regardless of how long the loaded directed/mutation vector actually is, so $readmemh legitimately leaves the untouched tail at its declared default. The lane's own bit-exact comparison only reads the vector's declared sample range, so the truncation report describes expected per-vector framing, not a defect. Icarus's classifier bucket for a 'warning:'-prefixed line is this generic class rather than the dedicated READMEM class (see RUNTIME_PATTERNS's match order); waived at its committed per-lane count, so any new or increased occurrence -- including one that is NOT this readmemh pattern -- still gates.",
+      "example": "WARNING: tb_normalization_replay_engine.sv:N: $readmemh(runN_mixN.hex): Not enough words in the file for the requested range [N:N]."
+    },
+    "verilator|tb/sv/adsr_engine.sv|WIDTHEXPAND": {
+      "count": 6,
+      "tier": "lint",
+      "units": [
+        "adsr"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator SHIFTL expects N bits on the LHS, but LHS's VARREF 'xeps' generates N bits."
+    },
+    "verilator|tb/sv/adsr_engine.sv|WIDTHTRUNC": {
+      "count": 4,
+      "tier": "lint",
+      "units": [
+        "adsr"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'SHAPE_ONE' expects N bits on the Initial value, but Initial value's SHIFTL generates N bits."
+    },
+    "verilator|tb/sv/audio_mix_engine.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "mix"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'IDX_LAST' expects N bits on the Initial value, but Initial value's SUB generates N bits."
+    },
+    "verilator|tb/sv/gf180_rtl_constants_pkg.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "adsr",
+        "anchor",
+        "lfo",
+        "mix",
+        "modmatrix",
+        "noise",
+        "normreplay",
+        "normreplay-binding",
+        "patch",
+        "vco",
+        "vco2"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'CN_UNITS_PER_TURN' expects N bits on the Initial value, but Initial value's CONST '?N?shN' generates N bits."
+    },
+    "verilator|tb/sv/lfo_vca_engine.sv|WIDTHEXPAND": {
+      "count": 12,
+      "tier": "lint",
+      "units": [
+        "lfo"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator SUB expects N bits on the RHS, but RHS's VARREF 'r_raw' generates N bits."
+    },
+    "verilator|tb/sv/lfo_vca_engine.sv|WIDTHTRUNC": {
+      "count": 2,
+      "tier": "lint",
+      "units": [
+        "lfo"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'IDX_LAST' expects N bits on the Initial value, but Initial value's SUB generates N bits."
+    },
+    "verilator|tb/sv/lut_sine_dut.sv|WIDTHEXPAND": {
+      "count": 11,
+      "tier": "lint",
+      "units": [
+        "anchor"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator SUB expects N bits on the RHS, but RHS's VARREF 'r_raw' generates N bits."
+    },
+    "verilator|tb/sv/lut_sine_dut.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "anchor"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator ASSIGNW expects N bits on the Assign RHS, but Assign RHS's COND generates N bits."
+    },
+    "verilator|tb/sv/mod_matrix_engine.sv|BLKSEQ": {
+      "count": 16,
+      "tier": "lint",
+      "units": [
+        "modmatrix"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/mod_matrix_engine.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "modmatrix"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'IDX_LAST' expects N bits on the Initial value, but Initial value's SUB generates N bits."
+    },
+    "verilator|tb/sv/noise_stream_dut.sv|WIDTHEXPAND": {
+      "count": 2,
+      "tier": "lint",
+      "units": [
+        "noise"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator COND expects N bits on the Conditional True, but Conditional True's VARREF 'CN_MAXN' generates N bits."
+    },
+    "verilator|tb/sv/noise_stream_dut.sv|WIDTHTRUNC": {
+      "count": 2,
+      "tier": "lint",
+      "units": [
+        "noise"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'EXPECTED_BYTES' expects N bits on the Initial value, but Initial value's MULS generates N bits."
+    },
+    "verilator|tb/sv/normalization_replay_engine.sv|WIDTHEXPAND": {
+      "count": 6,
+      "tier": "lint",
+      "units": [
+        "normreplay",
+        "normreplay-binding"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator COND expects N bits on the Conditional True, but Conditional True's CONST 'N'hN' generates N bits."
+    },
+    "verilator|tb/sv/normreplay-binding|VERILATOR-EXIT": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding"
+      ],
+      "reason": "Verilator 5.020 exits non-zero on patch_control.sv's BLKANDNBLK/BLKLOOPINIT unsupported-construct errors above even under -Wno-fatal (those are %Error-class diagnostics, not %Warning); the exit itself is lint_unit()'s own synthetic marker for that, waived alongside the errors that cause it for the same lint-front-end version-limitation reason -- Icarus and the bit-exact lanes are unaffected and both pass",
+      "example": "verilator exited 1 with -Wno-fatal"
+    },
+    "verilator|tb/sv/patch_control.sv|BLKANDNBLK": {
+      "count": 11,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "Verilator 5.020 (Ubuntu 24.04's apt package, CI's installed version) reports 'Unsupported: Blocked and non-blocking assignments to same variable' for patch_control.sv's testbench-side register mirror (c_entry_off/c_stream_len/c_kpad/c_total/c_slot/c_entry_len), driven procedurally by the bench rather than the DUT; Verilator 5.052 lints the identical source without this diagnostic. This is a lint-front-end version limitation, not an RTL defect -- Icarus Verilog (this repo's bit-exact arbiter) elaborates and simulates it correctly, and the patch/normreplay lanes both pass sample-exactly on the committed tree",
+      "example": "Unsupported: Blocked and non-blocking assignments to same variable: 'tb_render_binding.dut.receiver.c_entry_off'"
+    },
+    "verilator|tb/sv/patch_control.sv|BLKLOOPINIT": {
+      "count": 6,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "Verilator 5.020 reports 'Unsupported: Delayed assignment to array inside for loops' for patch_control.sv; Verilator 5.052 supports the identical construct. Same lint-front-end version-limitation reasoning as BLKANDNBLK above -- Icarus and the bit-exact patch/normreplay lanes are the arbiters and both pass",
+      "example": "Unsupported: Delayed assignment to array inside for loops (non-delayed is ok - see docs)"
+    },
+    "verilator|tb/sv/patch_control.sv|BLKSEQ": {
+      "count": 31,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/patch_control.sv|MULTIDRIVENPROC": {
+      "count": 3,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "patch_control's register file is written from more than one procedural block by design (host writes vs. reset defaults); the bit-exact lane plus issue #203's resync-count assertion cover it",
+      "example": "Variable written to in always block also written by another always block: 'patch_timer'"
+    },
+    "verilator|tb/sv/patch_control.sv|WIDTHEXPAND": {
+      "count": 45,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator SHIFTL expects N bits on the LHS, but LHS's VARREF 'd' generates N bits."
+    },
+    "verilator|tb/sv/patch_control.sv|WIDTHTRUNC": {
+      "count": 73,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding",
+        "patch"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Bit extraction of array[N:N] requires N bit index, not N bits."
+    },
+    "verilator|tb/sv/patch|VERILATOR-EXIT": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "patch"
+      ],
+      "reason": "Verilator 5.020 exits non-zero on patch_control.sv's BLKANDNBLK/BLKLOOPINIT unsupported-construct errors above even under -Wno-fatal (those are %Error-class diagnostics, not %Warning); the exit itself is lint_unit()'s own synthetic marker for that, waived alongside the errors that cause it for the same lint-front-end version-limitation reason -- Icarus and the bit-exact lanes are unaffected and both pass",
+      "example": "verilator exited 1 with -Wno-fatal"
+    },
+    "verilator|tb/sv/quarter_wave_lut.sv|WIDTHEXPAND": {
+      "count": 9,
+      "tier": "lint",
+      "units": [
+        "vco2"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator SUB expects N bits on the RHS, but RHS's VARREF 'r_raw' generates N bits."
+    },
+    "verilator|tb/sv/quarter_wave_lut.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "vco2"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator ASSIGNW expects N bits on the Assign RHS, but Assign RHS's COND generates N bits."
+    },
+    "verilator|tb/sv/sine_vco_engine.sv|WIDTHEXPAND": {
+      "count": 14,
+      "tier": "lint",
+      "units": [
+        "vco"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator ADD expects N bits on the LHS, but LHS's SIGNED generates N bits."
+    },
+    "verilator|tb/sv/sine_vco_engine.sv|WIDTHTRUNC": {
+      "count": 3,
+      "tier": "lint",
+      "units": [
+        "vco"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator VAR 'IDX_LAST' expects N bits on the Initial value, but Initial value's SUB generates N bits."
+    },
+    "verilator|tb/sv/square_saw_vco_engine.sv|WIDTHEXPAND": {
+      "count": 3,
+      "tier": "lint",
+      "units": [
+        "vco2"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator OR expects N bits on the RHS, but RHS's SEL generates N bits."
+    },
+    "verilator|tb/sv/tb_adsr_engine.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "adsr"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_audio_mix_engine.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "mix"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_lfo_vca_engine.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "lfo"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_lut_sine_dut.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "anchor"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_lut_sine_dut.sv|WIDTHTRUNC": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "anchor"
+      ],
+      "reason": "Verilator's WIDTHTRUNC/WIDTHEXPAND diagnostics on the landed engines describe the DR-0006 arithmetic profile's deliberate widening and narrowing of intermediate products. Silencing them would change declared arithmetic, which spec/ owns and which needs a decision record, not an RTL edit from a verification-tooling change. They are waived at their committed counts in tb/rtl-lint-baseline.json; any new or increased width/sign diagnostic fails the gate.",
+      "example": "Operator ASSIGN expects N bits on the Assign RHS, but Assign RHS's VARREF 'lvl' generates N bits."
+    },
+    "verilator|tb/sv/tb_mod_matrix_upsample.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "modmatrix"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_noise_stream_dut.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "noise"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_normalization_replay_engine.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "normreplay"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_patch_control.sv|BLKSEQ": {
+      "count": 8,
+      "tier": "lint",
+      "units": [
+        "patch"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_patch_control.sv|INITIALDLY": {
+      "count": 4,
+      "tier": "lint",
+      "units": [
+        "patch"
+      ],
+      "reason": "tb_patch_control.sv / tb_render_binding.sv seed bench-driven mirror state with non-blocking assignments inside initial/final blocks -- ordinary testbench-scaffolding idiom, not synthesised RTL; Verilator 5.020 flags it under -Wall, Verilator 5.052 does not report it for this source",
+      "example": "Non-blocking assignment '<=' in initial/final block"
+    },
+    "verilator|tb/sv/tb_render_binding.sv|BLKSEQ": {
+      "count": 8,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_render_binding.sv|INITIALDLY": {
+      "count": 4,
+      "tier": "lint",
+      "units": [
+        "normreplay-binding"
+      ],
+      "reason": "tb_patch_control.sv / tb_render_binding.sv seed bench-driven mirror state with non-blocking assignments inside initial/final blocks -- ordinary testbench-scaffolding idiom, not synthesised RTL; Verilator 5.020 flags it under -Wall, Verilator 5.052 does not report it for this source",
+      "example": "Non-blocking assignment '<=' in initial/final block"
+    },
+    "verilator|tb/sv/tb_sine_vco_engine.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "vco"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_square_saw_vco.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "vco2"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/tb_synth_dut.sv|BLKSEQ": {
+      "count": 1,
+      "tier": "lint",
+      "units": [
+        "selftest"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    },
+    "verilator|tb/sv/upsample_engine.sv|BLKSEQ": {
+      "count": 19,
+      "tier": "lint",
+      "units": [
+        "modmatrix"
+      ],
+      "reason": "blocking assignments inside sequential blocks are used where the fixed model's own evaluation order is being mirrored intra-cycle; the lanes' bit-exact comparison is the arbiter of that order",
+      "example": "Blocking assignment '=' in sequential logic process"
+    }
+  }
+}

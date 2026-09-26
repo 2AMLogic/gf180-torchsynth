@@ -85,3 +85,37 @@ jobs:
       - name: "Normalization replay + one-shot top lane (issue 77, iverilog, PDK-free)"
         timeout-minutes: 10
         run: python3 tb/run_tb.py normreplay
+
+  rtl-module-qualification:
+    # Issue #78's aggregation/gating layer. sim-lanes above already re-proves
+    # every lane's own bit-exact conformance individually; this job proves
+    # the gate on top of them: it turns previously-unexamined compile/runtime
+    # diagnostics (width/sign, X/Z) into failures via tb/rtl-lint-baseline.json's
+    # ratchet, checks the declared coverage/negative-control obligations, and
+    # writes the indexed evidence record over the bounded FAST_LANES subset
+    # (tools/qualify_rtl_modules.py). See spec/RTL-MODULE-QUALIFICATION.md.
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog + Verilator (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator
+      - name: Registered evaluator (rtl-module-qualification-v1)
+        run: python3 -m unittest discover -s tests -p test_rtl_module_qualification.py -v
+      - name: Make evidence output directory
+        run: mkdir -p out
+      - name: Aggregate gate -- lint tier + bounded fast-lane regression
+        run: |
+          python3 tools/qualify_rtl_modules.py --lint --lanes fast --parallel \
+            --log out/rtl-modules.log --record out/rtl-modules-evidence.json
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-modules-evidence
+          path: out/
+          retention-days: 30
+          if-no-files-found: ignore
