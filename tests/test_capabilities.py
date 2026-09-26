@@ -26,6 +26,9 @@ from torchsynth_voice.capabilities import (  # noqa: E402
     node_digest,
     render_markdown,
     validate_graph,
+    _contained,
+    _path,
+    _relative,
     _structure,
     _validate,
 )
@@ -415,6 +418,10 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(self.state(), "BLOCKED")
 
     def test_paths_reject_traversal_absolute_and_symlink_escape(self):
+        # "vectors:v1/freq:mid.json" is added to the refused set deliberately
+        # (issue #215): relaxing the walk to hash ':'-named files it finds must
+        # not widen what a reviewed *declaration* may say, which both capability
+        # schemas restrict to the same portable grammar.
         for path in (
             "../outside",
             "/tmp/absolute",
@@ -422,6 +429,7 @@ class CapabilityTests(unittest.TestCase):
             "./relative",
             "a//b",
             "C:\\escape",
+            "vectors:v1/freq:mid.json",
         ):
             bad = copy.deepcopy(self.graph)
             bad["nodes"][0]["coverage"]["inputs"] = [path]
@@ -437,6 +445,71 @@ class CapabilityTests(unittest.TestCase):
                 "sha256": digest(b"{}"),
             }
             self.assertEqual(self.state(), "NO VERDICT")
+
+    def test_declaration_grammar_is_stricter_than_walked_containment(self):
+        # Issue #215. A declared locator is reviewable policy and stays inside
+        # the schemas' portable grammar; a name found while walking a covered
+        # directory is data, so only containment (and _path's symlink/escape
+        # refusals) may judge it. Traversal stays refused for both.
+        colon = "fixture/vectors:v1/freq:mid-phase:min-unmod.json"
+        with self.assertRaises(CapabilityError):
+            _relative(colon)
+        _contained(colon)
+        (self.root / "fixture/vectors:v1").mkdir()
+        (self.root / colon).write_text("synthetic vector\n")
+        self.assertEqual(
+            _path(self.root, colon, declared=False), self.root.resolve() / colon
+        )
+        with self.assertRaises(CapabilityError):
+            _path(self.root, colon)
+        for unsafe in ("", "..", "../outside", "/tmp/absolute", "a/../outside", "a//b"):
+            with self.subTest(path=unsafe), self.assertRaises(CapabilityError):
+                _contained(unsafe)
+
+    def test_covered_trees_hash_filenames_the_grammar_would_refuse(self):
+        # Issue #215: sim/reference/sine-vco-golden-v1 and
+        # sim/reference/square-saw-vco-golden-v1 name every golden vector with a
+        # ':'-delimited scheme ("freq:mid-phase:min-unmod.json",
+        # "frozen:waveform:vco_2:saw.json"), inside a directory whose own
+        # declared name is portable. Walking that tree must hash those bytes --
+        # not raise "unsafe relative path", and not skip them with a warning,
+        # which would leave a supposedly current digest blind to their contents.
+        vectors = self.root / "fixture/vectors:v1"
+        vectors.mkdir()
+        names = (
+            "freq:mid-phase:min-unmod.json",
+            "frozen:waveform:vco_2:saw.json",
+            ":leading.json",
+            "trailing:.json",
+        )
+        for name in names:
+            (vectors / name).write_text("synthetic vector " + name + "\n")
+        original = coverage_hashes(self.graph["nodes"][0], self.root)["fixture"]
+        self.evidence()
+        self.assertEqual(self.state(), "PASS")
+        for name in names:
+            (vectors / name).write_text("changed vector\n")
+            with self.subTest(name=name):
+                self.assertEqual(self.state(), "STALE")
+            (vectors / name).write_text("synthetic vector " + name + "\n")
+            self.assertEqual(self.state(), "PASS")
+        (vectors / "extra:vector.json").write_text("new covered vector\n")
+        self.assertEqual(self.state(), "STALE")
+        (vectors / "extra:vector.json").unlink()
+        self.assertEqual(self.state(), "PASS")
+        self.assertEqual(
+            original, coverage_hashes(self.graph["nodes"][0], self.root)["fixture"]
+        )
+
+    def test_colon_named_tree_entries_still_refuse_symlink_escape(self):
+        self.evidence()
+        with tempfile.TemporaryDirectory() as outside:
+            external = Path(outside) / "vector.json"
+            external.write_text("outside the covered root\n")
+            (self.root / "fixture/escape:vector.json").symlink_to(external)
+            with self.assertRaises(CapabilityError):
+                coverage_hashes(self.graph["nodes"][0], self.root)
+            self.assertEqual(self.state(), "STALE")
 
     def referenced_records(self):
         """Use real v1 validators, with synthetic metadata and temporary zero audio."""

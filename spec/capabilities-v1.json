@@ -346,7 +346,7 @@
         "Line, toggle and branch code coverage (no Icarus instrument; see spec/RTL-MODULE-QUALIFICATION.md)",
         "SVA assertion/cover-point coverage (the benches assert procedurally; negative-control coverage is reported instead)",
         "Verilator width/sign diagnostics at their committed waived counts (tb/rtl-lint-baseline.json)",
-        "sim/reference/sine-vco-golden-v1 and sim/reference/square-saw-vco-golden-v1 vector-set hashes (their vector filenames use ':' delimiters that torchsynth_voice.capabilities._relative()'s path-safety pattern refuses; see spec/RTL-MODULE-QUALIFICATION.md)"
+        "sim/reference/sine-vco-golden-v1 and sim/reference/square-saw-vco-golden-v1 vector-set hashes (hashable since issue #215, but covering their 42 ':'-delimited vector files is a separate declaration decision; see spec/RTL-MODULE-QUALIFICATION.md)"
       ],
       "expensive": true,
       "cheaper_predecessor": "fixed-model",

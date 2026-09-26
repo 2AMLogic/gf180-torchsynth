@@ -200,18 +200,20 @@ everywhere.
 - **`sim/reference/sine-vco-golden-v1` and `sim/reference/square-saw-vco-golden-v1`
   vector-set hashes — excluded, justified.** Every vector filename in both
   directories uses a `:`-delimited naming scheme (e.g.
-  `freq:mid-phase:min-unmod.json`, `frozen:waveform:vco_2:saw.json`).
-  `torchsynth_voice.capabilities._relative()`'s path-safety pattern
-  (`[A-Za-z0-9_./-]+`) refuses `:`, so walking either directory through
-  `coverage_hashes()` raises `CapabilityError: unsafe relative path` rather
-  than hashing it — confirmed by actually running `--record` against the
-  committed tree, not by inspection. Renaming #73/#74's already-reviewed
-  vector files, or relaxing the shared path-safety regex, is out of this
-  aggregation/gating layer's scope; both directories are named in the
-  `rtl-modules` node's `exclusions` instead, and the bit-exact comparison
-  itself is unaffected — the `vco`/`vco2` lanes load and check every vector
-  in both directories exactly as before, this exclusion is only about the
-  evidence record's own input-hash list.
+  `freq:mid-phase:min-unmod.json`, `frozen:waveform:vco_2:saw.json`). Walking
+  either directory through `coverage_hashes()` once raised
+  `CapabilityError: unsafe relative path`, because the grammar reserved for
+  *declared* locators was also applied to names found on disk — observed by
+  actually running `--record` against the committed tree, not by inspection.
+  Issue #215 fixed that walk: a discovered name is judged by containment plus
+  the symlink and escape refusals, and its bytes are hashed as stored, so
+  neither directory raises any more. Whether this node's evidence should cover
+  42 additional vector files is a separate declaration decision, not this
+  aggregation/gating layer's to make, so both directories stay named in the
+  `rtl-modules` node's `exclusions` for now. The bit-exact comparison itself
+  was never affected — the `vco`/`vco2` lanes load and check every vector in
+  both directories exactly as before; this exclusion is only about the evidence
+  record's own input-hash list.
 
 These exclusions are also declared on the `rtl-modules` node in
 `spec/capabilities-v1.json`, so a reader of `docs/CAPABILITIES.md` sees them
