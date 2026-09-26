@@ -25,6 +25,7 @@ explicitly skipped when it is absent, and nothing here simulates.
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 import shutil
@@ -459,24 +460,34 @@ class RegistrationTests(unittest.TestCase):
         # Regression: sim/reference/sine-vco-golden-v1 and
         # sim/reference/square-saw-vco-golden-v1 (issues #73/#74) name every
         # vector with a ':'-delimited scheme (e.g.
-        # "freq:mid-phase:min-unmod.json"). capabilities._relative()'s
-        # path-safety pattern refuses ':', so walking either directory
-        # through coverage_hashes() used to raise CapabilityError("unsafe
-        # relative path") the moment --record actually ran -- caught only by
-        # running the real command, not by reading the graph. Both
-        # directories are declared exclusions instead (see
-        # spec/RTL-MODULE-QUALIFICATION.md); this proves coverage_hashes()
-        # stays crash-free for the committed rtl-modules node and that
-        # neither directory silently crept back into its coverage inputs.
+        # "freq:mid-phase:min-unmod.json"). Walking either directory through
+        # coverage_hashes() used to raise CapabilityError("unsafe relative
+        # path") the moment --record actually ran -- caught only by running the
+        # real command, not by reading the graph. Issue #215 fixed that walk:
+        # a name found on disk is now judged by containment plus the symlink
+        # and escape refusals, not by the grammar reserved for declarations, so
+        # either directory hashes as stored. Whether this node should cover
+        # them is a separate declaration decision; it still excludes them (see
+        # spec/RTL-MODULE-QUALIFICATION.md), so both facts are asserted here:
+        # the committed node hashes, and so would one that added them.
         graph = load_graph(GRAPH)
         node = next(n for n in graph["nodes"] if n["id"] == q.NODE_ID)
-        for excluded in (
+        vector_sets = (
             "sim/reference/sine-vco-golden-v1",
             "sim/reference/square-saw-vco-golden-v1",
-        ):
+        )
+        for excluded in vector_sets:
             self.assertNotIn(excluded, node["coverage"]["inputs"])
         hashes = coverage_hashes(node, ROOT)
         self.assertTrue(hashes)
+        covering = copy.deepcopy(node)
+        covering["coverage"]["inputs"] = sorted(
+            set(covering["coverage"]["inputs"]) | set(vector_sets)
+        )
+        covered = coverage_hashes(covering, ROOT)
+        for vectors in vector_sets:
+            self.assertRegex(covered[vectors], r"\A[0-9a-f]{64}\Z")
+            self.assertTrue(any(":" in p.name for p in (ROOT / vectors).iterdir()))
 
     @unittest.skipUnless(GRAPH.is_file(), "the capability graph is not in this tree")
     def test_evidence_stays_detached_while_the_prerequisite_is_unproven(self):

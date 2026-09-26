@@ -221,19 +221,41 @@ def _validate(value: Any, kind: str) -> None:
     _structure(value, schema)
 
 
-def _relative(path: str) -> None:
-    parts = path.split("/")
+def _contained(path: str) -> None:
+    """Structural containment every locator needs, declared or found on disk."""
     _require(
         bool(path)
         and not PurePosixPath(path).is_absolute()
-        and all(part not in ("", ".", "..") for part in parts)
-        and re.fullmatch(r"[A-Za-z0-9_./-]+", path) is not None,
+        and all(part not in ("", ".", "..") for part in path.split("/")),
         "unsafe relative path",
     )
 
 
-def _path(root: Path, relative: str) -> Path:
-    _relative(relative)
+def _relative(path: str) -> None:
+    """Declared locators additionally obey the schemas' portable path grammar.
+
+    A declaration is reviewable policy text, so it stays restricted to the
+    grammar both capability schemas enforce (no colons, backslashes, URI forms
+    or host paths). Names *discovered* inside a covered directory are data, not
+    policy: they are checked by _contained plus the symlink/escape refusals in
+    _path, never by this grammar, because a file whose name this pattern would
+    refuse must still be hashed rather than silently left out of a coverage
+    digest (issue #215: ':'-delimited golden-vector filenames).
+    """
+    _contained(path)
+    _require(
+        re.fullmatch(r"[A-Za-z0-9_./-]+", path) is not None,
+        f"non-portable declared path: {path}",
+    )
+
+
+def _path(root: Path, relative: str, declared: bool = True) -> Path:
+    # Declarations answer to the portable grammar; walked names answer only to
+    # containment, then to the same symlink/escape refusals below.
+    if declared:
+        _relative(relative)
+    else:
+        _contained(relative)
     root = root.resolve()
     target = root / relative
     # Reject aliases as well as escapes, including symlinked parent directories.
@@ -336,8 +358,11 @@ def coverage_hashes(node: dict, root: Path) -> dict[str, str]:
     def tree_files(directory):
         # rglob suppresses directory-read errors on recent Python versions. An
         # unreadable subtree must not disappear from a supposedly current hash.
+        # Walked names are data: containment, symlink and escape refusals still
+        # apply, but the declaration grammar does not, so a name it would refuse
+        # (a ':'-delimited golden vector) is hashed instead of dropped or raised.
         for child in sorted(directory.iterdir()):
-            _path(root, child.relative_to(root.resolve()).as_posix())
+            _path(root, child.relative_to(root.resolve()).as_posix(), declared=False)
             if child.is_dir():
                 yield from tree_files(child)
             else:
@@ -622,7 +647,10 @@ def render_markdown(graph: dict, results: dict[str, Result]) -> str:
         "",
         "Coverage hashes current stored bytes, including dirty and untracked covered files. Directory "
         "coverage hashes a sorted relative-file/digest map, without ignoring files. Symlinks and path "
-        "escapes are refused. Compiler, validators, their schemas and the pinned profile/manifest are "
+        "escapes are refused. Declared locators also obey the schemas' portable path grammar; names "
+        "found while walking a covered directory are hashed as stored, so a filename that grammar "
+        "would refuse is neither skipped nor fatal. Compiler, validators, their schemas and the pinned "
+        "profile/manifest are "
         "implicit covered inputs; registered checks add their implementation and required fixture files. "
         "The capability-compiler-v1 check runs only synthetic CapabilityTests; canonical graph/view "
         "agreement is checked separately by the normal repository suite and compiler --check/--strict "
