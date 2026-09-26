@@ -532,11 +532,11 @@ NORMREPLAY_ALWAYS_ON_MUTANT = "if (1'b1) begin"
 NORMREPLAY_ALWAYS_OFF_MUTANT = "if (1'b0) begin"
 NORMREPLAY_WRONG_PEAK_ANCHOR = (
     "if (mix_mag > peak_word)\n"
-    "                                peak_word <= mix_mag;"
+    "                                    peak_word <= mix_mag;"
 )
 NORMREPLAY_WRONG_PEAK_MUTANT = (
     "if (1'b1)\n"
-    "                                peak_word <= mix_mag;"
+    "                                    peak_word <= mix_mag;"
 )
 NORMREPLAY_WRONG_RECIPROCAL_ANCHOR = (
     "gain_word         <= recip_quo[C9_WIDTH-1:0];"
@@ -546,13 +546,15 @@ NORMREPLAY_WRONG_RECIPROCAL_MUTANT = (
 )
 NORMREPLAY_OFF_BY_ONE_ANCHOR = (
     "P_PASS1: begin\n"
-    "                    if (mix_valid) begin\n"
-    "                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin"
+    "                    if (!error) begin\n"
+    "                        if (mix_valid) begin\n"
+    "                            if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin"
 )
 NORMREPLAY_OFF_BY_ONE_MUTANT = (
     "P_PASS1: begin\n"
-    "                    if (mix_valid) begin\n"
-    "                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS - 18'd1) begin"
+    "                    if (!error) begin\n"
+    "                        if (mix_valid) begin\n"
+    "                            if (samples_this_pass == SCHED_SAMPLES_PER_PASS - 18'd1) begin"
 )
 #: Cases the always-on/always-off/wrong-peak/wrong-reciprocal mutations are
 #: demonstrated on (mirrors tests/test_normalization_replay.py's own
@@ -572,6 +574,14 @@ NORMREPLAY_BIND_REJECT_ANCHOR = (
 NORMREPLAY_BIND_REJECT_MUTANT = "end else if (1'b0) begin"
 NORMREPLAY_BIND_REJECT_CASE = "fixed:above-one-min"
 NORMREPLAY_ERR_BINDING_REJECTED = 3
+# Issue #208: a sticky ERR_SAMPLE_OVERRUN raised in P_PASS1 must never let
+# pass_index reach P_PASS2, and one raised in P_PASS2 must never let done
+# reach 1 — "further mix_valid/mix_done are ignored until rst" applies to
+# the framing errors too, not just #188's bind_reject discard.
+NORMREPLAY_ERR_SAMPLE_OVERRUN = 1
+NORMREPLAY_STICKY_OVERRUN_CASE = "fixed:above-one-min"
+NORMREPLAY_P_PASS1 = 1
+NORMREPLAY_P_PASS2 = 2
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
 SYNTH_PARAMETER = "adsr_1.alpha"
@@ -6442,6 +6452,94 @@ def normreplay_binding_reject(
     return all_ok
 
 
+def normreplay_sticky_overrun(
+    workdir: Path, simulator: str, formats, dut_sv: Path, *, report: bool
+) -> bool:
+    """Issue #208: a sticky ERR_SAMPLE_OVERRUN must discard the clip entire.
+
+    The module's own header ("Framing") documents "Once raised, further
+    mix_valid/mix_done are ignored until rst" — a sticky error raised in
+    P_PASS1 must never let ``pass_index`` reach P_PASS2, and one raised in
+    P_PASS2 must never let ``done`` reach 1'b1 (DR-0010 "Clip lifecycle").
+    This reproduces the issue's own exact repro (pass 1 fed
+    SCHED_SAMPLES_PER_PASS + 1 words) plus the equivalent pass-2 case.
+    Returns True only if both scenarios behave as specified.
+    """
+
+    clip = nr.directed_cases()[NORMREPLAY_STICKY_OVERRUN_CASE]
+    all_ok = True
+
+    # Pass-1 overrun-then-mix_done (the issue's own repro): feed one more
+    # than the declared pass-1 sample count, then a normal-looking pass 2.
+    # audio_out_valid is only ever asserted in P_PASS2, so if the sticky
+    # error correctly keeps pass_index pinned at P_PASS1, zero samples can
+    # ever be released and done must stay 0.
+    p1dir = workdir / "pass1-overrun"
+    p1dir.mkdir(parents=True, exist_ok=True)
+    normreplay_write_run(p1dir, 0, len(clip) + 1, len(clip), clip + [0], clip)
+    p1_captures, p1_statuses = normreplay_simulate(p1dir, simulator, 1, dut_sv)
+    p1_got = p1_captures[0]
+    p1_error, p1_error_code, _p1_peak, _p1_gain, _p1_branch, p1_done, p1_pass = (
+        p1_statuses[0][:7]
+    )
+    pass1_ok = (
+        p1_got == []
+        and p1_error == 1
+        and p1_error_code == NORMREPLAY_ERR_SAMPLE_OVERRUN
+        and p1_done == 0
+        and p1_pass == NORMREPLAY_P_PASS1
+    )
+    if report:
+        print(
+            "  pass-1 overrun-then-mix_done: %d sample(s) released "
+            "(expected 0), status (error, error_code, done, pass_index) = "
+            "(%d, %d, %d, %d) (expected (1, %d, 0, %d)) -> %s"
+            % (
+                len(p1_got), p1_error, p1_error_code, p1_done, p1_pass,
+                NORMREPLAY_ERR_SAMPLE_OVERRUN, NORMREPLAY_P_PASS1,
+                "OK" if pass1_ok else "FAIL",
+            )
+        )
+    all_ok = all_ok and pass1_ok
+
+    # Pass-2 overrun-then-mix_done (the same defect class): pass 1 completes
+    # normally, then pass 2 is fed one more than the declared sample count.
+    # The clean samples up to the overrun release exactly as a normal
+    # render would; the sticky error raised on the extra sample must then
+    # block the following mix_done from ever reaching P_DONE/done=1.
+    want, _diag = nrg.mirror_normalize(clip, formats)
+    p2dir = workdir / "pass2-overrun"
+    p2dir.mkdir(parents=True, exist_ok=True)
+    normreplay_write_run(p2dir, 0, len(clip), len(clip) + 1, clip, clip + [0])
+    p2_captures, p2_statuses = normreplay_simulate(p2dir, simulator, 1, dut_sv)
+    p2_got = p2_captures[0]
+    p2_error, p2_error_code, _p2_peak, _p2_gain, _p2_branch, p2_done, p2_pass = (
+        p2_statuses[0][:7]
+    )
+    pass2_ok = (
+        p2_got == want
+        and p2_error == 1
+        and p2_error_code == NORMREPLAY_ERR_SAMPLE_OVERRUN
+        and p2_done == 0
+        and p2_pass == NORMREPLAY_P_PASS2
+    )
+    if report:
+        print(
+            "  pass-2 overrun-then-mix_done: %d sample(s) released "
+            "(expected %d, the clean prefix only), status (error, "
+            "error_code, done, pass_index) = (%d, %d, %d, %d) "
+            "(expected (1, %d, 0, %d)) -> %s"
+            % (
+                len(p2_got), len(want), p2_error, p2_error_code, p2_done,
+                p2_pass, NORMREPLAY_ERR_SAMPLE_OVERRUN, NORMREPLAY_P_PASS2,
+                "OK" if pass2_ok else "FAIL",
+            )
+        )
+    all_ok = all_ok and pass2_ok
+
+    return all_ok
+
+
 def normreplay(workdir: Path, simulator: str) -> int:
     """Issue #77 flow: the normalization replay controller + one-shot top's
     two-pass sequencer vs the frozen model's own ``normalize_words()``."""
@@ -6722,6 +6820,17 @@ def normreplay(workdir: Path, simulator: str) -> int:
     )
     ok = ok and mutations_ok
 
+    # 5b. Issue #208: a sticky ERR_SAMPLE_OVERRUN raised in P_PASS1 or
+    #     P_PASS2 must discard the clip entire, exactly as the module's own
+    #     "Framing" contract and DR-0010 "Clip lifecycle" require.
+    print("sticky overrun discard (issue #208, DR-0010 Clip lifecycle):")
+    sticky_overrun_ok = normreplay_sticky_overrun(
+        workdir / "sticky-overrun", simulator, formats, NORMREPLAY_DUT_SV,
+        report=True,
+    )
+    print("sticky overrun discard -> %s" % ("OK" if sticky_overrun_ok else "FAIL"))
+    ok = ok and sticky_overrun_ok
+
     # 6. Pass/digest binding (issue #188, DR-0010 "Clip lifecycle"): the
     #    receiver's bind_reject discards the clip entire, and a mutant that
     #    ignores it must be caught by the same scenarios.
@@ -6759,8 +6868,9 @@ def normreplay(workdir: Path, simulator: str) -> int:
         return 1
     print(
         "NORMREPLAY RUN PASSED (%d isolated + full-voice cases bit-exact "
-        "+ replay pair bit-exact + owner-row/op-count asserts + binding "
-        "rejection discards the clip entire + all 6 mutations detected)"
+        "+ replay pair bit-exact + owner-row/op-count asserts + sticky "
+        "overrun discards the clip entire + binding rejection discards the "
+        "clip entire + all 6 mutations detected)"
         % len(cases)
     )
     return 0
