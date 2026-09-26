@@ -278,67 +278,78 @@ module normalization_replay_engine (
                     end
                 end
 
+                // Once the sticky error is raised, further mix_valid/
+                // mix_done are ignored until rst for both passes below
+                // (module header, "Framing") — no further pass_index
+                // advance and no done can occur on an errored clip
+                // (DR-0010 "Clip lifecycle").
                 P_PASS1: begin
-                    if (mix_valid) begin
-                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin
-                            error      <= 1'b1;
-                            error_code <= ERR_SAMPLE_OVERRUN;
-                            busy       <= 1'b0;
-                        end else begin
-                            op_compares <= op_compares + 32'd1;
-                            op_selects  <= op_selects  + 32'd1;
-                            if (mix_mag > peak_word)
-                                peak_word <= mix_mag;
-                            samples_this_pass <= samples_this_pass + 18'd1;
-                        end
-                    end else if (mix_done) begin
-                        if (samples_this_pass != SCHED_SAMPLES_PER_PASS) begin
-                            error      <= 1'b1;
-                            error_code <= ERR_PASS_TRUNCATED;
-                            busy       <= 1'b0;
-                        end else begin
-                            if (peak_word > UNITY_INT) begin
-                                branch_normalized <= 1'b1;
-                                gain_word         <= recip_quo[C9_WIDTH-1:0];
-                                op_recip_divs     <= op_recip_divs + 32'd1;
+                    if (!error) begin
+                        if (mix_valid) begin
+                            if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin
+                                error      <= 1'b1;
+                                error_code <= ERR_SAMPLE_OVERRUN;
+                                busy       <= 1'b0;
                             end else begin
-                                branch_normalized <= 1'b0;
-                                gain_word         <= UNITY_GAIN;
+                                op_compares <= op_compares + 32'd1;
+                                op_selects  <= op_selects  + 32'd1;
+                                if (mix_mag > peak_word)
+                                    peak_word <= mix_mag;
+                                samples_this_pass <= samples_this_pass + 18'd1;
                             end
-                            pass_index        <= P_PASS2;
-                            samples_this_pass <= 18'd0;
+                        end else if (mix_done) begin
+                            if (samples_this_pass != SCHED_SAMPLES_PER_PASS) begin
+                                error      <= 1'b1;
+                                error_code <= ERR_PASS_TRUNCATED;
+                                busy       <= 1'b0;
+                            end else begin
+                                if (peak_word > UNITY_INT) begin
+                                    branch_normalized <= 1'b1;
+                                    gain_word         <= recip_quo[C9_WIDTH-1:0];
+                                    op_recip_divs     <= op_recip_divs + 32'd1;
+                                end else begin
+                                    branch_normalized <= 1'b0;
+                                    gain_word         <= UNITY_GAIN;
+                                end
+                                pass_index        <= P_PASS2;
+                                samples_this_pass <= 18'd0;
+                            end
                         end
                     end
                 end
 
                 P_PASS2: begin
-                    if (mix_valid) begin
-                        if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin
-                            error      <= 1'b1;
-                            error_code <= ERR_SAMPLE_OVERRUN;
-                            busy       <= 1'b0;
-                        end else begin
-                            if (branch_normalized) begin
-                                audio_out  <= narrow_value;
-                                op_mults   <= op_mults   + 32'd1;
-                                op_narrows <= op_narrows + 32'd1;
-                                if (mul_saturates)
-                                    op_saturations <= op_saturations + 32'd1;
+                    // Same sticky-error gate as P_PASS1: once raised, no
+                    // further sample release and no reaching P_DONE/done.
+                    if (!error) begin
+                        if (mix_valid) begin
+                            if (samples_this_pass == SCHED_SAMPLES_PER_PASS) begin
+                                error      <= 1'b1;
+                                error_code <= ERR_SAMPLE_OVERRUN;
+                                busy       <= 1'b0;
                             end else begin
-                                audio_out <= mix_in;
+                                if (branch_normalized) begin
+                                    audio_out  <= narrow_value;
+                                    op_mults   <= op_mults   + 32'd1;
+                                    op_narrows <= op_narrows + 32'd1;
+                                    if (mul_saturates)
+                                        op_saturations <= op_saturations + 32'd1;
+                                end else begin
+                                    audio_out <= mix_in;
+                                end
+                                audio_out_valid   <= 1'b1;
+                                samples_this_pass <= samples_this_pass + 18'd1;
                             end
-                            audio_out_valid   <= 1'b1;
-                            samples_this_pass <= samples_this_pass + 18'd1;
-                        end
-                    end else if (mix_done) begin
-                        if (samples_this_pass != SCHED_SAMPLES_PER_PASS) begin
-                            error      <= 1'b1;
-                            error_code <= ERR_PASS_TRUNCATED;
-                            busy       <= 1'b0;
-                        end else begin
-                            pass_index <= P_DONE;
-                            busy       <= 1'b0;
-                            done       <= 1'b1;
+                        end else if (mix_done) begin
+                            if (samples_this_pass != SCHED_SAMPLES_PER_PASS) begin
+                                error      <= 1'b1;
+                                error_code <= ERR_PASS_TRUNCATED;
+                                busy       <= 1'b0;
+                            end else begin
+                                pass_index <= P_DONE;
+                                busy       <= 1'b0;
+                                done       <= 1'b1;
+                            end
                         end
                     end
                 end
