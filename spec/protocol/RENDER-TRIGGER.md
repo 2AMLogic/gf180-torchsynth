@@ -162,20 +162,57 @@ declared-digest check happens, therefore releases **zero** samples. The
 sticky error clears only on `rst`, which is how the receiver completes the
 discard. The engine holds no digest and computes none.
 
-The RTL protocol front end (`tb/sv/patch_control.sv`, #69) does not grant
-`CAP_RENDER` today (`CAPS_GRANTED` = bits 0 and 1) and answers both codes
-with `ERR_UNSUPPORTED_COMMAND`, which is conformant under the capability rule
-above. The RTL receiver for these commands, the 32-byte latch it needs for
-the declared digest, and the wire from that receiver to `bind_reject` are not
-implemented in this document's lane.
+The RTL protocol front end (`tb/sv/patch_control.sv`, #69) grants
+`CAP_RENDER` (`CAPS_GRANTED` = bits 0, 1 and 2) and implements the receiver
+for both codes: the `rendering` session state with its current pass and
+per-pass accepted-byte count, the pass-1 latch of the declared 32-byte
+digest and the bound sound identity, the pass-2 compare of both, and every
+error row of the lifecycle table above. It computes no digest of its own
+and holds no clip buffer — `NOISE_STREAM` data bytes are never stored, so
+the receiver's entire per-clip live state is 810 bits (256 declared digest
++ 512 bound identity + 8 identity length + 1 current pass + 1 pass-1-complete
++ 32 accepted-byte count), inside DR-0010 P2's "under ~1 Kbit" figure.
+
+The wire itself is `tb/sv/render_binding_top.sv`: a structural top that
+declares exactly one composition, the receiver's `bind_reject` output driving
+the engine's `bind_reject` input with no re-timing or gating in between. It
+is not the one-shot product top and adds no owner row to DR-0010's module
+table; the noise **byte** stream (#75 lane) and the pre-normalization mix
+**sample** stream (#76 lane) remain separate declared interfaces that no
+landed RTL joins.
+
+Because capabilities are negotiated rather than asserted, a host that does
+not request `CAP_RENDER` in `HELLO` still receives `ERR_UNSUPPORTED_COMMAND`
+for both codes and the `READY` capability word it is answered with is
+`requested & granted`, not the static grant mask.
 
 ## Status
 
-Verified in software only: the behavioral mock core
-(`core_protocol_mock.MockCore`) and host client
-(`protocol_client.HostClient.render_clip`) implement this document
-(`tests/test_render_trigger.py`), and the replay engine's `bind_reject`
-discard is exercised in simulation by `tb/run_tb.py normreplay` (boundary,
-mid-pass-2 and mid-pass-1 rejections, plus a mutant that ignores
-`bind_reject` and must be detected). None of this is evidence of synthesis,
-layout, signoff, hardware playback, or sound fidelity.
+Verified in software and in PDK-free RTL simulation (Icarus Verilog):
+
+- The behavioral mock core (`core_protocol_mock.MockCore`) and host client
+  (`protocol_client.HostClient.render_clip`) implement this document
+  (`tests/test_render_trigger.py`).
+- The replay engine's `bind_reject` discard is exercised by `tb/run_tb.py
+  normreplay` (boundary, mid-pass-2 and mid-pass-1 rejections, plus a mutant
+  that ignores `bind_reject` and must be detected).
+- The RTL receiver (`tb/sv/patch_control.sv`) is compared byte- and
+  cycle-exactly against its Python mirror
+  (`src/torchsynth_voice/patch_control_model.py`) by `tb/run_tb.py patch`
+  over the whole lifecycle table: `CAP_RENDER` negotiation, pass-1 bind,
+  contiguous `NOISE_STREAM` feed, pass-2 rebind and clip completion, every
+  rejection row, and one completion of the product profile's real
+  705,600-B/pass clip. Seven planted mutants (withheld capability, dropped
+  pass-1 identity binding, dropped pass-2 digest or identity compare,
+  dropped offset contiguity, suppressed `bind_reject`, dropped
+  clip-completion transition) are each detected.
+- The wire from receiver to engine is exercised end-to-end by `tb/run_tb.py
+  normreplay` through `tb/sv/render_binding_top.sv`, driven by real
+  `RENDER_TRIGGER`/`NOISE_STREAM` frames: a pass-2 declared-digest mismatch
+  answers `ERR_RENDER_BINDING`, pulses `bind_reject` for exactly one cycle,
+  raises the engine's sticky `ERR_BINDING_REJECTED` and releases **zero**
+  samples, while the matching binding leaves the wire quiet and completes
+  the clip bit-exactly. A mutant that drops the connection is detected.
+
+None of this is evidence of synthesis, layout, signoff, hardware playback,
+or sound fidelity.

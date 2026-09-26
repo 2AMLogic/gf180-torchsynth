@@ -12,6 +12,13 @@
 //                               commit gate)
 //   spec/protocol/SESSION.md    (lifecycle, ordering, backpressure,
 //                               timeouts, idempotency, error taxonomy)
+//   spec/protocol/RENDER-TRIGGER.md
+//                               (CAP_RENDER, RENDER_TRIGGER 0x15 /
+//                               NOISE_STREAM 0x16, the `rendering` state,
+//                               the pass-1 declared-digest + sound-identity
+//                               binding compared at the pass-2 trigger, and
+//                               the bind_reject pulse that discards the
+//                               clip in the replay engine)
 //
 // Word formats come from the accepted DR-0008 register through the emitted
 // constants package (C4: the uniform host-entry patch word is Q10.21,
@@ -63,6 +70,29 @@
 //      is ERR_PAYLOAD_LENGTH; a name the core cannot resolve — unknown,
 //      overlong, or not valid UTF-8 — is unresolvable (ERR_UNKNOWN_NAME,
 //      PATCH-LOAD's "must not accept names it cannot resolve").
+//   7. Capabilities are negotiated, not asserted: the READY capability
+//      word is (requested & CAPS_GRANTED), and a command whose capability
+//      bit is not in that word is ERR_UNSUPPORTED_COMMAND — checked
+//      BEFORE any state or payload rule, because RENDER-TRIGGER.md's
+//      capability paragraph is unconditional ("A core that does not grant
+//      it answers both codes with ERR_UNSUPPORTED_COMMAND and changes
+//      nothing"). The negotiated word survives RESET (SESSION: RESET
+//      returns to ready, it does not renegotiate) and is cleared only by
+//      rst and by the two fatal ERR_PROTOCOL_VERSION paths, so `closed`
+//      never holds a granted capability.
+//   8. RENDER-TRIGGER.md's lifecycle table names `ready` and `rendering`
+//      rows only. In `closed` the SESSION lifecycle admits HELLO alone, so
+//      both render codes are ERR_BAD_STATE there (unreachable in practice
+//      under refinement 7); in `patch_open` both are ERR_BAD_STATE (that
+//      document's own ordering rule). While `rendering`: PATCH_OPEN and
+//      PATCH_ABORT are ERR_BAD_STATE (an abort must not silently end a
+//      render — RESET does that), and PATCH_NAME/PATCH_VALUE/
+//      PATCH_COMMIT answer the no-open-transaction outcome they already
+//      answer in `ready`. A rejection that discards an OPEN render
+//      (ERR_RENDER_BINDING or ERR_NOISE_STREAM) pulses bind_reject for one
+//      cycle on the decide cycle that answers it; a pass-1 identity
+//      mismatch does not (no clip existed), and neither do RESET/HELLO,
+//      whose discard reaches the engine through its own rst/abort.
 //
 // ---------------------------------------------------------------------
 // CYCLE CONTRACT — replicated cycle-exactly by the Python mirror; the
@@ -98,7 +128,18 @@
 //                   [sum(name_len+7)], padding [9+k_pad] bytes, one
 //                   64-cycle compress per 64-byte block, a 32-cycle
 //                   digest compare. k_pad = (56-((stream+1) mod 64)) mod 64.
+//       RENDER_TRIGGER: pass index [1], identity len [2],
+//                   identity [ident_len, 0 consumes no cycle], digest
+//                   prefix [2], declared digest [32].
+//       NOISE_STREAM: pass index [1], offset [4], data len [2]. The data
+//                   region costs NO walk cycle: the bytes are consumed by
+//                   the parser and never stored (DR-0010 Memory strategy —
+//                   the receiver holds no clip buffer), so the engine only
+//                   ever reads this frame's declared length.
 //       Each walk is followed by one decide cycle (effects + enqueue).
+//       A command whose capability is not granted, or whose payload is not
+//       its declared shape (a length the walk itself could not traverse),
+//       is answered walk-free at the decide cycle.
 //   - Patch timeout: the timer runs only while the session is
 //     patch_open, reloads on every admitted transaction frame's t0 (and
 //     when a transaction opens), and expires silently after
@@ -127,7 +168,14 @@ module patch_control #(
     parameter integer TIMEOUT_CYCLES = 5000,
     parameter integer ADVERTISED_MAX_PAYLOAD = 1024,
     parameter integer ADVERTISED_RX_QUEUE_DEPTH = 1,
-    parameter integer ADVERTISED_PATCH_TIMEOUT_MS = 2
+    parameter integer ADVERTISED_PATCH_TIMEOUT_MS = 2,
+    // Per-pass host-fed noise-stream length in bytes: the product
+    // profile's clip length, SCHED_SAMPLES_PER_PASS x 4 = 705,600 B
+    // (RENDER-TRIGGER.md "Render lifecycle"). A smaller value is a
+    // simulation scale-down ONLY — it lets the directed framing/lifecycle
+    // cases run in a few thousand cycles instead of ~1.4M; the product
+    // length is this default, bound to the emitted schedule constant.
+    parameter integer NOISE_CLIP_BYTES = SCHED_SAMPLES_PER_PASS * 4
 ) (
     input  wire        clk,
     input  wire        rst,          // synchronous, active-high
@@ -140,8 +188,14 @@ module patch_control #(
     output wire [7:0]  rsp_byte,
     input  wire        rsp_ready,
 
-    output wire [1:0]  state_out,    // 0 closed, 1 ready, 2 patch_open
+    output wire [1:0]  state_out,    // 0 closed, 1 ready, 2 patch_open,
+                                     // 3 rendering (RENDER-TRIGGER.md)
     output wire        patch_active, // render gate (refinement 4)
+    // One-cycle pulse: this receiver answered ERR_RENDER_BINDING or
+    // ERR_NOISE_STREAM for an OPEN render, so the clip is discarded
+    // entire. Wired to normalization_replay_engine.bind_reject
+    // (RENDER-TRIGGER.md "Where the binding reaches the RTL").
+    output wire        bind_reject,
     output wire [C4_WIDTH-1:0] kbd_midi_f0_word, // C4 Q10.21, verbatim
     output wire [46:0] kbd_duration_word,  // Q16.30, exact wire-word <<9
     output wire [7:0]  sound_identity_len,
@@ -153,12 +207,14 @@ module patch_control #(
 
 `include "gf180_patch_table.svh"
 
-    localparam [1:0] S_CLOSED = 2'd0, S_READY = 2'd1, S_PATCH = 2'd2;
+    localparam [1:0] S_CLOSED = 2'd0, S_READY = 2'd1, S_PATCH = 2'd2,
+        S_RENDER = 2'd3;
 
     localparam [7:0] CMD_HELLO = 8'h01, CMD_READY = 8'h02,
         CMD_PATCH_OPEN = 8'h10, CMD_PATCH_NAME = 8'h11,
         CMD_PATCH_VALUE = 8'h12, CMD_PATCH_COMMIT = 8'h13,
-        CMD_PATCH_ABORT = 8'h14, CMD_RESET = 8'h20;
+        CMD_PATCH_ABORT = 8'h14, CMD_RENDER_TRIGGER = 8'h15,
+        CMD_NOISE_STREAM = 8'h16, CMD_RESET = 8'h20;
 
     localparam [7:0] KIND_CMD = 8'h01, KIND_RSP = 8'h02, KIND_ERR = 8'h03;
 
@@ -167,12 +223,29 @@ module patch_control #(
         ERR_BAD_STATE = 8'h06, ERR_TX_ACTIVE = 8'h07, ERR_INCOMPLETE = 8'h08,
         ERR_HASH_MISMATCH = 8'h09, ERR_UNKNOWN_NAME = 8'h0A,
         ERR_DUPLICATE_NAME = 8'h0B, ERR_TX_TIMEOUT = 8'h0C,
-        ERR_PAYLOAD_LENGTH = 8'h0D;
+        ERR_PAYLOAD_LENGTH = 8'h0D, ERR_RENDER_BINDING = 8'h0E,
+        ERR_NOISE_STREAM = 8'h0F;
 
     localparam integer PROFILE_WINDOW = 64;
     localparam integer REQ_SLOTS  = 8;
     localparam integer CACHE_BYTES = 178; // bound idempotent frame (HELLO 64/64)
-    localparam integer CAPS_GRANTED = 3;  // name_keyed_patch_load | reset
+    // Capability bits (FRAMING.md / RENDER-TRIGGER.md "Capability").
+    localparam [15:0] CAP_PATCH_LOAD = 16'h0001;
+    localparam [15:0] CAP_RESET      = 16'h0002;
+    localparam [15:0] CAP_RENDER     = 16'h0004;
+    // name_keyed_patch_load | reset | render
+    localparam [15:0] CAPS_GRANTED =
+        CAP_PATCH_LOAD | CAP_RESET | CAP_RENDER;
+    // The declared noise-stream digest width (RENDER_TRIGGER's opaque
+    // 32-byte field) and the two render pass indices.
+    localparam integer NOISE_DIGEST_BYTES = 32;
+    localparam [7:0] RENDER_PASS_1 = 8'd1, RENDER_PASS_2 = 8'd2;
+    // RENDER_TRIGGER's fixed payload cost: pass index [1] + identity
+    // length prefix [2] + digest length prefix [2] + digest [32].
+    localparam integer RENDER_TRIGGER_FIXED = 5 + NOISE_DIGEST_BYTES;
+    // NOISE_STREAM's fixed payload cost: pass [1] + offset [4] + data
+    // length prefix [2]; at least one data byte must follow.
+    localparam integer NOISE_STREAM_FIXED = 7;
 
     // ------------------------------------------------------------------
     // state declarations (all before any use)
@@ -213,6 +286,27 @@ module patch_control #(
     reg          done_valid, done_expired;
     reg [127:0]  done_id;
     reg [15:0]   done_seq_first, done_seq_last;
+
+    // Negotiated capability word (refinement 7): (requested & CAPS_GRANTED)
+    // as of the last HELLO; 0 after rst and after a fatal.
+    reg [15:0]   caps_r;
+
+    // ------------------------------------------------------------------
+    // render binding — the ONLY per-clip live state this receiver adds
+    // (RENDER-TRIGGER.md "Clip lifecycle"; DR-0010 P2 live-state budget).
+    // 256 + 512 + 8 + 1 + 1 + 32 = 810 bits, under DR-0010 P2's "~1 Kbit"
+    // figure. No clip buffer exists: NOISE_STREAM data bytes are consumed
+    // by the parser and never stored (DR-0010 Memory strategy), and this
+    // receiver computes no digest of its own over them (declared-digest
+    // binding only; receiver-side hashing is open, issue #207).
+    // ------------------------------------------------------------------
+    reg [255:0]  rnd_digest;        // pass-1 declared noise_stream_sha256
+    reg [511:0]  rnd_identity;      // bound sound identity, left-justified
+    reg [7:0]    rnd_identity_len;  // its declared length in bytes
+    reg          rnd_pass2;         // 0 current pass is 1, 1 current is 2
+    reg          rnd_pass1_done;    // pass 1 accepted NOISE_CLIP_BYTES
+    reg [31:0]   rnd_accepted;      // bytes accepted in the current pass
+    reg          bind_reject_r;     // one-cycle discard pulse (output)
 
     // idempotent-class replay caches (0 HELLO, 1 RESET, 2 PATCH_ABORT)
     reg [7:0]   cache_len [0:2];
@@ -269,18 +363,25 @@ module patch_control #(
     reg [15:0] req_seq  [0:REQ_SLOTS-1];
     reg [7:0]  req_plen [0:REQ_SLOTS-1];
     reg [7:0]  req_code [0:REQ_SLOTS-1];
+    reg [15:0] req_caps [0:REQ_SLOTS-1];  // READY capability word snapshot
     reg [3:0]  req_wptr, req_rptr;
 
     reg        b_busy;
     reg [7:0]  b_index;
     reg [7:0]  b_kind, b_cmd, b_code;
     reg [15:0] b_seq, b_paylen;
+    reg [15:0] b_caps;
     reg [15:0] b_crc;
 
     integer i;
 
     wire frame_completing = cmd_valid && (p_state == 3'd4) && p_keep &&
         (p_crc == {cmd_byte, p_crc_lo});
+
+    // The declared payload length as of the t_hdr cycle: the high byte is
+    // the byte arriving now, so p_len alone is one non-blocking assignment
+    // behind and still carries the PREVIOUS frame's high byte.
+    wire [15:0] hdr_len = {cmd_byte, p_len[7:0]};
 
     // ------------------------------------------------------------------
     // functions (pure: parameters and localparams only)
@@ -342,6 +443,8 @@ module patch_control #(
     // READY payload byte i (only serialized when plen == 71): the profile
     // and contract regions are opaque-packed (2-byte length prefix), the
     // locks region is empty — matching core_protocol.encode_ready exactly.
+    // The capability word is the NEGOTIATED one this response snapshotted
+    // at its enqueue (refinement 7), not the static CAPS_GRANTED mask.
     function [7:0] ready_byte(input [7:0] i);
         begin
             if (i == 0)                         ready_byte = PROFILE_ID_LEN[7:0];
@@ -353,8 +456,8 @@ module patch_control #(
             else if (i < 62)
                 ready_byte = NUMERIC_CONTRACT_VERSION[255 - (i-30)*8 -: 8];
             else if (i < 64)                    ready_byte = 8'h00; // locks: empty
-            else if (i == 64)                   ready_byte = CAPS_GRANTED[7:0];
-            else if (i == 65)                   ready_byte = 8'h00;
+            else if (i == 64)                   ready_byte = b_caps[7:0];
+            else if (i == 65)                   ready_byte = b_caps[15:8];
             else if (i == 66)                   ready_byte = ADVERTISED_MAX_PAYLOAD[7:0];
             else if (i == 67)                   ready_byte = ADVERTISED_MAX_PAYLOAD[15:8];
             else if (i == 68)                   ready_byte = ADVERTISED_RX_QUEUE_DEPTH[7:0];
@@ -437,11 +540,25 @@ module patch_control #(
         end
     endtask
 
+    // Discard the render binding whole (DR-0010: no resumable render).
+    // Used by every "clip discarded entire" row and by clear_session.
+    task discard_render;
+        begin
+            rnd_digest <= 256'h0;
+            rnd_identity <= 512'h0;
+            rnd_identity_len <= 8'h0;
+            rnd_pass2 <= 1'b0;
+            rnd_pass1_done <= 1'b0;
+            rnd_accepted <= 32'd0;
+        end
+    endtask
+
     // discard all open-session state (RESET / renegotiating HELLO / fatal;
     // the applied patch is render state and is discarded with it)
     task clear_session(input [1:0] s);
         begin
             session <= s;
+            discard_render;
             tx_want <= 16'd0; tx_have <= 16'd0;
             tx_declared_mask <= {NUM_PARAMS{1'b0}};
             tx_staged_mask <= {NUM_PARAMS{1'b0}};
@@ -480,6 +597,24 @@ module patch_control #(
                 req_seq[req_wptr] <= seq;
                 req_plen[req_wptr] <= plen;
                 req_code[req_wptr] <= 8'h00;
+                req_wptr <= (req_wptr == REQ_SLOTS-1) ? 4'd0 : req_wptr + 4'd1;
+            end
+        end
+    endtask
+
+    // READY: the only response whose payload is not a pure function of
+    // bound constants — it carries the negotiated capability word, so the
+    // request snapshots it at enqueue (refinement 7).
+    task enq_rsp_ready(input [7:0] cmd, input [15:0] seq,
+                       input [15:0] caps);
+        begin
+            if ((req_wptr - req_rptr) < REQ_SLOTS) begin
+                req_kind[req_wptr] <= KIND_RSP;
+                req_cmd[req_wptr] <= cmd;
+                req_seq[req_wptr] <= seq;
+                req_plen[req_wptr] <= 8'd71;
+                req_code[req_wptr] <= 8'h00;
+                req_caps[req_wptr] <= caps;
                 req_wptr <= (req_wptr == REQ_SLOTS-1) ? 4'd0 : req_wptr + 4'd1;
             end
         end
@@ -543,27 +678,37 @@ module patch_control #(
                         default: p_len[15:8] <= cmd_byte;
                     endcase
                     if (p_cnt == 3'd6) begin // t_hdr admission decision
+                        // hdr_len, not p_len: the high length byte IS this
+                        // cycle's byte, and p_len does not carry it until
+                        // the non-blocking assignment above commits. (A
+                        // declared length whose low byte is 0 and high byte
+                        // nonzero — any multiple of 256, e.g. the 1024-byte
+                        // NOISE_STREAM payload this core advertises — was
+                        // admitted as a zero-length frame before this was
+                        // corrected, and the payload was reparsed as
+                        // envelope bytes.)
                         if (p_version != 8'h02) begin
                             enq_rsp_err(p_command, p_seq, ERR_VERSION);
                             clear_session(S_CLOSED);
+                            caps_r <= 16'd0;  // fatal: renegotiate (refinement 7)
                             p_state <= 3'd5;
-                            p_skip <= p_len + 16'd2;
+                            p_skip <= hdr_len + 16'd2;
                         end else if (p_kind != KIND_CMD) begin
                             enq_rsp_err(p_command, p_seq, ERR_BAD_FRAME);
                             p_state <= 3'd5;
-                            p_skip <= p_len + 16'd2;
-                        end else if (p_len > MAX_PAYLOAD) begin
+                            p_skip <= hdr_len + 16'd2;
+                        end else if (hdr_len > MAX_PAYLOAD) begin
                             p_bad_len <= 1'b1;
                             p_state <= 3'd5;
-                            p_skip <= p_len + 16'd2;
+                            p_skip <= hdr_len + 16'd2;
                         end else if (frame_full) begin
                             enq_rsp_err(p_command, p_seq, ERR_BUSY);
                             p_state <= 3'd5;
-                            p_skip <= p_len + 16'd2;
+                            p_skip <= hdr_len + 16'd2;
                         end else begin
                             p_keep <= 1'b1;
                             p_pay <= 16'd0;
-                            p_state <= (p_len == 16'd0) ? 3'd3 : 3'd2;
+                            p_state <= (hdr_len == 16'd0) ? 3'd3 : 3'd2;
                         end
                     end
                     p_cnt <= p_cnt + 3'd1;
@@ -657,6 +802,7 @@ module patch_control #(
                     b_cmd <= req_cmd[req_rptr];
                     b_seq <= req_seq[req_rptr];
                     b_code <= req_code[req_rptr];
+                    b_caps <= req_caps[req_rptr];
                     b_paylen <= (req_kind[req_rptr] == KIND_ERR)
                         ? 16'd1 : {8'd0, req_plen[req_rptr]};
                     b_crc <= 16'hFFFF;
@@ -680,6 +826,7 @@ module patch_control #(
     assign cmd_ready = 1'b1;
     assign state_out = session;
     assign patch_active = patch_active_r;
+    assign bind_reject = bind_reject_r;
     assign kbd_midi_f0_word = kbd_midi_r;
     assign kbd_duration_word = kbd_dur_r;
     assign sound_identity_len = identity_len_r;
@@ -756,7 +903,16 @@ module patch_control #(
             c_stream_done <= 1'b0;
             c_stream_len <= 32'd0; c_kpad <= 32'd0; c_total <= 32'd0;
             c_fed <= 32'd0;
+            caps_r <= 16'd0;
+            rnd_digest <= 256'h0; rnd_identity <= 512'h0;
+            rnd_identity_len <= 8'h0; rnd_pass2 <= 1'b0;
+            rnd_pass1_done <= 1'b0; rnd_accepted <= 32'd0;
+            bind_reject_r <= 1'b0;
         end else begin
+            // bind_reject is a one-cycle pulse: the decide cycle that
+            // answers a discarding rejection overrides this default.
+            bind_reject_r <= 1'b0;
+
             // ----------------------------------------------------------
             // patch timeout (only while patch_open; reload at t0 handled
             // in the parser; expiry is silent per SESSION)
@@ -811,6 +967,8 @@ module patch_control #(
                         CMD_PATCH_OPEN: open_walk;
                         CMD_PATCH_NAME: name_walk;
                         CMD_PATCH_VALUE: value_walk;
+                        CMD_RENDER_TRIGGER: render_trigger_walk;
+                        CMD_NOISE_STREAM: noise_stream_walk;
                         default: commit_walk;
                     endcase
                 end
@@ -861,6 +1019,8 @@ module patch_control #(
     task take_command(input [7:0] cmd);
         reg [31:0] stream;
         reg [6:0]  slot;
+        reg [15:0] ident_len;
+        reg [15:0] data_len;
         integer guard;
         begin
             case (cmd)
@@ -915,6 +1075,54 @@ module patch_control #(
                         sha_h[4] <= 32'h510e527f; sha_h[5] <= 32'h9b05688c;
                         sha_h[6] <= 32'h1f83d9ab; sha_h[7] <= 32'h5be0cd19;
                         e_state <= E_WALK;
+                    end
+                end
+                CMD_RENDER_TRIGGER: begin
+                    // Refinement 7: the capability gate is outermost.
+                    if (!(caps_r & CAP_RENDER)) begin
+                        e_err <= ERR_UNSUPPORTED;
+                        e_state <= E_DECIDE;
+                    end else if ((session == S_CLOSED) ||
+                                 (session == S_PATCH)) begin
+                        // refinement 8: decided at take, so the walk's
+                        // field scratch is never read stale at decide
+                        e_err <= ERR_BAD_STATE;
+                        e_state <= E_DECIDE;
+                    end else if (f_len < RENDER_TRIGGER_FIXED) begin
+                        e_err <= ERR_PAYLOAD_LENGTH;
+                        e_state <= E_DECIDE;
+                    end else begin
+                        ident_len = {frame_ram[2], frame_ram[1]};
+                        if ((ident_len > PROFILE_WINDOW) ||
+                            (f_len != RENDER_TRIGGER_FIXED + ident_len)) begin
+                            e_err <= ERR_PAYLOAD_LENGTH;
+                            e_state <= E_DECIDE;
+                        end else begin
+                            e_state <= E_WALK;
+                        end
+                    end
+                end
+                CMD_NOISE_STREAM: begin
+                    if (!(caps_r & CAP_RENDER)) begin
+                        e_err <= ERR_UNSUPPORTED;
+                        e_state <= E_DECIDE;
+                    end else if ((session == S_CLOSED) ||
+                                 (session == S_PATCH)) begin
+                        // refinement 8: decided at take, so the walk's
+                        // field scratch is never read stale at decide
+                        e_err <= ERR_BAD_STATE;
+                        e_state <= E_DECIDE;
+                    end else if (f_len < NOISE_STREAM_FIXED + 1) begin
+                        e_err <= ERR_PAYLOAD_LENGTH;  // needs >= 1 data byte
+                        e_state <= E_DECIDE;
+                    end else begin
+                        data_len = {frame_ram[6], frame_ram[5]};
+                        if (f_len != NOISE_STREAM_FIXED + data_len) begin
+                            e_err <= ERR_PAYLOAD_LENGTH;
+                            e_state <= E_DECIDE;
+                        end else begin
+                            e_state <= E_WALK;
+                        end
                     end
                 end
                 default: begin
@@ -1220,6 +1428,112 @@ module patch_control #(
         end
     endtask
 
+    // RENDER_TRIGGER: pass index, the bound sound identity and the
+    // transport-declared 32-byte noise-stream digest. No digest is
+    // computed here — the declared value is latched (pass 1) or compared
+    // against the latch (pass 2), RENDER-TRIGGER.md "What is bound".
+    task render_trigger_walk;
+        begin
+            case (e_phase)
+                6'd0: begin // pass index (1 cycle)
+                    cap_count <= {8'd0, frame_ram[0]};
+                    if ((frame_ram[0] != RENDER_PASS_1) &&
+                        (frame_ram[0] != RENDER_PASS_2))
+                        e_err <= ERR_PAYLOAD_LENGTH;
+                    e_phase <= 6'd1;
+                    e_cnt <= 16'd0;
+                end
+                6'd1: begin // identity length (2 cycles)
+                    if (e_cnt == 16'd0) begin
+                        e_flen_b[7:0] <= frame_ram[1];
+                    end else begin
+                        e_flen_b[15:8] <= frame_ram[2];
+                    end
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt == 16'd1) begin
+                        e_cnt <= 16'd0;
+                        e_ptr <= 16'd3;
+                        // a zero-length identity consumes no walk cycle
+                        e_phase <= ({frame_ram[2], frame_ram[1]} == 16'd0)
+                            ? 6'd3 : 6'd2;
+                    end
+                end
+                6'd2: begin // identity copy (ident_len cycles)
+                    cap_b <= {cap_b[503:0], frame_ram[e_ptr]};
+                    e_ptr <= e_ptr + 16'd1;
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt + 16'd1 >= e_flen_b) begin
+                        e_phase <= 6'd3;
+                        e_cnt <= 16'd0;
+                    end
+                end
+                6'd3: begin // digest length prefix (2 cycles, opaque-packed)
+                    if (e_cnt == 16'd0) begin
+                        e_flen_a[7:0] <= frame_ram[e_ptr];
+                    end
+                    e_ptr <= e_ptr + 16'd1;
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt == 16'd1) begin
+                        e_phase <= 6'd4;
+                        e_cnt <= 16'd0;
+                        // the digest region is opaque-packed: its 2-byte
+                        // length prefix must be exactly 32
+                        if ({frame_ram[e_ptr], e_flen_a[7:0]} != 16'd32)
+                            e_err <= ERR_PAYLOAD_LENGTH;
+                    end
+                end
+                default: begin // declared digest copy (32 cycles)
+                    cap_c <= {cap_c[247:0], frame_ram[e_ptr]};
+                    e_ptr <= e_ptr + 16'd1;
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt == 16'd31)
+                        e_state <= E_DECIDE;
+                end
+            endcase
+        end
+    endtask
+
+    // NOISE_STREAM: pass index, offset and the declared data length. The
+    // data region itself is NOT walked — the bytes are consumed by the
+    // parser and never stored (DR-0010 Memory strategy: the receiver
+    // retains no clip buffer), so only this frame's length matters.
+    task noise_stream_walk;
+        begin
+            case (e_phase)
+                6'd0: begin // pass index (1 cycle)
+                    e_flen_a <= {8'd0, frame_ram[0]};
+                    if ((frame_ram[0] != RENDER_PASS_1) &&
+                        (frame_ram[0] != RENDER_PASS_2))
+                        e_err <= ERR_PAYLOAD_LENGTH;
+                    e_phase <= 6'd1;
+                    e_cnt <= 16'd0;
+                end
+                6'd1: begin // offset, u32 little-endian (4 cycles)
+                    case (e_cnt[1:0])
+                        2'd0: cap_id[7:0]   <= frame_ram[1];
+                        2'd1: cap_id[15:8]  <= frame_ram[2];
+                        2'd2: cap_id[23:16] <= frame_ram[3];
+                        default: cap_id[31:24] <= frame_ram[4];
+                    endcase
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt == 16'd3) begin
+                        e_phase <= 6'd2;
+                        e_cnt <= 16'd0;
+                    end
+                end
+                default: begin // data length prefix (2 cycles)
+                    if (e_cnt == 16'd0)
+                        cap_count[7:0] <= frame_ram[5];
+                    else
+                        cap_count[15:8] <= frame_ram[6];
+                    e_cnt <= e_cnt + 16'd1;
+                    if (e_cnt == 16'd1)
+                        e_state <= E_DECIDE;
+                end
+            endcase
+        end
+    endtask
+
     // PATCH_COMMIT: stream the domain-separated hash message into the
     // SHA-256 engine (the feeder stalls while a block compresses), then
     // compare the digest against the declared hash.
@@ -1324,6 +1638,10 @@ module patch_control #(
                     cache_match(e_cmd, e_seq, hit);
                     if (session == S_CLOSED)
                         enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+                    else if (session == S_RENDER)
+                        // refinement 8: an abort must not silently end a
+                        // render; RESET does that.
+                        enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
                     else if (session == S_READY)
                         enq_rsp_err(e_cmd, e_seq, expired_or_bad_seq(e_seq));
                     else if (hit)
@@ -1340,6 +1658,8 @@ module patch_control #(
                 CMD_PATCH_NAME: decide_name;
                 CMD_PATCH_VALUE: decide_value;
                 CMD_PATCH_COMMIT: decide_commit;
+                CMD_RENDER_TRIGGER: decide_render_trigger;
+                CMD_NOISE_STREAM: decide_noise_stream;
                 default: enq_rsp_err(e_cmd, e_seq, ERR_UNSUPPORTED);
             endcase
         end
@@ -1351,15 +1671,19 @@ module patch_control #(
             cache_match(e_cmd, e_seq, hit);
             if (e_err == ERR_PAYLOAD_LENGTH)
                 enq_rsp_err(e_cmd, e_seq, ERR_PAYLOAD_LENGTH);
-            else if (hit)
-                enq_rsp(e_cmd, e_seq, 8'd71);
-            else if (cap_c != NUMERIC_CONTRACT_VERSION) begin
+            else if (hit) begin
+                // an identical replay carries identical caps by construction
+                caps_r <= cap_count & CAPS_GRANTED;
+                enq_rsp_ready(e_cmd, e_seq, cap_count & CAPS_GRANTED);
+            end else if (cap_c != NUMERIC_CONTRACT_VERSION) begin
                 clear_session(S_CLOSED);  // fatal (refinement 1)
+                caps_r <= 16'd0;          // renegotiate (refinement 7)
                 enq_rsp_err(e_cmd, e_seq, ERR_VERSION);
             end else begin
                 clear_session(S_READY);
+                caps_r <= cap_count & CAPS_GRANTED;  // negotiated
                 cache_store(e_cmd, e_seq);
-                enq_rsp(e_cmd, e_seq, 8'd71);
+                enq_rsp_ready(e_cmd, e_seq, cap_count & CAPS_GRANTED);
             end
         end
     endtask
@@ -1369,6 +1693,10 @@ module patch_control #(
             if (session == S_PATCH)
                 enq_rsp_err(e_cmd, e_seq, ERR_TX_ACTIVE);
             else if (session == S_CLOSED)
+                enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+            else if (session == S_RENDER)
+                // refinement 8 / RENDER-TRIGGER.md ordering rule: render
+                // and patch-transaction frames never interleave.
                 enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
             else if (e_err == ERR_PAYLOAD_LENGTH)
                 enq_rsp_err(e_cmd, e_seq, ERR_PAYLOAD_LENGTH);
@@ -1400,7 +1728,8 @@ module patch_control #(
         begin
             if (session == S_CLOSED)
                 enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
-            else if (session == S_READY)
+            else if (session != S_PATCH)
+                // ready or rendering: no transaction is open (refinement 8)
                 enq_rsp_err(e_cmd, e_seq, expired_or_bad_seq(e_seq));
             else begin
                 tx_seq_last <= e_seq;
@@ -1423,7 +1752,8 @@ module patch_control #(
         begin
             if (session == S_CLOSED)
                 enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
-            else if (session == S_READY)
+            else if (session != S_PATCH)
+                // ready or rendering: no transaction is open (refinement 8)
                 enq_rsp_err(e_cmd, e_seq, expired_or_bad_seq(e_seq));
             else begin
                 tx_seq_last <= e_seq;
@@ -1451,7 +1781,8 @@ module patch_control #(
         begin
             if (session == S_CLOSED)
                 enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
-            else if (session == S_READY)
+            else if (session != S_PATCH)
+                // ready or rendering: no transaction is open (refinement 8)
                 enq_rsp_err(e_cmd, e_seq, expired_or_bad_seq(e_seq));
             else if ((e_len != 16'd34) ||
                      ({frame_ram[1], frame_ram[0]} != 16'd32))
@@ -1482,6 +1813,128 @@ module patch_control #(
                 finish_tx;
                 session <= S_READY;
                 enq_rsp(e_cmd, e_seq, 8'd0);
+            end
+        end
+    endtask
+
+    // ---------------- render lane (RENDER-TRIGGER.md) ----------------
+    // The single site that drives the engine's bind_reject: a rejection
+    // answered for an OPEN render. One cycle, sticky nowhere here — the
+    // engine's own ERR_BINDING_REJECTED is what stays sticky until rst.
+    task pulse_bind_reject;
+        begin
+            bind_reject_r <= 1'b1;
+        end
+    endtask
+
+    localparam [31:0] CLIP_BYTES_W = NOISE_CLIP_BYTES;
+
+    task decide_render_trigger;
+        reg [511:0] ident;
+        begin
+            // cap_b holds the trigger's identity right-justified; the same
+            // left-justifying shift decide_commit applies to the active
+            // patch's identity makes the two comparable byte-for-byte.
+            ident = cap_b << (8*(64 - e_flen_b[7:0]));
+            if (e_err == ERR_UNSUPPORTED)
+                enq_rsp_err(e_cmd, e_seq, ERR_UNSUPPORTED);
+            else if (e_err == ERR_BAD_STATE)
+                enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+            else if (e_err == ERR_PAYLOAD_LENGTH)
+                enq_rsp_err(e_cmd, e_seq, ERR_PAYLOAD_LENGTH);
+            else if (cap_count[7:0] == RENDER_PASS_1) begin
+                if (session == S_RENDER)
+                    // a second trigger never joins or replaces a clip
+                    enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+                else if (!patch_active_r)
+                    enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+                else if ((e_flen_b[7:0] != identity_len_r) ||
+                         (ident != identity_r))
+                    // no clip existed, so nothing is discarded and
+                    // bind_reject stays low
+                    enq_rsp_err(e_cmd, e_seq, ERR_RENDER_BINDING);
+                else begin
+                    // bind (sound_identity, noise_stream_sha256) for the
+                    // whole clip; current pass 1, 0 bytes accepted
+                    rnd_digest <= cap_c;
+                    rnd_identity <= ident;
+                    rnd_identity_len <= e_flen_b[7:0];
+                    rnd_pass2 <= 1'b0;
+                    rnd_pass1_done <= 1'b0;
+                    rnd_accepted <= 32'd0;
+                    session <= S_RENDER;
+                    enq_rsp(e_cmd, e_seq, 8'd0);
+                end
+            end else begin  // pass 2
+                if (session != S_RENDER)
+                    enq_rsp_err(e_cmd, e_seq, ERR_BAD_SEQUENCE);
+                else if (rnd_pass2 || !rnd_pass1_done) begin
+                    // pass 1 short of the clip length, or pass 2 already
+                    // open: clip discarded entire
+                    discard_render;
+                    session <= S_READY;
+                    pulse_bind_reject;
+                    enq_rsp_err(e_cmd, e_seq, ERR_NOISE_STREAM);
+                end else if ((e_flen_b[7:0] != rnd_identity_len) ||
+                             (ident != rnd_identity) ||
+                             (cap_c != rnd_digest)) begin
+                    // the DR-0010 binding check, BEFORE any pass-2 noise
+                    // byte exists: zero samples can have been released
+                    discard_render;
+                    session <= S_READY;
+                    pulse_bind_reject;
+                    enq_rsp_err(e_cmd, e_seq, ERR_RENDER_BINDING);
+                end else begin
+                    rnd_pass2 <= 1'b1;
+                    rnd_accepted <= 32'd0;
+                    enq_rsp(e_cmd, e_seq, 8'd0);
+                end
+            end
+        end
+    endtask
+
+    task decide_noise_stream;
+        reg [31:0] dlen;
+        reg [31:0] noff;
+        reg [7:0]  want_pass;
+        reg        fault;
+        begin
+            dlen = {16'd0, cap_count};
+            noff = cap_id[31:0];
+            want_pass = rnd_pass2 ? RENDER_PASS_2 : RENDER_PASS_1;
+            if (e_err == ERR_UNSUPPORTED)
+                enq_rsp_err(e_cmd, e_seq, ERR_UNSUPPORTED);
+            else if (e_err == ERR_BAD_STATE)
+                enq_rsp_err(e_cmd, e_seq, ERR_BAD_STATE);
+            else if (e_err == ERR_PAYLOAD_LENGTH)
+                enq_rsp_err(e_cmd, e_seq, ERR_PAYLOAD_LENGTH);
+            else if (session != S_RENDER)
+                enq_rsp_err(e_cmd, e_seq, ERR_BAD_SEQUENCE);
+            else begin
+                fault = (e_flen_a[7:0] != want_pass) ||
+                        (noff != rnd_accepted) ||
+                        (!rnd_pass2 && rnd_pass1_done) ||
+                        ((rnd_accepted + dlen) > CLIP_BYTES_W);
+                if (fault) begin
+                    discard_render;
+                    session <= S_READY;
+                    pulse_bind_reject;
+                    enq_rsp_err(e_cmd, e_seq, ERR_NOISE_STREAM);
+                end else begin
+                    // the bytes are consumed as they arrive; only the
+                    // accepted count is kept (no clip buffer)
+                    rnd_accepted <= rnd_accepted + dlen;
+                    if ((rnd_accepted + dlen) == CLIP_BYTES_W) begin
+                        if (rnd_pass2) begin
+                            // the clip is complete: nothing is retained
+                            discard_render;
+                            session <= S_READY;
+                        end else begin
+                            rnd_pass1_done <= 1'b1;
+                        end
+                    end
+                    enq_rsp(e_cmd, e_seq, 8'd0);
+                end
             end
         end
     endtask

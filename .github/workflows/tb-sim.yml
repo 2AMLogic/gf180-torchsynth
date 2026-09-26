@@ -73,7 +73,9 @@ jobs:
       # defers the RTL to), so leaving them out would keep reporting them
       # as "skipped" on every PR — the defect this job exists to close.
       # Budgets are ~3-5x the measured wall-clock of a local Icarus 12.0
-      # run (noise 555s, mix 359s, normreplay 75s).
+      # run (noise 555s, mix 359s, normreplay 108s — the normreplay figure
+      # includes issue #211's patch_control -> bind_reject integration run
+      # and its drop-the-wire mutant).
       - name: "Host-fed noise-stream lane (issue 75, iverilog, PDK-free)"
         timeout-minutes: 30
         run: python3 tb/run_tb.py noise

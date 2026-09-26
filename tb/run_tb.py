@@ -370,22 +370,29 @@ from torchsynth_voice.fixedpoint.rounding import (  # noqa: E402
 )
 from torchsynth_voice.fixedpoint.schedule import ScheduleNotAccepted  # noqa: E402
 from torchsynth_voice.core_protocol import (  # noqa: E402
+    CAP_NAME_KEYED_PATCH_LOAD,
+    CAP_RENDER,
+    CAP_RESET,
     CMD_HELLO,
+    CMD_NOISE_STREAM,
     CMD_PATCH_ABORT,
     CMD_PATCH_COMMIT,
     CMD_PATCH_NAME,
     CMD_PATCH_OPEN,
     CMD_PATCH_VALUE,
+    CMD_RENDER_TRIGGER,
     CMD_RESET,
     KIND_COMMAND,
     ErrorCode,
     decode_frame,
     encode_frame,
     encode_hello,
+    encode_noise_stream,
     encode_patch_commit,
     encode_patch_name,
     encode_patch_open,
     encode_patch_value,
+    encode_render_trigger,
     numeric_contract_version_bound,
 )
 from torchsynth_voice.format_sweep import (  # noqa: E402
@@ -582,6 +589,16 @@ NORMREPLAY_ERR_SAMPLE_OVERRUN = 1
 NORMREPLAY_STICKY_OVERRUN_CASE = "fixed:above-one-min"
 NORMREPLAY_P_PASS1 = 1
 NORMREPLAY_P_PASS2 = 2
+# Issue #211: the structural top that actually wires the protocol receiver's
+# clip-discard decision to the engine's bind_reject input, and its bench.
+RENDER_BINDING_TOP_SV = TB_ROOT / "sv/render_binding_top.sv"
+RENDER_BINDING_TB_SV = TB_ROOT / "sv/tb_render_binding.sv"
+#: Mutation seam: the one connection this top exists to declare. Dropping it
+#: leaves both modules individually correct and the discard unreachable.
+RENDER_BINDING_WIRE_ANCHOR = ".bind_reject       (receiver_bind_reject),\n" \
+    "        .mix_in            (mix_in),"
+RENDER_BINDING_WIRE_MUTANT = ".bind_reject       (1'b0),\n" \
+    "        .mix_in            (mix_in),"
 #: Trace name from the canonical registry used for the synthetic stream.
 SYNTH_TRACE = "mixer.output"
 SYNTH_PARAMETER = "adsr_1.alpha"
@@ -4382,13 +4399,25 @@ PATCH_DUT_SV = TB_ROOT / "sv/patch_control.sv"
 PATCH_TB_SV = TB_ROOT / "sv/tb_patch_control.sv"
 #: Must equal the DUT's TIMEOUT_CYCLES parameter default.
 PATCH_TIMEOUT_CYCLES = 5000
+#: Per-pass host-fed noise-stream length, the product profile's clip length
+#: (RENDER-TRIGGER.md "Render lifecycle": SCHED_SAMPLES_PER_PASS x 4). Must
+#: equal the DUT's NOISE_CLIP_BYTES parameter default and the mirror's.
+NOISE_CLIP_BYTES = 705_600
+#: The directed scale-down used for the render-lifecycle framing battery:
+#: the same state machine over a clip short enough to feed many times in
+#: one scenario. Chosen so both a multi-chunk feed and a ragged final chunk
+#: occur (2048 = 1000 + 1000 + 48).
+RENDER_SMALL_CLIP_BYTES = 2048
+#: The largest NOISE_STREAM data region a 1024-byte max payload admits
+#: (1 pass byte + 4 offset bytes + 2 length-prefix bytes of overhead).
+NOISE_CHUNK_MAX = 1024 - 7
 
 CORE_PROFILE_ID = b"torchsynth-1-voice-default"
 CORE_IDENTITY = b"identity-golden-0001"
 SOURCE_VERSION = b"torchsynth@2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
 
 
-def patch_build_model():
+def patch_build_model(noise_clip_bytes: int = NOISE_CLIP_BYTES):
     """The mirror oracle bound to the pinned inventory + accepted register."""
     from torchsynth_voice.patch_control_model import PatchControlModel
 
@@ -4401,6 +4430,7 @@ def patch_build_model():
         contract_version=numeric_contract_version_bound(),
         profile_id=CORE_PROFILE_ID,
         timeout_cycles=PATCH_TIMEOUT_CYCLES,
+        noise_clip_bytes=noise_clip_bytes,
     )
 
 
@@ -4463,8 +4493,15 @@ def write_schedule(path: Path, schedule: list) -> None:
 
 
 def patch_simulate(workdir: Path, simulator: str, stim: Path,
-                   dut_sv: Path) -> tuple:
-    """Compile + run the tb; return (response byte list, final observables)."""
+                   dut_sv: Path, clip_bytes: int = NOISE_CLIP_BYTES) -> tuple:
+    """Compile + run the tb; return (response byte list, final observables).
+
+    ``clip_bytes`` overrides the DUT's ``NOISE_CLIP_BYTES`` parameter (the
+    per-pass host-fed noise-stream length, RENDER-TRIGGER.md). The product
+    value is the default; a smaller one is a directed scale-down so the
+    render lifecycle's framing cases cost a few thousand cycles instead of
+    the ~1.4M a full 705,600-byte two-pass clip costs.
+    """
     captured = workdir / "captured.txt"
     final = workdir / "final.txt"
     if simulator == "iverilog":
@@ -4472,6 +4509,7 @@ def patch_simulate(workdir: Path, simulator: str, stim: Path,
         _run(
             [
                 "iverilog", "-g2012", "-I", str(TB_ROOT / "sv"),
+                "-Ptb_patch_control.NOISE_CLIP_BYTES=%d" % clip_bytes,
                 "-o", str(vvp), str(CONSTANTS_PKG_SV), str(dut_sv),
                 str(PATCH_TB_SV),
             ],
@@ -4504,6 +4542,8 @@ def patch_simulate(workdir: Path, simulator: str, stim: Path,
         "kbd_midi_word": head[2],
         "kbd_duration_word": head[3],
         "identity_len": head[4],
+        "bind_pulses": head[6],
+        "bind_max_run": head[7],
         "identity_hex": fields[1].strip(),
         "bank": [int(v) for v in fields[2 : 2 + 78]],
     }
@@ -4519,6 +4559,7 @@ def obs_from_mirror(obs: dict) -> dict:
         "kbd_duration_word": obs["kbd_duration_word"],
         "identity_len": len(identity),
         "identity_hex": identity.hex(),
+        "bind_pulses": obs["bind_pulses"],
         "bank": [obs["bank"][slot] for slot in range(78)],
     }
 
@@ -4539,15 +4580,16 @@ def compare_run(label: str, schedule: list, workdir: Path, simulator: str,
                 model, dut_sv: Path, extra_checks=None) -> bool:
     """Mirror vs RTL: exact response byte stream + exact final state."""
     expected_rsp, mirror_obs = model.run(schedule)
-    if mirror_obs["session"] == 2:  # patch_open at end would drain-diverge
+    if mirror_obs["session"] in (2, 3):
         raise SystemExit(
-            "%s: scenario ends with an open transaction; end every "
-            "scenario in ready" % label
+            "%s: scenario ends with an open transaction or an open render; "
+            "end every scenario in ready" % label
         )
     workdir.mkdir(parents=True, exist_ok=True)
     stim = workdir / "stimulus.txt"
     write_schedule(stim, schedule)
-    rsp, obs = patch_simulate(workdir, simulator, stim, dut_sv)
+    rsp, obs = patch_simulate(workdir, simulator, stim, dut_sv,
+                              model.noise_clip_bytes)
 
     ok = True
     if rsp != list(expected_rsp):
@@ -4577,13 +4619,22 @@ def compare_run(label: str, schedule: list, workdir: Path, simulator: str,
     # declared length-prefix carries meaning
     obs["identity_hex"] = obs["identity_hex"][: 2 * obs["identity_len"]]
     for key in ("session", "patch_active", "kbd_midi_word",
-                "kbd_duration_word", "identity_len", "identity_hex"):
+                "kbd_duration_word", "identity_len", "identity_hex",
+                "bind_pulses"):
         if obs[key] != want_obs[key]:
             ok = False
             print(
                 "%s: final state mismatch %s: mirror %r vs rtl %r"
                 % (label, key, want_obs[key], obs[key])
             )
+    # The engine's contract is a one-cycle pulse, not a level hold.
+    if obs["bind_max_run"] > 1:
+        ok = False
+        print(
+            "%s: bind_reject held high for %d consecutive cycles; the "
+            "replay engine's contract is a one-cycle pulse"
+            % (label, obs["bind_max_run"])
+        )
     if obs["bank"] != want_obs["bank"]:
         ok = False
         first = next(
@@ -4857,6 +4908,279 @@ def build_scenarios(model, words: dict, vector: dict) -> dict:
     }
 
 
+# ----------------------------------------------------------------------
+# Render lane (issue #211): the RTL receiver for RENDER_TRIGGER (0x15) and
+# NOISE_STREAM (0x16), the pass-1 declared-digest + sound-identity binding
+# it compares at the pass-2 trigger, and the one-cycle bind_reject pulse it
+# drives when a rejection discards an open clip
+# (spec/protocol/RENDER-TRIGGER.md; DR-0010 "Clip lifecycle").
+# ----------------------------------------------------------------------
+
+#: The pinned declared noise-stream digests these scenarios bind. Content is
+#: opaque to the receiver: it latches the pass-1 declaration and compares the
+#: pass-2 one, and computes no digest of its own (issue #207 is the open
+#: question of receiver-side hashing, deliberately out of scope here).
+RENDER_DIGEST_A = bytes(range(32))
+RENDER_DIGEST_B = bytes(range(32, 64))
+#: Sound identities that are NOT the committed patch's. The first is the
+#: same LENGTH as CORE_IDENTITY so the binding's content compare is what
+#: rejects it (a length-only check would let it through); the second differs
+#: in length, so both halves of the compare are exercised.
+RENDER_FOREIGN_IDENTITY = b"identity-golden-0002"
+RENDER_SHORT_IDENTITY = b"identity-golden-00"
+
+#: Capability words a host may request in HELLO.
+CAPS_PATCH_AND_RESET = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET
+CAPS_WITH_RENDER = CAPS_PATCH_AND_RESET | CAP_RENDER
+
+
+class SeqCounter:
+    """Monotonic protocol sequence allocator for a scenario."""
+
+    def __init__(self, start: int = 1):
+        self.value = start - 1
+
+    def next(self) -> int:
+        self.value += 1
+        return self.value
+
+
+def render_hello(model, caps: int, seq: int = 0) -> bytes:
+    return frame(
+        CMD_HELLO, seq,
+        encode_hello(CORE_PROFILE_ID, SOURCE_VERSION,
+                     model.contract_version, caps),
+    )
+
+
+def render_full_tx(model, words: dict, seqs: SeqCounter, tx_id: bytes,
+                   identity: bytes = CORE_IDENTITY) -> list:
+    """A complete 78-name transaction — the only kind that asserts the gate.
+
+    `patch_active` (reconciliation 4) is the RTL's "a committed patch is
+    active" predicate for a pass-1 trigger, and it asserts only for a
+    hash-matching commit of the full canonical table.
+    """
+    names = list(model.names)
+    frames = [
+        frame(CMD_PATCH_OPEN, seqs.next(),
+              encode_patch_open(tx_id, identity, model.table_sha256,
+                                len(names)))
+    ]
+    entries = {}
+    for name in names:
+        encoded = word4(words[name])
+        entries[name] = encoded
+        frames.append(frame(CMD_PATCH_NAME, seqs.next(),
+                            encode_patch_name(name)))
+        frames.append(frame(CMD_PATCH_VALUE, seqs.next(),
+                            encode_patch_value(name, encoded)))
+    frames.append(frame(CMD_PATCH_COMMIT, seqs.next(),
+                        encode_patch_commit(patch_hash_entries(model, entries))))
+    return frames
+
+
+def render_trigger_frame(seqs: SeqCounter, pass_index: int, identity: bytes,
+                         digest: bytes) -> bytes:
+    return frame(CMD_RENDER_TRIGGER, seqs.next(),
+                 encode_render_trigger(pass_index, identity, digest))
+
+
+def noise_frame(seqs: SeqCounter, pass_index: int, offset: int,
+                length: int) -> bytes:
+    """One NOISE_STREAM frame. The data bytes are opaque to the receiver."""
+    return frame(CMD_NOISE_STREAM, seqs.next(),
+                 encode_noise_stream(pass_index, offset, bytes(length)))
+
+
+def noise_pass_frames(seqs: SeqCounter, pass_index: int, total: int,
+                      chunk: int = NOISE_CHUNK_MAX, start: int = 0) -> list:
+    """Contiguous NOISE_STREAM frames covering [start, total) of one pass."""
+    frames = []
+    offset = start
+    while offset < total:
+        length = min(chunk, total - offset)
+        frames.append(noise_frame(seqs, pass_index, offset, length))
+        offset += length
+    return frames
+
+
+def paced_render(frames, gap: int = 300, after_commit: int = 4700,
+                 after_noise: int = 40) -> list:
+    """Pacing for a render scenario.
+
+    A NOISE_STREAM frame's walk is 8 cycles (the data region costs none), so
+    a short gap keeps a 705,600-byte pass affordable while still leaving the
+    single frame slot free before the next frame's t_hdr.
+    """
+    items: list = []
+    for item in frames:
+        items.append(item)
+        if isinstance(item, bytes):
+            command = item[4]
+            if command == CMD_PATCH_COMMIT:
+                items.append(after_commit)
+            elif command == CMD_NOISE_STREAM:
+                items.append(after_noise)
+            else:
+                items.append(gap)
+    return items
+
+
+def render_happy_path_frames(model, words: dict, clip_bytes: int) -> list:
+    """One complete clip: bind at pass 1, re-feed under pass 2, complete."""
+    seqs = SeqCounter()
+    frames = [render_hello(model, CAPS_WITH_RENDER)]
+    frames += render_full_tx(model, words, seqs, b"tx-render-0001")
+    frames.append(render_trigger_frame(seqs, 1, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames += noise_pass_frames(seqs, 2, clip_bytes)
+    return frames
+
+
+def render_negative_frames(model, words: dict, clip_bytes: int) -> list:
+    """Every non-success row of RENDER-TRIGGER.md's lifecycle table."""
+    seqs = SeqCounter()
+    trig1 = lambda: render_trigger_frame(seqs, 1, CORE_IDENTITY,
+                                         RENDER_DIGEST_A)  # noqa: E731
+    frames = []
+
+    # --- capability negotiation: a host that does not request CAP_RENDER
+    #     gets ERR_UNSUPPORTED_COMMAND for both codes and nothing changes.
+    frames.append(render_hello(model, CAPS_PATCH_AND_RESET))
+    frames.append(trig1())
+    frames.append(noise_frame(seqs, 1, 0, 8))
+
+    # --- CAP_RENDER granted from here on.
+    frames.append(render_hello(model, CAPS_WITH_RENDER, seq=1))
+
+    # --- ready, no committed patch: pass 1 is ERR_BAD_STATE; pass 2 and
+    #     NOISE_STREAM are ERR_BAD_SEQUENCE (no render is open).
+    frames.append(trig1())
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames.append(noise_frame(seqs, 1, 0, 8))
+
+    # --- payload shapes: a pass index that is neither 1 nor 2, a declared
+    #     digest that is not 32 bytes, and a trailing byte.
+    frames.append(frame(CMD_RENDER_TRIGGER, seqs.next(),
+                        b"\x03" + struct.pack("<H", len(CORE_IDENTITY))
+                        + CORE_IDENTITY + struct.pack("<H", 32)
+                        + RENDER_DIGEST_A))
+    frames.append(frame(CMD_RENDER_TRIGGER, seqs.next(),
+                        b"\x01" + struct.pack("<H", len(CORE_IDENTITY))
+                        + CORE_IDENTITY + struct.pack("<H", 31)
+                        + RENDER_DIGEST_A[:31]))
+    frames.append(frame(CMD_RENDER_TRIGGER, seqs.next(),
+                        b"\x01" + struct.pack("<H", len(CORE_IDENTITY))
+                        + CORE_IDENTITY + struct.pack("<H", 32)
+                        + RENDER_DIGEST_A + b"\x00"))
+    frames.append(frame(CMD_NOISE_STREAM, seqs.next(),
+                        b"\x01" + struct.pack("<I", 0)
+                        + struct.pack("<H", 4) + b"\x00\x00\x00"))
+    # A declared length above the advertised max payload is a bad frame
+    # whose bytes are consumed. This is the only committed frame whose
+    # declared length needs BOTH length bytes, so it is also the regression
+    # for the t_hdr stale-high-byte defect the render lane surfaced.
+    frames.append(noise_frame(seqs, 1, 0, 2048 - 7))
+
+    # --- a committed patch, then an identity that is not its own: the
+    #     pass-1 ERR_RENDER_BINDING row, where no clip existed and so no
+    #     bind_reject pulse is driven.
+    frames += render_full_tx(model, words, seqs, b"tx-render-neg-01")
+    frames.append(render_trigger_frame(seqs, 1, RENDER_FOREIGN_IDENTITY,
+                                       RENDER_DIGEST_A))
+
+    # --- a cached PATCH_ABORT, then a render: the replay must not resurrect
+    #     the cached success while rendering (refinement 9).
+    abort_seq = seqs.next()
+    frames.append(frame(CMD_PATCH_OPEN, seqs.next(),
+                        encode_patch_open(b"tx-render-neg-02", CORE_IDENTITY,
+                                          model.table_sha256, 1)))
+    frames.append(frame(CMD_PATCH_ABORT, abort_seq))
+    frames.append(trig1())
+    frames.append(frame(CMD_PATCH_ABORT, abort_seq))
+
+    # --- rendering: ordering + second-trigger rows, all state-preserving.
+    frames.append(frame(CMD_PATCH_OPEN, seqs.next(),
+                        encode_patch_open(b"tx-render-neg-03", CORE_IDENTITY,
+                                          model.table_sha256, 1)))
+    frames.append(frame(CMD_PATCH_NAME, seqs.next(),
+                        encode_patch_name("adsr_1.alpha")))
+    frames.append(trig1())
+
+    # --- NOISE_STREAM framing faults, each discarding the clip entire and
+    #     pulsing bind_reject once: wrong pass, then non-contiguous offset.
+    frames.append(noise_frame(seqs, 2, 0, 8))
+    frames.append(trig1())
+    frames.append(noise_frame(seqs, 1, 4, 8))
+
+    # --- a pass-2 trigger before pass 1 reaches the clip length.
+    frames.append(trig1())
+    frames.append(noise_frame(seqs, 1, 0, 8))
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+
+    # --- the pass-1/pass-2 boundary digest mismatch (zero samples exist).
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_B))
+
+    # --- the same boundary, identity mismatch instead: once with an
+    #     identity of the same length (only the content compare can reject
+    #     it) and once with a different length.
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, RENDER_FOREIGN_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, RENDER_SHORT_IDENTITY,
+                                       RENDER_DIGEST_A))
+
+    # --- a pass-1 NOISE_STREAM after pass 1 is already complete.
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(noise_frame(seqs, 1, clip_bytes, 8))
+
+    # --- a second pass-2 trigger while pass 2 is already open.
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+
+    # --- a framing fault mid pass 2: some samples were already released,
+    #     the clip is still discarded entire (bytes past the clip length).
+    frames.append(trig1())
+    frames += noise_pass_frames(seqs, 1, clip_bytes)
+    frames.append(render_trigger_frame(seqs, 2, CORE_IDENTITY,
+                                       RENDER_DIGEST_A))
+    frames += noise_pass_frames(seqs, 2, clip_bytes - 8)
+    frames.append(noise_frame(seqs, 2, clip_bytes - 8, 16))
+
+    # --- RESET while rendering: all render state discarded, no pulse (the
+    #     engine's own rst completes that discard), and the applied patch
+    #     goes with the session, so the next pass-1 trigger is BAD_STATE.
+    frames.append(trig1())
+    frames.append(noise_frame(seqs, 1, 0, 8))
+    frames.append(frame(CMD_RESET, seqs.next()))
+    frames.append(trig1())
+
+    # --- HELLO while rendering renegotiates and discards the same way.
+    frames += render_full_tx(model, words, seqs, b"tx-render-neg-04")
+    frames.append(trig1())
+    frames.append(noise_frame(seqs, 1, 0, 8))
+    frames.append(render_hello(model, CAPS_WITH_RENDER, seq=2))
+    frames.append(trig1())
+    return frames
+
+
 def patch(workdir: Path, simulator: str) -> int:
     """Issue #69 flow: loader/identity/reset/keyboard vs its mirror."""
     model = patch_build_model()
@@ -4920,6 +5244,83 @@ def patch(workdir: Path, simulator: str) -> int:
         ok = compare_run(label, scenarios[key], workdir / key, simulator,
                          model, PATCH_DUT_SV, checks) and ok
 
+    # --- render lane (issue #211, spec/protocol/RENDER-TRIGGER.md) -------
+    # The lifecycle battery runs against a scaled-down NOISE_CLIP_BYTES so
+    # a clip can be opened and discarded a dozen times in one scenario; the
+    # product profile's own 705,600-byte two-pass clip is then completed
+    # once at the DEFAULT parameter, so the real length is simulated, not
+    # merely asserted.
+    small_model = patch_build_model(RENDER_SMALL_CLIP_BYTES)
+    render_scenarios = {
+        "s7-render": (
+            small_model,
+            schedule_of(paced_render(render_happy_path_frames(
+                small_model, words, RENDER_SMALL_CLIP_BYTES)) + [3000]),
+            0,
+        ),
+        "s8-render-negative": (
+            small_model,
+            schedule_of(paced_render(render_negative_frames(
+                small_model, words, RENDER_SMALL_CLIP_BYTES)) + [3000]),
+            9,
+        ),
+        "s9-render-full-clip": (
+            model,
+            schedule_of(paced_render(render_happy_path_frames(
+                model, words, NOISE_CLIP_BYTES)) + [3000]),
+            0,
+        ),
+    }
+    render_specs = [
+        ("render lifecycle: bind, re-feed, complete (clip %d B)"
+         % RENDER_SMALL_CLIP_BYTES, "s7-render"),
+        ("render lifecycle: every rejection row (clip %d B)"
+         % RENDER_SMALL_CLIP_BYTES, "s8-render-negative"),
+        ("render lifecycle: product-profile clip completion (%d B/pass)"
+         % NOISE_CLIP_BYTES, "s9-render-full-clip"),
+    ]
+    for label, key in render_specs:
+        run_model, schedule, want_pulses = render_scenarios[key]
+
+        def check_pulses(obs, expected=want_pulses, name=label):
+            if obs["bind_pulses"] != expected:
+                print(
+                    "  %s: %d bind_reject pulse(s), expected %d"
+                    % (name, obs["bind_pulses"], expected)
+                )
+                return False
+            print(
+                "  %s: %d bind_reject pulse(s) reached the replay engine's "
+                "discard input, each exactly one cycle wide"
+                % (name, obs["bind_pulses"])
+            )
+            return True
+
+        ok = compare_run(label, schedule, workdir / key, simulator,
+                         run_model, PATCH_DUT_SV, check_pulses) and ok
+
+    # The product clip length is a bound constant, not a magic number: it is
+    # SCHED_SAMPLES_PER_PASS x 4 from the emitted accepted-schedule register.
+    try:
+        clip_bound = sched.constant(
+            sched.require_accepted_schedule(), "samples_per_pass"
+        ) * 4
+    except ScheduleNotAccepted as error:
+        print("PATCH REFUSED: DR-0010 schedule register refused: %s" % error)
+        return 1
+    if clip_bound != NOISE_CLIP_BYTES or model.noise_clip_bytes != NOISE_CLIP_BYTES:
+        ok = False
+        print(
+            "  render clip length: accepted schedule says %d B/pass but the "
+            "harness/mirror use %d/%d"
+            % (clip_bound, NOISE_CLIP_BYTES, model.noise_clip_bytes)
+        )
+    else:
+        print(
+            "  render clip length: %d B/pass == SCHED_SAMPLES_PER_PASS x 4 "
+            "from the accepted DR-0010 schedule register -> OK" % clip_bound
+        )
+
     # Mutations: every planted fault MUST be detected (AC 6).
     mutations_ok = True
     mutation_specs = [
@@ -4957,9 +5358,62 @@ def patch(workdir: Path, simulator: str) -> int:
             ),
             "s1-full",
         ),
+        # --- render lane (issue #211) ---
+        (
+            "CAP_RENDER withheld (the capability the two codes are gated on)",
+            (
+                "        CAP_PATCH_LOAD | CAP_RESET | CAP_RENDER;",
+                "        CAP_PATCH_LOAD | CAP_RESET;",
+            ),
+            "s7-render",
+        ),
+        (
+            "pass-1 sound-identity binding dropped",
+            (
+                "                else if ((e_flen_b[7:0] != identity_len_r) ||\n"
+                "                         (ident != identity_r))",
+                "                else if (1'b0)",
+            ),
+            "s8-render-negative",
+        ),
+        (
+            "pass-2 declared-digest compare dropped",
+            ("(cap_c != rnd_digest)", "(1'b0)"),
+            "s8-render-negative",
+        ),
+        (
+            "pass-2 sound-identity compare dropped",
+            ("(ident != rnd_identity) ||", "(1'b0) ||"),
+            "s8-render-negative",
+        ),
+        (
+            "noise-stream offset contiguity dropped",
+            ("(noff != rnd_accepted) ||", "(1'b0) ||"),
+            "s8-render-negative",
+        ),
+        (
+            "bind_reject never pulsed (the discard never reaches the engine)",
+            ("            bind_reject_r <= 1'b1;", "            bind_reject_r <= 1'b0;"),
+            "s8-render-negative",
+        ),
+        (
+            "clip-length completion transition dropped",
+            (
+                "if ((rnd_accepted + dlen) == CLIP_BYTES_W) begin",
+                "if (1'b0) begin",
+            ),
+            "s7-render",
+        ),
     ]
-    for label, (anchor, replacement), scenario in mutation_specs:
-        mut_dir = workdir / ("mut-" + scenario)
+    mutation_oracles = {key: (model, scenarios[key]) for key in scenarios}
+    mutation_oracles.update(
+        {key: (run_model, schedule)
+         for key, (run_model, schedule, _pulses) in render_scenarios.items()}
+    )
+    for index, (label, (anchor, replacement), scenario) in enumerate(
+        mutation_specs
+    ):
+        mut_dir = workdir / ("mut-%02d-%s" % (index, scenario))
         mut_dir.mkdir(parents=True, exist_ok=True)
         mutated_sv = mut_dir / "patch_control_mut.sv"
         mutated_sv.write_text(
@@ -4967,9 +5421,10 @@ def patch(workdir: Path, simulator: str) -> int:
                       anchor, replacement, label),
             encoding="utf-8",
         )
+        mut_model, mut_schedule = mutation_oracles[scenario]
         detected = not compare_run(
             "mutation [%s] %s" % (scenario, label),
-            scenarios[scenario], mut_dir, simulator, model, mutated_sv,
+            mut_schedule, mut_dir, simulator, mut_model, mutated_sv,
         )
         print(
             "mutation %s: %s"
@@ -4983,8 +5438,11 @@ def patch(workdir: Path, simulator: str) -> int:
         print("PATCH RUN FAILED")
         return 1
     print(
-        "PATCH RUN PASSED (mirror-vs-RTL byte/cycle-exact on 6 scenarios + "
-        "4 mutations detected + keyboard golden words)"
+        "PATCH RUN PASSED (mirror-vs-RTL byte/cycle-exact on %d scenarios "
+        "including the render lifecycle and one product-profile "
+        "705,600-B/pass clip completion + %d mutations detected + keyboard "
+        "golden words)" % (len(run_specs) + len(render_specs),
+                           len(mutation_specs))
     )
     return 0
 
@@ -6540,6 +6998,170 @@ def normreplay_sticky_overrun(
     return all_ok
 
 
+#: Per-pass noise-stream length the integration bench runs the receiver at.
+#: A scale-down: the product 705,600-B clip is completed end-to-end by
+#: tb/run_tb.py 'patch' (scenario s9), and the byte stream and the mix sample
+#: stream are separate declared interfaces here (see render_binding_top.sv).
+RENDER_BINDING_CLIP_BYTES = 2048
+
+
+def render_binding_frames(model, words: dict, clip_bytes: int, *,
+                          reject: bool) -> tuple:
+    """(proto_a, proto_b) frame lists for one integration run.
+
+    ``proto_a`` brings the receiver to "pass 1 complete": HELLO with
+    CAP_RENDER, a full 78-name patch commit (the render gate), the pass-1
+    RENDER_TRIGGER that binds (identity, declared digest), and that pass's
+    whole NOISE_STREAM. ``proto_b`` is the pass-2 trigger, carrying either
+    the bound digest or a different one; when it binds, pass 2's whole
+    NOISE_STREAM follows so both runs end with the receiver back in
+    ``ready`` — one because its clip completed, one because its clip was
+    discarded entire.
+    """
+    seqs = SeqCounter()
+    proto_a = [render_hello(model, CAPS_WITH_RENDER)]
+    proto_a += render_full_tx(model, words, seqs, b"tx-bind-wire-01")
+    proto_a.append(render_trigger_frame(seqs, 1, CORE_IDENTITY,
+                                        RENDER_DIGEST_A))
+    proto_a += noise_pass_frames(seqs, 1, clip_bytes)
+    proto_b = [render_trigger_frame(
+        seqs, 2, CORE_IDENTITY,
+        RENDER_DIGEST_B if reject else RENDER_DIGEST_A)]
+    if not reject:
+        proto_b += noise_pass_frames(seqs, 2, clip_bytes)
+    return proto_a, proto_b
+
+
+def render_binding_integration(workdir: Path, simulator: str, formats,
+                               top_sv: Path, *, report: bool) -> bool:
+    """Issue #211: does a protocol rejection discard the clip in the engine?
+
+    Drives render_binding_top (the receiver + the replay engine, wired) from
+    real RENDER_TRIGGER / NOISE_STREAM frames. Run 0 declares a different
+    noise-stream digest at the pass-2 trigger: the receiver must answer
+    ERR_RENDER_BINDING (0x0E) and pulse ``bind_reject``, the engine must
+    raise the sticky ERR_BINDING_REJECTED and release ZERO samples. Run 1
+    declares the bound digest: the same wire must stay quiet and the clip
+    must complete bit-exactly against the frozen model's normalization.
+    """
+
+    clip = nr.directed_cases()[NORMREPLAY_BIND_REJECT_CASE]
+    expected_out, _diag = nrg.mirror_normalize(clip, formats)
+    model = patch_build_model(RENDER_BINDING_CLIP_BYTES)
+    words, _vector = patch_anchor_words()
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    # (label, reject?, expected capture, expected trigger answer)
+    runs = [
+        ("pass-2 boundary digest mismatch", True, [], ErrorCode.RENDER_BINDING),
+        ("pass-2 binding matches", False, list(expected_out), None),
+    ]
+    (workdir / "runs.txt").write_text("%d\n" % len(runs), encoding="utf-8")
+    mix_hex = "\n".join(normreplay_hexword(v) for v in clip) + "\n"
+    for index, (_label, reject, _want, _code) in enumerate(runs):
+        proto_a, proto_b = render_binding_frames(
+            model, words, RENDER_BINDING_CLIP_BYTES, reject=reject
+        )
+        write_schedule(workdir / ("run%d_proto_a.txt" % index),
+                       schedule_of(paced_render(proto_a) + [300]))
+        write_schedule(workdir / ("run%d_proto_b.txt" % index),
+                       schedule_of(paced_render(proto_b) + [300]))
+        (workdir / ("run%d_stim.txt" % index)).write_text(
+            "%d\n" % len(clip), encoding="utf-8"
+        )
+        (workdir / ("run%d_mix.hex" % index)).write_text(
+            mix_hex, encoding="utf-8"
+        )
+
+    if simulator != "iverilog":
+        raise SystemExit(
+            "simulator %r is not wired up; this runner is PDK-free and "
+            "currently supports iverilog" % simulator
+        )
+    vvp = workdir / "render_binding.vvp"
+    _run(
+        [
+            "iverilog", "-g2012", "-I", str(TB_ROOT / "sv"),
+            "-Ptb_render_binding.NOISE_CLIP_BYTES=%d"
+            % RENDER_BINDING_CLIP_BYTES,
+            "-o", str(vvp), str(CONSTANTS_PKG_SV), str(PATCH_DUT_SV),
+            str(NORMREPLAY_DUT_SV), str(top_sv), str(RENDER_BINDING_TB_SV),
+        ],
+        cwd=workdir,
+    )
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
+
+    all_ok = True
+    for index, (label, _reject, want_capture, want_code) in enumerate(runs):
+        captured = [
+            int(line)
+            for line in (workdir / ("run%d_captured.txt" % index))
+            .read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        status = [
+            int(v)
+            for v in (workdir / ("run%d_status.txt" % index))
+            .read_text(encoding="utf-8").split()
+        ]
+        rsp = bytes(
+            int(line)
+            for line in (workdir / ("run%d_rsp.txt" % index))
+            .read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
+        (
+            s_error, s_code, s_done, s_pass, s_pulses, s_max_run, s_session,
+        ) = status
+        try:
+            answers = decode_rsp_frames(rsp)
+        except AssertionError:
+            answers = []
+        trigger_answers = [f for f in answers if f[1] == CMD_RENDER_TRIGGER]
+        if want_code is None:
+            answer_ok = (
+                len(trigger_answers) == 2
+                and all(f[0] == 2 for f in trigger_answers)
+            )
+            engine_ok = (
+                s_error == 0 and s_done == 1 and s_pass == 3
+                and s_pulses == 0
+            )
+        else:
+            answer_ok = (
+                len(trigger_answers) == 2
+                and trigger_answers[-1][0] == 3
+                and trigger_answers[-1][3] == bytes([int(want_code)])
+            )
+            engine_ok = (
+                s_error == 1
+                and s_code == NORMREPLAY_ERR_BINDING_REJECTED
+                and s_done == 0 and s_pass == 0 and s_pulses == 1
+            )
+        ok = (
+            captured == want_capture and answer_ok and engine_ok
+            and s_max_run <= 1 and s_session == 1
+        )
+        if report:
+            print(
+                "  binding wire [%s]: receiver answered %s, drove %d "
+                "bind_reject pulse(s) (max run %d), engine (error, code, "
+                "done, pass) %r, %d sample(s) released (expected %d), "
+                "session %d -> %s"
+                % (
+                    label,
+                    (trigger_answers[-1][3].hex() if trigger_answers and
+                     trigger_answers[-1][0] == 3 else "RSP"),
+                    s_pulses, s_max_run,
+                    [s_error, s_code, s_done, s_pass],
+                    len(captured), len(want_capture), s_session,
+                    "OK" if ok else "FAIL",
+                )
+            )
+        all_ok = all_ok and ok
+    return all_ok
+
+
 def normreplay(workdir: Path, simulator: str) -> int:
     """Issue #77 flow: the normalization replay controller + one-shot top's
     two-pass sequencer vs the frozen model's own ``normalize_words()``."""
@@ -6863,6 +7485,41 @@ def normreplay(workdir: Path, simulator: str) -> int:
     )
     ok = ok and reject_detected
 
+    # 7. The wire itself (issue #211): the protocol receiver
+    #    (tb/sv/patch_control.sv) driving this engine's bind_reject through
+    #    tb/sv/render_binding_top.sv, from real RENDER_TRIGGER /
+    #    NOISE_STREAM frames rather than a testbench-synthesised pulse.
+    print(
+        "binding wire (issue #211, patch_control -> "
+        "normalization_replay_engine.bind_reject):"
+    )
+    wire_ok = render_binding_integration(
+        workdir / "bind-wire", simulator, formats, RENDER_BINDING_TOP_SV,
+        report=True,
+    )
+    print("binding wire -> %s" % ("OK" if wire_ok else "FAIL"))
+    ok = ok and wire_ok
+    wire_mut_dir = workdir / "mut-drop-bind-wire"
+    wire_mut_dir.mkdir(parents=True, exist_ok=True)
+    mutated_top = wire_mut_dir / "render_binding_top_mut.sv"
+    mutated_top.write_text(
+        mutate_sv(
+            RENDER_BINDING_TOP_SV.read_text(encoding="utf-8"),
+            RENDER_BINDING_WIRE_ANCHOR, RENDER_BINDING_WIRE_MUTANT,
+            "drop-bind-wire",
+        ),
+        encoding="utf-8",
+    )
+    wire_detected = not render_binding_integration(
+        wire_mut_dir, simulator, formats, mutated_top, report=False
+    )
+    print(
+        "mutation drop-bind-wire (integration top): %s"
+        % ("DETECTED (the receiver's discard no longer reaches the engine)"
+           if wire_detected else "NOT DETECTED")
+    )
+    ok = ok and wire_detected
+
     if not ok:
         print("NORMREPLAY RUN FAILED")
         return 1
@@ -6870,7 +7527,8 @@ def normreplay(workdir: Path, simulator: str) -> int:
         "NORMREPLAY RUN PASSED (%d isolated + full-voice cases bit-exact "
         "+ replay pair bit-exact + owner-row/op-count asserts + sticky "
         "overrun discards the clip entire + binding rejection discards the "
-        "clip entire + all 6 mutations detected)"
+        "clip entire + the patch_control -> bind_reject wire proven "
+        "end-to-end + all 7 mutations detected)"
         % len(cases)
     )
     return 0
