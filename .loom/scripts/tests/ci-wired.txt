@@ -75,6 +75,7 @@ test-clean-stale-building-labels.sh
 test-config-resolver.sh
 test-config-tiers-cli-migration.sh
 test-cpu-budget.sh
+test-create-pr-provenance.sh
 test-create-pr-superseded-issue.sh
 test-create-pr-version-check.sh
 test-default-branch.sh
@@ -187,6 +188,7 @@ test-run-ci-suites-daemon-guard.sh
 test-run-ci-suites-failure-excerpt.sh
 test-run-ci-suites-retry.sh
 test-run-ci-suites-serial-lane.sh
+test-run-ci-suites-shard.sh
 test-run-job.sh
 test-safe-stash-pop.sh
 test-safehoused-service.sh
