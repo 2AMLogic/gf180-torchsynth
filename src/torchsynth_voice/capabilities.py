@@ -87,6 +87,37 @@ CHECKS = {
         ),
         {"stale-input": "hash-mismatch"},
     ),
+    # Issue #78. The evaluator is the aggregation/gating layer's own test
+    # suite: it proves the diagnostic gate, the waiver ledger's ratchet, the
+    # declared coverage model's completeness and the record shape. The
+    # bit-exact module conformance itself is executed by tb/run_tb.py's lanes,
+    # which that layer aggregates and whose transcript the record indexes.
+    "rtl-module-qualification-v1": Check(
+        (
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests",
+            "-p",
+            "test_rtl_module_qualification.py",
+            "-v",
+        ),
+        "implementation-identity",
+        "rtl-simulation",
+        "rtl",
+        "module-sample-exact",
+        (
+            "spec/RTL-MODULE-QUALIFICATION.md",
+            "tb/rtl-lint-baseline.json",
+            "tb/run_tb.py",
+            "tests/test_rtl_module_qualification.py",
+            "tools/qualify_rtl_modules.py",
+            "tools/run_fast_tests.py",
+        ),
+        {"one-bit-mutation": "sample-mismatch"},
+    ),
 }
 
 # These implementation/spec bytes always participate, including dirty files.

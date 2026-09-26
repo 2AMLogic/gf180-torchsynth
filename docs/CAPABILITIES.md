@@ -32,7 +32,7 @@ Status precedence: evidence is inspected independently, then any prerequisite ot
 | fixed-model | numeric-fidelity | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: float-modules=BLOCKED, rubric=BLOCKED, scalar=BLOCKED |
 | auditory | auditory-transparency | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: apparatus=NOT RUN, fixed-model=BLOCKED |
 | distribution | distribution-preservation | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: apparatus=NOT RUN, fixed-model=BLOCKED |
-| rtl-modules | implementation-identity | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: fixed-model=BLOCKED |
+| rtl-modules | implementation-identity | BLOCKED | READY | registered check available; no evidence attached; prerequisites not demonstrated: fixed-model=BLOCKED |
 | rtl-clip | implementation-identity | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: rtl-modules=BLOCKED |
 | fpga | fpga-operation | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: rtl-clip=BLOCKED |
 | synthesized | gf180-synthesis | BLOCKED | NOT RUN | planned check is not registered; no evidence attached; prerequisites not demonstrated: rtl-clip=BLOCKED |
@@ -259,14 +259,14 @@ Distribution preservation over a declared corpus and statistical protocol
 RTL modules are sample-exact with the fixed model
 
 - Engine/layer/scope: `rtl-simulation` / `rtl` / `module-sample-exact`.
-- Check: `rtl-module-qualification-v1`; planned, no registered runnable implementation.
+- Check: `rtl-module-qualification-v1`; `python3 -m unittest discover -s tests -p test_rtl_module_qualification.py -v`.
 - Dependencies: fixed-model.
-- Inputs (plus implicit coverage): `docs/MEASUREMENT-PLAN.md`, `spec/decision-records/0004-verification-claims.md`.
+- Inputs (plus implicit coverage): `docs/MEASUREMENT-PLAN.md`, `sim/reference/adsr-golden-v1`, `sim/reference/fixed-voice-golden-v1.json`, `sim/reference/golden-vector-fixed-anchor.json`, `sim/reference/lfo-vca-golden-v1`, `sim/reference/mod-matrix-golden-v1`, `spec/RTL-MODULE-QUALIFICATION.md`, `spec/decision-records/0004-verification-claims.md`, `tb/sv`.
 - References: none declared.
 - Evidence: none.
 - Required controls: one-bit-mutation detects sample-mismatch.
 - Cheaper cancellation gate: fixed-model.
-- Excludes: Physical timing; Sound fidelity beyond fixed model.
+- Excludes: Physical timing; Sound fidelity beyond fixed model; Line, toggle and branch code coverage (no Icarus instrument; see spec/RTL-MODULE-QUALIFICATION.md); SVA assertion/cover-point coverage (the benches assert procedurally; negative-control coverage is reported instead); Verilator width/sign diagnostics at their committed waived counts (tb/rtl-lint-baseline.json); sim/reference/sine-vco-golden-v1 and sim/reference/square-saw-vco-golden-v1 vector-set hashes (their vector filenames use ':' delimiters that torchsynth_voice.capabilities._relative()'s path-safety pattern refuses; see spec/RTL-MODULE-QUALIFICATION.md).
 
 ## rtl-clip
 

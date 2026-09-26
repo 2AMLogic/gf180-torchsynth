@@ -325,7 +325,14 @@
       "coverage": {
         "inputs": [
           "docs/MEASUREMENT-PLAN.md",
-          "spec/decision-records/0004-verification-claims.md"
+          "sim/reference/adsr-golden-v1",
+          "sim/reference/fixed-voice-golden-v1.json",
+          "sim/reference/golden-vector-fixed-anchor.json",
+          "sim/reference/lfo-vca-golden-v1",
+          "sim/reference/mod-matrix-golden-v1",
+          "spec/RTL-MODULE-QUALIFICATION.md",
+          "spec/decision-records/0004-verification-claims.md",
+          "tb/sv"
         ],
         "references": []
       },
@@ -335,7 +342,11 @@
       },
       "exclusions": [
         "Physical timing",
-        "Sound fidelity beyond fixed model"
+        "Sound fidelity beyond fixed model",
+        "Line, toggle and branch code coverage (no Icarus instrument; see spec/RTL-MODULE-QUALIFICATION.md)",
+        "SVA assertion/cover-point coverage (the benches assert procedurally; negative-control coverage is reported instead)",
+        "Verilator width/sign diagnostics at their committed waived counts (tb/rtl-lint-baseline.json)",
+        "sim/reference/sine-vco-golden-v1 and sim/reference/square-saw-vco-golden-v1 vector-set hashes (their vector filenames use ':' delimiters that torchsynth_voice.capabilities._relative()'s path-safety pattern refuses; see spec/RTL-MODULE-QUALIFICATION.md)"
       ],
       "expensive": true,
       "cheaper_predecessor": "fixed-model",
