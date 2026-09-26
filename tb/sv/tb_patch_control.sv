@@ -7,6 +7,15 @@
 //
 // Plusargs: +stim=<path> +capture=<path> +final=<path>
 //
+// The final line also carries the render lane's evidence (issue #211): the
+// number of one-cycle `bind_reject` pulses the DUT drove (each is a clip
+// discarded entire by ERR_RENDER_BINDING / ERR_NOISE_STREAM) and the
+// longest consecutive run of cycles the output was high, which must never
+// exceed 1 — the replay engine's contract is a pulse, not a level. The
+// per-pass noise-stream clip length is the DUT parameter
+// NOISE_CLIP_BYTES; override it for a directed scale-down with
+// `iverilog -Ptb_patch_control.NOISE_CLIP_BYTES=<n>`.
+//
 // The stimulus schedules and every expectation are produced by the Python
 // mirror (src/torchsynth_voice/patch_control_model.py) through
 // tb/run_tb.py's `patch` command; this bench is byte-agnostic on purpose.
@@ -16,6 +25,11 @@
 import gf180_rtl_constants::*;
 
 module tb_patch_control;
+
+    // Per-pass host-fed noise-stream length, in bytes. Default is the
+    // product profile's 705,600 B; a directed scale-down is applied with
+    // `iverilog -Ptb_patch_control.NOISE_CLIP_BYTES=<n>`.
+    parameter integer NOISE_CLIP_BYTES = SCHED_SAMPLES_PER_PASS * 4;
 
     reg clk = 1'b0;
     reg rst = 1'b1;
@@ -35,8 +49,11 @@ module tb_patch_control;
     reg  [6:0]  probe_slot = 7'd0;
     wire [C4_WIDTH-1:0] probe_value;
     wire        idle_out;
+    wire        bind_reject;
 
-    patch_control dut (
+    patch_control #(
+        .NOISE_CLIP_BYTES(NOISE_CLIP_BYTES)
+    ) dut (
         .clk(clk),
         .rst(rst),
         .cmd_valid(cmd_valid),
@@ -47,6 +64,7 @@ module tb_patch_control;
         .rsp_ready(rsp_ready),
         .state_out(state_out),
         .patch_active(patch_active),
+        .bind_reject(bind_reject),
         .kbd_midi_f0_word(kbd_midi_f0_word),
         .kbd_duration_word(kbd_duration_word),
         .sound_identity_len(sound_identity_len),
@@ -63,6 +81,28 @@ module tb_patch_control;
     always @(posedge clk) begin
         if (rsp_valid && rsp_ready)
             $fwrite(capf, "%0d\n", rsp_byte);
+    end
+
+    // bind_reject observation: count pulses (rising edges) and the longest
+    // consecutive high run, so a level-hold regression cannot pass as a
+    // pulse (RENDER-TRIGGER.md "Where the binding reaches the RTL").
+    integer bind_pulses = 0;
+    integer bind_run = 0;
+    integer bind_max_run = 0;
+    always @(posedge clk) begin
+        if (rst) begin
+            bind_pulses = 0;
+            bind_run = 0;
+            bind_max_run = 0;
+        end else if (bind_reject) begin
+            if (bind_run == 0)
+                bind_pulses = bind_pulses + 1;
+            bind_run = bind_run + 1;
+            if (bind_run > bind_max_run)
+                bind_max_run = bind_run;
+        end else begin
+            bind_run = 0;
+        end
     end
 
     reg [1023:0] stim_path, cap_path, final_path;
@@ -125,9 +165,10 @@ module tb_patch_control;
 
         // final observable state
         finalf = $fopen(final_path, "w");
-        $fwrite(finalf, "%0d %0d %0d %0d %0d %0d\n",
+        $fwrite(finalf, "%0d %0d %0d %0d %0d %0d %0d %0d\n",
                 state_out, patch_active, kbd_midi_f0_word,
-                kbd_duration_word, sound_identity_len, idle_out);
+                kbd_duration_word, sound_identity_len, idle_out,
+                bind_pulses, bind_max_run);
         begin : identity_dump
             integer k;
             for (k = 63; k >= 0; k = k - 1)

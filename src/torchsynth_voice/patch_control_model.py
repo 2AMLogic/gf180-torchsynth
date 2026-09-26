@@ -11,9 +11,13 @@ per clock cycle: a byte value or ``None`` for an idle cycle), it produces
 It implements the declared protocol semantics of ``spec/protocol/FRAMING.md``
 (protocol version 2 envelope, numeric-contract gate), ``PATCH-LOAD.md``
 (name-keyed staged patch transaction over the 78-name canonical table,
-patch-hash-v2 domain-separated commit) and ``SESSION.md`` (lifecycle,
-ordering, backpressure, timeouts, idempotency, error taxonomy), plus the
-module header's declared cycle contract, which the RTL replicates:
+patch-hash-v2 domain-separated commit), ``SESSION.md`` (lifecycle,
+ordering, backpressure, timeouts, idempotency, error taxonomy) and
+``RENDER-TRIGGER.md`` (``CAP_RENDER``, ``RENDER_TRIGGER`` / ``NOISE_STREAM``,
+the ``rendering`` state, the pass-1 declared-digest + sound-identity binding
+compared at the pass-2 trigger, and the one-cycle ``bind_reject`` pulse that
+discards the clip in the replay engine), plus the module header's declared
+cycle contract, which the RTL replicates:
 
 - one command byte accepted per cycle; the parser never stalls;
 - t_hdr (7th header byte) decides admission: unsupported header version or
@@ -72,6 +76,26 @@ sentence; both sides of the shared test suite hold to them):
    encodings"), so the loader's duration output is the exact widening of
    that word, not the model's direct binary64 -> Q16.30 entry quantization
    (a wire-boundary artifact bounded by 2^-22; declared, not hidden).
+8. Capabilities are negotiated, not asserted: the READY capability word is
+   ``requested & granted_caps``, and a command whose capability bit is not
+   in that word is ``ERR_UNSUPPORTED_COMMAND``, checked BEFORE any state or
+   payload rule (RENDER-TRIGGER.md's capability paragraph is
+   unconditional). The negotiated word survives ``RESET`` and is cleared
+   only at reset and by the two fatal ``ERR_PROTOCOL_VERSION`` paths, so
+   ``closed`` never holds a granted capability.
+9. RENDER-TRIGGER.md's lifecycle table names ``ready`` and ``rendering``
+   rows only. In ``closed`` the SESSION lifecycle admits ``HELLO`` alone, so
+   both render codes are ``ERR_BAD_STATE`` there (unreachable in practice
+   under refinement 8); in ``patch_open`` both are ``ERR_BAD_STATE`` (that
+   document's own ordering rule). While ``rendering``: ``PATCH_OPEN`` and
+   ``PATCH_ABORT`` are ``ERR_BAD_STATE`` (an abort must not silently end a
+   render — ``RESET`` does that), and ``PATCH_NAME`` / ``PATCH_VALUE`` /
+   ``PATCH_COMMIT`` answer the no-open-transaction outcome they already
+   answer in ``ready``. A rejection that discards an OPEN render
+   (``ERR_RENDER_BINDING`` or ``ERR_NOISE_STREAM``) pulses ``bind_reject``
+   for one cycle on the decide cycle that answers it; a pass-1 identity
+   mismatch does not (no clip existed), and neither do ``RESET`` / ``HELLO``,
+   whose discard reaches the engine through its own ``rst`` / ``abort``.
 """
 
 from __future__ import annotations
@@ -81,20 +105,28 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from .core_protocol import (
     CAP_NAME_KEYED_PATCH_LOAD,
+    CAP_RENDER,
     CAP_RESET,
     CMD_HELLO,
+    CMD_NOISE_STREAM,
     CMD_PATCH_ABORT,
     CMD_PATCH_COMMIT,
     CMD_PATCH_NAME,
     CMD_PATCH_OPEN,
     CMD_PATCH_VALUE,
     CMD_READY,
+    CMD_RENDER_TRIGGER,
     CMD_RESET,
     KIND_COMMAND,
     KIND_ERROR,
     KIND_RESPONSE,
+    NOISE_STREAM_CLIP_BYTES,
+    NOISE_STREAM_DIGEST_BYTES,
     PARAM_VALUE_BYTES,
     PROTOCOL_VERSION,
+    RENDER_PASS_1,
+    RENDER_PASS_2,
+    RENDER_PASSES,
     SYNC,
     crc16_ccitt_false,
     encode_ready,
@@ -117,12 +149,23 @@ ERR_UNKNOWN_NAME = 0x0A
 ERR_DUPLICATE_NAME = 0x0B
 ERR_TX_TIMEOUT = 0x0C
 ERR_PAYLOAD_LENGTH = 0x0D
+ERR_RENDER_BINDING = 0x0E
+ERR_NOISE_STREAM = 0x0F
 
-CLOSED, READY, PATCH = 0, 1, 2
+CLOSED, READY, PATCH, RENDER = 0, 1, 2, 3
 
 TX_CMD_LO, TX_CMD_HI = CMD_PATCH_OPEN, CMD_PATCH_ABORT
 
 REQ_QUEUE_DEPTH = 8
+
+#: RENDER_TRIGGER's fixed payload cost: pass index (1) + identity length
+#: prefix (2) + digest length prefix (2) + declared digest (32).
+RENDER_TRIGGER_FIXED = 5 + NOISE_STREAM_DIGEST_BYTES
+#: NOISE_STREAM's fixed payload cost: pass (1) + offset (4) + data length
+#: prefix (2); at least one data byte must follow.
+NOISE_STREAM_FIXED = 7
+#: The identity window both PATCH_OPEN and RENDER_TRIGGER accept.
+IDENTITY_WINDOW = 64
 
 
 def crc16_step(crc: int, byte: int) -> int:
@@ -149,6 +192,7 @@ class PatchControlModel:
         advertised_patch_timeout_ms: int = 2,
         kbd_midi_slot: int = 11,
         kbd_duration_slot: int = 10,
+        noise_clip_bytes: int = NOISE_STREAM_CLIP_BYTES,
     ):
         if len(table_sha256) != 32 or len(contract_version) != 32:
             raise ValueError("table_sha256/contract_version must be 32 bytes")
@@ -165,7 +209,16 @@ class PatchControlModel:
         self.adv_max_payload = advertised_max_payload
         self.adv_rx_depth = advertised_rx_queue_depth
         self.adv_timeout_ms = advertised_patch_timeout_ms
-        self.granted_caps = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET
+        # Per-pass host-fed noise-stream length. The product profile's value
+        # is NOISE_STREAM_CLIP_BYTES (705,600 B = SCHED_SAMPLES_PER_PASS x 4);
+        # a smaller value is a simulation scale-down only, matched by the
+        # DUT's NOISE_CLIP_BYTES parameter (RENDER-TRIGGER.md).
+        if noise_clip_bytes < 1:
+            raise ValueError("noise_clip_bytes must be >= 1")
+        self.noise_clip_bytes = noise_clip_bytes
+        self.granted_caps = CAP_NAME_KEYED_PATCH_LOAD | CAP_RESET | CAP_RENDER
+        self._session_caps = 0
+        self._bind_pulses = 0
         self._reset_all()
 
     # ------------------------------------------------------------------
@@ -179,6 +232,13 @@ class PatchControlModel:
         self.kbd_midi_word = 0
         self.kbd_duration_word = 0
         self.identity = b""
+        # The open render's binding + per-pass progress, or None. This is
+        # the receiver's entire per-clip live state: the 32-byte declared
+        # digest, the bound sound identity, the current pass, whether pass 1
+        # reached the clip length, and this pass's accepted-byte count. No
+        # clip buffer is ever held (DR-0010 Memory strategy) and no digest
+        # is computed over received bytes (declared-digest binding only).
+        self.render: Optional[dict] = None
         # transaction state
         self._tx_clear()
         # idempotent-class replay caches: seq -> (frame bytes, request)
@@ -215,6 +275,11 @@ class PatchControlModel:
         Returns ``(response_bytes, observables)``.
         """
         self._reset_all()
+        # Session-scoped, not reset-scoped: the negotiated capability word
+        # survives RESET (refinement 8). bind_reject pulses are counted for
+        # the whole reset-to-reset run, like the testbench's own counter.
+        self._session_caps = 0
+        self._bind_pulses = 0
         self._parser = {
             "state": "hunt",
             "prev": 0,
@@ -252,6 +317,7 @@ class PatchControlModel:
             "kbd_midi_word": self.kbd_midi_word,
             "kbd_duration_word": self.kbd_duration_word,
             "identity": self.identity,
+            "bind_pulses": self._bind_pulses,
         }
 
     # ------------------------------------------------------------------
@@ -314,6 +380,7 @@ class PatchControlModel:
                     self._tx_clear()
                     self._reset_all()
                     self.session = CLOSED
+                    self._session_caps = 0  # fatal: renegotiate (refinement 8)
                     p["state"] = "skip"
                     p["skip"] = p["length"] + 2
                     return False
@@ -429,6 +496,18 @@ class PatchControlModel:
         blocks = total // 64
         return total, k_pad, blocks
 
+    @staticmethod
+    def _walk_render_trigger(ident_len: int) -> int:
+        # pass index, identity len, identity (0 costs no cycle), digest
+        # prefix, declared digest, decide
+        return 1 + 2 + ident_len + 2 + NOISE_STREAM_DIGEST_BYTES + 1
+
+    @staticmethod
+    def _walk_noise_stream() -> int:
+        # pass index, offset, data length prefix, decide. The data region
+        # costs no walk cycle: the bytes are consumed, never stored.
+        return NOISE_STREAM_FIXED + 1
+
     def _walk_commit(self, staged: Dict[int, int]) -> int:
         stream_len = 63 + sum(
             len(self.names[slot].encode("utf-8")) + 7 for slot in sorted(staged)
@@ -438,6 +517,10 @@ class PatchControlModel:
 
     def _engine_start(self, cmd: int, seq: int, payload: bytes) -> None:
         self._cur = (cmd, seq, payload)
+        # The RTL clears e_err when it takes a frame (E_IDLE), so no
+        # take-time verdict ever leaks from the previous command.
+        self._pending_unsupported = False
+        self._pending_render_bad_state = False
         if cmd == CMD_RESET or cmd == CMD_PATCH_ABORT:
             self._engine_busy = 1
             return
@@ -447,12 +530,39 @@ class PatchControlModel:
             CMD_PATCH_NAME,
             CMD_PATCH_VALUE,
             CMD_PATCH_COMMIT,
+            CMD_RENDER_TRIGGER,
+            CMD_NOISE_STREAM,
         ):
             # unknown command: immediate unsupported error
             self._engine_busy = 1
             self._pending_unsupported = True
             return
         self._pending_unsupported = False
+        self._pending_render_bad_state = False
+        if cmd in (CMD_RENDER_TRIGGER, CMD_NOISE_STREAM):
+            # refinement 8: the capability gate is outermost and walk-free
+            if not self._session_caps & CAP_RENDER:
+                self._engine_busy = 1
+                self._pending_unsupported = True
+                return
+            if self.session in (CLOSED, PATCH):
+                # refinement 9, decided at take so the walk's field scratch
+                # is never read stale at decide
+                self._engine_busy = 1
+                self._pending_render_bad_state = True
+                return
+            if cmd == CMD_RENDER_TRIGGER:
+                fields = self._parse_render_trigger(payload)
+                self._engine_busy = (
+                    1 if fields is None
+                    else self._walk_render_trigger(len(fields[1]))
+                )
+            else:
+                chunk = self._parse_noise_stream(payload)
+                self._engine_busy = (
+                    1 if chunk is None else self._walk_noise_stream()
+                )
+            return
         if cmd == CMD_HELLO:
             self._engine_busy = self._walk_hello()
         elif cmd == CMD_PATCH_OPEN:
@@ -524,8 +634,13 @@ class PatchControlModel:
             self._enqueue_error(cmd, seq, ERR_UNSUPPORTED_COMMAND)
             return
 
-        # idempotent-class replay check (before any effect)
-        if cmd in (CMD_HELLO, CMD_RESET, CMD_PATCH_ABORT):
+        # idempotent-class replay check (before any effect). PATCH_ABORT is
+        # excluded while rendering: refinement 9 answers ERR_BAD_STATE there
+        # before the replay cache is consulted, exactly as the RTL's decide
+        # checks the session state ahead of its cache hit.
+        if cmd in (CMD_HELLO, CMD_RESET, CMD_PATCH_ABORT) and not (
+            cmd == CMD_PATCH_ABORT and self.session == RENDER
+        ):
             cached = self._caches[cmd].get(seq)
             if cached is not None and cached["frame"] == self._frame_bytes(cmd, seq, payload):
                 self._enqueue(cached["request"])
@@ -545,7 +660,12 @@ class PatchControlModel:
             if self.session == CLOSED:
                 self._enqueue_error(cmd, seq, ERR_BAD_STATE)
                 return
-            if self.session == READY:
+            if self.session == RENDER:
+                # refinement 9: an abort must not silently end a render
+                self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+                return
+            if self.session != PATCH:
+                # ready or rendering: no transaction is open (refinement 9)
                 self._tx_seq_span_record(seq)
                 self._enqueue_error(cmd, seq, self._expired_or_bad_sequence())
                 return
@@ -564,10 +684,12 @@ class PatchControlModel:
             if contract != self.contract_version:
                 self._reset_all()
                 self.session = CLOSED
+                self._session_caps = 0  # fatal: renegotiate (refinement 8)
                 self._enqueue_error(cmd, seq, ERR_PROTOCOL_VERSION)
                 return
             self._reset_all()
             self.session = READY
+            self._session_caps = caps & self.granted_caps  # negotiated
             request = self._ready_rsp(cmd, seq, caps)
             self._cache_idempotent(cmd, seq, payload, request)
             self._enqueue(request)
@@ -578,6 +700,11 @@ class PatchControlModel:
                 self._enqueue_error(cmd, seq, ERR_PATCH_TX_ACTIVE)
                 return
             if self.session == CLOSED:
+                self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+                return
+            if self.session == RENDER:
+                # refinement 9 / RENDER-TRIGGER.md ordering rule: render and
+                # patch-transaction frames never interleave.
                 self._enqueue_error(cmd, seq, ERR_BAD_STATE)
                 return
             fields = self._parse_open(payload)
@@ -613,7 +740,8 @@ class PatchControlModel:
             if self.session == CLOSED:
                 self._enqueue_error(cmd, seq, ERR_BAD_STATE)
                 return
-            if self.session == READY:
+            if self.session != PATCH:
+                # ready or rendering: no transaction is open (refinement 9)
                 self._tx_seq_span_record(seq)
                 self._enqueue_error(cmd, seq, self._expired_or_bad_sequence())
                 return
@@ -639,7 +767,8 @@ class PatchControlModel:
             if self.session == CLOSED:
                 self._enqueue_error(cmd, seq, ERR_BAD_STATE)
                 return
-            if self.session == READY:
+            if self.session != PATCH:
+                # ready or rendering: no transaction is open (refinement 9)
                 self._tx_seq_span_record(seq)
                 self._enqueue_error(cmd, seq, self._expired_or_bad_sequence())
                 return
@@ -666,11 +795,20 @@ class PatchControlModel:
             self._enqueue(self._empty_rsp(cmd, seq))
             return
 
+        if cmd == CMD_RENDER_TRIGGER:
+            self._decide_render_trigger(cmd, seq, payload)
+            return
+
+        if cmd == CMD_NOISE_STREAM:
+            self._decide_noise_stream(cmd, seq, payload)
+            return
+
         # PATCH_COMMIT
         if self.session == CLOSED:
             self._enqueue_error(cmd, seq, ERR_BAD_STATE)
             return
-        if self.session == READY:
+        if self.session != PATCH:
+            # ready or rendering: no transaction is open (refinement 9)
             self._tx_seq_span_record(seq)
             self._enqueue_error(cmd, seq, self._expired_or_bad_sequence())
             return
@@ -712,6 +850,143 @@ class PatchControlModel:
         self.session = READY
         self._enqueue(self._empty_rsp(cmd, seq))
         return
+
+    # ---- render lane (RENDER-TRIGGER.md) ---------------------------------
+    def _discard_render(self) -> None:
+        """Drop the render binding whole (DR-0010: no resumable render)."""
+        self.render = None
+
+    def _reject_render(self, cmd: int, seq: int, code: int) -> None:
+        """A rejection for an OPEN render: discard entire, pulse, answer.
+
+        This is the single site that drives the replay engine's
+        ``bind_reject`` (RENDER-TRIGGER.md "Where the binding reaches the
+        RTL"): one cycle, on the decide cycle that answers ``code``.
+        """
+        self._discard_render()
+        self.session = READY
+        self._bind_pulses += 1
+        self._enqueue_error(cmd, seq, code)
+
+    def _decide_render_trigger(self, cmd: int, seq: int, payload: bytes) -> None:
+        if self._pending_render_bad_state:
+            self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+            return
+        fields = self._parse_render_trigger(payload)
+        if fields is None:
+            self._enqueue_error(cmd, seq, ERR_PAYLOAD_LENGTH)
+            return
+        pass_index, identity, digest_prefix, digest = fields
+        if pass_index not in RENDER_PASSES or digest_prefix != NOISE_STREAM_DIGEST_BYTES:
+            self._enqueue_error(cmd, seq, ERR_PAYLOAD_LENGTH)
+            return
+
+        if pass_index == RENDER_PASS_1:
+            if self.session == RENDER:
+                # a second trigger never joins or replaces a clip
+                self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+                return
+            if not self.patch_active:
+                self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+                return
+            if identity != self.identity:
+                # no clip existed, so nothing is discarded and no pulse
+                self._enqueue_error(cmd, seq, ERR_RENDER_BINDING)
+                return
+            self.render = {
+                "sound_identity": identity,
+                "noise_stream_sha256": digest,
+                "pass_index": RENDER_PASS_1,
+                "pass1_complete": False,
+                "accepted": 0,
+            }
+            self.session = RENDER
+            self._enqueue(self._empty_rsp(cmd, seq))
+            return
+
+        # pass 2
+        if self.session != RENDER:
+            self._enqueue_error(cmd, seq, ERR_BAD_SEQUENCE)
+            return
+        render = self.render
+        if render["pass_index"] != RENDER_PASS_1 or not render["pass1_complete"]:
+            # pass 1 short of the clip length, or pass 2 already open
+            self._reject_render(cmd, seq, ERR_NOISE_STREAM)
+            return
+        if (
+            identity != render["sound_identity"]
+            or digest != render["noise_stream_sha256"]
+        ):
+            # the DR-0010 binding check, before any pass-2 noise byte exists
+            self._reject_render(cmd, seq, ERR_RENDER_BINDING)
+            return
+        render["pass_index"] = RENDER_PASS_2
+        render["accepted"] = 0
+        self._enqueue(self._empty_rsp(cmd, seq))
+
+    def _decide_noise_stream(self, cmd: int, seq: int, payload: bytes) -> None:
+        if self._pending_render_bad_state:
+            self._enqueue_error(cmd, seq, ERR_BAD_STATE)
+            return
+        chunk = self._parse_noise_stream(payload)
+        if chunk is None:
+            self._enqueue_error(cmd, seq, ERR_PAYLOAD_LENGTH)
+            return
+        pass_index, offset, data_len = chunk
+        if pass_index not in RENDER_PASSES:
+            self._enqueue_error(cmd, seq, ERR_PAYLOAD_LENGTH)
+            return
+        if self.session != RENDER:
+            self._enqueue_error(cmd, seq, ERR_BAD_SEQUENCE)
+            return
+        render = self.render
+        if (
+            pass_index != render["pass_index"]
+            or offset != render["accepted"]
+            or (render["pass_index"] == RENDER_PASS_1 and render["pass1_complete"])
+            or render["accepted"] + data_len > self.noise_clip_bytes
+        ):
+            self._reject_render(cmd, seq, ERR_NOISE_STREAM)
+            return
+        # consumed as they arrive; only the accepted count is kept
+        render["accepted"] += data_len
+        if render["accepted"] == self.noise_clip_bytes:
+            if render["pass_index"] == RENDER_PASS_1:
+                render["pass1_complete"] = True
+            else:
+                # the clip is complete: nothing is retained
+                self._discard_render()
+                self.session = READY
+        self._enqueue(self._empty_rsp(cmd, seq))
+
+    @staticmethod
+    def _parse_render_trigger(payload: bytes):
+        """(pass_index, identity, digest_prefix, digest) or None.
+
+        ``None`` means the payload is not the shape the walk could traverse
+        (too short, an identity beyond the 64-byte window, or trailing
+        bytes) — an ERR_PAYLOAD_LENGTH answered walk-free.
+        """
+        if len(payload) < RENDER_TRIGGER_FIXED:
+            return None
+        ident_len = payload[1] | (payload[2] << 8)
+        if ident_len > IDENTITY_WINDOW:
+            return None
+        if len(payload) != RENDER_TRIGGER_FIXED + ident_len:
+            return None
+        identity = payload[3 : 3 + ident_len]
+        digest_prefix = payload[3 + ident_len] | (payload[4 + ident_len] << 8)
+        return payload[0], identity, digest_prefix, payload[5 + ident_len :]
+
+    @staticmethod
+    def _parse_noise_stream(payload: bytes):
+        """(pass_index, offset, data_len) or None for a walk-free shape fault."""
+        if len(payload) < NOISE_STREAM_FIXED + 1:
+            return None
+        data_len = payload[5] | (payload[6] << 8)
+        if len(payload) != NOISE_STREAM_FIXED + data_len:
+            return None
+        return payload[0], int.from_bytes(payload[1:5], "little"), data_len
 
     # ---- shared helpers --------------------------------------------------
     @staticmethod
