@@ -106,6 +106,27 @@ sum across units. Shared sources (`gf180_rtl_constants_pkg.sv`,
 committed numbers depend on how many units include a file — adding a lint unit
 would then fail the ratchet for sources nobody touched.
 
+### The ledger is pinned to CI's linter versions, not any developer's local ones
+
+`tb/rtl-lint-baseline.json` is seeded from, and validated against,
+`.github/workflows/tb-sim.yml`'s exact toolchain: `apt-get install iverilog
+verilator` on the `ubuntu-24.04`-based runner image (Verilator 5.020, Icarus
+12.0 as of this writing). A developer running `--lint` locally with a
+different linter build — e.g. a newer Homebrew Verilator on macOS — will
+observe a *different* diagnostic set for the identical source: some classes
+this ledger waives (`BLKANDNBLK`, `BLKLOOPINIT`, `VERILATOR-EXIT`,
+`INITIALDLY` — all Verilator-5.020-only "Unsupported"/lint reports that a
+newer Verilator resolves) will show as "no longer observed" notes locally,
+while other classes a newer Verilator newly reports (observed locally:
+`WIDTHTRUNC` on `gf180_rtl_constants_pkg.sv`, `MULTIDRIVENPROC` on
+`patch_control.sv`) will show as unwaived local failures. Neither is a
+regression — **CI's toolchain is the ledger's ground truth**, and the
+`rtl-module-qualification` CI job installs the same apt packages
+`--update-baseline` was run against. Re-baselining from a different linter
+build would just shift which developer's environment disagrees with the
+ledger; do it from a container matching `tb-sim.yml`'s toolchain (or from CI
+itself) rather than from an arbitrary local install.
+
 ### Why the width/sign diagnostics are waived rather than fixed
 
 The landed engines produce 200-plus `WIDTHTRUNC`/`WIDTHEXPAND` reports. They

@@ -283,6 +283,41 @@ WAIVER_REASONS: dict[str, str] = {
         "array; that whole-array sensitivity is what the decode is supposed "
         "to have, and the lane's cycle-exact Python mirror arbitrates it"
     ),
+    "BLKANDNBLK": (
+        "Verilator 5.020 (Ubuntu 24.04's apt package, CI's installed "
+        "version) reports 'Unsupported: Blocked and non-blocking "
+        "assignments to same variable' for patch_control.sv's testbench-"
+        "side register mirror (c_entry_off/c_stream_len/c_kpad/c_total/"
+        "c_slot/c_entry_len), driven procedurally by the bench rather than "
+        "the DUT; Verilator 5.052 lints the identical source without this "
+        "diagnostic. This is a lint-front-end version limitation, not an "
+        "RTL defect -- Icarus Verilog (this repo's bit-exact arbiter) "
+        "elaborates and simulates it correctly, and the patch/normreplay "
+        "lanes both pass sample-exactly on the committed tree"
+    ),
+    "BLKLOOPINIT": (
+        "Verilator 5.020 reports 'Unsupported: Delayed assignment to array "
+        "inside for loops' for patch_control.sv; Verilator 5.052 supports "
+        "the identical construct. Same lint-front-end version-limitation "
+        "reasoning as BLKANDNBLK above -- Icarus and the bit-exact "
+        "patch/normreplay lanes are the arbiters and both pass"
+    ),
+    "INITIALDLY": (
+        "tb_patch_control.sv / tb_render_binding.sv seed bench-driven "
+        "mirror state with non-blocking assignments inside initial/final "
+        "blocks -- ordinary testbench-scaffolding idiom, not synthesised "
+        "RTL; Verilator 5.020 flags it under -Wall, Verilator 5.052 does "
+        "not report it for this source"
+    ),
+    "VERILATOR-EXIT": (
+        "Verilator 5.020 exits non-zero on patch_control.sv's BLKANDNBLK/"
+        "BLKLOOPINIT unsupported-construct errors above even under "
+        "-Wno-fatal (those are %Error-class diagnostics, not %Warning); "
+        "the exit itself is lint_unit()'s own synthetic marker for that, "
+        "waived alongside the errors that cause it for the same "
+        "lint-front-end version-limitation reason -- Icarus and the "
+        "bit-exact lanes are unaffected and both pass"
+    ),
     "TB-WARN": (
         "tb_adsr_engine.sv:194 / tb_lfo_vca_engine.sv:181 print TB-WARN when "
         "out_valid stays low, which is exactly what the planted off-by-one "
