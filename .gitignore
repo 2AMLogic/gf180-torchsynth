@@ -77,3 +77,6 @@ out/
 artifacts/
 spec/reference/generated/
 sim/work/
+
+# Repo Skills guard-hook logs (machine-local; carry absolute paths)
+.claude/skills/repo/logs/
