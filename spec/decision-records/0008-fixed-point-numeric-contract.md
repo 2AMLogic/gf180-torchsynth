@@ -73,7 +73,8 @@ The contract applies to one target: the default Voice graph
 profile — a deterministic one-shot, 4-second, 44.1 kHz default-nebula clip
 (DR-0002) — under the host boundary of DR-0003: the host supplies a
 resolved, name-keyed patch and the selected canonical noise stream
-(`spec/decision-records/0003-host-boundary-and-normalization.md:14-19`).
+(`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Proposed decision", items 3–5).
 Live note semantics and the drum nebula are later, separately named
 profiles and are out of scope. Nothing here changes the target; the pin
 stays `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`.
@@ -188,7 +189,8 @@ switch to CORDIC for area would be gated by the same metrics unchanged.
 ## 7. Noise policy interface
 
 The canonical noise stream is host- or testbench-fed **bit-exactly** per
-DR-0003 (`spec/decision-records/0003-host-boundary-and-normalization.md:14-19`);
+DR-0003 (`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Proposed decision", items 3–5);
 canonical slot is `sound_index % 32` with seed 13
 (`spec/VOICE-CONTRACT.md:75-77`); 32-stream repetition for larger
 reproducible batches is upstream behavior (pinned `torchsynth/config.py:19`;
@@ -439,7 +441,7 @@ affected traces are registry names.
 | C6 | Rounding: half-even at S1–S5 | accepted (reviewed merge; 2026-09-21) | Section 6; rounding-mode axis (`sim/reference/control-format-sweep-v1.json`: truncation member loses to the half-even baseline) | per-site half-away-from-zero | all narrowing sites | directed fixture requiring an exception |
 | C7 | Saturation + sticky counters; Nyquist clamp forbidden | accepted (reviewed merge; 2026-09-21) | #83 groundwork Section 1; per-site sticky counters measured (`sim/candidates/audio-sources-sweep-v1.json`) | clamp-to-Nyquist (rejected: not upstream) | saturate counters, `vco_*.raw` | upstream behavior change at pin |
 | C8 | Noise: host-fed exact stream, slot `sound_index % 32`, seed 13 | accepted (reviewed merge; 2026-09-21) | `spec/VOICE-CONTRACT.md:75-77`; DR-0003; noise identity rows exact-bytes (`sim/candidates/audio-sources-sweep-v1.json`) | on-chip generator (needs its own DR) | `noise.raw` | new noise-policy decision record |
-| C9 | Normalization replay gain `1/peak`, declared-precision reciprocal — measured: reciprocal-multiply, 22 frac bits, gain word U1.22 (width 23), half-even at S5 | accepted (reviewed merge; 2026-09-21) | DR-0003; `spec/decision-records/0003-host-boundary-and-normalization.md:40-44`; measured recommendation (`sim/reference/normalization-reciprocal-v1.json`, issue #52 / PR #150) | limiter/AGC (rejected by DR-0003); F=12 (measured: misses draft band); direct division (costlier, same floor) | final output, replay traces | reciprocal precision measurement |
+| C9 | Normalization replay gain `1/peak`, declared-precision reciprocal — measured: reciprocal-multiply, 22 frac bits, gain word U1.22 (width 23), half-even at S5 | accepted (reviewed merge; 2026-09-21) | DR-0003; `spec/decision-records/0003-host-boundary-and-normalization.md` §"Why proposed", the "division/reciprocal precision and output arithmetic" measurement item; measured recommendation (`sim/reference/normalization-reciprocal-v1.json`, issue #52 / PR #150) | limiter/AGC (rejected by DR-0003); F=12 (measured: misses draft band); direct division (costlier, same floor) | final output, replay traces | reciprocal precision measurement |
 | C10 | Thresholds: 2x-measured power-of-two, preregistered pre-freeze | accepted (reviewed merge; 2026-09-21) | Section 10; DR-0004; applied over the v0 sweeps (Section 10 as amended 2026-09-21) | fixed a-priori thresholds | M1/M2 bands | new calibration-policy evidence |
 
 ## 13. Change control
@@ -569,7 +571,8 @@ rows open as `NO VERDICT`, never force-ratified.
 | C9 reciprocal precision | **Ratified** F=22 / U1.22 (width 23) with branch coverage below/at/above one, tie, late peak, extremum, silence. | #150 receipt `decision` block |
 
 **DR-0003 remains Proposed.** Its own acceptance text
-(`spec/decision-records/0003-host-boundary-and-normalization.md:38-44`)
+(`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Why proposed", the "Before acceptance, measure:" list)
 requires, before acceptance: replay determinism for every stateful module;
 cycle, SRAM, and energy cost of replay versus buffering; exact noise
 stream requirements; division/reciprocal precision; and the UI/transport

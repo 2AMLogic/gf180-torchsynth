@@ -1,8 +1,9 @@
 """Fixed-path whole-clip normalization replay: the DR-0003 acceptance measurement.
 
 Issue #52 delivers the measurement DR-0003 names before acceptance
-(``spec/decision-records/0003-host-boundary-and-normalization.md:40-44``:
-"division/reciprocal precision and output arithmetic") and the DR-0008
+(``spec/decision-records/0003-host-boundary-and-normalization.md`` section
+"Why proposed", the "division/reciprocal precision and output arithmetic"
+measurement item) and the DR-0008
 Section 8 / choice C9 reciprocal-precision measurement. Semantics are fixed
 by DR-0003 and are not re-decided here: render once to find the peak, replay
 at gain ``1 / peak`` if the peak exceeds one, otherwise unity. The limiter,

@@ -203,7 +203,7 @@
         "rounding_mode": "half_even",
         "application_site": "S5"
       },
-      "evidence": "DR-0003; spec/decision-records/0003-host-boundary-and-normalization.md:40-44; measured: sim/reference/normalization-reciprocal-v1.json decision block - reciprocal-multiply F=22 (gain word U1.22, width 23) recommended by the receipt rule (smallest swept width with calibrated threshold <= the draft strictest M1 band 2^-13 AND worst case within half an output LSB of the direct-division floor); F=12 misses the draft band; branch coverage below/at/above one, tie, late peak, extremum, silence",
+      "evidence": "DR-0003; spec/decision-records/0003-host-boundary-and-normalization.md section \"Why proposed\", the \"division/reciprocal precision and output arithmetic\" measurement item; measured: sim/reference/normalization-reciprocal-v1.json decision block - reciprocal-multiply F=22 (gain word U1.22, width 23) recommended by the receipt rule (smallest swept width with calibrated threshold <= the draft strictest M1 band 2^-13 AND worst case within half an output LSB of the direct-division floor); F=12 misses the draft band; branch coverage below/at/above one, tie, late peak, extremum, silence",
       "affected_traces": [
         "final output",
         "replay traces"
