@@ -169,13 +169,6 @@ def voice_checkpoints():
     return names
 
 
-def resolved_input_names():
-    """The three resolved input checkpoints, in map order."""
-
-    document = fi.load_checkpoints()
-    return [entry["name"] for entry in document["resolved_inputs"]]
-
-
 def f32le_bytes(samples):
     """Encode binary32 samples as the declared little-endian buffer bytes."""
 
@@ -402,13 +395,3 @@ def diverged_boundary(reference, candidate, order=None):
         ):
             return (name, name.split(".")[0], "declared checkpoint divergence")
     return None
-
-
-def checkpoint_shape_of(name, values):
-    """The declared registry shape for one composed checkpoint."""
-
-    if name in ("mixer.peak", "mixer.gain"):
-        return [1]
-    if name in ("keyboard.midi_f0", "keyboard.duration"):
-        return []
-    return [len(values)]

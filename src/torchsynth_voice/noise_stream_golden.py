@@ -24,7 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from .float_sources import AUDIO_SAMPLES, NOISE_SEED, NOISE_STREAMS, NoiseSource
 
@@ -48,7 +48,6 @@ ERROR_STREAM_TRUNCATED = 3
 #: structurally, not by convention).
 ERROR_IDENTITY_CHANGED = 4
 
-_PACK_F32 = struct.Struct("<f")
 _PACK_U32 = struct.Struct("<I")
 
 
@@ -297,17 +296,6 @@ def truncate_stream(noise_bytes: bytes) -> List[int]:
         bits = int.from_bytes(noise_bytes[offset:offset + 4], "little")
         out.append(truncate_f32_bits(bits))
     return out
-
-
-def f32_bits_and_value(noise_bytes: bytes, sample_index: int) -> Tuple[int, float]:
-    """Debug view: the raw u32 bits and the binary32 value of one sample."""
-
-    offset = sample_index * 4
-    chunk = noise_bytes[offset:offset + 4]
-    if len(chunk) != 4:
-        raise ValueError("sample index outside the fed stream")
-    bits = int.from_bytes(chunk, "little")
-    return bits, _PACK_F32.unpack(chunk)[0]
 
 
 def trace_digest(words: List[int]) -> str:

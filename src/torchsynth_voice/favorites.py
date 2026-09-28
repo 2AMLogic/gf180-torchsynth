@@ -152,15 +152,6 @@ def _check_portable(node, key=None) -> None:
             )
 
 
-def _check_patch_names(parameters: Mapping, expected: set[str]) -> None:
-    if set(parameters["physical_by_name"]) != expected:
-        observed = set(parameters["physical_by_name"])
-        raise FavoriteError(
-            "canonical parameter names changed; "
-            f"missing={sorted(expected - observed)}, extra={sorted(observed - expected)}"
-        )
-
-
 def _favorite(document) -> Favorite:
     """Validate one favorite document completely; the only constructor."""
 
