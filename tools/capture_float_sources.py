@@ -39,6 +39,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import paired_metrics as pm  # noqa: E402
+from torchsynth_voice.artifact_renderer import (  # noqa: E402
+    dispatch_flags,
+    dispatch_unset_flags,
+    release_profile_environment,
+)
 
 RELEASE_RECORD = ROOT / "sim/reference/release-era-environment.json"
 MANIFEST_PATH = ROOT / "spec/reference/directed-voice-v1.json"
@@ -451,18 +456,22 @@ def run_capture(staging):
     (staging / "request-traces.json").write_text(json.dumps(TRACES))
     (staging / "request-sound-index.json").write_text(json.dumps(SOUND_INDEX))
     (staging / "driver.py").write_text(DRIVER_SOURCE)
+    # Derived from the preregistered plan, never restated: the driver below
+    # runs render_artifact.render_selected, which asserts the plan's whole
+    # profile_environment["release"] before it renders (issue #3).
+    profile = release_profile_environment()
     command = [
         "docker", "run", "--rm", "--pull", "never",
         "--platform", "linux/amd64", "--network", "none",
         "--memory", "6g", "--cpus", "1",
         "--env", "OMP_NUM_THREADS=1",
         "--env", "MKL_NUM_THREADS=1",
-        "--env", "MKL_CBWR=COMPATIBLE",
+        *dispatch_flags(profile),
         "--mount", "type=bind,src=" + str(ROOT) + ",dst=/repo,readonly",
         "--mount", "type=bind,src=" + str(staging) + ",dst=/output",
         "--entrypoint", "env",
         image,
-        "-u", "ATEN_CPU_CAPABILITY",
+        *dispatch_unset_flags(profile),
         "python3", "/output/driver.py",
     ]
     result = subprocess.run(command, capture_output=True, timeout=5400, check=False)

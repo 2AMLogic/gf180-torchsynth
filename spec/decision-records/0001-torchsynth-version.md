@@ -59,6 +59,40 @@ The canonical Python/PyTorch runtime is not selected by this record. The next
 gate must render repeatable fixtures, compare a patched-import `v1.0.2` checkout
 against this commit in one environment, and record cross-environment drift.
 
+### Resolved 2026-09-19 by DR-0006 and DR-0007
+
+That gate has since been run and decided, so this section is history rather
+than open work. Nothing above it is superseded: the source pin, the released
+baseline, the constraints and the CPU-only scope all still hold, and a future
+TorchSynth patch is still adopted only through another decision record.
+
+- **The canonical runtime** is named by
+  [DR-0006](0006-canonical-runtime.md) — profile `release-mkl-compatible-v1`,
+  CPython 3.9.13 / PyTorch 1.12.1+cpu / NumPy 1.23.2 / Lightning 1.8.6 on
+  linux/amd64, built from `env/release-era/Dockerfile` and
+  `env/release-era/requirements.lock`. DR-0006 supersedes **only** this
+  section's open runtime question, and bounds its own portability claim in
+  its `## Permitted host scope`.
+- **Repeatable fixtures and cross-environment drift** are measured in
+  [`sim/reference/repeatability-runtime.json`](../../sim/reference/repeatability-runtime.json):
+  128/128 cells rendered, 64/64 fresh-process repeats and 48/48 batch-size
+  comparisons byte-exact, and 32/32 cross-runtime comparisons retained as
+  measured `FAIL`s rather than reconciled away.
+- **The patched-import `v1.0.2` comparison** is
+  [`env/release-era/source-comparison.json`](../../env/release-era/source-comparison.json)
+  and its rendered counterpart
+  [`sim/reference/source-equivalence.json`](../../sim/reference/source-equivalence.json):
+  of the eleven pinned Voice files, only `synth.py` (the one-line
+  `LightningModule` import, plus two docstrings) and the unused `profile.py`
+  profiling CLI differ.
+- **Batch-size-1 execution** is scoped separately by
+  [DR-0007](0007-single-sound-execution.md) as a diagnostic oracle, not as the
+  corpus identity generator; it reconciled against DR-0006 on 2026-09-19.
+
+The consolidated cross-check of those records against each other — and the
+program that re-runs it in CI — is
+[`spec/CANONICAL-REFERENCE-QUALIFICATION.md`](../CANONICAL-REFERENCE-QUALIFICATION.md).
+
 ## Sources
 
 - [One Billion Audio Sounds from GPU-enabled Modular Synthesis](https://arxiv.org/html/2104.12922v2)

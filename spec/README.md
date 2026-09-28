@@ -11,6 +11,11 @@ details are allowed to become the de facto product.
   acceptance decision input, candidate-pending-ratification.
 - [`RUBRIC.md`](RUBRIC.md) is the frozen verification rubric v0 (#48): the
   composed release decision procedure over every landed measurement family.
+- [`CANONICAL-REFERENCE-QUALIFICATION.md`](CANONICAL-REFERENCE-QUALIFICATION.md)
+  consolidates the canonical CPU reference phase (#3): how DR-0006/DR-0007
+  discharge DR-0001's deferred runtime question, each acceptance criterion
+  re-derived from the committed artifacts, and the divergences still open.
+  `tools/check_reference_consolidation.py` re-runs the cross-check in CI.
 - [`protocol/`](protocol/) specifies the core/host transport protocol subset
   that is independent of the pending numeric contract (#53).
 - [`decision-records/`](decision-records/) records choices and unresolved
