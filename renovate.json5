@@ -95,6 +95,33 @@
     {
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["major"]
+    },
+
+    // The release-era image is an intentional historical pin: its base tag and
+    // digest must stay on CPython 3.9 because requirements.lock pins the
+    // cp39-only torch==1.12.1+cpu wheel matching the normative TorchSynth
+    // commit. No newer Python has a compatible wheel, so never propose bumps.
+    {
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["env/release-era/Dockerfile"],
+      "enabled": false
+    },
+
+    // actions/setup-python `python-version:` values are deliberately spread
+    // across 3.11/3.12/3.13 in these workflows for cross-version coverage.
+    // A single "update python" PR would flatten that spread, so do not manage
+    // them here; change them by hand when the coverage policy changes.
+    {
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["python"],
+      "matchFileNames": [
+        ".github/workflows/capabilities.yml",
+        ".github/workflows/mutations.yml",
+        ".github/workflows/parameter-inventory.yml",
+        ".github/workflows/reference-repeatability.yml",
+        ".github/workflows/tb-sim.yml"
+      ],
+      "enabled": false
     }
 
     // Note: security/vulnerability PRs bypass both schedule and
