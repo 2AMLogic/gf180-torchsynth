@@ -2,9 +2,10 @@
 
 Verifies spec/protocol/RENDER-TRIGGER.md (issue #188) against the behavioral
 mock core and the host client. Scope honesty: the core binds the
-TRANSPORT-DECLARED noise-stream digest; it never hashes received bytes (open
-question, issue #207). These are software-lane protocol tests only — no RTL,
-synthesis, hardware, or sound-fidelity claim.
+TRANSPORT-DECLARED noise-stream digest; it never hashes received bytes
+(declared-only, decided 2026-09-26 by DR-0010 amendment, issue #207). These
+are software-lane protocol tests only — no RTL, synthesis, hardware, or
+sound-fidelity claim.
 """
 
 from __future__ import annotations

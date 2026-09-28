@@ -41,14 +41,16 @@ and the software mock round-trip harness) is unchanged in structure. Version
 - the patch hash is a domain-separated SHA-256 bound to the negotiated
   numeric contract (replacing the version 1 stand-in digest).
 
+The noise-stream digest binding is transport-declared only: the core binds
+the declared digest across both passes and computes no digest over the
+bytes it receives (decided by operator ruling 2026-09-26, issue #207;
+recorded as a DR-0010 amendment and in [RENDER-TRIGGER.md](RENDER-TRIGGER.md)).
+
 Still **not** specified here:
 
 - the audio output transfer/streaming command set (its numeric format is
   bound; no landed record allocates the commands — DR-0010, the issue #63
   record, did not);
-- whether the core computes a digest over the noise bytes it receives, in
-  addition to binding the transport-declared digest (open, issue #207;
-  requires a DR-0010 amendment if answered receiver-side);
 - per-parameter wire widths and numeric IDs (the name table's `numeric_id`
   and `width` columns stay reserved);
 - the global sound identity binding (issues #12/#88), the product profile

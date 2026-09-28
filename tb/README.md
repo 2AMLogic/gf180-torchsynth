@@ -771,9 +771,10 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   commands themselves (specified in `spec/protocol/RENDER-TRIGGER.md` and
   implemented only in the software mock; the RTL receiver that would drive
   `bind_reject` is not implemented), holds no digest and computes none
-  (declared-digest binding only; a receiver-side digest is open, issue
-  #207), and makes no claim about issue #76's eventual mixer RTL interface
-  beyond the single Q2.21 word per sample DR-0010 already declares.
+  (declared-digest binding only; receiver-side digest rejected by the
+  2026-09-26 DR-0010 amendment, issue #207), and makes no claim about
+  issue #76's eventual mixer RTL interface beyond the single Q2.21 word
+  per sample DR-0010 already declares.
   Nothing here claims synthesis, layout, signoff, hardware playback, or
   sound fidelity.
 

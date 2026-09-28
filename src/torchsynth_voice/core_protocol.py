@@ -75,7 +75,8 @@ RENDER_PASSES = (RENDER_PASS_1, RENDER_PASS_2)
 # Declared noise-stream digest: SHA-256 (32 bytes) over the clip's complete
 # host-fed byte stream — the digest noise_stream_golden.noise_bytes_sha256
 # produces and check_fed_bytes verifies. The core binds the DECLARED digest;
-# it does not hash the bytes it receives (open question, issue #207).
+# it does not hash the bytes it receives (declared-only, decided 2026-09-26,
+# issue #207; DR-0010 "Clip lifecycle" amendment).
 NOISE_STREAM_DIGEST_BYTES = 32
 
 # Per-pass noise-stream length of the product profile: one binary32 sample
