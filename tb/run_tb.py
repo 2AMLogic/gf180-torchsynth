@@ -4918,8 +4918,8 @@ def build_scenarios(model, words: dict, vector: dict) -> dict:
 
 #: The pinned declared noise-stream digests these scenarios bind. Content is
 #: opaque to the receiver: it latches the pass-1 declaration and compares the
-#: pass-2 one, and computes no digest of its own (issue #207 is the open
-#: question of receiver-side hashing, deliberately out of scope here).
+#: pass-2 one, and computes no digest of its own (declared-only: receiver-side
+#: hashing was rejected by the 2026-09-26 DR-0010 amendment, issue #207).
 RENDER_DIGEST_A = bytes(range(32))
 RENDER_DIGEST_B = bytes(range(32, 64))
 #: Sound identities that are NOT the committed patch's. The first is the

@@ -27,14 +27,14 @@ digest:
   exists, and output release only ever happens in pass 2 (DR-0010 "output
   release begins only after the branch decision").
 - The core does **not** compute a digest over the noise bytes it actually
-  receives. Whether it should is an **open design question** DR-0010 does
-  not settle: an on-chip digest over 2 x 705,600 B per clip is not in
-  DR-0010's worst-case resource table nor in the #75 owner row, so answering
-  "receiver-side" requires a DR-0010 amendment before any implementation
-  (DR-0010 "Change control"). That question is tracked separately
-  (issue #207); nothing in this document forecloses either answer — a
-  receiver-side check would compare its computed digest against exactly the
-  declared digest bound here.
+  receives. This is **decided**: the operator ruled on 2026-09-26
+  (issue #207) that the core trusts the transport-declared digest alone,
+  recorded in DR-0010's "Clip lifecycle" amendment (2026-09-26, issue
+  #207). Declared-only adds no on-chip resource (no streaming hash core
+  over the 2 x 705,600 B per clip) and catches a declared mismatch before
+  pass 2 starts, rather than only after pass-2 samples were released.
+  Revisiting receiver-side hashing requires a further DR-0010 amendment
+  before any implementation (DR-0010 "Change control").
 
 Residual limit of the declared-digest binding, stated rather than hidden: a
 host that declares the same digest in both passes but feeds different bytes

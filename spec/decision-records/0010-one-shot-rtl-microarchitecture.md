@@ -346,6 +346,36 @@ clip-buffer cost P4 exists to avoid.
   class failure) discards the clip entire; the error taxonomy and recovery
   are the landed session semantics', unchanged.
 
+**Amendment (2026-09-26, issue #207, operator ruling by Joseph Turian).**
+The digest in the binding above is the **transport-declared** digest only.
+The core latches the pass-1 `RENDER_TRIGGER` declared noise-stream digest
+and compares the pass-2 declaration (with the sound identity) against it;
+it does **not** compute a digest over the noise bytes it receives. The
+receiver-side alternative (a streaming SHA-256 or cheaper declared hash at
+byte rate over both passes) is rejected: it would add gate count, area, and
+latency with no practical benefit, since the transport layer already binds
+and validates before bytes enter the core. Consequences:
+
+- **Resource cost: zero additional.** No streaming hash core, no new LUT,
+  multiplier, or live-state item; the worst-case resource estimate above
+  and the P2 live-state budget are unchanged.
+- **Detection point: before pass 2 starts.** A declared-digest mismatch is
+  caught at the pass-2 trigger, before any pass-2 noise byte is accepted
+  and therefore before any sample is released (release is pass 2 only), so
+  "discards the clip entire" is enforced by the core withholding output,
+  not by the host dropping already-released samples — which a digest over
+  pass-2 bytes, known only at the end of pass 2, could not guarantee.
+- **Residual limit, stated:** a host that declares the same digest for both
+  passes but feeds different pass-2 bytes is not detected core-side.
+  Byte-level truth lives on the host (`noise_stream_golden.check_fed_bytes`;
+  the conforming client derives the declared digest from the exact bytes it
+  sends).
+
+This amendment records the behavior already implemented by #188 (PR #210);
+it changes no numeric value, schedule register entry, or protocol command.
+Revisiting receiver-side hashing requires a further amendment here before
+any dependent RTL ("Change control").
+
 ## Trace/debug visibility (issue #63 AC)
 
 RTL exposes, at minimum: every registry-named checkpoint trace the frozen

@@ -62,8 +62,8 @@
 // the declared-digest check happens) therefore releases zero samples. With
 // no render open (IDLE/DONE) ``bind_reject`` is ignored: no clip exists to
 // discard. This module holds no digest and computes none; the digest
-// comparison lives in the receiver (declared-digest binding only; whether
-// the core should also hash received bytes is open, issue #207).
+// comparison lives in the receiver (declared-only: receiver-side hashing
+// was rejected by the 2026-09-26 DR-0010 amendment, issue #207).
 //
 // Framing (AC3 — exactly 176,400 samples, no stale/missing/duplicate
 // sample): the host feeds ``mix_valid`` for exactly
