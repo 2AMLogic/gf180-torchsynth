@@ -74,6 +74,33 @@ class ConsolidationTests(unittest.TestCase):
             record["sentinel"]["plan_sha256"],
         )
 
+    def test_the_scans_are_reachable_in_this_checkout(self) -> None:
+        """Reachability on the real tree, wherever this checkout happens to live.
+
+        The synthetic controls in :class:`ScanReachabilityTests` pin both root
+        shapes; this pins the tree CI and the fleet actually run against, so a
+        "9 consolidation checks passed" line cannot again mean "the scans
+        visited nothing".
+        """
+        visited = {
+            relative
+            for _, relative in consolidation.scanned_python_sources(consolidation.ROOT)
+        }
+        for relative in consolidation.PUBLICATION_PIN_SITES:
+            self.assertIn(relative, visited, relative)
+        for spawn, worker in consolidation.DISPATCH_SPAWN_SITES:
+            self.assertIn(spawn, visited, spawn)
+            self.assertIn(worker, visited, worker)
+        # The scanner is excluded from the gate scan only, not from the walk: the
+        # literal scan still holds it to the no-hard-coded-pins rule.
+        self.assertIn(consolidation.SELF_RELATIVE, visited)
+        self.assertIn(
+            consolidation.PUBLICATION_PIN_MESSAGE,
+            (ROOT / consolidation.SELF_RELATIVE).read_text(encoding="utf-8"),
+            "the gate-scan self-exclusion is dead code if the scanner stops "
+            "naming the sentinel message",
+        )
+
     def test_both_publication_gate_sites_pin_the_live_digest(self) -> None:
         actual = consolidation.digest(
             consolidation.read_bytes(consolidation.PUBLICATION)
@@ -90,9 +117,18 @@ class SyntheticTreeTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.addCleanup(setattr, consolidation, "ROOT", consolidation.ROOT)
 
-    def tree(self, files: dict[str, bytes]) -> Path:
-        directory = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, directory, True)
+    #: A tree root shaped like the checkout every Builder and Doctor actually
+    #: runs the checker from: ``<repo>/.loom/worktrees/issue-N``. Passed as
+    #: ``inside=`` so the synthetic root itself carries a ``.loom`` path
+    #: component, which is the condition that silently disabled both
+    #: completeness scans (see :class:`ScanReachabilityTests`).
+    WORKTREE_SHAPED_ROOT = ".loom/worktrees/issue-3"
+
+    def tree(self, files: dict[str, bytes], inside: str = "") -> Path:
+        enclosing = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, enclosing, True)
+        directory = enclosing / inside if inside else enclosing
+        directory.mkdir(parents=True, exist_ok=True)
         for relative, payload in files.items():
             path = directory / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,13 +146,18 @@ class SyntheticTreeTestCase(unittest.TestCase):
             + '")\n'
         ).encode()
 
-    def publication_tree(self, pins: list[str], extra: dict[str, bytes] | None = None):
+    def publication_tree(
+        self,
+        pins: list[str],
+        extra: dict[str, bytes] | None = None,
+        inside: str = "",
+    ):
         payload = b'{"status": "PASS"}\n'
         files = {consolidation.PUBLICATION: payload}
         for relative, literal in zip(consolidation.PUBLICATION_PIN_SITES, pins):
             files[relative] = self.gate_site(literal)
         files.update(extra or {})
-        return consolidation.digest(payload), self.tree(files)
+        return consolidation.digest(payload), self.tree(files, inside=inside)
 
     def census_tree(self, record) -> Path:
         return self.tree(
@@ -127,6 +168,38 @@ class SyntheticTreeTestCase(unittest.TestCase):
                 ).encode(),
             }
         )
+
+    def dispatch_tree(
+        self,
+        spawn: bytes,
+        worker: bytes,
+        extra: dict[str, bytes] | None = None,
+        inside: str = "",
+    ) -> Path:
+        """One registered spawn/worker pair, with the real plan's profile."""
+        matrix = {
+            "profile_environment": {
+                "release": {"MKL_CBWR": "COMPATIBLE", "ATEN_CPU_CAPABILITY": None}
+            }
+        }
+        spawn_path, worker_path = consolidation.DISPATCH_SPAWN_SITES[1]
+        files = {
+            consolidation.MATRIX: json.dumps(matrix).encode(),
+            spawn_path: spawn,
+            worker_path: worker,
+        }
+        files.update(extra or {})
+        directory = self.tree(files, inside=inside)
+        self.addCleanup(
+            setattr,
+            consolidation,
+            "DISPATCH_SPAWN_SITES",
+            consolidation.DISPATCH_SPAWN_SITES,
+        )
+        consolidation.DISPATCH_SPAWN_SITES = (
+            consolidation.DISPATCH_SPAWN_SITES[1],
+        )
+        return directory
 
 
 class NegativeControlTests(SyntheticTreeTestCase):
@@ -164,34 +237,6 @@ class NegativeControlTests(SyntheticTreeTestCase):
         errors = consolidation.check_publication_pins()
         self.assertEqual(len(errors), 1, errors)
         self.assertIn("not in PUBLICATION_PIN_SITES", errors[0])
-
-    def dispatch_tree(
-        self, spawn: bytes, worker: bytes, extra: dict[str, bytes] | None = None
-    ) -> Path:
-        """One registered spawn/worker pair, with the real plan's profile."""
-        matrix = {
-            "profile_environment": {
-                "release": {"MKL_CBWR": "COMPATIBLE", "ATEN_CPU_CAPABILITY": None}
-            }
-        }
-        spawn_path, worker_path = consolidation.DISPATCH_SPAWN_SITES[1]
-        files = {
-            consolidation.MATRIX: json.dumps(matrix).encode(),
-            spawn_path: spawn,
-            worker_path: worker,
-        }
-        files.update(extra or {})
-        directory = self.tree(files)
-        self.addCleanup(
-            setattr,
-            consolidation,
-            "DISPATCH_SPAWN_SITES",
-            consolidation.DISPATCH_SPAWN_SITES,
-        )
-        consolidation.DISPATCH_SPAWN_SITES = (
-            consolidation.DISPATCH_SPAWN_SITES[1],
-        )
-        return directory
 
     def test_a_plan_derived_spawn_is_accepted(self) -> None:
         self.dispatch_tree(
@@ -377,6 +422,102 @@ class NegativeControlTests(SyntheticTreeTestCase):
         self.assertTrue(
             any("repeat comparisons with status PASS" in message for message in errors),
             errors,
+        )
+
+
+class ScanReachabilityTests(SyntheticTreeTestCase):
+    """The completeness scans must actually visit files, from any checkout path.
+
+    The two registries in the checker are deliberately *not* the only guard: an
+    unregistered eighth spawn site or gate site is refused because the scans read
+    the whole tree. A scan that silently visits nothing keeps every one of those
+    assertions passing while asserting nothing at all — worse than no check,
+    because the green result is read as evidence.
+
+    That is not hypothetical here. Both scans first excluded ``.git``/``.loom`` by
+    testing ``path.parts`` of the *absolute* path. A Loom worktree lives at
+    ``<repo>/.loom/worktrees/issue-N``, so that test matched every file in the
+    tree: from any worktree — i.e. from every Builder and Doctor run — both scans
+    skipped every module in the tree (measured: 207 of 207 on the worktree this
+    was found in) and passed vacuously, and only CI's plain checkout ever
+    enforced them.
+
+    So each control below plants one synthetic unregistered occurrence and
+    requires the scan to refuse it, run twice: once from a plain temp root, once
+    from a root nested under :data:`SyntheticTreeTestCase.WORKTREE_SHAPED_ROOT`.
+    The pair is the point — the plain-root half passed before the fix too.
+    """
+
+    def plant_unregistered_gate_site(self, inside: str) -> None:
+        live = consolidation.digest(b'{"status": "PASS"}\n')
+        self.publication_tree(
+            [live, live],
+            extra={"tools/rogue_gate.py": self.gate_site(live)},
+            inside=inside,
+        )
+        errors = consolidation.check_publication_pins()
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("tools/rogue_gate.py", errors[0])
+        self.assertIn("not in PUBLICATION_PIN_SITES", errors[0])
+
+    def test_gate_scan_reaches_files_from_a_plain_checkout_root(self) -> None:
+        self.plant_unregistered_gate_site("")
+
+    def test_gate_scan_reaches_files_from_a_loom_worktree_root(self) -> None:
+        self.plant_unregistered_gate_site(self.WORKTREE_SHAPED_ROOT)
+
+    def plant_unregistered_pin_literal(self, inside: str) -> None:
+        self.dispatch_tree(
+            b"render_artifact\n*dispatch_flags(profile)\n",
+            b'plan["profile_environment"]["release"]\n',
+            extra={"tools/rogue_spawn.py": b'"--env", "MKL_CBWR=COMPATIBLE",\n'},
+            inside=inside,
+        )
+        errors = consolidation.check_dispatch_profile_sites()
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("tools/rogue_spawn.py", errors[0])
+        self.assertIn("hard-codes the dispatch pin", errors[0])
+
+    def test_literal_scan_reaches_files_from_a_plain_checkout_root(self) -> None:
+        self.plant_unregistered_pin_literal("")
+
+    def test_literal_scan_reaches_files_from_a_loom_worktree_root(self) -> None:
+        self.plant_unregistered_pin_literal(self.WORKTREE_SHAPED_ROOT)
+
+    def test_the_scan_still_skips_a_loom_tree_nested_inside_the_repo(self) -> None:
+        """The exclusion must mean repo-relative, not "anywhere in the ancestry".
+
+        A checkout under ``.loom/worktrees/`` really is a second copy of the
+        tree, and flagging its files would report every finding twice from the
+        primary clone. Repo-relative matching keeps that exclusion while making
+        the scan reach the tree it was pointed at.
+        """
+        live = consolidation.digest(b'{"status": "PASS"}\n')
+        self.publication_tree(
+            [live, live],
+            extra={
+                ".loom/worktrees/issue-9/tools/rogue_gate.py": self.gate_site(live),
+                ".git/hooks/rogue_gate.py": self.gate_site(live),
+            },
+        )
+        self.assertEqual(consolidation.check_publication_pins(), [])
+
+    def test_the_scanner_module_is_not_itself_a_gate_site(self) -> None:
+        """Blocker 1: the scanner names the sentinel, and gates nothing on it.
+
+        ``SELF_RELATIVE`` cannot instead be registered in
+        ``PUBLICATION_PIN_SITES``: that arm additionally demands the site pin the
+        publication's committed digest as a literal, which a checker that
+        recomputes that digest does not carry.
+        """
+        live = consolidation.digest(b'{"status": "PASS"}\n')
+        self.publication_tree(
+            [live, live],
+            extra={consolidation.SELF_RELATIVE: self.gate_site(live)},
+        )
+        self.assertEqual(consolidation.check_publication_pins(), [])
+        self.assertNotIn(
+            consolidation.SELF_RELATIVE, consolidation.PUBLICATION_PIN_SITES
         )
 
 

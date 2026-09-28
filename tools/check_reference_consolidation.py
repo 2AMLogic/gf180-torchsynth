@@ -52,6 +52,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+#: This module's own repo-relative path. The completeness scan in
+#: :func:`check_publication_pins` searches every ``*.py`` for
+#: :data:`PUBLICATION_PIN_MESSAGE`, and this module necessarily *contains* that
+#: string — as the constant being searched for. Naming the sentinel is not gating
+#: a render on it, so the scanner excludes its own source. It cannot instead be
+#: registered in :data:`PUBLICATION_PIN_SITES`: that arm additionally requires
+#: each site to pin the publication's committed digest as a literal, which a
+#: checker that *recomputes* the digest deliberately does not, so registering it
+#: would trade one false failure for another and assert something untrue.
+SELF_RELATIVE = Path(__file__).resolve().relative_to(ROOT).as_posix()
+
+#: Repo-relative directory prefixes the completeness scans never descend into:
+#: git's own object store and Loom's orchestration tree (which contains a full
+#: nested checkout per active worktree).
+UNSCANNED_PREFIXES = (".git/", ".loom/")
+
 PUBLICATION = "sim/reference/repeatability-runtime.json"
 MATRIX = "env/release-era/repeatability-matrix.json"
 SOURCE_COMPARISON = "env/release-era/source-comparison.json"
@@ -151,6 +167,34 @@ def canonical_json_bytes(value) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
+def scanned_python_sources(root: Path) -> list[tuple[Path, str]]:
+    """``(path, repo-relative path)`` for every ``*.py`` the scans must visit.
+
+    The two completeness scans below are what make the registries above
+    non-authoritative: an *unregistered* seventh spawn site or gate site is still
+    refused, because the scan reads the whole tree rather than the registry. That
+    guarantee is only as good as the scan's reachability, so the exclusion list is
+    matched on the path **relative to** ``root``, never on the absolute path.
+
+    Matching absolutely — ``".loom" in path.parts`` — is a silent no-op, not a
+    narrow miss: a Loom worktree lives at ``<repo>/.loom/worktrees/issue-N``, so
+    ``.loom`` is an ancestor component of *every* file in that checkout and the
+    exclusion swallows the entire tree. Both scans then pass vacuously in exactly
+    the environment every Builder and Doctor runs them from, while CI's plain
+    checkout still enforces them — a check that could not run looking like one
+    that passed, which ``.loom/docs/ci-principles.md`` names as the failure mode
+    to design against. ``ScanReachabilityTests`` in
+    ``tests/test_reference_consolidation.py`` pins this from both checkout shapes.
+    """
+    sources: list[tuple[Path, str]] = []
+    for path in sorted(root.glob("**/*.py")):
+        relative = path.relative_to(root).as_posix()
+        if relative.startswith(UNSCANNED_PREFIXES):
+            continue
+        sources.append((path, relative))
+    return sources
+
+
 def check_publication_pins() -> list[str]:
     """Every hard-coded gate on the ratified publication names the live file.
 
@@ -173,11 +217,11 @@ def check_publication_pins() -> list[str]:
                 f"every render through it refuses with {PUBLICATION_PIN_MESSAGE!r}"
             )
     registered = set(PUBLICATION_PIN_SITES)
-    for path in sorted(ROOT.glob("**/*.py")):
-        if ".git" in path.parts or ".loom" in path.parts:
-            continue
-        relative = path.relative_to(ROOT).as_posix()
-        if relative in registered:
+    for path, relative in scanned_python_sources(ROOT):
+        # SELF_RELATIVE names the sentinel as the constant this scan searches
+        # for; it gates nothing on it. See SELF_RELATIVE for why registering it
+        # is not the alternative.
+        if relative == SELF_RELATIVE or relative in registered:
             continue
         if PUBLICATION_PIN_MESSAGE in path.read_text(encoding="utf-8"):
             errors.append(
@@ -242,14 +286,8 @@ def check_dispatch_profile_sites() -> list[str]:
     # registered or not. Test modules may, and do — asserting that a pin reaches
     # the container is exactly their job — and so may the recapture-gated sites,
     # which pay for the exemption above.
-    for path in sorted(ROOT.glob("**/*.py")):
-        relative = path.relative_to(ROOT).as_posix()
-        if (
-            ".git" in path.parts
-            or ".loom" in path.parts
-            or path.name.startswith("test_")
-            or relative in DISPATCH_RECAPTURE_GATED
-        ):
+    for path, relative in scanned_python_sources(ROOT):
+        if path.name.startswith("test_") or relative in DISPATCH_RECAPTURE_GATED:
             continue
         text = path.read_text(encoding="utf-8")
         for key, literal in sorted(literals.items()):
