@@ -1,4 +1,4 @@
-FROM python:3.9.13-slim-bullseye@sha256:b3bb514565b331c9a6f36c396af2a937f730b64f34004b750a3b3d5874abd990
+FROM python:3.13.6-slim-bullseye@sha256:820931fc46e322afb4decaa291c58bc2f84a7d8009b396daf96cd20a939b7fc7
 
 # This digest and the PyTorch wheel are linux/amd64 only. No mutable apt step.
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
