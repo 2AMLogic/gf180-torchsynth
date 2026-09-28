@@ -30,7 +30,8 @@ state mapped to one RTL owner with a cycle/sample contract, a cycle-defined
 noise/replay/reset and normalization schedule, worst-case resource and cycle
 estimates, and a host binding — with the normalization architecture decision
 carrying the replay-versus-buffering cost evidence DR-0003 required before
-acceptance (`spec/decision-records/0003-host-boundary-and-normalization.md:38-44`).
+acceptance (`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Why proposed", the "Before acceptance, measure:" list).
 The 2026-09-20 draft skeleton held the interface facts that were already
 decidable and named P1–P5 as `pending measurement` with owning issues.
 
@@ -47,8 +48,8 @@ Every premise the skeleton waited on is now closed on `origin/main`:
 - #62 landed protocol v2 with numeric wire formats bound to the accepted
   register (PR #155);
 - #52's one residual — the replay-versus-buffering cost — was explicitly
-  deferred to this record (DR-0008 §15,
-  `spec/decision-records/0008-fixed-point-numeric-contract.md:519-529`;
+  deferred to this record (DR-0008 §15, its "**DR-0003 remains Proposed.**"
+  paragraph in `spec/decision-records/0008-fixed-point-numeric-contract.md`;
   PR #150's tradeoff-ownership rows). This record delivers it (P4), and that
   delivery is the cost item DR-0003's acceptance required.
 
@@ -72,7 +73,7 @@ values are unchanged; only their contract strength moved.
 | MIDI-domain control arithmetic | 32-bit Q10.21 | register C4 |
 | Multiplier/accumulate internals | 24x24 → 48-bit products; 48-bit-class accumulators in VCA/mixer lanes; no intermediate rounding before a declared narrowing site | DR-0008 Section 2 |
 | Rounding / saturation | half-even at every declared site S1–S5; saturation with sticky per-site counters; phase/frequency never saturate; Nyquist clamp forbidden | registers C6, C7 |
-| Sine | 4096x24 quarter-wave LUT + integer linear interpolation (12 index + 18 interp bits on the 32-bit phase circle); 1K quadratic fallback pre-authorized | register C5; emission record (`spec/decision-records/0008-fixed-point-numeric-contract.md:429-442`) |
+| Sine | 4096x24 quarter-wave LUT + integer linear interpolation (12 index + 18 interp bits on the 32-bit phase circle); 1K quadratic fallback pre-authorized | register C5; emission record (`spec/decision-records/0008-fixed-point-numeric-contract.md` §13, its "**Emission record (2026-09-21)**" note) |
 | Normalization gain | reciprocal-multiply, F=22 frac bits, gain word U1.22 (width 23), half-even at S5, strict `peak > 1` branch on the Q2.21 grid | register C9; measured receipt (`sim/reference/normalization-reciprocal-v1.json`, issue #52 / PR #150) |
 | Noise | host-fed exact binary32 stream, slot `sound_index % 32`, seed 13 | register C8; `spec/VOICE-CONTRACT.md:75-77` |
 | One-shot grid | 176,400 mono samples @ 44,100 Hz per trigger (4.000 s), 441 Hz control rate, exact 100x endpoint-aligned upsampling, one resolved sound per trigger | DR-0002 (`spec/decision-records/0002-one-shot-product-profile.md:27-35`); `spec/VOICE-CONTRACT.md:20-32`; DR-0008 Section 9 |
@@ -275,7 +276,8 @@ and applies the S5 narrowing. The three candidates:
 At the 50 MHz candidate the replay costs +0.85 s per clip against buffering
 and saves 516.8 KiB of SRAM — the dominant memory instance count on this
 technology. Buffering the complete clip merely to normalize is excluded by
-DR-0003 (`spec/decision-records/0003-host-boundary-and-normalization.md:21-23`),
+DR-0003 (`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Proposed decision", its "Do not buffer the complete clip" paragraph),
 so the decision follows from the accepted record; this analysis is the cost
 quantification its acceptance required, delivered in the only honest form
 available before RTL exists: computed from the frozen composition's counted
@@ -440,7 +442,24 @@ flow runs against it.
 ## Citation basis
 
 Repository citations use `path:line` form verified against `origin/main`
-(head `1177061`, working tree identical, 2026-09-21). Upstream TorchSynth
+(head `1177061`, working tree identical, 2026-09-21), and that stamp still
+governs every `path:line` citation here. Citations into another decision
+record are the exception: they anchor on the cited record's section — and,
+where narrower, on the cited heading or paragraph — not on a line range,
+because a line anchor into a record that is later amended drifts silently
+while still resolving in range, so no range check can catch it, whereas a
+section anchor holds across amendments and needs no re-verification when
+either record grows. Issue #225 converted the four citations that had
+drifted exactly that way — two in §Problem, the sine row of §Grounded
+facts, and the DR-0003 buffering exclusion in §Normalization replay
+architecture (P4) — after re-deriving each against the record it cites. The
+two remaining record-to-record line citations (DR-0002 and DR-0006, in
+§Grounded facts) resolve identically at the stamp above and at current head,
+so they are left as written and take the section form when next touched.
+Citations *into* this chain that still carry drifted line anchors are
+tracked in issue #233: repairing them edits DR-0008 and the choice register,
+which triggers the contract-digest rebinding of DR-0008 §13, so they are
+batched there rather than in this record. Upstream TorchSynth
 claims are cited through this repository's records (DR-0002, DR-0003,
 DR-0008, `spec/VOICE-CONTRACT.md`) and are not re-derived here. This record
 makes **no** gf180mcu synthesis, layout, signoff, hardware playback, or
