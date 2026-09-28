@@ -6,7 +6,7 @@
   "sample_count": 176400,
   "sample_rate_hz": 44100
  },
- "content_hash": "ee7609878594f8892ea830b918e70c42eda5eac94efdc77b7ca7bb543fa612d9",
+ "content_hash": "a30c8be38e3a773a0727a496a51b989fd331755fcdefd3949fb1252296176c31",
  "parameter_inventory_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
  "parameters": {
   "adsr_1.alpha": 0.9999999687075615,
@@ -90,7 +90,7 @@
  },
  "provenance": {
   "case_id": "frozen:boundary:vco_1.initial_phase:upper",
-  "choices_register_sha256": "e46c25f9edd74e4490b2e6542cb702c70c2dccc7dd9f2d8b5537500544d7a1f9",
+  "choices_register_sha256": "f8ca537de81e62eae2e8504468d81e5000e7e55cdd889e34c352bcb2d6a4248d",
   "dr_0008_constants_package_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
   "dr_0008_status": "Accepted",
   "frozen_binding": {

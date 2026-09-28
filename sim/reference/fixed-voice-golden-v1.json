@@ -1,9 +1,9 @@
 {
  "bindings": {
-  "choices_register_sha256": "e46c25f9edd74e4490b2e6542cb702c70c2dccc7dd9f2d8b5537500544d7a1f9",
+  "choices_register_sha256": "f8ca537de81e62eae2e8504468d81e5000e7e55cdd889e34c352bcb2d6a4248d",
   "constants_package": "tb/sv/gf180_rtl_constants_pkg.sv",
   "constants_package_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
-  "dr_0008_record_sha256": "4b380b591f888ccca72beaa9a801f3d71daefa4f21448be6b12cfbb140fca612",
+  "dr_0008_record_sha256": "570cd205d285501dcfba2f86082b13036ac61619e7bbe50f107cbdf0b5ff4d8b",
   "dr_0008_status": "Accepted",
   "lut_m2_evidence": "sim/candidates/audio-sources-sweep-v1.json lut_tables['4096'] (M2 measured 2.45576012636306e-07 vs the calibrated 2^-20 limit; the model's table binds to the same digest)",
   "lut_sha256": "ba77ddaf0142638eb05eb74639596d97e666129054992aa387b52598615a5931",
@@ -17599,7 +17599,7 @@
   "corpus_parameters": "digest-custody only, never committed",
   "full_vectors": "regenerable bit-exactly via this tool; per-trace digests recorded per case above; no multi-GB payload committed",
   "sentinel_bytes": 2240408,
-  "sentinel_sha256": "80591a0fb11056d2aca04d158615ca36d269ff6e8b8599b7c5d9ff046fff4ff3",
+  "sentinel_sha256": "c5868dcdca4b99f86e767a34d90458e8c9e6705af3b17c5fa25c58de8c6aa4bd",
   "sidecar_encoding": "exact f32le of accepted Q2.21 words (word/2^21 is exact in binary32); reverse with round(value*2^21)"
  },
  "double_run": {

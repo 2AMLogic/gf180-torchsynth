@@ -3,9 +3,10 @@
 This document records the normalization measurement delivered for issue
 #52: the reciprocal-precision and output-arithmetic measurement DR-0003
 names before acceptance
-(`spec/decision-records/0003-host-boundary-and-normalization.md:40-44`) and
-the DR-0008 Section 8 / choice C9 reciprocal-precision measurement. The
-committed evidence receipt is
+(`spec/decision-records/0003-host-boundary-and-normalization.md`
+§"Why proposed", the "division/reciprocal precision and output arithmetic"
+measurement item) and the DR-0008 Section 8 / choice C9
+reciprocal-precision measurement. The committed evidence receipt is
 [`sim/reference/normalization-reciprocal-v1.json`](../sim/reference/normalization-reciprocal-v1.json)
 (digest `66678504fe451df102ff2e456cfd44cce1a8077ecac5b833c7dca446f54b9320`,
 byte-stable across regenerations with the declared timestamp excluded).
