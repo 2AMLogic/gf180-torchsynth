@@ -211,6 +211,17 @@ def check_publication_mode(registry, capture, document, constants):
 
 def host_run(args):
     """DR-0006 gated qualification; writes the bounded publication."""
+    # Imported here, not at module scope: ``--check-inputs`` and
+    # ``--check-publication`` are the stdlib-only CI modes and must not depend
+    # on the ``torchsynth_voice`` package; only this mode dispatches a
+    # container.
+    sys.path.insert(0, str(ROOT / "src"))
+    from torchsynth_voice.artifact_renderer import (
+        dispatch_flags,
+        dispatch_unset_flags,
+        release_profile_environment,
+    )
+
     require = (load_production_modules()[0]).require
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         raise SystemExit("unqualified host")
@@ -284,9 +295,12 @@ def host_run(args):
         "NUMEXPR_NUM_THREADS",
     ):
         command += ["--env", name + "=1"]
+    # Derived from the preregistered plan, never restated: capture_traces.py
+    # asserts the plan's whole profile_environment["release"] before it renders
+    # ("worker environment outside release-mkl-compatible-v1"; issue #3).
+    profile = release_profile_environment()
     command += [
-        "--env",
-        "MKL_CBWR=COMPATIBLE",
+        *dispatch_flags(profile),
         "--mount",
         "type=bind,src=" + str(ROOT) + ",dst=/repo,readonly",
         "--mount",
@@ -294,8 +308,7 @@ def host_run(args):
         "--entrypoint",
         "env",
         image,
-        "-u",
-        "ATEN_CPU_CAPABILITY",
+        *dispatch_unset_flags(profile),
         "python",
         "/repo/env/release-era/capture_traces.py",
         "--worker",

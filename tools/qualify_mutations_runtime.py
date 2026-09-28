@@ -30,6 +30,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import mutations, mutation_runtime  # noqa: E402
 from torchsynth_voice import trace_capture, trace_registry  # noqa: E402
+from torchsynth_voice.artifact_renderer import (  # noqa: E402
+    dispatch_flags,
+    dispatch_unset_flags,
+    release_profile_environment,
+)
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-runtime-v1.json"
 WORKER_PATH = ROOT / "env/release-era/mutation_worker.py"
@@ -435,9 +440,12 @@ def host_run(args):
         "NUMEXPR_NUM_THREADS",
     ):
         command += ["--env", name + "=1"]
+    # Derived from the preregistered plan, never restated: mutation_worker.py
+    # asserts the plan's whole profile_environment["release"] before it renders
+    # ("worker environment outside release-mkl-compatible-v1"; issue #3).
+    profile = release_profile_environment()
     command += [
-        "--env",
-        "MKL_CBWR=COMPATIBLE",
+        *dispatch_flags(profile),
         "--mount",
         "type=bind,src=" + str(ROOT) + ",dst=/repo,readonly",
         "--mount",
@@ -445,8 +453,7 @@ def host_run(args):
         "--entrypoint",
         "env",
         image,
-        "-u",
-        "ATEN_CPU_CAPABILITY",
+        *dispatch_unset_flags(profile),
         "python",
         "/repo/env/release-era/mutation_worker.py",
         "--worker",

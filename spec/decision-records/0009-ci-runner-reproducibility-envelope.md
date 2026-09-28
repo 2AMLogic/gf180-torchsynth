@@ -476,3 +476,40 @@ being sentinel-scoped and taken from a pre-A2 parent, is superseded by
 the full-scope republish from `d664805` carried here (replaced receipt:
 source tree `89aadc21`, file sha256 recorded in the receipt's
 `recapture` block).
+
+### A2, note (the sweep was incomplete; it is now a check — issue #3)
+
+The two lessons above were drawn but not enforced, and the consolidation of
+the canonical-reference phase (issue #3,
+[`spec/CANONICAL-REFERENCE-QUALIFICATION.md`](../CANONICAL-REFERENCE-QUALIFICATION.md))
+found both sweeps had been left half-done on `main` at `938915a`:
+
+- **A second companion pin of the republished publication.**
+  `env/release-era/render_artifact.py` gates the same file behind the same
+  `"ratified runtime publication changed"` refusal and was still pinned to the
+  pre-A2 digest `5904089505c05c30…`. It is the worker that runs *inside* the
+  container, so the host-side gate admitted a render and the worker then refused
+  it. Corrected to the committed digest; no publication byte changed.
+- **Six host spawn paths still declaring the pre-amendment environment.** This
+  amendment's "zero code changes" claim holds for the two spawn paths it names
+  (`qualify_repeatability.py`, which derives the environment from the plan, and
+  `qualify_scalar.sh`, which forwards the job shell's pins). The other six
+  restated `MKL_CBWR`/`ATEN_CPU_CAPABILITY` as literals and therefore never
+  forwarded the two new ISA pins, while their workers assert the plan's whole
+  `profile_environment["release"]` — a guaranteed refusal, since the release
+  image sets neither variable. Five now derive from the plan. The sixth,
+  `tools/probe_trace_registry.py`, is left unchanged on purpose: a committed
+  experiment pins that tool's own digest as producer provenance, so repairing
+  the spawn requires a recapture on the DR-0006 host rather than an edit, and
+  the gap is registered and enforced as a named open divergence instead.
+
+Both are enforced from CI rather than restated as lessons:
+`tools/check_reference_consolidation.py` registers every companion digest gate
+and every spawn/worker pair, fails when a gate names a superseded digest or a
+spawn restates a declared pin, refuses an unregistered non-test module that
+hard-codes one, and refuses a recapture-gated exemption whose producer binding
+or open-divergence record has lapsed. This note records a repair to references,
+not a change to this record's declared envelope, any committed digest, or the
+canonical runtime; neither correction re-ratifies anything, and every repaired
+path's first real render remains an unrecorded execution under DR-0006's drift
+policy.

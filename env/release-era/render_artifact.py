@@ -48,9 +48,16 @@ def render_selected(request, source_root, *, capture_provider=None):
     qualification_bytes = (
         REPO / "sim/reference/repeatability-runtime.json"
     ).read_bytes()
+    # Companion pin of the ratified DR-0006 publication. This literal and the
+    # host-side QUALIFICATION_SHA256 in src/torchsynth_voice/artifact_renderer.py
+    # are deliberately independent: a republish of the publication must move
+    # both, and tools/check_reference_consolidation.py proves in CI that every
+    # gate site agrees with the committed file (DR-0009 amendment A2, "companion
+    # republish pin"; issue #3). Value below is the A2 publication (commit
+    # 2c4a20f); the pre-A2 value was 5904089505c05c30...53ec1ac4cbe4.
     if (
         sha256(qualification_bytes)
-        != "5904089505c05c30a456cb5e162bde89e40218ec0d0151ffb27053ec1ac4cbe4"
+        != "611fe2121330a7a467ffab1deade50e59f6dd0ea25d4da86d129b9b501fa9cc3"
     ):
         raise ValueError("ratified runtime publication changed")
     expected_runtime = next(

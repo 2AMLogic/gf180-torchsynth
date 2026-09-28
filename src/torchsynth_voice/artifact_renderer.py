@@ -51,6 +51,50 @@ def require(condition, message):
         raise ValidationError(message)
 
 
+def release_profile_environment():
+    """The declared dispatch environment of the canonical release profile.
+
+    Read from the preregistered plan rather than restated here, and shared by
+    every host-side spawn of a release-profile worker (the registry lives in
+    ``tools/check_reference_consolidation.py`` as ``DISPATCH_SPAWN_SITES``).
+    Each of those workers asserts this same object before it renders — e.g.
+    ``env/release-era/render_artifact.py`` -> "worker environment outside
+    explicit profile" — so a literal copy of the pins in a spawn path is a
+    second place for the declaration to drift out of agreement with the plan.
+
+    That drift is exactly what DR-0009 amendment A2 left behind: it added
+    ``ONEDNN_MAX_CPU_ISA``/``MKL_ENABLE_INSTRUCTIONS`` to the plan, which the two
+    sentinel spawn paths picked up for free because they already read the plan,
+    while six other spawn paths went on describing the pre-amendment
+    two-variable environment and therefore refused at the worker on first use
+    (issue #3).
+    """
+    plan = loads(
+        (repository_root() / "env/release-era/repeatability-matrix.json").read_bytes()
+    )
+    return plan["profile_environment"]["release"]
+
+
+def dispatch_flags(profile):
+    """``docker run`` ``--env`` flags for every pin the profile declares set."""
+    return [
+        part
+        for key, value in profile.items()
+        if value is not None
+        for part in ("--env", key + "=" + value)
+    ]
+
+
+def dispatch_unset_flags(profile):
+    """``env -u`` arguments for every pin the profile declares explicitly unset.
+
+    A ``null`` in the plan is a declaration ("this selector stays at the image
+    default"), not an omission, so it is enforced by unsetting the variable
+    inside the container rather than by hoping the image never sets it.
+    """
+    return [part for key, value in profile.items() if value is None for part in ("-u", key)]
+
+
 def json_bytes(value):
     canonical_bytes(value)  # reject non-JSON/nonfinite values before serialization
     return (
@@ -455,6 +499,7 @@ class DockerBackend:
             and inspection["Os"] == "linux",
             "qualified image mismatch",
         )
+        profile = release_profile_environment()
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary).resolve()
             (directory / "request.json").write_bytes(json_bytes(request))
@@ -477,8 +522,7 @@ class DockerBackend:
                     for k, v in THREAD_ENV.items()
                     for part in ("--env", k + "=" + v)
                 ],
-                "--env",
-                "MKL_CBWR=COMPATIBLE",
+                *dispatch_flags(profile),
                 "--mount",
                 "type=bind,src=" + str(self.project_root) + ",dst=/repo,readonly",
                 "--mount",
@@ -486,8 +530,7 @@ class DockerBackend:
                 "--entrypoint",
                 "env",
                 image,
-                "-u",
-                "ATEN_CPU_CAPABILITY",
+                *dispatch_unset_flags(profile),
                 "python",
                 "/repo/env/release-era/render_artifact.py",
                 "--request",

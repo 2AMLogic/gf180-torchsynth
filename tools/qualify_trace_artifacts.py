@@ -33,10 +33,13 @@ from torchsynth_voice.artifact_renderer import (  # noqa: E402
     PROFILE,
     THREAD_ENV,
     digest,
+    dispatch_flags,
+    dispatch_unset_flags,
     json_bytes,
     loads,
     project_identity,
     qualification,
+    release_profile_environment,
     render_artifact,
     request_template,
     sha256_file,
@@ -281,6 +284,10 @@ class TracedDockerBackend:
         )
         publication, expected_runtime = qualification()
         host, image = host_admission(publication)
+        # Derived from the preregistered plan, never restated: the driver below
+        # runs render_artifact.render_selected, which asserts the plan's whole
+        # profile_environment["release"] before it renders (issue #3).
+        profile = release_profile_environment()
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary).resolve()
             (directory / "request.json").write_bytes(json_bytes(request))
@@ -304,8 +311,7 @@ class TracedDockerBackend:
                     for k, v in THREAD_ENV.items()
                     for part in ("--env", k + "=" + v)
                 ],
-                "--env",
-                "MKL_CBWR=COMPATIBLE",
+                *dispatch_flags(profile),
                 "--mount",
                 "type=bind,src=" + str(self.project_root) + ",dst=/repo,readonly",
                 "--mount",
@@ -313,8 +319,7 @@ class TracedDockerBackend:
                 "--entrypoint",
                 "env",
                 image,
-                "-u",
-                "ATEN_CPU_CAPABILITY",
+                *dispatch_unset_flags(profile),
                 "python",
                 "/output/driver.py",
             ]
