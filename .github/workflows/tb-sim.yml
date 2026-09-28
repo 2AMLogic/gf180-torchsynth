@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Install Icarus Verilog (PDK-free)
         run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: "ADSR envelope engine lane (issue 70, iverilog, PDK-free)"
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Install Icarus Verilog + Verilator (PDK-free)
         run: sudo apt-get update && sudo apt-get install -y iverilog verilator
       - name: Registered evaluator (rtl-module-qualification-v1)

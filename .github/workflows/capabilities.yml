@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Graph, evidence, renderer and fail-closed controls
         run: python3 -S -m unittest discover -s tests -p 'test_capabilit*.py' -v
       - name: Lightweight graph and all-view agreement
@@ -50,7 +50,7 @@ jobs:
           ref: main
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
       - name: Regenerate without executing measurement commands
         run: python3 -S tools/compile_capabilities.py
       - name: Validate generated views and controls
