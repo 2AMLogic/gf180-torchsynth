@@ -1193,9 +1193,3 @@ def decode_rsp_frames(stream: bytes) -> List[Tuple[int, int, int, bytes]]:
         frames.append((kind, cmd, seq, payload))
         i += 11 + length
     return frames
-
-
-def expected_bank_words(parameter_words: Dict[str, int], names: Sequence[str]) -> List[int]:
-    """Active-bank word vector for a fully applied named patch."""
-    slot_of = {name: i for i, name in enumerate(names)}
-    return [parameter_words.get(name, 0) for name in names]
