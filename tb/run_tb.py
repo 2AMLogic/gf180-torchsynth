@@ -1237,6 +1237,56 @@ def mutate_sv(source: str, anchor: str, replacement: str, label: str) -> str:
     return source.replace(anchor, replacement)
 
 
+def run_rtl_mutation(
+    workdir: Path,
+    label: str,
+    case_id: str,
+    write_mutant,
+    write_case,
+    simulate,
+    is_detected,
+    kind: str = "RTL",
+    detected_message: str = "DETECTED (test fails the mutant)",
+) -> bool:
+    """Shared plant-mutation/simulate/detect/report skeleton.
+
+    Every per-subsystem mutation runner shares this shape: make a scratch
+    dir, plant one mutation, write the case, re-simulate, decide whether the
+    mutant was caught, print a DETECTED/NOT DETECTED line, return
+    ``detected``. Only the subsystem-specific pieces differ, so they are
+    supplied as callables rather than folded in here:
+
+    - ``write_mutant(mut_dir)`` -- write the mutated ``.sv`` (plus any
+      auxiliary files, e.g. a LUT memh) into ``mut_dir``; a no-op for a
+      stimulus-only mutation that leaves the DUT unmutated.
+    - ``write_case(mut_dir)`` -- materialize the subsystem's test case.
+    - ``simulate(mut_dir)`` -- re-run the subsystem's ``*_simulate`` helper
+      and return whatever capture object ``is_detected`` expects (opaque to
+      this helper).
+    - ``is_detected(capture)`` -- the subsystem's own comparison logic;
+      returns ``(detected, suffix)``, with ``suffix`` appended verbatim to
+      the report line (``""`` for none, e.g. a localization note).
+    """
+
+    mut_dir = workdir / ("mut-" + label)
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    write_mutant(mut_dir)
+    write_case(mut_dir)
+    capture = simulate(mut_dir)
+    detected, suffix = is_detected(capture)
+    print(
+        "mutation %s (%s, case %s): %s%s"
+        % (
+            label,
+            kind,
+            case_id,
+            detected_message if detected else "NOT DETECTED",
+            suffix,
+        )
+    )
+    return detected
+
+
 def adsr_detects(captures_run, cases, vector):
     """True iff the captured streams mismatch the vector's expectations."""
 
@@ -1658,26 +1708,28 @@ def lfo_run_mutation(
 ):
     """Plant one RTL mutation on one case and require it to be DETECTED."""
 
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
-    source = (dut_sv or LFO_DUT_SV).read_text(encoding="utf-8")
-    mutated = mutate_sv(source, anchor, replacement, label)
-    (mut_dir / "lfo_vca_engine_mut.sv").write_text(mutated, encoding="utf-8")
-    (mut_dir / "lut.memh").write_bytes((case_dirs[case_id][0] / "lut.memh").read_bytes())
-    lfo_write_case(mut_dir, 0, case_dirs[case_id][1])
-    mut_captures = lfo_simulate(
-        mut_dir, simulator, 1, mut_dir / "lfo_vca_engine_mut.sv"
-    )
-    detected = lfo_detects(mut_captures[0], case_dirs[case_id][1], vectors[case_id])
-    print(
-        "mutation %s (RTL, case %s): %s"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
+    def write_mutant(mut_dir):
+        source = (dut_sv or LFO_DUT_SV).read_text(encoding="utf-8")
+        mutated = mutate_sv(source, anchor, replacement, label)
+        (mut_dir / "lfo_vca_engine_mut.sv").write_text(mutated, encoding="utf-8")
+        (mut_dir / "lut.memh").write_bytes(
+            (case_dirs[case_id][0] / "lut.memh").read_bytes()
         )
+
+    def write_case(mut_dir):
+        lfo_write_case(mut_dir, 0, case_dirs[case_id][1])
+
+    def simulate(mut_dir):
+        return lfo_simulate(
+            mut_dir, simulator, 1, mut_dir / "lfo_vca_engine_mut.sv"
+        )[0]
+
+    def is_detected(capture):
+        return lfo_detects(capture, case_dirs[case_id][1], vectors[case_id]), ""
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected
     )
-    return detected
 
 
 def lfo(workdir: Path, simulator: str) -> int:
@@ -2327,54 +2379,57 @@ def mm_run_mutation(
     trace set (the route-swap/depth AC's localization evidence).
     """
 
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
     source = MM_DUT_SV.read_text(encoding="utf-8")
     up_source = MM_UP_DUT_SV.read_text(encoding="utf-8")
     if anchor not in source and anchor not in up_source:
         raise SystemExit("mutation anchor not found for %s" % label)
-    if anchor in source:
-        (mut_dir / "mod_matrix_engine_mut.sv").write_text(
-            mutate_sv(source, anchor, replacement, label), encoding="utf-8"
-        )
-        mut_dut = mut_dir / "mod_matrix_engine_mut.sv"
-        mut_up = MM_UP_DUT_SV
-    else:
-        (mut_dir / "upsample_engine_mut.sv").write_text(
-            mutate_sv(up_source, anchor, replacement, label), encoding="utf-8"
-        )
-        mut_dut = MM_DUT_SV
-        mut_up = mut_dir / "upsample_engine_mut.sv"
     case_dir, case = case_dirs[case_id]
-    mm_write_case(mut_dir, 0, case)
-    mut_captures = mm_simulate(mut_dir, simulator, 1, mut_dut, mut_up,
-                               max_j=MM_MUTATION_WALK_CAP)
-    capture = mut_captures[0]
-    detected = not mm_check_case(capture, case, vectors[case_id], case_id)
-    localization = ""
-    if detected and expect_traces is not None:
-        bad = mm_mismatch_trace_set(
-            mm_matrix_by_route(capture["matrix"]), capture["audio"], case,
-            audio_prefix=True,
-        )
-        if bad != expect_traces:
-            detected = False
-            localization = (
-                " (localization FAILED: mismatch set %s != expected %s)"
-                % (sorted(bad), sorted(expect_traces))
+    mut_dut_paths = {}
+
+    def write_mutant(mut_dir):
+        if anchor in source:
+            (mut_dir / "mod_matrix_engine_mut.sv").write_text(
+                mutate_sv(source, anchor, replacement, label), encoding="utf-8"
             )
+            mut_dut_paths["dut"] = mut_dir / "mod_matrix_engine_mut.sv"
+            mut_dut_paths["up"] = MM_UP_DUT_SV
         else:
-            localization = " (localized to %s)" % sorted(bad)
-    print(
-        "mutation %s (RTL, case %s): %s%s"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
-            localization,
-        )
+            (mut_dir / "upsample_engine_mut.sv").write_text(
+                mutate_sv(up_source, anchor, replacement, label), encoding="utf-8"
+            )
+            mut_dut_paths["dut"] = MM_DUT_SV
+            mut_dut_paths["up"] = mut_dir / "upsample_engine_mut.sv"
+
+    def write_case(mut_dir):
+        mm_write_case(mut_dir, 0, case)
+
+    def simulate(mut_dir):
+        return mm_simulate(
+            mut_dir, simulator, 1, mut_dut_paths["dut"], mut_dut_paths["up"],
+            max_j=MM_MUTATION_WALK_CAP,
+        )[0]
+
+    def is_detected(capture):
+        detected = not mm_check_case(capture, case, vectors[case_id], case_id)
+        localization = ""
+        if detected and expect_traces is not None:
+            bad = mm_mismatch_trace_set(
+                mm_matrix_by_route(capture["matrix"]), capture["audio"], case,
+                audio_prefix=True,
+            )
+            if bad != expect_traces:
+                detected = False
+                localization = (
+                    " (localization FAILED: mismatch set %s != expected %s)"
+                    % (sorted(bad), sorted(expect_traces))
+                )
+            else:
+                localization = " (localized to %s)" % sorted(bad)
+        return detected, localization
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected
     )
-    return detected
 
 
 def mm_run_vector_mutation(
@@ -2394,45 +2449,47 @@ def mm_run_vector_mutation(
     expected trace set.
     """
 
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
     case = case_dirs[case_id][1]
     # The rewrite mutates its argument in place: deep-copy so the shared
     # derived case (and every later mutation run) keeps pristine truth.
     mutated = copy.deepcopy(case)
     rewrite_stimulus(mutated)
-    mm_write_case(mut_dir, 0, mutated)
-    mut_captures = mm_simulate(mut_dir, simulator, 1, MM_DUT_SV,
-                               max_j=MM_MUTATION_WALK_CAP)
-    capture = mut_captures[0]
-    # Compare against the MUTATED expectations: stimulus-side mutations
-    # (sign flip, one-ULP depth) leave the expectations pristine, so the
-    # capture diverges from them; expectation-side mutations (route swap)
-    # corrupt exactly the traces that must localize.
-    bad = mm_mismatch_trace_set(
-        mm_matrix_by_route(capture["matrix"]), capture["audio"], mutated,
-        audio_prefix=True,
-    )
-    detected = bool(bad)
-    localization = ""
-    if bad != expect_traces:
-        detected = False
-        localization = (
-            " (localization FAILED: mismatch set %s != expected %s)"
-            % (sorted(bad), sorted(expect_traces))
+
+    def write_mutant(mut_dir):
+        pass  # stimulus-side mutation: the DUT itself is never mutated.
+
+    def write_case(mut_dir):
+        mm_write_case(mut_dir, 0, mutated)
+
+    def simulate(mut_dir):
+        return mm_simulate(
+            mut_dir, simulator, 1, MM_DUT_SV, max_j=MM_MUTATION_WALK_CAP
+        )[0]
+
+    def is_detected(capture):
+        # Compare against the MUTATED expectations: stimulus-side mutations
+        # (sign flip, one-ULP depth) leave the expectations pristine, so the
+        # capture diverges from them; expectation-side mutations (route
+        # swap) corrupt exactly the traces that must localize.
+        bad = mm_mismatch_trace_set(
+            mm_matrix_by_route(capture["matrix"]), capture["audio"], mutated,
+            audio_prefix=True,
         )
-    else:
-        localization = " (localized to %s)" % sorted(bad)
-    print(
-        "mutation %s (vector side, case %s): %s%s"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
-            localization,
-        )
+        detected = bool(bad)
+        if bad != expect_traces:
+            detected = False
+            localization = (
+                " (localization FAILED: mismatch set %s != expected %s)"
+                % (sorted(bad), sorted(expect_traces))
+            )
+        else:
+            localization = " (localized to %s)" % sorted(bad)
+        return detected, localization
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected,
+        kind="vector side",
     )
-    return detected
 
 
 def modmatrix(workdir: Path, simulator: str) -> int:
@@ -2927,32 +2984,32 @@ def vco2_run_mutation(workdir: Path, simulator: str, formats, label: str,
                      case_dirs: dict):
     """Plant one RTL mutation on one case and require it to be DETECTED."""
 
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
-    source = VCO2_DUT_SV.read_text(encoding="utf-8")
-    if anchor not in source:
-        raise SystemExit("mutation anchor not found for %s" % label)
-    (mut_dir / "square_saw_vco_engine_mut.sv").write_text(
-        mutate_sv(source, anchor, replacement, label), encoding="utf-8"
-    )
     case = case_dirs[case_id][1]
-    vco2_write_case(mut_dir, 0, case, walk_cap=VCO2_MUTATION_WALK_CAP)
-    capture = vco2_simulate(
-        mut_dir, simulator, 1, formats,
-        dut_sv=mut_dir / "square_saw_vco_engine_mut.sv"
-    )[0]
-    bad = vco_mismatch_trace_set(capture["rows"], case, prefix=True)
-    detected = bool(bad)
-    print(
-        "mutation %s (RTL, case %s): %s (mismatch traces: %s)"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
-            sorted(bad),
+
+    def write_mutant(mut_dir):
+        source = VCO2_DUT_SV.read_text(encoding="utf-8")
+        if anchor not in source:
+            raise SystemExit("mutation anchor not found for %s" % label)
+        (mut_dir / "square_saw_vco_engine_mut.sv").write_text(
+            mutate_sv(source, anchor, replacement, label), encoding="utf-8"
         )
+
+    def write_case(mut_dir):
+        vco2_write_case(mut_dir, 0, case, walk_cap=VCO2_MUTATION_WALK_CAP)
+
+    def simulate(mut_dir):
+        return vco2_simulate(
+            mut_dir, simulator, 1, formats,
+            dut_sv=mut_dir / "square_saw_vco_engine_mut.sv",
+        )[0]
+
+    def is_detected(capture):
+        bad = vco_mismatch_trace_set(capture["rows"], case, prefix=True)
+        return bool(bad), " (mismatch traces: %s)" % sorted(bad)
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected
     )
-    return detected
 
 
 def vco_run_vector_mutation(workdir: Path, simulator: str, formats,
@@ -2965,33 +3022,35 @@ def vco_run_vector_mutation(workdir: Path, simulator: str, formats,
     diverge exactly inside ``expect_traces``.
     """
 
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
     mutated = copy.deepcopy(case_dirs[case_id][1])
     rewrite_stimulus(mutated)
-    vco2_write_case(mut_dir, 0, mutated, walk_cap=VCO2_MUTATION_WALK_CAP)
-    capture = vco2_simulate(mut_dir, simulator, 1, formats)[0]
-    bad = vco_mismatch_trace_set(capture["rows"], mutated, prefix=True)
-    detected = bool(bad)
-    localization = ""
-    if bad != expect_traces:
-        detected = False
-        localization = (
-            " (localization FAILED: mismatch set %s != expected %s)"
-            % (sorted(bad), sorted(expect_traces))
-        )
-    else:
-        localization = " (localized to %s)" % sorted(bad)
-    print(
-        "mutation %s (stimulus, case %s): %s%s"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
-            localization,
-        )
+
+    def write_mutant(mut_dir):
+        pass  # stimulus-side mutation: the DUT itself is never mutated.
+
+    def write_case(mut_dir):
+        vco2_write_case(mut_dir, 0, mutated, walk_cap=VCO2_MUTATION_WALK_CAP)
+
+    def simulate(mut_dir):
+        return vco2_simulate(mut_dir, simulator, 1, formats)[0]
+
+    def is_detected(capture):
+        bad = vco_mismatch_trace_set(capture["rows"], mutated, prefix=True)
+        detected = bool(bad)
+        if bad != expect_traces:
+            detected = False
+            localization = (
+                " (localization FAILED: mismatch set %s != expected %s)"
+                % (sorted(bad), sorted(expect_traces))
+            )
+        else:
+            localization = " (localized to %s)" % sorted(bad)
+        return detected, localization
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected,
+        kind="stimulus",
     )
-    return detected
 
 
 def vco2(workdir: Path, simulator: str) -> int:
@@ -3935,44 +3994,42 @@ def vco_run_mutation(workdir: Path, simulator: str, label: str, case_id: str,
     """
 
     anchor, replacement = VCO_PARAMS_LINE_ANCHORS[label]
-    mut_dir = workdir / ("mut-" + label)
-    mut_dir.mkdir(parents=True, exist_ok=True)
-    mutated = mutate_sv(
-        VCO_DUT_SV.read_text(encoding="utf-8"), anchor, replacement, label
-    )
-    (mut_dir / "sine_vco_engine_mut.sv").write_text(mutated, encoding="utf-8")
-    (mut_dir / "lut.memh").write_bytes(
-        (workdir / "lut.memh").read_bytes()
-    )
     case = cases_by_id[case_id]
-    vco_write_case(mut_dir, 0, case)
-    mut_captures = vco_simulate(
-        mut_dir, simulator, 1, mut_dir / "sine_vco_engine_mut.sv",
-        max_n=walk_cap,
-    )
-    capture = mut_captures[0]
-    full_walk = walk_cap is None
-    trace_bad = not vco_check_case(capture, case, case_id,
-                                   prefix=not full_walk)
-    walked = len(capture["vco"])
-    # Only a full-clip walk may be judged on the whole-clip counters.
-    ops_bad = full_walk and capture["ops"] != vco_expected_ops(walked, case)
-    detected = trace_bad or ops_bad
-    surface = (
-        "trace rows" if trace_bad
-        else ("property rows (counters %r)" % (capture["ops"],))
-        if ops_bad else "neither"
-    )
-    print(
-        "mutation %s (RTL, case %s): %s via %s"
-        % (
-            label,
-            case_id,
-            "DETECTED (test fails the mutant)" if detected else "NOT DETECTED",
-            surface,
+
+    def write_mutant(mut_dir):
+        mutated = mutate_sv(
+            VCO_DUT_SV.read_text(encoding="utf-8"), anchor, replacement, label
         )
+        (mut_dir / "sine_vco_engine_mut.sv").write_text(mutated, encoding="utf-8")
+        (mut_dir / "lut.memh").write_bytes((workdir / "lut.memh").read_bytes())
+
+    def write_case(mut_dir):
+        vco_write_case(mut_dir, 0, case)
+
+    def simulate(mut_dir):
+        return vco_simulate(
+            mut_dir, simulator, 1, mut_dir / "sine_vco_engine_mut.sv",
+            max_n=walk_cap,
+        )[0]
+
+    def is_detected(capture):
+        full_walk = walk_cap is None
+        trace_bad = not vco_check_case(capture, case, case_id,
+                                       prefix=not full_walk)
+        walked = len(capture["vco"])
+        # Only a full-clip walk may be judged on the whole-clip counters.
+        ops_bad = full_walk and capture["ops"] != vco_expected_ops(walked, case)
+        detected = trace_bad or ops_bad
+        surface = (
+            "trace rows" if trace_bad
+            else ("property rows (counters %r)" % (capture["ops"],))
+            if ops_bad else "neither"
+        )
+        return detected, " via %s" % surface
+
+    return run_rtl_mutation(
+        workdir, label, case_id, write_mutant, write_case, simulate, is_detected
     )
-    return detected
 
 
 def vco(workdir: Path, simulator: str) -> int:
@@ -7391,33 +7448,45 @@ def normreplay(workdir: Path, simulator: str) -> int:
     mutations_ok = True
 
     def run_mutation(label, anchor, replacement, case_id, clip=None):
-        mut_dir = workdir / ("mut-" + label)
-        mut_dir.mkdir(parents=True, exist_ok=True)
-        mutated_sv = mut_dir / "normalization_replay_engine_mut.sv"
-        mutated_sv.write_text(
-            mutate_sv(
-                NORMREPLAY_DUT_SV.read_text(encoding="utf-8"),
-                anchor, replacement, label,
-            ),
-            encoding="utf-8",
-        )
         if clip is None:
             clip = nr.directed_cases()[case_id]
-        normreplay_write_run(mut_dir, 0, len(clip), len(clip), clip, clip)
-        mut_captures, mut_statuses = normreplay_simulate(
-            mut_dir, simulator, 1, mutated_sv
+
+        def write_mutant(mut_dir):
+            mutated_sv = mut_dir / "normalization_replay_engine_mut.sv"
+            mutated_sv.write_text(
+                mutate_sv(
+                    NORMREPLAY_DUT_SV.read_text(encoding="utf-8"),
+                    anchor, replacement, label,
+                ),
+                encoding="utf-8",
+            )
+
+        def write_case(mut_dir):
+            normreplay_write_run(mut_dir, 0, len(clip), len(clip), clip, clip)
+
+        def simulate(mut_dir):
+            mutated_sv = mut_dir / "normalization_replay_engine_mut.sv"
+            mut_captures, mut_statuses = normreplay_simulate(
+                mut_dir, simulator, 1, mutated_sv
+            )
+            return mut_captures[0], mut_statuses[0]
+
+        def is_detected(capture):
+            mut_out, mut_status = capture
+            pristine_out, _pristine_diag = nrg.mirror_normalize(clip, formats)
+            detected = (
+                mut_out != pristine_out
+                or mut_status[0] != 0  # a sticky error is also a divergence
+            )
+            return detected, ""
+
+        return run_rtl_mutation(
+            workdir, label, case_id, write_mutant, write_case, simulate,
+            is_detected,
+            detected_message=(
+                "DETECTED (diverges from the pristine golden capture)"
+            ),
         )
-        pristine_out, _pristine_diag = nrg.mirror_normalize(clip, formats)
-        detected = (
-            mut_captures[0] != pristine_out
-            or mut_statuses[0][0] != 0  # a sticky error is also a divergence
-        )
-        print(
-            "mutation %s (RTL, case %s): %s"
-            % (label, case_id, "DETECTED (diverges from the pristine golden "
-               "capture)" if detected else "NOT DETECTED")
-        )
-        return detected
 
     mutations_ok &= run_mutation(
         "always-on", NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_ON_MUTANT,
