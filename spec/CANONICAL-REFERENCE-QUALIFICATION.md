@@ -240,22 +240,31 @@ check rather than a lesson: `PUBLICATION_PIN_SITES` in
 each one names the live digest, and a scan proves no *unregistered* file gates
 the publication behind the same refusal message.
 
-Both completeness scans (this one and `check_dispatch_profile_sites`') carry
-exactly two exclusions, and both are stated here rather than left in the code
-alone. First, the scans skip the repo-relative prefixes `.git/` and `.loom/` —
-matched **relative to the repository root**, never against the absolute path. A
-Loom worktree lives at `<repo>/.loom/worktrees/issue-N`, so an absolute-path test
-for a `.loom` component matches every file in such a checkout and turns both
-scans into silent no-ops in precisely the environment they are run from most; the
+Both completeness scans (this one and `check_dispatch_profile_sites`) skip the
+repo-relative prefixes `.git/` and `.loom/`, and both are stated here rather
+than left in the code alone. These are matched **relative to the repository
+root**, never against the absolute path. A Loom worktree lives at
+`<repo>/.loom/worktrees/issue-N`, so an absolute-path test for a `.loom`
+component matches every file in such a checkout and turns both scans into
+silent no-ops in precisely the environment they are run from most; the
 `ScanReachabilityTests` controls plant a synthetic unregistered occurrence and
-require refusal from both a plain root and a worktree-shaped one, so a scan that
-visits nothing can no longer report a pass. Second, the publication-pin scan
-skips `tools/check_reference_consolidation.py` itself: the scanner necessarily
-contains the refusal message as the constant it searches for, and naming a
-sentinel is not gating a render on it. Registering the scanner as a gate site
-would be both untrue and unsatisfiable — that arm additionally requires the site
-to pin the publication's committed digest as a literal, which a checker that
-recomputes that digest does not carry.
+require refusal from both a plain root and a worktree-shaped one, so a scan
+that visits nothing can no longer report a pass. The publication-pin scan
+carries one further exclusion beyond those two: it skips
+`tools/check_reference_consolidation.py` itself, because the scanner
+necessarily contains the refusal message as the constant it searches for, and
+naming a sentinel is not gating a render on it. Registering the scanner as a
+gate site would be both untrue and unsatisfiable — that arm additionally
+requires the site to pin the publication's committed digest as a literal,
+which a checker that recomputes that digest does not carry.
+
+`check_dispatch_profile_sites` carries two further exclusions beyond the
+shared `.git/`/`.loom/` pair, for a total of four; both are documented, with
+rationale, where the scan is described in full below (§"repaired" table and
+divergence 4): it exempts test modules (`path.name.startswith("test_")` —
+"Test modules are exempt by design: asserting that a pin reaches the
+container is their job", :301-303) and the sixth, not-yet-repaired spawn
+named in `DISPATCH_RECAPTURE_GATED` (:305-307, :387-388).
 
 Other references to the pre-A2 digest were audited and deliberately left alone,
 because they are dated provenance rather than gates: `spec/SIGNAL-PREPARATION.md`
