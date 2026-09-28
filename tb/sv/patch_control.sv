@@ -297,8 +297,9 @@ module patch_control #(
     // 256 + 512 + 8 + 1 + 1 + 32 = 810 bits, under DR-0010 P2's "~1 Kbit"
     // figure. No clip buffer exists: NOISE_STREAM data bytes are consumed
     // by the parser and never stored (DR-0010 Memory strategy), and this
-    // receiver computes no digest of its own over them (declared-digest
-    // binding only; receiver-side hashing is open, issue #207).
+    // receiver computes no digest of its own over them (declared-only:
+    // receiver-side hashing was rejected by the 2026-09-26 DR-0010
+    // amendment, issue #207).
     // ------------------------------------------------------------------
     reg [255:0]  rnd_digest;        // pass-1 declared noise_stream_sha256
     reg [511:0]  rnd_identity;      // bound sound identity, left-justified
