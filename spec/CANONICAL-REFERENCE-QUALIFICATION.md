@@ -260,11 +260,12 @@ which a checker that recomputes that digest does not carry.
 
 `check_dispatch_profile_sites` carries two further exclusions beyond the
 shared `.git/`/`.loom/` pair, for a total of four; both are documented, with
-rationale, where the scan is described in full below (§"repaired" table and
-divergence 4): it exempts test modules (`path.name.startswith("test_")` —
-"Test modules are exempt by design: asserting that a pin reaches the
-container is their job", :301-303) and the sixth, not-yet-repaired spawn
-named in `DISPATCH_RECAPTURE_GATED` (:305-307, :387-388).
+rationale, where the scan is described in full below (§"Six spawns that had
+drifted from the profile they declare" and
+[divergence 4](#open-divergences)): it exempts test modules
+(`path.name.startswith("test_")` — "Test modules are exempt by design:
+asserting that a pin reaches the container is their job") and the sixth,
+not-yet-repaired spawn named in `DISPATCH_RECAPTURE_GATED`.
 
 Other references to the pre-A2 digest were audited and deliberately left alone,
 because they are dated provenance rather than gates: `spec/SIGNAL-PREPARATION.md`
