@@ -1,0 +1,545 @@
+{
+  "corpus": {
+    "canonical_names_per_case": 78,
+    "directed_cases": 392,
+    "directed_cases_by_kind": {
+      "boundary": 324,
+      "envelope": 24,
+      "normalization": 3,
+      "route": 20,
+      "source": 3,
+      "special": 3,
+      "waveform": 15
+    },
+    "directed_share_of_development_rows": 27048,
+    "registry_development_cases": 488,
+    "registry_development_expected_rows": 33672,
+    "registry_holdout_cases": 32,
+    "registry_holdout_expected_rows": 2208,
+    "required_rows_per_case": 69,
+    "resolved_name_value_pairs": 30576,
+    "samples_per_clip": 176400
+  },
+  "criteria": [
+    {
+      "id": "AC1",
+      "method": "Set comparison of the coverage report's parameter keys against the landed inventory, per-parameter boundary-variant equality, and the declared discrete-mode rationale.",
+      "observed": {
+        "boundary_fixtures": 324,
+        "discrete_mode_rationale": "All 78 inventory parameters are continuous.",
+        "discrete_modes": 0,
+        "inventory_parameters": 78,
+        "parameters_with_planned_fixtures": 78
+      },
+      "statement": "Every parameter and discrete mode maps to at least one planned fixture or has an explicit rationale.",
+      "status": "SATISFIED"
+    },
+    {
+      "id": "AC2",
+      "method": "Set equality between the planned capture intents and the canonical trace registry, per-trace isolation and case checks, and the executed upstream capture inventory.",
+      "observed": {
+        "canonical_traces": 32,
+        "captured_traces_per_case": 32,
+        "directed_fixtures_with_executed_upstream_capture": [
+          "normalization:above",
+          "normalization:below",
+          "normalization:tie"
+        ],
+        "planned_traces": 32,
+        "traces_declaring_a_graph_limitation": [
+          "adsr_1.output",
+          "adsr_2.output",
+          "keyboard.duration",
+          "keyboard.midi_f0",
+          "lfo_1_amp_adsr.output",
+          "lfo_1_rate_adsr.output",
+          "lfo_2_amp_adsr.output",
+          "lfo_2_rate_adsr.output",
+          "mixer.gain",
+          "mixer.output",
+          "mixer.peak",
+          "mixer.pre_normalization"
+        ]
+      },
+      "statement": "Every named trace in the measurement plan is exercised in isolation where the graph permits.",
+      "status": "SATISFIED-AS-PREPARATION"
+    },
+    {
+      "id": "AC3",
+      "method": "Exact binary32 round-trip of each declared target, ordering of the three targets, the recorded tie policy text, and the captured strict-inequality branch decision on the pinned upstream.",
+      "observed": {
+        "captured_peak_greater_than_one": {
+          "normalization:above": true,
+          "normalization:below": false,
+          "normalization:tie": false
+        },
+        "peak_status_in_manifest_coverage": "unmeasured",
+        "target_peaks": {
+          "above": 1.0000001192092896,
+          "below": 0.9999999403953552,
+          "tie": 1.0
+        },
+        "tie_policy": "strict peak > 1 normalizes; an exact tie retains the input"
+      },
+      "statement": "Normalization boundary cases include representable values on both sides and a tie policy question.",
+      "status": "SATISFIED"
+    },
+    {
+      "id": "AC4",
+      "method": "Rebuild the manifest and coverage report and compare committed bytes, resolve all patches by canonical name, recompute the sealed identity, mutate one patch to confirm the identity moves, and confirm the case registry pins those exact bytes.",
+      "observed": {
+        "canonical_names_per_case": 78,
+        "cases": 392,
+        "manifest_identity": "directed-voice-v1-sha256:7c04914ed6fc7d1431e4d3b9bd7c60fc912cb7a6e2b5c68b45c77270b79ee249",
+        "manifest_sha256": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+        "resolved_name_value_pairs": 30576,
+        "schema_ids": {
+          "spec/schemas/case-registry-v1.schema.json": "urn:gf180-torchsynth:case-registry:1",
+          "spec/schemas/directed-voice-v1.schema.json": "Preregistered directed default Voice patches v1",
+          "spec/schemas/scorecard-report-v1.schema.json": "urn:gf180-torchsynth:scorecard-report:v1",
+          "spec/schemas/scorecard-row-v1.schema.json": "urn:gf180-torchsynth:scorecard-row:v1"
+        }
+      },
+      "statement": "Fixture manifests are deterministic, name-keyed, schema-validated, and contain no positional patches.",
+      "status": "SATISFIED"
+    },
+    {
+      "id": "AC5",
+      "method": "Four live negative controls through the landed scorecard API in this run; each must refuse with an explicit reason.",
+      "observed": {
+        "negative_controls": [
+          {
+            "probe": "missing unit",
+            "reason": "row requires exactly these fields: artifact, case, coverage, estimator, expected, observed, property, rubric, schema_version, tolerance, trace, unit, validity, verdict",
+            "refused": true
+          },
+          {
+            "probe": "missing validity",
+            "reason": "row requires exactly these fields: artifact, case, coverage, estimator, expected, observed, property, rubric, schema_version, tolerance, trace, unit, validity, verdict",
+            "refused": true
+          },
+          {
+            "probe": "NaN as a result value",
+            "reason": "non-finite JSON number: NaN",
+            "refused": true
+          },
+          {
+            "probe": "aggregate of incompatible properties",
+            "reason": "cannot summarize incompatible comparison families",
+            "refused": true
+          }
+        ]
+      },
+      "statement": "Scorecard schema rejects missing units, missing validity, NaN-as-result, and an aggregate of incompatible properties.",
+      "status": "SATISFIED"
+    },
+    {
+      "id": "AC6",
+      "method": "Live summaries over synthetic control rows whose verdicts differ and coverage does not, plus the generated board's coverage denominators with zero accepted rows.",
+      "observed": {
+        "board_development_expected_rows": 33672,
+        "board_development_outcomes": {
+          "FAIL": 0,
+          "NO VERDICT": 0,
+          "NOT RUN": 488,
+          "PASS": 0,
+          "STALE": 0
+        },
+        "board_development_raw_row_counts": {
+          "FAIL": 0,
+          "MISSING EVIDENCE": 0,
+          "NO VERDICT": 0,
+          "PASS": 0
+        },
+        "control_summaries": {
+          "pass_and_fail": {
+            "coverage": {
+              "complete": 2,
+              "none": 0,
+              "partial": 0
+            },
+            "total_rows": 2,
+            "verdicts": {
+              "FAIL": 1,
+              "MISSING EVIDENCE": 0,
+              "NO VERDICT": 0,
+              "PASS": 1
+            }
+          },
+          "pass_and_no_verdict": {
+            "coverage": {
+              "complete": 2,
+              "none": 0,
+              "partial": 0
+            },
+            "total_rows": 2,
+            "verdicts": {
+              "FAIL": 0,
+              "MISSING EVIDENCE": 0,
+              "NO VERDICT": 1,
+              "PASS": 1
+            }
+          }
+        }
+      },
+      "statement": "Coverage is reportable independently from error and verdict.",
+      "status": "SATISFIED"
+    },
+    {
+      "id": "AC7",
+      "method": "This review: corpus accounting recomputed from the manifest and registry, runtime and storage projected from pinned measured receipts, and the declared truth basis joined to per-fixture activation facts.",
+      "observed": {
+        "document": "spec/DIRECTED-PHASE-REVIEW.md",
+        "report": "spec/reference/directed-phase-review-v1.json",
+        "truth_basis": "spec/reference/directed-truth-basis-v1.json"
+      },
+      "statement": "Review documents expected corpus size/runtime and identifies fixtures that cannot have analytic truth.",
+      "status": "SATISFIED"
+    }
+  ],
+  "evidence_references": {
+    "note": "A name-reference count over a reviewed snapshot of landed records. A reference is not a render, a verdict, or a qualification.",
+    "records": {
+      "sim/reference/adsr-golden-v1/frozen-envelope-receipt.json": [
+        "boundary:adsr_1.alpha:lower"
+      ],
+      "sim/reference/fixed-voice-golden-v1.json": [
+        "boundary:adsr_1.alpha:lower",
+        "boundary:adsr_2.decay:lower",
+        "boundary:lfo_1.mod_depth:center",
+        "boundary:lfo_1_amp_adsr.alpha:near-lower",
+        "boundary:lfo_1_rate_adsr.decay:near-lower",
+        "boundary:lfo_2.rsaw:near-upper",
+        "boundary:lfo_2_amp_adsr.decay:near-upper",
+        "boundary:lfo_2_rate_adsr.sustain:near-upper",
+        "boundary:mod_matrix.adsr_1->vco_2_amp:near-upper",
+        "boundary:mod_matrix.lfo_1->noise_amp:near-upper",
+        "boundary:mod_matrix.lfo_2->vco_1_pitch:near-upper",
+        "boundary:vco_1.initial_phase:upper",
+        "boundary:vco_1.mod_depth:upper",
+        "boundary:vco_1.tuning:upper",
+        "boundary:vco_2.initial_phase:upper",
+        "boundary:vco_2.mod_depth:upper",
+        "envelope:lfo_1_rate_adsr:cut-attack",
+        "normalization:above",
+        "normalization:below",
+        "normalization:tie",
+        "route:mod_matrix.lfo_1->vco_2_amp",
+        "source:noise",
+        "source:vco_1",
+        "source:vco_2",
+        "waveform:vco_2:saw"
+      ],
+      "sim/reference/float-sources-v1.json": [
+        "boundary:vco_1.initial_phase:upper",
+        "boundary:vco_1.mod_depth:upper",
+        "boundary:vco_1.tuning:upper",
+        "boundary:vco_2.mod_depth:upper",
+        "waveform:vco_2:saw"
+      ],
+      "sim/reference/float-voice-v1.json": [
+        "boundary:vco_1.initial_phase:upper",
+        "boundary:vco_1.mod_depth:upper",
+        "boundary:vco_1.tuning:upper",
+        "boundary:vco_2.mod_depth:upper",
+        "normalization:above",
+        "normalization:below",
+        "normalization:tie",
+        "waveform:vco_2:saw"
+      ],
+      "sim/reference/lfo-vca-golden-v1/frozen-lfo-receipt.json": [
+        "boundary:lfo_1.mod_depth:center"
+      ],
+      "sim/reference/mod-matrix-golden-v1/frozen-mod-matrix-receipt.json": [
+        "boundary:lfo_1.mod_depth:center"
+      ],
+      "sim/reference/scalar-execution.json": [
+        "envelope:adsr_1:cut-attack",
+        "envelope:adsr_1:zero-stages",
+        "source:noise",
+        "source:vco_1",
+        "waveform:lfo_1:blend",
+        "waveform:vco_2:blend",
+        "waveform:vco_2:saw",
+        "waveform:vco_2:square"
+      ],
+      "sim/reference/trace-capture.json": [
+        "normalization:above",
+        "normalization:below",
+        "normalization:tie"
+      ]
+    },
+    "referenced_by_kind": {
+      "boundary": {
+        "preregistered": 324,
+        "referenced": 16
+      },
+      "envelope": {
+        "preregistered": 24,
+        "referenced": 3
+      },
+      "normalization": {
+        "preregistered": 3,
+        "referenced": 3
+      },
+      "route": {
+        "preregistered": 20,
+        "referenced": 1
+      },
+      "source": {
+        "preregistered": 3,
+        "referenced": 3
+      },
+      "special": {
+        "preregistered": 3,
+        "referenced": 0
+      },
+      "waveform": {
+        "preregistered": 15,
+        "referenced": 4
+      }
+    },
+    "referenced_fixtures": [
+      "boundary:adsr_1.alpha:lower",
+      "boundary:adsr_2.decay:lower",
+      "boundary:lfo_1.mod_depth:center",
+      "boundary:lfo_1_amp_adsr.alpha:near-lower",
+      "boundary:lfo_1_rate_adsr.decay:near-lower",
+      "boundary:lfo_2.rsaw:near-upper",
+      "boundary:lfo_2_amp_adsr.decay:near-upper",
+      "boundary:lfo_2_rate_adsr.sustain:near-upper",
+      "boundary:mod_matrix.adsr_1->vco_2_amp:near-upper",
+      "boundary:mod_matrix.lfo_1->noise_amp:near-upper",
+      "boundary:mod_matrix.lfo_2->vco_1_pitch:near-upper",
+      "boundary:vco_1.initial_phase:upper",
+      "boundary:vco_1.mod_depth:upper",
+      "boundary:vco_1.tuning:upper",
+      "boundary:vco_2.initial_phase:upper",
+      "boundary:vco_2.mod_depth:upper",
+      "envelope:adsr_1:cut-attack",
+      "envelope:adsr_1:zero-stages",
+      "envelope:lfo_1_rate_adsr:cut-attack",
+      "normalization:above",
+      "normalization:below",
+      "normalization:tie",
+      "route:mod_matrix.lfo_1->vco_2_amp",
+      "source:noise",
+      "source:vco_1",
+      "source:vco_2",
+      "waveform:lfo_1:blend",
+      "waveform:vco_2:blend",
+      "waveform:vco_2:saw",
+      "waveform:vco_2:square"
+    ],
+    "referenced_total": 30,
+    "unreferenced_total": 362
+  },
+  "inputs": {
+    "docs/scorecard.json": "85b5ceb189ea958da3578fb1db66d5071ace4a3fc82d505ed241264fb0895ea7",
+    "sim/reference/adsr-golden-v1/frozen-envelope-receipt.json": "65d0b670cb899d2727e6ffd1ac1e04f388cb58b505a81c9c5cc1a296f2fee6a6",
+    "sim/reference/development-corpus-first.json": "da255466f611bd881adb30d86c9e95cfe2c2ecb040d860ff7fee0f6174f1798e",
+    "sim/reference/fixed-voice-golden-v1.json": "7b68e82474ce401feb135953da6656f559542377363c537ef4a0643777ea0b8a",
+    "sim/reference/float-sources-v1.json": "b60d4cc1efeefe89c69f2691601a390983f9938c3c059a4cb998aa2e1667c73a",
+    "sim/reference/float-voice-v1.json": "e0ed61aa680298204efca7f80983895ca0cf0ddf2cb345e549095e47b1e6065e",
+    "sim/reference/lfo-vca-golden-v1/frozen-lfo-receipt.json": "1a4e6997d8a8461ef532ecb2f44c53802db5e7652bcec8294c3ef803a225501a",
+    "sim/reference/mod-matrix-golden-v1/frozen-mod-matrix-receipt.json": "4696c16fe2a710d45ece397d6e1c56885203ea1dc9f2188fc3fd67ba893d1af0",
+    "sim/reference/scalar-execution.json": "78c4d08bbff8d99b545362b8301b871963c354321add19ea402d6e55d368498f",
+    "sim/reference/trace-capture.json": "b803f015a63f723c95a20c287027a5168d0bf6df0f7bcf95f6fa817b88ccb56d",
+    "spec/reference/case-registry-v1.json": "bbc1dc5028f213f23ffe7835b1335ff0e0279deb8672b33d39f5a0c5e54486bd",
+    "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
+    "spec/reference/directed-truth-basis-v1.json": "88e4d91b84e6aad62c9b530d9bcc67da4e57ae077d0d0559a9ab02f3d252412f",
+    "spec/reference/directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+    "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+    "spec/reference/trace-registry-v1.json": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+    "spec/schemas/case-registry-v1.schema.json": "eb444a7305e0094f867c769ddd484efdd97e6e3f5f573b1342fb2e9a70b6b222",
+    "spec/schemas/directed-voice-v1.schema.json": "f860525b71094bf61351dc1a26348553279339558ccbd2c85a952e624f8969c7",
+    "spec/schemas/scorecard-report-v1.schema.json": "30e0bee2c0a836526d9172bbc348e6381978e4704e9a55ad0a0ef822e8eae4d1",
+    "spec/schemas/scorecard-row-v1.schema.json": "45ad8ea1f984efebf1c44cfd3a77ba693e619feb29bdd0c79f8699b5b29f357f",
+    "tools/review_directed_phase.py": "68f06294e957162452f4b24f8277bd7fbc411622ca3dcd88261e6b80808eb876"
+  },
+  "limits": [
+    "A preparation and contract review. It renders no audio, runs no estimator, and establishes no Voice, fixed-point, synthesis, layout, signoff or playback claim.",
+    "Criterion status is a documentation judgement over landed artifacts, never a scorecard verdict; SATISFIED-AS-PREPARATION means the plan is complete while execution is not.",
+    "The manifest coverage report still declares its trace claims planned and its normalization peaks unmeasured; executed captures live in their own receipts and are cited, not merged into it.",
+    "No tolerance, error metric, estimator qualification or rubric is introduced, changed, or implied."
+  ],
+  "outstanding": [
+    {
+      "item": "audio_render",
+      "note": "The manifest's own coverage report is a static preparation result; three normalization fixtures have an executed upstream capture recorded in sim/reference/trace-capture.json.",
+      "state": "not_run"
+    },
+    {
+      "item": "expected_values_and_tolerances",
+      "note": "All required registry rows are paired reference-versus-candidate comparisons under an unfrozen rubric; no row carries an analytic expected value today.",
+      "state": "null with declared reasons"
+    },
+    {
+      "item": "candidate_engine",
+      "note": "The registered engine is unimplemented, so every development case is NOT RUN by construction.",
+      "state": "integrated-rtl-not-implemented"
+    }
+  ],
+  "projection": {
+    "basis": {
+      "capture_host": "Apple M5",
+      "capture_receipt": "sim/reference/trace-capture.json",
+      "capture_runtime_profile": "release-mkl-compatible-v1",
+      "corpus_host": "Apple M5",
+      "corpus_receipt": "sim/reference/development-corpus-first.json",
+      "corpus_receipt_cases": 96,
+      "measured_directed_cases": [
+        "normalization:above",
+        "normalization:below",
+        "normalization:tie"
+      ]
+    },
+    "limits": [
+      "Derived arithmetic over pinned measured receipts, not a measured directed-corpus run.",
+      "Render seconds come from three batch-32 directed captures with full trace capture; publishing seconds come from a 96-case random-corpus run that also validated and published artifacts. Both receipts record one host CPU under the release runtime profile, so neither is a multi-host or CI budget.",
+      "Projections exclude container start-up, source validation, estimator execution and evidence validation."
+    ],
+    "projected_publishing_seconds": {
+      "maximum": 7193.592,
+      "median": 6049.736,
+      "minimum": 5293.176
+    },
+    "projected_render_seconds": {
+      "maximum": 305.274,
+      "median": 292.318,
+      "minimum": 287.04
+    },
+    "projected_retained_bytes": {
+      "full": 3637233152,
+      "partial": 555957920
+    },
+    "publishing_seconds_per_case": {
+      "maximum": 18.351,
+      "median": 15.433,
+      "minimum": 13.503
+    },
+    "render_seconds_per_case": {
+      "maximum": 0.7787607510108501,
+      "median": 0.7457088759401813,
+      "minimum": 0.7322447079932317
+    },
+    "retained_bytes_per_case": {
+      "full": 9278656,
+      "partial": 1418260
+    }
+  },
+  "review": "issue-5-directed-fixtures-and-scorecard-contract",
+  "schema": "torchsynth-directed-phase-review",
+  "schema_version": 1,
+  "scope": "Phase-level closure review of issue #5 over the landed work of #16, #17, #18 and #87: coverage synthesis, corpus size and runtime expectation, and analytic-truth availability.",
+  "source_target": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "truth": {
+    "audible_source_combinations": {
+      "noise": 20,
+      "noise+vco_1+vco_2": 1,
+      "none": 16,
+      "vco_1": 293,
+      "vco_2": 62
+    },
+    "basis_version": "1",
+    "fixtures_whose_peak_must_be_measured": {
+      "count": 376,
+      "rule": "Every fixture with any audible source: a whole-clip extremum has no closed form."
+    },
+    "fixtures_with_analytically_silent_output": {
+      "count": 16,
+      "ids": [
+        "boundary:mixer.noise:lower",
+        "boundary:mixer.vco_1:lower",
+        "boundary:mixer.vco_2:lower",
+        "boundary:mod_matrix.adsr_1->noise_amp:lower",
+        "boundary:mod_matrix.adsr_1->vco_1_amp:lower",
+        "boundary:mod_matrix.adsr_1->vco_2_amp:lower",
+        "boundary:mod_matrix.adsr_2->noise_amp:lower",
+        "boundary:mod_matrix.adsr_2->vco_1_amp:lower",
+        "boundary:mod_matrix.adsr_2->vco_2_amp:lower",
+        "boundary:mod_matrix.lfo_1->noise_amp:lower",
+        "boundary:mod_matrix.lfo_1->vco_1_amp:lower",
+        "boundary:mod_matrix.lfo_1->vco_2_amp:lower",
+        "boundary:mod_matrix.lfo_2->noise_amp:lower",
+        "boundary:mod_matrix.lfo_2->vco_1_amp:lower",
+        "boundary:mod_matrix.lfo_2->vco_2_amp:lower",
+        "special:silence"
+      ],
+      "limit": "Analytic but non-discriminating: a candidate that emits silence for an unrelated reason matches the same expectation. These fixtures qualify parameter deactivation, not audio fidelity.",
+      "rule": "For every audio source, the mixer gain is zero or its destination amplitude column in the modulation matrix is entirely zero."
+    },
+    "fixtures_without_analytic_final_output": {
+      "count": 21,
+      "ids": [
+        "boundary:mixer.noise:near-lower",
+        "boundary:mixer.noise:near-upper",
+        "boundary:mixer.noise:upper",
+        "boundary:mod_matrix.adsr_1->noise_amp:near-lower",
+        "boundary:mod_matrix.adsr_1->noise_amp:near-upper",
+        "boundary:mod_matrix.adsr_1->noise_amp:upper",
+        "boundary:mod_matrix.adsr_2->noise_amp:near-lower",
+        "boundary:mod_matrix.adsr_2->noise_amp:near-upper",
+        "boundary:mod_matrix.adsr_2->noise_amp:upper",
+        "boundary:mod_matrix.lfo_1->noise_amp:near-lower",
+        "boundary:mod_matrix.lfo_1->noise_amp:near-upper",
+        "boundary:mod_matrix.lfo_1->noise_amp:upper",
+        "boundary:mod_matrix.lfo_2->noise_amp:near-lower",
+        "boundary:mod_matrix.lfo_2->noise_amp:near-upper",
+        "boundary:mod_matrix.lfo_2->noise_amp:upper",
+        "route:mod_matrix.adsr_1->noise_amp",
+        "route:mod_matrix.adsr_2->noise_amp",
+        "route:mod_matrix.lfo_1->noise_amp",
+        "route:mod_matrix.lfo_2->noise_amp",
+        "source:noise",
+        "special:stress"
+      ],
+      "rule": "mixer.noise is greater than zero and at least one mod_matrix.<source>->noise_amp weight is greater than zero."
+    },
+    "trace_basis": {
+      "adsr_1.output": "closed-form",
+      "adsr_2.output": "closed-form",
+      "control_upsample.noise_amp": "closed-form-limited",
+      "control_upsample.vco_1_amp": "closed-form-limited",
+      "control_upsample.vco_1_pitch": "closed-form-limited",
+      "control_upsample.vco_2_amp": "closed-form-limited",
+      "control_upsample.vco_2_pitch": "closed-form-limited",
+      "keyboard.duration": "closed-form",
+      "keyboard.midi_f0": "closed-form",
+      "lfo_1.post_control_vca": "closed-form-limited",
+      "lfo_1.raw": "closed-form-limited",
+      "lfo_1_amp_adsr.output": "closed-form",
+      "lfo_1_rate_adsr.output": "closed-form",
+      "lfo_2.post_control_vca": "closed-form-limited",
+      "lfo_2.raw": "closed-form-limited",
+      "lfo_2_amp_adsr.output": "closed-form",
+      "lfo_2_rate_adsr.output": "closed-form",
+      "mixer.gain": "reference-capture-only",
+      "mixer.output": "reference-capture-only",
+      "mixer.peak": "reference-capture-only",
+      "mixer.pre_normalization": "reference-capture-only",
+      "mod_matrix.noise_amp": "closed-form-limited",
+      "mod_matrix.vco_1_amp": "closed-form-limited",
+      "mod_matrix.vco_1_pitch": "closed-form-limited",
+      "mod_matrix.vco_2_amp": "closed-form-limited",
+      "mod_matrix.vco_2_pitch": "closed-form-limited",
+      "noise.post_vca": "reference-capture-only",
+      "noise.raw": "reference-capture-only",
+      "vco_1.post_vca": "closed-form-limited",
+      "vco_1.raw": "closed-form-limited",
+      "vco_2.post_vca": "closed-form-limited",
+      "vco_2.raw": "closed-form-limited"
+    },
+    "traces_by_basis": {
+      "closed-form": 8,
+      "closed-form-limited": 18,
+      "reference-capture-only": 6
+    }
+  },
+  "work_units": [
+    16,
+    17,
+    18,
+    87
+  ]
+}

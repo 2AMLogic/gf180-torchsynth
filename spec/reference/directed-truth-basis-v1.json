@@ -1,0 +1,198 @@
+{
+  "basis_codes": {
+    "closed-form": "A sample-level expectation is derivable from the frozen 78 normalized parameters and the pinned mapping/stage equations alone, without executing TorchSynth. Residual disagreement against a float32 reference is rounding, judged by a declared error metric that this document does not supply.",
+    "closed-form-limited": "A mathematical expectation exists but depends on accumulated float32 state (oscillator phase under modulation, chained products) or on an input whose own basis is limited. Usable for the listed property-level truths, never as a sample-level oracle.",
+    "reference-capture-only": "No expectation exists without the pinned reference: a seeded pseudorandom stream, or a whole-clip extremum with no closed form. Only the listed structural or distributional facts are analytic."
+  },
+  "family_rules": {
+    "analytically_silent": {
+      "consequence": "mixer.pre_normalization and mixer.output are identically zero, mixer.peak is zero, mixer.gain is one by the derived rule, and the normalization division is not applied. Final-output truth is closed-form for these fixtures.",
+      "limit": "Analytic but non-discriminating: a candidate that emits silence for an unrelated reason matches the same expectation. These fixtures qualify parameter deactivation, not audio fidelity.",
+      "rule": "For every audio source, the mixer gain is zero or its destination amplitude column in the modulation matrix is entirely zero."
+    },
+    "noise_audible": {
+      "consequence": "mixer.pre_normalization, mixer.output, mixer.peak and mixer.gain are reference-capture-only for these fixtures, because the audible samples are the pinned seeded stream.",
+      "limit": "Reproducing the stream with a second copy of the pinned source is repeatability, not analytic truth.",
+      "rule": "mixer.noise is greater than zero and at least one mod_matrix.<source>->noise_amp weight is greater than zero."
+    },
+    "normalization_targets": {
+      "consequence": "The three declared exact binary32 peak targets are design intents. The branch decision (strict peak greater than one, tie retains the input) is analytic; the peak that selects the branch is not.",
+      "limit": "A candidate patch that misses its target peak leaves the branch uncovered; no tolerance or gain fitting may promote it.",
+      "rule": "The fixture is one of normalization:below, normalization:tie or normalization:above."
+    }
+  },
+  "declared_for": "issue-5-directed-fixtures-and-scorecard-contract",
+  "limits": [
+    "This document classifies where an expectation can come from. It declares no tolerance, no error metric, no estimator qualification and no rubric.",
+    "A closed-form basis is an availability statement, not a claim that any expectation has been computed, qualified, or compared.",
+    "Property-level analytic truth requires a separately qualified estimator; the landed periodic and envelope qualifications are analytic-development-only.",
+    "Classification is reviewed judgement over the landed trace registry, not a generated result. Drift from it is an error to reconcile, never a value to update silently."
+  ],
+  "schema": "torchsynth-directed-truth-basis",
+  "schema_version": 1,
+  "scope": "Availability of analytic (non-reference) truth for the 32 canonical trace names when exercised by the preregistered directed Voice fixtures. Sample-level basis plus the property-level truths that a later qualified estimator could ground analytically.",
+  "source_target": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "traces": {
+    "adsr_1.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Stage times follow the pinned ADSR equations from the frozen parameters and the note-off implied by keyboard.duration at the 441 Hz control rate."
+    },
+    "adsr_2.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Same basis as adsr_1.output; the directed manifest drives both envelopes independently of the modulation matrix."
+    },
+    "control_upsample.noise_amp": {
+      "analytic_properties": ["first_sample_equality", "last_sample_equality", "sample_count"],
+      "basis": "closed-form-limited",
+      "condition": "Endpoint-aligned interpolation is exact algebra on its input, so the basis is inherited from mod_matrix.noise_amp; the endpoint and count facts are analytic regardless."
+    },
+    "control_upsample.vco_1_amp": {
+      "analytic_properties": ["first_sample_equality", "last_sample_equality", "sample_count"],
+      "basis": "closed-form-limited",
+      "condition": "Inherited from mod_matrix.vco_1_amp; endpoints and sample count are analytic."
+    },
+    "control_upsample.vco_1_pitch": {
+      "analytic_properties": ["first_sample_equality", "last_sample_equality", "sample_count"],
+      "basis": "closed-form-limited",
+      "condition": "Inherited from mod_matrix.vco_1_pitch; endpoints and sample count are analytic."
+    },
+    "control_upsample.vco_2_amp": {
+      "analytic_properties": ["first_sample_equality", "last_sample_equality", "sample_count"],
+      "basis": "closed-form-limited",
+      "condition": "Inherited from mod_matrix.vco_2_amp; endpoints and sample count are analytic."
+    },
+    "control_upsample.vco_2_pitch": {
+      "analytic_properties": ["first_sample_equality", "last_sample_equality", "sample_count"],
+      "basis": "closed-form-limited",
+      "condition": "Inherited from mod_matrix.vco_2_pitch; endpoints and sample count are analytic."
+    },
+    "keyboard.duration": {
+      "analytic_properties": ["value_seconds"],
+      "basis": "closed-form",
+      "condition": "A pinned parameter conversion of the frozen normalized input."
+    },
+    "keyboard.midi_f0": {
+      "analytic_properties": ["value_midi_semitones"],
+      "basis": "closed-form",
+      "condition": "A pinned parameter conversion of the frozen normalized input."
+    },
+    "lfo_1.post_control_vca": {
+      "analytic_properties": ["envelope_bound", "stage_boundary_samples"],
+      "basis": "closed-form-limited",
+      "condition": "A product of lfo_1.raw and lfo_1_amp_adsr.output; inherits the raw LFO's phase accumulation."
+    },
+    "lfo_1.raw": {
+      "analytic_properties": ["frequency_hz", "initial_phase_rad", "shape_weights"],
+      "basis": "closed-form-limited",
+      "condition": "The five-shape blend is analytic at a fixed rate, but lfo_1_rate_adsr modulates the rate, so the sample-level expectation depends on float32 phase accumulation."
+    },
+    "lfo_1_amp_adsr.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Pinned ADSR equations from the frozen parameters."
+    },
+    "lfo_1_rate_adsr.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Pinned ADSR equations from the frozen parameters."
+    },
+    "lfo_2.post_control_vca": {
+      "analytic_properties": ["envelope_bound", "stage_boundary_samples"],
+      "basis": "closed-form-limited",
+      "condition": "A product of lfo_2.raw and lfo_2_amp_adsr.output; inherits the raw LFO's phase accumulation."
+    },
+    "lfo_2.raw": {
+      "analytic_properties": ["frequency_hz", "initial_phase_rad", "shape_weights"],
+      "basis": "closed-form-limited",
+      "condition": "Same basis as lfo_1.raw under lfo_2_rate_adsr modulation."
+    },
+    "lfo_2_amp_adsr.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Pinned ADSR equations from the frozen parameters."
+    },
+    "lfo_2_rate_adsr.output": {
+      "analytic_properties": ["stage_boundary_samples", "peak_level", "sustain_level"],
+      "basis": "closed-form",
+      "condition": "Pinned ADSR equations from the frozen parameters."
+    },
+    "mixer.gain": {
+      "analytic_properties": ["branch_decision", "derived_gain_rule"],
+      "basis": "reference-capture-only",
+      "condition": "Derived from mixer.peak by the declared rule, so it inherits the extremum. The branch decision and the reciprocal rule are analytic; the value that selects the branch is measured. Closed-form only for analytically silent fixtures."
+    },
+    "mixer.output": {
+      "analytic_properties": ["sample_count", "finiteness", "bypass_byte_equality"],
+      "basis": "reference-capture-only",
+      "condition": "Inherits mixer.pre_normalization and mixer.gain. Closed-form only for analytically silent fixtures; reference-capture-only whenever the noise path is audible."
+    },
+    "mixer.peak": {
+      "analytic_properties": ["branch_relation"],
+      "basis": "reference-capture-only",
+      "condition": "A whole-clip extremum over 176,400 modulated samples has no closed form; the landed fixture spec already requires capture. Closed-form only for analytically silent fixtures."
+    },
+    "mixer.pre_normalization": {
+      "analytic_properties": ["sample_count", "finiteness"],
+      "basis": "reference-capture-only",
+      "condition": "A weighted sum of the three post-VCA sources: closed-form-limited when only oscillator paths are audible, reference-capture-only whenever the noise path is audible, and closed-form (identically zero) for analytically silent fixtures."
+    },
+    "mod_matrix.noise_amp": {
+      "analytic_properties": ["route_gain", "sign", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "A weighted sum of the four control sources; closed-form when only envelope inputs are routed, and the 20 isolated-route fixtures make that condition explicit."
+    },
+    "mod_matrix.vco_1_amp": {
+      "analytic_properties": ["route_gain", "sign", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "As mod_matrix.noise_amp for the vco_1 amplitude column."
+    },
+    "mod_matrix.vco_1_pitch": {
+      "analytic_properties": ["route_gain", "sign", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "As mod_matrix.noise_amp for the vco_1 pitch column."
+    },
+    "mod_matrix.vco_2_amp": {
+      "analytic_properties": ["route_gain", "sign", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "As mod_matrix.noise_amp for the vco_2 amplitude column."
+    },
+    "mod_matrix.vco_2_pitch": {
+      "analytic_properties": ["route_gain", "sign", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "As mod_matrix.noise_amp for the vco_2 pitch column."
+    },
+    "noise.post_vca": {
+      "analytic_properties": ["deactivation"],
+      "basis": "reference-capture-only",
+      "condition": "A product of the seeded stream and its upsampled control; identically zero exactly when the noise_amp column is deactivated, and otherwise carries the stream."
+    },
+    "noise.raw": {
+      "analytic_properties": ["sample_count", "distribution_family"],
+      "basis": "reference-capture-only",
+      "condition": "A seeded pseudorandom stream (slot 0, seed 13). Regenerating it from a second copy of the pinned source is repeatability, not analytic truth; only distributional facts are analytic."
+    },
+    "vco_1.post_vca": {
+      "analytic_properties": ["amplitude_bound", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "A product of vco_1.raw and its upsampled amplitude control; inherits oscillator phase accumulation."
+    },
+    "vco_1.raw": {
+      "analytic_properties": ["frequency_hz", "initial_phase_rad"],
+      "basis": "closed-form-limited",
+      "condition": "A sine whose instantaneous frequency follows the upsampled pitch control; the sample-level expectation depends on float32 phase accumulation."
+    },
+    "vco_2.post_vca": {
+      "analytic_properties": ["amplitude_bound", "deactivation"],
+      "basis": "closed-form-limited",
+      "condition": "A product of vco_2.raw and its upsampled amplitude control; inherits oscillator phase accumulation."
+    },
+    "vco_2.raw": {
+      "analytic_properties": ["frequency_hz", "initial_phase_rad", "shape_regime"],
+      "basis": "closed-form-limited",
+      "condition": "A square/saw shape blend over an accumulated modulated phase; the shape regime at a frozen vco_2.shape is analytic, the samples are not."
+    }
+  },
+  "version": "1"
+}
