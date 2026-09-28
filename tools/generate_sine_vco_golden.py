@@ -47,6 +47,7 @@ from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
 from torchsynth_voice import vco_golden as vg  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     FixedVoiceModel,
@@ -159,10 +160,6 @@ SHADOW_BOUNDARY = (
     "wrap, quarter-wave LUT address/interpolation, S4 narrowing, the "
     "saturations) is RTL-owned."
 )
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def file_digest(path: Path) -> str:

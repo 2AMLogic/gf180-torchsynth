@@ -26,10 +26,14 @@ Stdlib only. Exit 0 when consistent, 1 with a list of findings otherwise.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from torchsynth_voice.digest import sha256_file  # noqa: E402
 
 SEMANTIC_VERSION = "rubric-v0"  # default; the expected version is derived per file (issue #53: rubric-v1 binds the calibrated rows)
 
@@ -79,10 +83,6 @@ class Findings:
 
     def add(self, message: str) -> None:
         self.errors.append(message)
-
-
-def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def resolve_path(node, path: str) -> list:

@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import float_mix as fm  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes as sha256_of_bytes  # noqa: E402
 
 RECORD_PATH = ROOT / "sim/reference/trace-capture.json"
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
@@ -109,10 +110,6 @@ def resolved_levels(document, case_id):
         if name in levels:
             levels[name] = override["physical"]
     return [levels[name] for name in LEVEL_NAMES]
-
-
-def sha256_of_bytes(data):
-    return hashlib.sha256(data).hexdigest()
 
 
 def check_record_bindings(record, document):

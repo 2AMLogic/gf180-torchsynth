@@ -40,6 +40,7 @@ from torchsynth_voice import float_interfaces as fi  # noqa: E402
 from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import vco2_golden as vg  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     FixedVoiceModel,
@@ -99,10 +100,6 @@ SHADOW_BOUNDARY = (
     "(pitch sum, clamp, increment division, phase wrap, both LUT "
     "interps, driven, right narrowing, combine, saturations) is RTL-owned."
 )
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def file_digest(path: Path) -> str:

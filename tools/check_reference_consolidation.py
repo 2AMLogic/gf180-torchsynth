@@ -44,13 +44,15 @@ Run directly for a report::
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from torchsynth_voice.digest import sha256_bytes as digest  # noqa: E402
 
 #: This module's own repo-relative path. The completeness scan in
 #: :func:`check_publication_pins` searches every ``*.py`` for
@@ -141,10 +143,6 @@ SOURCE_GATED_WORKERS = (
 )
 
 HEX64 = re.compile(r"\b[0-9a-f]{64}\b")
-
-
-def digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def read_bytes(relative: str) -> bytes:
