@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import hashlib
 import json
 import struct
 import sys
@@ -35,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import directed  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes as digest  # noqa: E402
 from torchsynth_voice.inventory import load_json  # noqa: E402
 from torchsynth_voice.scorecard import (  # noqa: E402
     ScorecardError,
@@ -116,10 +116,6 @@ def require(condition: object, reason: str) -> None:
 
 def encode(document: dict) -> bytes:
     return (json.dumps(document, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
-
-
-def digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def read_bytes(relative: str) -> bytes:
