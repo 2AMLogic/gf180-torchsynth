@@ -355,7 +355,7 @@
     "spec/schemas/directed-voice-v1.schema.json": "f860525b71094bf61351dc1a26348553279339558ccbd2c85a952e624f8969c7",
     "spec/schemas/scorecard-report-v1.schema.json": "30e0bee2c0a836526d9172bbc348e6381978e4704e9a55ad0a0ef822e8eae4d1",
     "spec/schemas/scorecard-row-v1.schema.json": "45ad8ea1f984efebf1c44cfd3a77ba693e619feb29bdd0c79f8699b5b29f357f",
-    "tools/review_directed_phase.py": "68f06294e957162452f4b24f8277bd7fbc411622ca3dcd88261e6b80808eb876"
+    "tools/review_directed_phase.py": "2306f4b088d1b9e0e4e4f554aeb86d5a62919b10d3fc247f386251c15e5ecbd3"
   },
   "limits": [
     "A preparation and contract review. It renders no audio, runs no estimator, and establishes no Voice, fixed-point, synthesis, layout, signoff or playback claim.",
