@@ -63,12 +63,12 @@ bit-exactly; ``tb/run_tb.py mix`` is the flow that proves it.
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import float_interfaces as fi
 from . import float_sources as fs
+from .digest import digest_words
 from .fixed_voice import AcceptedFormats, FixedVoiceModel, entry_quantize
 from .fixedpoint.counters import ROUNDING, SATURATION, StickyCounters
 from .fixedpoint.formats import FixedFormat
@@ -130,15 +130,6 @@ def product_format(audio: FixedFormat) -> FixedFormat:
     return FixedFormat(
         signed=True, int_bits=PRODUCT_INT_BITS, frac_bits=2 * audio.frac_bits
     )
-
-
-def digest_words(words: Sequence[int]) -> str:
-    """The #54 trace-digest convention over an integer word list."""
-
-    blob = json.dumps(
-        list(words), sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
-    return hashlib.sha256(blob).hexdigest()
 
 
 def level_words(

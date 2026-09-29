@@ -29,12 +29,11 @@ dataflow bit-exactly.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
 from fractions import Fraction
 from typing import Dict, List, Tuple
 
+from .digest import digest_words
 from .float_interfaces import AUDIO_RATE_HZ
 from .fixed_voice import entry_quantize, shadow_half_even
 from .fixedpoint.counters import StickyCounters
@@ -65,18 +64,6 @@ _SEMITONES_PER_OCTAVE = 12.0
 
 class SineVcoGoldenError(ValueError):
     """Raised when the sine-lane mirror refuses its inputs."""
-
-
-def digest_words(words) -> str:
-    """The #54 trace-digest convention over an integer word list.
-
-    The same canonical form the frozen receipt's per-trace digests use.
-    """
-
-    blob = json.dumps(
-        list(words), sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
-    return hashlib.sha256(blob).hexdigest()
 
 
 def initial_phase_word(

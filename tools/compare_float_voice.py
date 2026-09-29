@@ -55,6 +55,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import float_interfaces as fi  # noqa: E402
 from torchsynth_voice import float_voice as fv  # noqa: E402
 from torchsynth_voice import trace_registry as tr  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_file as sha256_of  # noqa: E402
 from torchsynth_voice.float_sources import NoiseSource, f32le_values  # noqa: E402
 from torchsynth_voice.paired_metrics import (  # noqa: E402
     Limit,
@@ -93,12 +94,8 @@ FIXTURE_REF_TRACES = (
 CLASSES = ("structural-identity", "validity", "coverage", "numeric-error")
 
 
-def sha256_of(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def digest_of_values(values):
-    return hashlib.sha256(fv.f32le_bytes(values)).hexdigest()
+    return sha256_bytes(fv.f32le_bytes(values))
 
 
 def load_json(path):

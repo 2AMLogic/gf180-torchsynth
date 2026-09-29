@@ -44,6 +44,7 @@ from torchsynth_voice.artifact_renderer import (  # noqa: E402
     dispatch_unset_flags,
     release_profile_environment,
 )
+from torchsynth_voice.digest import sha256_file  # noqa: E402
 
 RELEASE_RECORD = ROOT / "sim/reference/release-era-environment.json"
 MANIFEST_PATH = ROOT / "spec/reference/directed-voice-v1.json"
@@ -427,10 +428,6 @@ def main():
 if __name__ == "__main__":
     main()
 '''
-
-
-def sha256_file(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def json_bytes(record):

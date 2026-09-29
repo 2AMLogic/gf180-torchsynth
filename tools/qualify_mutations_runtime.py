@@ -17,7 +17,6 @@ Absence is reported as absent, never as a pass; staleness fails.
 """
 
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -35,6 +34,7 @@ from torchsynth_voice.artifact_renderer import (  # noqa: E402
     dispatch_unset_flags,
     release_profile_environment,
 )
+from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-runtime-v1.json"
 WORKER_PATH = ROOT / "env/release-era/mutation_worker.py"
@@ -72,10 +72,6 @@ NOT_RUN = (
     "development corpus cases and batch slots beyond the pinned global-0 "
     "selected sound",
 )
-
-
-def sha256(data):
-    return hashlib.sha256(data).hexdigest()
 
 
 def json_bytes(value):

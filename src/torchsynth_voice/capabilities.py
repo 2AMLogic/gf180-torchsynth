@@ -129,6 +129,7 @@ EVALUATOR_INPUTS = (
     "src/torchsynth_voice/artifacts.py",
     "src/torchsynth_voice/scorecard.py",
     "src/torchsynth_voice/contract.py",
+    "src/torchsynth_voice/digest.py",
     "src/torchsynth_voice/identity.py",
     "spec/schemas/capability-graph-v1.schema.json",
     "spec/schemas/capability-evidence-v1.schema.json",

@@ -21,7 +21,6 @@ the bounded actual-Voice runtime fault-injection evidence is owned by
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import sys
@@ -31,6 +30,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import mutations, mutation_runtime  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-framework-v1.json"
 
@@ -52,10 +52,6 @@ NOT_RUN = (
     "voice-runtime operators are test-only bridge proofs)",
     "detector qualification #34 matrix publication",
 )
-
-
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def build_publication():

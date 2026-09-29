@@ -14,13 +14,13 @@ inventory this module reconciles against.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import copy
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .digest import sha256_file
 from .scorecard import ScorecardError, validate_row
 
 LEDGER_SCHEMA_VERSION = 1
@@ -87,14 +87,6 @@ _SCOPE = (
 
 class EstimatorQualificationError(ValueError):
     """The ledger, an artifact, or the reviewed inventory fails completeness."""
-
-
-def sha256_file(path: str | Path) -> str:
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for block in iter(lambda: handle.read(1 << 16), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def _reject_constant(value: str) -> None:

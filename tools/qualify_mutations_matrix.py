@@ -35,7 +35,6 @@ blind-listening protocol and #48 rubric qualification are recorded not-run
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -49,6 +48,7 @@ from torchsynth_voice import mutation_runtime  # noqa: E402
 from torchsynth_voice import mutations_identity  # noqa: E402
 from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v1.json"
 
@@ -113,10 +113,6 @@ CI_SUBSET_CATEGORIES = {
     "gain": ("gain.",),
     "normalization": ("norm.",),
 }
-
-
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def register_families() -> dict:

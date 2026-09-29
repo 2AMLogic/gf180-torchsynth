@@ -36,6 +36,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
+from .digest import sha256_file
+
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "spec/reference/trace-registry-v1.json"
 INVENTORY_PATH = ROOT / "spec/reference/parameter-inventory-v1.json"
@@ -140,11 +142,6 @@ def compute_content_hash(document: Dict[str, Any]) -> str:
         payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True
     ).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()
-
-
-def sha256_file(path: Union[str, Path]) -> str:
-    """SHA-256 over the file's raw bytes."""
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def verify_accepted_contract(

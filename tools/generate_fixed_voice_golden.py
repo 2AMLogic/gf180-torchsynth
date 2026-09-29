@@ -71,6 +71,7 @@ from torchsynth_voice.fixed_voice import (  # noqa: E402
 from torchsynth_voice.fixedpoint.choices import ChoiceNotAccepted  # noqa: E402
 from torchsynth_voice.float_voice import FloatVoiceModel  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_json  # noqa: E402
 
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
 RECEIPT_OUT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
@@ -134,15 +135,6 @@ _SENTINEL_TRACES = (
     "vco_1.raw",
     "mixer.output",
 )
-
-
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def sha256_json(value) -> str:
-    blob = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 def file_digest(path: Path) -> str:

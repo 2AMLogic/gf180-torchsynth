@@ -17,7 +17,6 @@ Absence is reported as absent, never as a pass.
 """
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import os
@@ -27,6 +26,10 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
+
 PUBLICATION_PATH = ROOT / "sim/reference/trace-capture.json"
 WORKER_PATH = ROOT / "env/release-era/capture_traces.py"
 
@@ -55,10 +58,6 @@ def load_worker_constants():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-
-
-def sha256(data):
-    return hashlib.sha256(data).hexdigest()
 
 
 def json_bytes(value):

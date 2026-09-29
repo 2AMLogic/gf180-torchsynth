@@ -49,6 +49,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
+from torchsynth_voice.digest import sha256_bytes as sha256_hex  # noqa: E402
+
 CONFIG_SCHEMA_PATH = (
     ROOT / "spec" / "reference" / "listening-protocol-config-v1.schema.json"
 )
@@ -118,10 +120,6 @@ def canonical_bytes(document: Any) -> bytes:
     return json.dumps(
         document, sort_keys=True, separators=(",", ":"), ensure_ascii=True
     ).encode("utf-8")
-
-
-def sha256_hex(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
 
 
 def config_identity(cfg: Dict[str, Any]) -> str:

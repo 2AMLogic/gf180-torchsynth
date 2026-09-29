@@ -48,6 +48,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 from . import float_interfaces as fi
 from . import float_sources as fs
 from .contract import repository_root
+from .digest import digest_words
 from .fixed_voice import AcceptedFormats, FixedVoiceModel, normalize_words
 from .fixedpoint.counters import StickyCounters
 
@@ -85,15 +86,6 @@ _MIX_LANES = ("mixer.vco_1", "mixer.vco_2", "mixer.noise")
 
 class NormalizationReplayGoldenError(ValueError):
     """Raised when this module cannot resolve or mirror a requested case."""
-
-
-def digest_words(words: Sequence[int]) -> str:
-    """The #54 golden-receipt trace-digest convention over an integer word list."""
-
-    blob = json.dumps(
-        list(words), sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    )
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 def mirror_normalize(

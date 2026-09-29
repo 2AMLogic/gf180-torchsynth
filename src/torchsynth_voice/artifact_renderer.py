@@ -7,7 +7,6 @@ spec/CORPUS-RUNNER.md. Importing this module needs only the standard library.
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import math
 import platform
@@ -26,6 +25,7 @@ from .artifacts import (
     validate_artifact,
 )
 from .contract import UpstreamContract, repository_root, sha256_file
+from .digest import sha256_bytes as digest
 from .identity import SoundIdentity
 from .storage import ArtifactStore, StoredArtifact
 
@@ -100,10 +100,6 @@ def json_bytes(value):
     return (
         json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
     ).encode()
-
-
-def digest(data):
-    return hashlib.sha256(data).hexdigest()
 
 
 def fixture(index):
