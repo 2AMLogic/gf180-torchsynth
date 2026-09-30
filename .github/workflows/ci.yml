@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   contract:
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
+    # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
+    # outage and the operator's move of every public repo off Blacksmith (D5).
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python: ["3.11", "3.12", "3.13"]

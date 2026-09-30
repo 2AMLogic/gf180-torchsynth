@@ -37,7 +37,9 @@ jobs:
     # interpreter version, and running them across the ci.yml-style
     # 3-version matrix would triple already-bounded RTL wall-clock for no
     # verification value (issue #187).
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'blacksmith-4vcpu-ubuntu-2404' || 'ubuntu-latest' }}
+    # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
+    # outage and the operator's move of every public repo off Blacksmith (D5).
+    runs-on: ubuntu-24.04
     # >= the sum of the per-step budgets below (370) plus install/checkout
     # margin, so a single runaway lane is caught by its own step timeout
     # rather than by the job cap.
