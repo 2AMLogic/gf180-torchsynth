@@ -29,12 +29,9 @@
 //
 // The ``link_valid`` wire is a named mutation seam (the tb runner plants a
 // missing-sample fault there and requires the status/trace comparison to
-// catch it). It is exposed as a port so the testbench can capture the
-// mixer-output trace on link_valid rather than mix_out_valid -- a link-side
-// drop would otherwise be invisible to a capture gated on the mixer's own
-// valid, since mix_out_valid itself never skips a cycle (see
-// spec/ONESHOT-E2E.md AC2). PDK-free plain SystemVerilog for Icarus Verilog
-// (-g2012).
+// catch it). It is exported as ``link_valid_out`` so the testbench can
+// capture the replay engine's input stream and localize a link fault to the
+// faulting sample. PDK-free plain SystemVerilog for Icarus Verilog (-g2012).
 
 `timescale 1ns/1ps
 
@@ -64,6 +61,10 @@ module one_shot_tail_top (
     output wire        [C1_WIDTH-1:0] mix_abs,
     output wire        [C1_WIDTH-1:0] mix_peak_word,
     output wire                       mix_out_valid,
+    // The replay engine's own ``mix_valid`` (the ``link_valid`` seam below),
+    // brought out so the testbench captures what the engine actually
+    // consumes, not only what the mixer emitted.
+    output wire                       link_valid_out,
     output wire [31:0] mix_op_mults,
     output wire [31:0] mix_op_adds,
     output wire [31:0] mix_op_narrows,
@@ -71,7 +72,6 @@ module one_shot_tail_top (
     output wire [31:0] mix_op_rounds,
     output wire [31:0] mix_op_peak_cmps,
     output wire [31:0] mix_op_acc_faults,
-    output wire                       link_valid,
 
     // --- #77 replay side -------------------------------------------------
     input  wire start,
@@ -127,7 +127,8 @@ module one_shot_tail_top (
 
     // The link. A mutant that drops, duplicates or re-times a sample here is
     // exactly the "missing-sample" regression tb/run_oneshot.py must catch.
-    assign link_valid = mix_out_valid;
+    wire link_valid = mix_out_valid;
+    assign link_valid_out = link_valid;
 
     normalization_replay_engine replay (
         .clk               (clk),

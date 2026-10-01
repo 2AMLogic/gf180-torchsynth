@@ -48,6 +48,8 @@ def clean_capture(expected):
     return {
         "mix1": [(10 + i, w) for i, w in enumerate(expected["mix"])],
         "mix2": [(100 + i, w) for i, w in enumerate(expected["mix"])],
+        "link1": [(10 + i, w) for i, w in enumerate(expected["mix"])],
+        "link2": [(100 + i, w) for i, w in enumerate(expected["mix"])],
         "out": [(200 + i, w) for i, w in enumerate(expected["out"])],
         "status": list(expected["status"]),
         "ops": {"P1": list(expected["mix_ops"]), "P2": list(expected["mix_ops"])},
@@ -82,6 +84,36 @@ class ComparatorLocalizesFirstMismatch(unittest.TestCase):
         traces = {row[0]: row for row in rows}
         row = traces["mixer.pre_normalization[pass1]"]
         self.assertEqual(row[2], 3)  # first differing sample index
+
+    def test_link_drop_is_localized_to_the_dropped_sample(self):
+        # the #79 missing-sample mutant: the mixer emits every word but the
+        # replay engine never consumes sample 3. The mixer trace is clean;
+        # the link capture must name sample 3 as the earliest divergence.
+        expected = synthetic_expected()
+        capture = clean_capture(expected)
+        del capture["link1"][3]
+        rows = ro.oneshot_rows(capture, expected)
+        self.assertEqual(rows[0][:3], ("link.replay_input[pass1]", 14, 3))
+
+    def test_sequence_rows_are_ordered_by_cycle(self):
+        # a late pass-1 mixer divergence must not mask an earlier link one
+        expected = synthetic_expected()
+        capture = clean_capture(expected)
+        capture["mix1"].append((18, 99))          # extra late pass-1 word
+        capture["link1"][2] = (12, capture["link1"][2][1] + 1)
+        rows = ro.oneshot_rows(capture, expected)
+        self.assertEqual(
+            [r[0] for r in rows[:2]],
+            ["link.replay_input[pass1]", "mixer.pre_normalization[pass1]"],
+        )
+        self.assertEqual([r[1] for r in rows[:2]], [12, 18])
+
+    def test_missing_sample_location_is_the_declared_drop(self):
+        self.assertEqual(
+            ro.ONESHOT_MISSING_SAMPLE_LOCATION,
+            ("link.replay_input[pass1]", ro.ONESHOT_DROP_SAMPLE),
+        )
+        self.assertIn("linkcap", ro.ONESHOT_ARTIFACTS)
 
     def test_no_tolerance_one_ulp_status_difference_fails(self):
         expected = synthetic_expected()
@@ -127,7 +159,7 @@ class MutationSeamsAreAnchored(unittest.TestCase):
             ro.ONESHOT_LINK_MISSING_SAMPLE,
             "missing-sample",
         )
-        self.assertEqual(mutated.count("assign link_valid"), 1)
+        self.assertEqual(mutated.count("wire link_valid"), 1)
         self.assertIn("MUTANT", mutated)
 
     @unittest.skipUnless(has_iverilog(), "Icarus Verilog not installed")
@@ -250,6 +282,59 @@ class CasePartitionMatchesFrozenReceipt(unittest.TestCase):
             ro.ONESHOT_MUTATION_BYPASS_CASE,
         }:
             self.assertIn(cid, ro.ONESHOT_REGRESSION_CASES)
+
+
+class CiJobBudgetsAreConsistent(unittest.TestCase):
+    """tb-sim.yml: a capped job's step budgets must fit under its cap.
+
+    Otherwise a slow lane is killed by the job cap instead of its own step
+    timeout, and GitHub-hosted jobs hard-stop at 360 minutes regardless.
+    Line-based (stdlib only; CI's unittest env need not carry PyYAML).
+    """
+
+    WORKFLOW = ROOT / ".github/workflows/tb-sim.yml"
+    HOSTED_JOB_LIMIT = 360
+
+    def _budgets(self):
+        jobs, job, in_jobs = {}, None, False
+        for line in self.WORKFLOW.read_text(encoding="utf-8").splitlines():
+            if line.startswith("jobs:"):
+                in_jobs = True
+                continue
+            if not in_jobs or not line.strip() or line.lstrip().startswith("#"):
+                continue
+            indent = len(line) - len(line.lstrip())
+            text = line.strip()
+            if indent == 2 and text.endswith(":"):
+                job = text[:-1]
+                jobs[job] = {"cap": None, "steps": []}
+            elif job and text.startswith("timeout-minutes:"):
+                value = int(text.split(":", 1)[1])
+                if indent == 4:
+                    jobs[job]["cap"] = value
+                else:
+                    jobs[job]["steps"].append(value)
+        return jobs
+
+    def test_oneshot_lane_has_its_own_job(self):
+        jobs = self._budgets()
+        self.assertIn("oneshot-tail-chain", jobs)
+        text = self.WORKFLOW.read_text(encoding="utf-8")
+        self.assertEqual(text.count("tb/run_oneshot.py --profile regression"), 1)
+
+    def test_step_budgets_fit_under_each_job_cap(self):
+        for name, job in self._budgets().items():
+            if job["cap"] is None:
+                continue
+            with self.subTest(job=name):
+                self.assertLess(sum(job["steps"]), job["cap"])
+
+    def test_oneshot_job_cap_is_within_the_hosted_limit(self):
+        # Scoped to this lane's job. sim-lanes (370-min step sum, 400-min
+        # cap) predates #79 and already exceeds the hosted limit; that is a
+        # separate follow-up, not asserted (or hidden) here.
+        job = self._budgets()["oneshot-tail-chain"]
+        self.assertLessEqual(job["cap"], self.HOSTED_JOB_LIMIT)
 
 
 if __name__ == "__main__":

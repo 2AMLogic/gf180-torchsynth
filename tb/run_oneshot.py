@@ -85,18 +85,23 @@ ONESHOT_HASH_CASES = ("oneshot:divide-distinct-levels", "normalization:below")
 #: Sample the missing-sample link mutation drops (same index the #75 slip
 #: mutations use).
 ONESHOT_DROP_SAMPLE = 1000
-ONESHOT_LINK_ANCHOR = "assign link_valid = mix_out_valid;"
+ONESHOT_LINK_ANCHOR = "wire link_valid = mix_out_valid;"
 ONESHOT_LINK_MISSING_SAMPLE = (
     "reg [31:0] drop_count;\n"
     "    always @(posedge clk) begin\n"
     "        if (rst) drop_count <= 32'd0;\n"
     "        else if (mix_out_valid) drop_count <= drop_count + 32'd1;\n"
     "    end\n"
-    "    assign link_valid = mix_out_valid && !(drop_count == 32'd%d);"
+    "    wire link_valid = mix_out_valid && !(drop_count == 32'd%d);"
     "  // MUTANT: one sample dropped at the link" % ONESHOT_DROP_SAMPLE
 )
+#: Where the missing-sample control must be localized: the replay engine's
+#: consumed stream (the link capture), at the dropped sample.
+ONESHOT_MISSING_SAMPLE_LOCATION = (
+    "link.replay_input[pass1]", ONESHOT_DROP_SAMPLE,
+)
 ONESHOT_ARTIFACTS = (
-    "params", "streams", "mixcap", "outcap", "status", "ops",
+    "params", "streams", "mixcap", "linkcap", "outcap", "status", "ops",
 )
 #: Where raw artifacts of a failed committed run are retained (a fresh
 #: directory under the system temp dir, printed on failure).
@@ -140,11 +145,17 @@ def oneshot_simulate(workdir: Path, runs: int, top_sv: Path = None,
                     out.append(None)  # an x-state emission: a mismatch
             return out
         mixcap = rows("mixcap", 3)
+        linkcap = rows("linkcap", 3)
         capture = {
             "mix1": [(row[0], row[2]) if row else (None, None)
                      for row in mixcap if row is None or row[1] == 1],
             "mix2": [(row[0], row[2]) if row else (None, None)
                      for row in mixcap if row is not None and row[1] == 2],
+            # what the replay engine consumed (mix_in on its mix_valid)
+            "link1": [(row[0], row[2]) if row else (None, None)
+                      for row in linkcap if row is None or row[1] == 1],
+            "link2": [(row[0], row[2]) if row else (None, None)
+                      for row in linkcap if row is not None and row[1] == 2],
             "out": [tuple(row) if row else (None, None)
                     for row in rows("outcap", 2)],
         }
@@ -202,26 +213,36 @@ def oneshot_rows(capture: dict, expected: dict) -> list:
     """Every first-mismatch row: (trace, cycle, sample, expected, actual).
 
     Exact comparison, no tolerance anywhere. Sequences are compared word by
-    word (the first differing sample is named with the capture's own cycle),
-    then every status register and both passes' mixer counters.
+    word (the first differing sample is named with the capture's own cycle):
+    the mixer's emitted stream, the replay engine's consumed stream (the
+    link) and the released output. Sequence rows are ordered by cycle, so
+    ``rows[0]`` is the earliest observable divergence in simulated time.
+    Every status register and both passes' mixer counters follow.
     """
 
-    found = []
+    seq_rows = []
 
     def sequence(trace, got, want):
         for index in range(max(len(got), len(want))):
             g = got[index] if index < len(got) else None
             w = want[index] if index < len(want) else None
             if g is None or w is None or g[1] != w:
-                found.append(
+                seq_rows.append(
                     (trace, g[0] if g else None, index, w,
                      g[1] if g else None)
                 )
                 return
 
     sequence("mixer.pre_normalization[pass1]", capture["mix1"], expected["mix"])
+    sequence("link.replay_input[pass1]", capture["link1"], expected["mix"])
     sequence("mixer.pre_normalization[pass2]", capture["mix2"], expected["mix"])
+    sequence("link.replay_input[pass2]", capture["link2"], expected["mix"])
     sequence("mixer.output", capture["out"], expected["out"])
+    # stable sort: ties keep the upstream-first order above; a row with no
+    # cycle (a sequence that ended early) sorts after every timed row
+    found = sorted(
+        seq_rows, key=lambda row: (row[1] is None, row[1] or 0)
+    )
     got_status = capture["status"]
     for name, want, got in zip(
         ONESHOT_STATUS_NAMES, expected["status"], got_status
@@ -414,12 +435,14 @@ def oneshot(workdir: Path, simulator: str) -> int:
         rows = oneshot_rows(capture, expected)
         count_ok = (
             len(capture["mix1"]) == len(capture["mix2"])
+            == len(capture["link1"]) == len(capture["link2"])
             == len(capture["out"]) == case["samples"] == 176400
         )
         if not count_ok:
-            print("ONESHOT FAILED: %s sample counts pass1/pass2/out = "
-                  "%d/%d/%d (need exactly 176400)"
+            print("ONESHOT FAILED: %s sample counts pass1/pass2/link1/link2/"
+                  "out = %d/%d/%d/%d/%d (need exactly 176400)"
                   % (case_id, len(capture["mix1"]), len(capture["mix2"]),
+                     len(capture["link1"]), len(capture["link2"]),
                      len(capture["out"])))
         oneshot_print_rows(case_id, rows)
         case_ok = case_ok and count_ok and not rows
@@ -507,7 +530,7 @@ def oneshot(workdir: Path, simulator: str) -> int:
     bypass = derived[ONESHOT_MUTATION_BYPASS_CASE]
     mutants = []
 
-    def sim_mutant(label, kind, case, mutate=None, **stim):
+    def sim_mutant(label, kind, case, mutate=None, localize=None, **stim):
         mut_dir = workdir / ("mut-" + label)
         mut_dir.mkdir(parents=True, exist_ok=True)
         kwargs = {}
@@ -530,6 +553,15 @@ def oneshot(workdir: Path, simulator: str) -> int:
         rows = oneshot_rows(capture, expectations[case["id"]])
         detected = bool(rows)
         first_row = rows[0] if rows else None
+        if localize is not None and detected:
+            # the control must also be *located*: its earliest row must name
+            # the declared trace and faulting sample, else the run fails
+            located = (first_row[0], first_row[2]) == localize
+            if not located:
+                print("ONESHOT FAILED: mutation %s detected but not localized "
+                      "(first row trace=%s sample=%s; need trace=%s sample=%s)"
+                      % ((label, first_row[0], first_row[2]) + localize))
+                detected = False
         print(
             "mutation %s (%s, case %s): %s%s"
             % (label, kind, case["id"],
@@ -547,23 +579,28 @@ def oneshot(workdir: Path, simulator: str) -> int:
                   "gain-one-ulp"):
         mut_ok = sim_mutant(label, "stimulus", divide, **stimulus[label]) \
             and mut_ok
-    for label, target, anchor, replacement, case in (
+    for label, target, anchor, replacement, case, localize in (
         ("normalization-always-off", NORMREPLAY_DUT_SV,
-         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_OFF_MUTANT, divide),
+         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_OFF_MUTANT, divide,
+         None),
         ("normalization-always-on", NORMREPLAY_DUT_SV,
-         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_ON_MUTANT, bypass),
+         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_ON_MUTANT, bypass,
+         None),
         ("normalization-wrong-reciprocal", NORMREPLAY_DUT_SV,
          NORMREPLAY_WRONG_RECIPROCAL_ANCHOR,
-         NORMREPLAY_WRONG_RECIPROCAL_MUTANT, divide),
+         NORMREPLAY_WRONG_RECIPROCAL_MUTANT, divide, None),
         ("normalization-wrong-peak", NORMREPLAY_DUT_SV,
-         NORMREPLAY_WRONG_PEAK_ANCHOR, NORMREPLAY_WRONG_PEAK_MUTANT, divide),
+         NORMREPLAY_WRONG_PEAK_ANCHOR, NORMREPLAY_WRONG_PEAK_MUTANT, divide,
+         None),
         ("missing-sample", ONESHOT_TOP_SV, ONESHOT_LINK_ANCHOR,
-         ONESHOT_LINK_MISSING_SAMPLE, divide),
+         ONESHOT_LINK_MISSING_SAMPLE, divide,
+         ONESHOT_MISSING_SAMPLE_LOCATION),
         ("mixer-truncate", MIX_DUT_SV, MIX_RTL_MUTATIONS["mixer-truncate"][0],
-         MIX_RTL_MUTATIONS["mixer-truncate"][1], divide),
+         MIX_RTL_MUTATIONS["mixer-truncate"][1], divide, None),
     ):
         mut_ok = sim_mutant(label, "RTL", case,
-                            mutate=(target, anchor, replacement)) and mut_ok
+                            mutate=(target, anchor, replacement),
+                            localize=localize) and mut_ok
     ok = ok and mut_ok
 
     record = {

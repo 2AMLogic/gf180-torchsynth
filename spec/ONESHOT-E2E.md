@@ -52,7 +52,7 @@ sequencing signals (`start`, mixer `trigger`, `mix_done`).
 | # | Criterion | Status | Where / why |
 | --- | --- | --- | --- |
 | 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **PARTIAL.** Met for the tail chain (every case in the declared profile, both passes and the output clip, plus every status/counter register). **Not met** for the whole-voice top: it does not exist. | `oneshot()` section 1 |
-| 2 | First mismatch localized by trace/cycle/sample, raw artifacts retained | Met for the chain | `oneshot_rows`, `oneshot_print_rows`; failed committed runs copy their raw artifacts to a printed `oneshot-failed-*` temp dir; `--workdir` keeps everything |
+| 2 | First mismatch localized by trace/cycle/sample, raw artifacts retained | Met for the chain | `oneshot_rows`, `oneshot_print_rows`: three sequence traces are captured -- the mixer's emitted stream, the replay engine's consumed stream (`link.replay_input`, sampled on the `link_valid` seam) and the released output -- and the first mismatch is the earliest by cycle. The missing-sample control must localize to `link.replay_input[pass1]` at its dropped sample (1000) or the run fails. Failed committed runs copy their raw artifacts to a printed `oneshot-failed-*` temp dir; `--workdir` keeps everything |
 | 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | Met at the chain boundary, with the caveat below | Mutation table below |
 | 4 | Two clean simulations artifact-hash identical | Met for two declared cases (one divide, one bypass); every other case is simulated once | `oneshot()` section 3 |
 | 5 | Runtime/regression partition and full evidence commands documented | Met | Partition below |
@@ -61,16 +61,23 @@ sequencing signals (`start`, mixer `trigger`, `mix_done`).
 
 ### The mutation caveat (AC3)
 
-"Parameter shuffle", "wrong noise", "interpolation" and "gain" are faults of
-logic that lives *upstream* of this chain (patch parameter routing, the noise
-stream, the control upsample, the host-fed noise level word). They are
-therefore planted as **stimulus-side** mutations: the pristine RTL is fed a
-wrong level order / a one-slot-rotated noise stream / a zero-order-hold
-amplitude column / a +1 ULP noise level word, and the chain must expose each
-against the model's expected traces. That proves the chain is *sensitive* to
-those faults, not that RTL implementing those upstream blocks catches them --
-that RTL is not composed here. The normalization and missing-sample mutations
-are genuine RTL mutations of the composed hardware.
+"Parameter shuffle", "wrong noise" and "interpolation" are faults of logic
+that lives *upstream* of this chain (patch parameter routing, the noise
+stream, the control upsample). They are therefore planted as **stimulus-side**
+mutations: the pristine RTL is fed a wrong level order / a one-slot-rotated
+noise stream / a zero-order-hold amplitude column, and the chain must expose
+each against the model's expected traces. That proves the chain is *sensitive*
+to those faults, not that RTL implementing those upstream blocks catches them
+-- that RTL is not composed here.
+
+`gain-one-ulp` is **also stimulus-side**: it bumps the host-fed noise level
+word by one ULP; the mixer's level-multiply RTL is pristine. So four of the
+ten controls (`parameter-shuffle`, `wrong-noise`, `interpolation-zoh`,
+`gain-one-ulp`) are stimulus-only. The other six -- the four normalization
+mutations, `missing-sample` and `mixer-truncate` -- are genuine RTL mutations
+of the composed hardware. The only genuine RTL *gain* fault is
+`normalization-wrong-reciprocal`; there is no RTL mutant of the mixer's level
+multiply in this lane.
 
 | Control | Kind | Planted fault |
 | --- | --- | --- |
@@ -82,12 +89,14 @@ are genuine RTL mutations of the composed hardware.
 | `normalization-always-on` | RTL | replay engine always divides (on a bypass case) |
 | `normalization-wrong-reciprocal` | RTL | U1.22 gain word +1 ULP |
 | `normalization-wrong-peak` | RTL | peak tracker keeps the last sample, not the max |
-| `missing-sample` | RTL | one mixer sample (index 1000) dropped at the link |
+| `missing-sample` | RTL | one mixer sample (index 1000) dropped at the link; must localize to `link.replay_input[pass1]` sample 1000 |
 | `mixer-truncate` | RTL | truncation instead of half-even at the mixer narrowing |
 
 Each must be DETECTED; an undetected control fails the run. Detection is the
 exact-comparison rows of the same machinery the committed cases use, and the
-first mismatching trace/cycle/sample is printed per control.
+first (earliest-cycle) mismatching trace/cycle/sample is printed per control.
+`missing-sample` additionally fails the run if it is detected but its first
+row is not the declared link trace and sample.
 
 Back-to-back replay note: the replay engine's op counters are free-running
 until reset, so the replay check requires the second run's counters to equal
@@ -117,14 +126,14 @@ samples each) and the 176,400-sample released output.
 
 | Profile | Cases | Command | Role |
 | --- | --- | --- | --- |
-| `regression` (default) | `normalization:above/below/tie`, `normalization-stress:anchor-3.9478583336`, `source:noise`, `special:silence`, `special:stress`, `oneshot:divide-distinct-levels` plus the replay pair, two hash pairs and ten mutation simulations | `python3 tb/run_oneshot.py --profile regression` | PR/CI gate (`tb-sim.yml`) |
+| `regression` (default) | `normalization:above/below/tie`, `normalization-stress:anchor-3.9478583336`, `source:noise`, `special:silence`, `special:stress`, `oneshot:divide-distinct-levels` plus the replay pair, two hash pairs and ten mutation simulations | `python3 tb/run_oneshot.py --profile regression` | PR/CI gate (`tb-sim.yml` job `oneshot-tail-chain`) |
 | `full` | all 26 receipt cases + 3 directed fixtures + the derived fixture, plus the same pair/hash/mutation simulations | `python3 tb/run_oneshot.py --profile full --workdir <dir>` | release-era evidence; remote AWS box per `CLAUDE.md` |
 
 Both profiles walk the complete clip twice; neither caps a walk. The
 regression profile compiles and simulates roughly twenty-five times; a full
 regression run on the dev Mac took tens of minutes wall-clock
 (single machine, serial; indicative, not a bound). Pass `--workdir` to retain every raw
-artifact (`run0_{params,streams,mixcap,outcap,status,ops}.txt`) and the
+artifact (`run0_{params,streams,mixcap,linkcap,outcap,status,ops}.txt`) and the
 evidence record `oneshot-evidence.json`. Exit status is the lane's own
 pass/fail; exit 3 means Icarus Verilog is absent and **nothing ran**.
 

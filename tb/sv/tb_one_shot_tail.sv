@@ -8,11 +8,11 @@
 //   - run<r>_params.txt: three C1 Q2.21 level entry words, unsigned 32-bit
 //     bit patterns ("level_vco_1 level_vco_2 level_noise").
 //   - run<r>_streams.txt: 176,400 lines "raw1 raw2 rawn amp1 amp2 ampn".
-//   - run<r>_mixcap.txt: one line per link-valid cycle "cycle pass word"
-//     (pass is the replay engine's own pass_index at that edge). Sampled on
-//     link_valid, not mix_out_valid, so it reflects what the replay engine
-//     actually consumed -- a link-side drop/duplicate/re-time mutation is
-//     visible here, localized to the cycle it happens on.
+//   - run<r>_mixcap.txt: one line per mixer-valid cycle "cycle pass word"
+//     (pass is the replay engine's own pass_index at that edge).
+//   - run<r>_linkcap.txt: one line per link-valid cycle "cycle pass word":
+//     the words the replay engine actually consumes (its mix_in qualified by
+//     its mix_valid), so a link fault localizes to the faulting sample.
 //   - run<r>_outcap.txt: one line per released output "cycle word".
 //   - run<r>_status.txt: one line "error error_code peak gain branch done
 //     pass compares selects recip_divs mults narrows saturations mix_peak".
@@ -44,8 +44,7 @@ module tb;
 
     wire signed [C1_WIDTH-1:0] post_vca_1, post_vca_2, post_vca_n, mix_word;
     wire        [C1_WIDTH-1:0] mix_abs, mix_peak_word;
-    wire                       mix_out_valid;
-    wire                       link_valid;
+    wire                       mix_out_valid, link_valid_out;
     wire [31:0] m_m, m_a, m_n, m_s, m_r, m_p, m_f;
     wire signed [C1_WIDTH-1:0] audio_out;
     wire        audio_out_valid, busy, done, error, branch_normalized;
@@ -66,10 +65,10 @@ module tb;
         .post_vca_1(post_vca_1), .post_vca_2(post_vca_2),
         .post_vca_n(post_vca_n), .mix_word(mix_word), .mix_abs(mix_abs),
         .mix_peak_word(mix_peak_word), .mix_out_valid(mix_out_valid),
+        .link_valid_out(link_valid_out),
         .mix_op_mults(m_m), .mix_op_adds(m_a), .mix_op_narrows(m_n),
         .mix_op_sats(m_s), .mix_op_rounds(m_r), .mix_op_peak_cmps(m_p),
         .mix_op_acc_faults(m_f),
-        .link_valid(link_valid),
         .start(start), .mix_done(mix_done),
         .audio_out(audio_out), .audio_out_valid(audio_out_valid),
         .busy(busy), .done(done), .error(error), .error_code(error_code),
@@ -89,6 +88,7 @@ module tb;
     reg signed [C1_WIDTH-1:0] s_ampn [0:N-1];
 
     integer mixcap_fd [0:MAX_RUNS-1];
+    integer linkcap_fd [0:MAX_RUNS-1];
     integer outcap_fd [0:MAX_RUNS-1];
     integer RUNS, r, fd, code, k;
     integer v0, v1, v2, v3, v4, v5;
@@ -99,8 +99,10 @@ module tb;
     always @(posedge clk) begin
         cyc <= cyc + 1;
         if (!rst && r >= 0) begin
-            if (link_valid)
+            if (mix_out_valid)
                 $fwrite(mixcap_fd[r], "%0d %0d %0d\n", cyc, pass_index, mix_word);
+            if (link_valid_out)
+                $fwrite(linkcap_fd[r], "%0d %0d %0d\n", cyc, pass_index, mix_word);
             if (audio_out_valid)
                 $fwrite(outcap_fd[r], "%0d %0d\n", cyc, audio_out);
         end
@@ -180,6 +182,8 @@ module tb;
         for (k = 0; k < RUNS; k = k + 1) begin
             $sformat(fname, "run%0d_mixcap.txt", k);
             mixcap_fd[k] = $fopen(fname, "w");
+            $sformat(fname, "run%0d_linkcap.txt", k);
+            linkcap_fd[k] = $fopen(fname, "w");
             $sformat(fname, "run%0d_outcap.txt", k);
             outcap_fd[k] = $fopen(fname, "w");
         end
@@ -205,6 +209,7 @@ module tb;
         end
         for (k = 0; k < RUNS; k = k + 1) begin
             $fclose(mixcap_fd[k]);
+            $fclose(linkcap_fd[k]);
             $fclose(outcap_fd[k]);
         end
         $display("TB-DONE %0d", RUNS);
