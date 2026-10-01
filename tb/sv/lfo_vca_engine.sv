@@ -209,12 +209,24 @@ module lfo_vca_engine #(
     // audio-path table's 24-bit C5_ENTRY_WIDTH. Index C5_N_ENTRIES holds
     // the quarter-turn endpoint entry (the reflected r == 0 neighbor of
     // the last entry).
+    //
+    // Table selection: this engine's table is the CONTROL path's Q1.23
+    // table, which is NOT the accepted C5 audio-path table the #73/#74
+    // engines read. A bench that instantiates only this engine may keep
+    // passing the single ``+lut=<memh>`` plusarg; a bench that composes
+    // this engine together with the audio-path engines (the integrated
+    // whole-voice top, issue #79) must distinguish the two tables, and
+    // passes the control table as ``+ctl_lut=<memh>``. ``+ctl_lut`` is
+    // therefore preferred and ``+lut`` is the backward-compatible
+    // fallback -- content unchanged either way, only the file selection.
     reg signed [24:0] rom [0:C5_N_ENTRIES];
     reg [1023:0] lut_file;
     initial begin
-        if (!$value$plusargs("lut=%s", lut_file)) begin
-            $display("DUT-ERROR inst %0d missing +lut=<memh path> plusarg", INST_ID);
-            $finish;
+        if (!$value$plusargs("ctl_lut=%s", lut_file)) begin
+            if (!$value$plusargs("lut=%s", lut_file)) begin
+                $display("DUT-ERROR inst %0d missing +ctl_lut= (or +lut=) memh plusarg", INST_ID);
+                $finish;
+            end
         end
         $readmemh(lut_file, rom);
     end

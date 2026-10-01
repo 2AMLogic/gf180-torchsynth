@@ -113,6 +113,54 @@ jobs:
         timeout-minutes: 150
         run: python3 tb/run_oneshot.py --profile regression
 
+  oneshot-whole-voice:
+    # Issue #79's INTEGRATED WHOLE-VOICE top: every landed Epic #2 engine
+    # (#70 x6, #71 x2, #72 matrix + 5 upsample columns, #73, #74, #75, #76,
+    # #77) composed into one clip renderer, regression profile. Its own job
+    # for the same reason oneshot-tail-chain is: it runs in parallel with
+    # sim-lanes, and its budget would push sim-lanes' step sum past that
+    # job's cap and past GitHub-hosted runners' 360-minute job limit.
+    #
+    # The profile is 2 committed cases (one bypass branch, one divide) at
+    # 1,764 control ticks + 2 x 176,400 audio samples each, 2 clean
+    # full-length simulations for artifact-hash identity, a back-to-back
+    # replay pair + solo, and 12 all-RTL mutation simulations -- 10 of which
+    # are full-length (the four normalization controls must be, because the
+    # branch decision is only reached at sample 176,400). Measured ~12 min
+    # per full-length simulation and ~2 h total on the dev Mac (Apple
+    # silicon, iverilog 13.0, serial); the step budget below is ~2.5x that
+    # for a slower hosted runner. This is the most expensive lane in the
+    # repository on purpose: it is the end-to-end bit-identity gate.
+    #
+    # The full profile (26 param-committed receipt cases + 3 directed
+    # fixtures + 1 derived fixture, ~15x this work) is the release-era
+    # AWS-box evidence command in spec/ONESHOT-E2E.md, not a PR gate.
+    runs-on: ubuntu-24.04
+    # >= the one lane step budget (300) plus install/checkout margin, and
+    # within GitHub-hosted's 360-minute hard job limit, so a runaway run is
+    # caught by its own step timeout rather than by the job cap.
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Make evidence output directory
+        run: mkdir -p out/whole-voice
+      - name: "Whole-voice one-shot lane, regression profile (issue 79, iverilog, PDK-free)"
+        timeout-minutes: 300
+        run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice
+      - name: Upload whole-voice evidence record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneshot-whole-voice-evidence
+          path: out/whole-voice/voice-evidence.json
+          retention-days: 30
+          if-no-files-found: ignore
+
   rtl-module-qualification:
     # Issue #78's aggregation/gating layer. sim-lanes above already re-proves
     # every lane's own bit-exact conformance individually; this job proves
