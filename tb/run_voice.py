@@ -20,7 +20,10 @@ the frozen fixed model's own cases, and:
    the tail-chain increment (``tb/run_oneshot.py``), **every control here
    is a genuine RTL mutation**, including the parameter-shuffle, wrong-
    noise, interpolation and gain classes, because the RTL that owns each
-   of those faults is now composed in.
+   of those faults is now composed in. Binding faults are demonstrated on
+   a declared *binding-distinct* stimulus, because the uniform
+   ``special:stress`` parameters cannot distinguish the two things a
+   binding fault confuses (see :func:`voice_binding_overrides`).
 
 Separate entry point from ``tb/run_tb.py`` for the same reason
 ``run_oneshot.py`` is: it is not a lane of the #78 aggregate qualification
@@ -82,6 +85,69 @@ VOICE_REGRESSION_CASES = (
     "normalization:below",              # bypass branch, param-committed
     "voice:divide-distinct-levels",     # divide branch, three distinct levels
 )
+#: Per-route modulation depths for the binding-distinct fixture below. Every
+#: one of the twenty words is distinct, and the two PITCH rows are pushed to
+#: opposite ends of the range so a pitch-route fault is not merely a small
+#: perturbation of a nearly equal word.
+VOICE_BINDING_DEPTHS = {
+    "vco_1_pitch": (0.07, 0.11, 0.13, 0.17),
+    "vco_1_amp":   (0.23, 0.29, 0.31, 0.37),
+    "vco_2_pitch": (0.89, 0.91, 0.93, 0.97),
+    "vco_2_amp":   (0.41, 0.43, 0.47, 0.53),
+    "noise_amp":   (0.59, 0.61, 0.67, 0.71),
+}
+#: Per-instance envelope formations for the same fixture, in the model's own
+#: prefix order: (attack, decay, sustain, release). All six differ, and every
+#: attack is shorter than the prefix-capped mutation walk (6,000 audio samples
+#: = 60 control ticks = 0.136 s), so an envelope-role fault diverges inside
+#: the cap rather than only in the release tail.
+VOICE_BINDING_ENVELOPES = {
+    "adsr_1":          (0.02, 0.10, 0.75, 0.20),
+    "adsr_2":          (0.05, 0.15, 0.60, 0.30),
+    "lfo_1_rate_adsr": (0.01, 0.08, 0.90, 0.12),
+    "lfo_1_amp_adsr":  (0.03, 0.12, 0.45, 0.25),
+    "lfo_2_rate_adsr": (0.04, 0.06, 0.80, 0.18),
+    "lfo_2_amp_adsr":  (0.06, 0.20, 0.30, 0.35),
+}
+
+
+def voice_binding_overrides() -> dict:
+    """``special:stress`` overrides that make every binding observable.
+
+    ``special:stress`` is deliberately uniform: all twenty modulation depths
+    are 1.0, all six envelope parameter sets are identical and the two LFO
+    sides are identical. That uniformity makes a whole class of genuine RTL
+    binding faults -- a permuted matrix source column, a swapped LFO
+    envelope role, a swapped amplitude or pitch route -- produce *identical*
+    output, so those mutations survive on it. (They did: the first run of
+    this lane reported four NOT DETECTED controls for exactly this reason.)
+    This map breaks every such symmetry.
+    """
+
+    overrides = {}
+    for route, row in VOICE_BINDING_DEPTHS.items():
+        for source, depth in zip(MOD_MATRIX_INPUTS, row):
+            overrides["mod_matrix." + source + "->" + route] = depth
+    for prefix, (attack, decay, sustain, release) in (
+            VOICE_BINDING_ENVELOPES.items()):
+        overrides[prefix + ".attack"] = attack
+        overrides[prefix + ".decay"] = decay
+        overrides[prefix + ".sustain"] = sustain
+        overrides[prefix + ".release"] = release
+    # The two LFO sides must differ in rate, depth, phase and shape mix, or
+    # a swapped LFO source column is unobservable.
+    overrides.update({
+        "lfo_2.frequency": 7.0, "lfo_2.mod_depth": 12.0,
+        "lfo_2.initial_phase": 0.25,
+        "lfo_2.sin": 0.25, "lfo_2.tri": 0.0, "lfo_2.saw": 1.0,
+        "lfo_2.rsaw": 0.75, "lfo_2.sqr": 0.5,
+        # Three distinct mixer level words (as the divide case uses), so a
+        # level-lane permutation would also be observable here.
+        "mixer.vco_2": 0.75, "mixer.noise": 0.5,
+    })
+    return overrides
+
+
 #: Declared derived fixtures: a base directed fixture plus physical-map
 #: overrides. The receipt's own divide-branch cases are digest-custody
 #: ``global-*`` corpus items whose physical parameters are never committed,
@@ -91,6 +157,7 @@ VOICE_DERIVED_CASES = {
     "voice:divide-distinct-levels": (
         "special:stress", {"mixer.vco_2": 0.75, "mixer.noise": 0.5},
     ),
+    "voice:binding-distinct": ("special:stress", voice_binding_overrides()),
 }
 #: The divide-branch case every mutation is demonstrated on (it divides, so
 #: a gain/normalization fault is load-bearing, and it has three distinct
@@ -98,6 +165,16 @@ VOICE_DERIVED_CASES = {
 #: case the always-on normalization mutation needs.
 VOICE_MUTATION_DIVIDE_CASE = "voice:divide-distinct-levels"
 VOICE_MUTATION_BYPASS_CASE = "normalization:below"
+#: The case every *binding* fault is demonstrated on. A binding fault is only
+#: observable against a stimulus that distinguishes the two things it
+#: confuses, which ``special:stress`` (and therefore the divide case derived
+#: from it) does not -- see :func:`voice_binding_overrides`.
+VOICE_MUTATION_BINDING_CASE = "voice:binding-distinct"
+#: Controls demonstrated on the binding case rather than the divide case.
+VOICE_BINDING_CONTROLS = (
+    "matrix-column-shuffle", "lfo-envelope-swap", "amp-route-swap",
+    "pitch-column-load-swap", "vco-pitch-wire-swap", "wrong-noise",
+)
 #: The case whose two clean simulations must be artifact-hash identical.
 VOICE_HASH_CASE = "voice:divide-distinct-levels"
 #: Mutation-simulation prefix cap. Every control below demonstrably bites
@@ -152,11 +229,31 @@ VOICE_TOP_MUTATIONS = {
         "    wire signed [C1_WIDTH-1:0] amp_vco_1      = up_arr[4];"
         "  // MUTANT: vco_1 VCA driven by the noise amplitude column",
     ),
-    # Genuine RTL route fault: the two pitch columns are swapped.
-    "pitch-route-swap": (
+    # Genuine RTL route fault at the control/audio-rate crossing: the two
+    # pitch route words land in each other's upsample column memory, so both
+    # pitch columns carry the wrong route. Observable directly on the
+    # exported control_upsample.*_pitch traces.
+    "pitch-column-load-swap": (
+        "                .column_word    (mm_out_arr[gu]),",
+        "                .column_word    (mm_out_arr[(gu == 0) ? 2 : "
+        "((gu == 2) ? 0 : gu)]),"
+        "  // MUTANT: the two pitch route words land in each other's column",
+    ),
+    # Genuine RTL route fault one stage later: vco_1's pitch *wire* is driven
+    # by the vco_2 pitch column. This one is NOT observable on any compared
+    # sample trace, and that is a property of the ratified architecture, not
+    # of this bench: the frequency both VCOs integrate is the host-replayed
+    # exp2 shadow word (DR-0010's 2026-09-22 amendment), so ``up_pitch``'s
+    # only consumer inside the engine is the C4 MIDI sum, which is not an
+    # output. It is still caught -- by the engine's own declared op-count
+    # conformance surface, where the wrong column changes the measured MIDI
+    # clamp count (``ops.V1.*[5]``). Closing the trace-level gap would need
+    # the #73 engine to export its MIDI sum, which is an RTL change to a
+    # qualified module and therefore out of this verification issue's scope.
+    "vco-pitch-wire-swap": (
         "    wire signed [C1_WIDTH-1:0] up_pitch_vco_1 = up_arr[0];",
         "    wire signed [C1_WIDTH-1:0] up_pitch_vco_1 = up_arr[2];"
-        "  // MUTANT: vco_1 pitch driven by the vco_2 pitch column",
+        "  // MUTANT: vco_1 pitch wire driven by the vco_2 pitch column",
     ),
     # Genuine RTL wrong-noise fault: the mixer consumes the previous noise
     # sample (a one-sample lag on the exact C8 stream).
@@ -378,6 +475,34 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
     if vco2_streams["v2"] != traces["vco_2.raw"]:
         raise SystemExit("square/saw mirror drift on %s" % case_id)
 
+    # Prefix-exact saturation/clamp tallies for the declared capped walks.
+    # Without them a capped walk leaves the two VCO engines' sticky
+    # saturation and MIDI-clamp counters unchecked -- and that op-count
+    # conformance surface is the ONLY place the vco-pitch-wire-swap control
+    # is observable, because the frequency the engines integrate is the
+    # host-replayed exp2 shadow word. Re-running each mirror over the first
+    # ``cap`` pitch words is exact, not an estimate: both are strictly
+    # sequential per-sample walks.
+    prefix_aux = {}
+    for cap in sorted({VOICE_MUTATION_WALK_CAP, VOICE_REPLAY_WALK_CAP}):
+        _prefix_sine, prefix_sine_aux = vg.mirror_sine_lane(
+            formats, midi_f0_word, vco1_tuning, vco1_depth, vco1_init,
+            traces["control_upsample.vco_1_pitch"][:cap],
+        )
+        prefix_vco2 = vc.mirror_square_saw_vco(
+            formats, vco2_words, partials, vco2_init,
+            traces["control_upsample.vco_2_pitch"][:cap],
+        )
+        prefix_aux[cap] = {
+            "sine_sats": sum(
+                record["count"]
+                for record in prefix_sine_aux["counters"]["records"]
+                if record["kind"] == "saturation"
+            ),
+            "sine_clamps": prefix_sine_aux["clamps"],
+            "vco2_sats": prefix_vco2["counters"]["total_saturation"],
+        }
+
     # --- #75: the exact C8 byte stream --------------------------------
     from torchsynth_voice import float_sources as fs
     noise_bytes = fs.NoiseSource.resolve(sound_index)
@@ -451,6 +576,7 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
         "square_q": vco2_streams["square_q"],
         "left_q": vco2_streams["left_q"],
         "sine_aux": sine_aux,
+        "prefix_aux": prefix_aux,
         "vco2_sats": vco2_streams["counters"]["total_saturation"],
         "mix_truth": {"streams": mix_streams, "aux": mix_aux},
         "noise_bytes": noise_bytes,
@@ -672,6 +798,15 @@ def voice_expected(case: dict, walk: int) -> dict:
         for record in case["sine_aux"]["counters"]["records"]
         if record["kind"] == "saturation"
     )
+    # Prefix-exact tallies where the walk is one of the declared caps; None
+    # (unchecked) only for a walk length nothing precomputed.
+    prefix = None if full else case.get("prefix_aux", {}).get(n)
+    exp_sine_sats = sine_sats if full else (
+        prefix["sine_sats"] if prefix else None)
+    exp_sine_clamps = case["sine_aux"]["clamps"] if full else (
+        prefix["sine_clamps"] if prefix else None)
+    exp_vco2_sats = case["vco2_sats"] if full else (
+        prefix["vco2_sats"] if prefix else None)
     ops = {}
     for index in range(6):
         ops[("A", index)] = [
@@ -693,13 +828,9 @@ def voice_expected(case: dict, walk: int) -> dict:
                 interior, interior, interior, interior, coord_steps, None, n,
             ]
         ops[("V1", pas)] = [
-            3 * n, 7 * n, 4 * n, n,
-            sine_sats if full else None,
-            case["sine_aux"]["clamps"] if full else None,
+            3 * n, 7 * n, 4 * n, n, exp_sine_sats, exp_sine_clamps,
         ]
-        ops[("V2", pas)] = [
-            8 * n, 8 * n, 7 * n, case["vco2_sats"] if full else None,
-        ]
+        ops[("V2", pas)] = [8 * n, 8 * n, 7 * n, exp_vco2_sats]
         ops[("MIX", pas)] = (
             mix_expected_ops(n, case["mix_truth"]) if full else
             [6 * n, 2 * n, 4 * n, None, None, n, 0]
@@ -941,6 +1072,40 @@ def voice(workdir: Path) -> int:
           % (divide_seen, bypass_seen, "OK" if branches_ok else "FAIL"))
     ok = ok and branches_ok
 
+    # 1b. The binding case. Every *binding* control below needs a stimulus
+    #     that distinguishes the two things the fault confuses; the uniform
+    #     `special:stress` parameters do not (see voice_binding_overrides).
+    #     In the `full` profile this case is one of the committed
+    #     full-length cases above; in `regression` it is derived here. Either
+    #     way the pristine RTL is proven bit-exact on it over the declared
+    #     prefix cap FIRST, so a later DETECTED verdict is attributable to the
+    #     planted mutation rather than to a pre-existing divergence.
+    if VOICE_MUTATION_BINDING_CASE not in derived:
+        base_id, overrides = VOICE_DERIVED_CASES[VOICE_MUTATION_BINDING_CASE]
+        physical = dict(fixtures[base_id]["physical"])
+        physical.update(overrides)
+        derived[VOICE_MUTATION_BINDING_CASE] = voice_derive_case(
+            formats, fcp, VOICE_MUTATION_BINDING_CASE, physical,
+            fixtures[base_id]["normalized"], None,
+        )
+    binding = derived[VOICE_MUTATION_BINDING_CASE]
+    baseline_dir = workdir / "binding-baseline"
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    voice_write_case(baseline_dir, 0, binding, walk=VOICE_MUTATION_WALK_CAP)
+    baseline_rows = voice_rows(
+        voice_simulate(baseline_dir, 1)[0],
+        voice_expected(binding, VOICE_MUTATION_WALK_CAP),
+    )
+    voice_print_rows("%s baseline" % VOICE_MUTATION_BINDING_CASE, baseline_rows)
+    baseline_ok = not baseline_rows
+    print("binding baseline %s: pristine RTL bit-exact over the first %d "
+          "audio samples (every binding distinguishable: 20 distinct "
+          "modulation depths, 6 distinct envelopes, 2 distinct LFO sides) "
+          "-> %s"
+          % (VOICE_MUTATION_BINDING_CASE, VOICE_MUTATION_WALK_CAP,
+             "OK" if baseline_ok else "FAIL"))
+    ok = ok and baseline_ok
+
     # 2. Two clean simulations are artifact-hash identical (determinism).
     digests = []
     for attempt in (1, 2):
@@ -1029,16 +1194,18 @@ def voice(workdir: Path) -> int:
                  else "NOT DETECTED",
                  "; first mismatch trace=%s cycle=%s sample=%s expected=%s "
                  "actual=%s" % first_row if first_row else ""))
-        mutants.append((label, detected, walk))
+        mutants.append((label, detected, walk, case["id"]))
         return detected
 
     mut_ok = True
-    # Faults whose effect is visible in an upstream named trace bite inside
-    # the declared prefix cap.
-    for label in ("matrix-column-shuffle", "lfo-envelope-swap",
-                  "amp-route-swap", "pitch-route-swap", "wrong-noise"):
+    # Binding faults: demonstrated on the binding case, whose stimulus
+    # distinguishes every source column, envelope role and route. Each bites
+    # inside the declared prefix cap -- five on a named sample trace, and
+    # vco-pitch-wire-swap on the vco_1 engine's MIDI-clamp op counter (the
+    # host-replayed exp2 shadow hides it from every sample trace).
+    for label in VOICE_BINDING_CONTROLS:
         anchor, replacement = VOICE_TOP_MUTATIONS[label]
-        mut_ok = sim_mutant(label, divide, VOICE_TOP_SV, anchor,
+        mut_ok = sim_mutant(label, binding, VOICE_TOP_SV, anchor,
                             replacement) and mut_ok
     anchor, replacement = VOICE_TOP_MUTATIONS["missing-sample"]
     mut_ok = sim_mutant(
@@ -1087,12 +1254,15 @@ def voice(workdir: Path) -> int:
             label: {
                 "verdict": "DETECTED" if det else "NOT DETECTED",
                 "walk": walk,
+                "case": cid,
             }
-            for label, det, walk in mutants
+            for label, det, walk, cid in mutants
         },
         "mutation_kind": "all-RTL",
         "mutation_walk_cap": VOICE_MUTATION_WALK_CAP,
         "replay_walk_cap": VOICE_REPLAY_WALK_CAP,
+        "binding_case": VOICE_MUTATION_BINDING_CASE,
+        "binding_baseline": "PASS" if baseline_ok else "FAIL",
         "artifact_hashes": digests[0],
         "artifact_hash_case": VOICE_HASH_CASE,
         "identity": voice_tool_identity(),

@@ -324,6 +324,166 @@ class MutationSeamsAreAnchored(unittest.TestCase):
                                  "%s: %s" % (label, done.stderr))
 
 
+class BindingCaseBreaksEveryStimulusSymmetry(unittest.TestCase):
+    """A binding fault is only observable against a stimulus that
+    distinguishes the two things it confuses.
+
+    ``special:stress`` is uniform -- all twenty modulation depths are 1.0,
+    all six envelope parameter sets are identical and the two LFO sides are
+    identical -- so ``matrix-column-shuffle``, ``lfo-envelope-swap``,
+    ``amp-route-swap`` and the pitch-route controls all SURVIVE on it. The
+    first run of this lane reported exactly those four as NOT DETECTED. These
+    checks pin the asymmetry that kills them, so a future edit cannot quietly
+    restore a degenerate stimulus and turn six controls back into no-ops.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from run_tb import mix_load_fixtures
+
+        _manifest, fixtures = mix_load_fixtures()
+        base_id, overrides = rv.VOICE_DERIVED_CASES[
+            rv.VOICE_MUTATION_BINDING_CASE
+        ]
+        cls.base = fixtures[base_id]["physical"]
+        cls.physical = dict(cls.base)
+        cls.physical.update(overrides)
+
+    def test_the_base_fixture_really_is_degenerate(self):
+        # If this ever stops holding, the overrides below may be unnecessary
+        # -- but the check must then be revisited deliberately, not silently.
+        depths = {k: v for k, v in self.base.items()
+                  if k.startswith("mod_matrix.")}
+        self.assertEqual(len(depths), 20)
+        self.assertEqual(len(set(depths.values())), 1)
+
+    def test_all_twenty_modulation_depths_are_distinct(self):
+        depths = [v for k, v in self.physical.items()
+                  if k.startswith("mod_matrix.")]
+        self.assertEqual(len(depths), 20)
+        self.assertEqual(len(set(depths)), 20)
+
+    def test_the_two_pitch_rows_are_well_separated(self):
+        # pitch-column-load-swap swaps the two pitch routes; a route pair that
+        # differs only slightly can leave the swap below one output quantum.
+        low = max(rv.VOICE_BINDING_DEPTHS["vco_1_pitch"])
+        high = min(rv.VOICE_BINDING_DEPTHS["vco_2_pitch"])
+        self.assertGreater(high - low, 0.5)
+
+    def test_every_route_row_occupies_its_own_band(self):
+        rows = list(rv.VOICE_BINDING_DEPTHS.values())
+        for index, row in enumerate(rows):
+            for other in rows[index + 1:]:
+                self.assertFalse(
+                    set(row) & set(other),
+                    "two route rows share a depth word",
+                )
+
+    def test_all_six_envelope_formations_are_distinct(self):
+        formations = set(rv.VOICE_BINDING_ENVELOPES.values())
+        self.assertEqual(len(formations), 6)
+        self.assertEqual(set(rv.VOICE_BINDING_ENVELOPES), {
+            "adsr_1", "adsr_2", "lfo_1_rate_adsr", "lfo_1_amp_adsr",
+            "lfo_2_rate_adsr", "lfo_2_amp_adsr",
+        })
+
+    def test_each_lfo_rate_and_amp_envelope_pair_differs(self):
+        # lfo-envelope-swap swaps the rate and gain roles per side.
+        for side in ("lfo_1", "lfo_2"):
+            self.assertNotEqual(
+                rv.VOICE_BINDING_ENVELOPES[side + "_rate_adsr"],
+                rv.VOICE_BINDING_ENVELOPES[side + "_amp_adsr"],
+                side,
+            )
+
+    def test_every_attack_is_inside_the_prefix_walk(self):
+        # 6,000 audio samples == 60 control ticks at 441 Hz == ~0.136 s. An
+        # envelope-role fault must diverge inside the cap, not only in the
+        # release tail.
+        seconds = rv.VOICE_MUTATION_WALK_CAP / 44100.0
+        for prefix, formation in rv.VOICE_BINDING_ENVELOPES.items():
+            self.assertLess(formation[0], seconds, prefix)
+
+    def test_the_two_lfo_sides_differ(self):
+        for field in ("frequency", "mod_depth", "initial_phase", "sin", "saw"):
+            self.assertNotEqual(
+                self.physical["lfo_1." + field],
+                self.physical["lfo_2." + field],
+                field,
+            )
+
+    def test_every_binding_control_is_a_declared_top_mutation(self):
+        for label in rv.VOICE_BINDING_CONTROLS:
+            self.assertIn(label, rv.VOICE_TOP_MUTATIONS, label)
+
+    def test_binding_case_is_a_declared_derived_fixture(self):
+        self.assertIn(
+            rv.VOICE_MUTATION_BINDING_CASE, rv.VOICE_DERIVED_CASES
+        )
+
+
+class PrefixWalksStillCheckTheVcoOpCounters(unittest.TestCase):
+    """``vco-pitch-wire-swap`` is observable ONLY on an op counter.
+
+    The frequency both VCOs integrate is the host-replayed exp2 shadow word,
+    so a wrong pitch column changes no sample trace -- only the engine's
+    measured MIDI-clamp count. If a prefix-capped walk left that counter
+    unchecked (expected ``None``), the control would be a silent no-op.
+    """
+
+    def _case(self, cap):
+        traces = {name: [0] * CONTROL_TICKS for name in rv.VOICE_CTL_TRACES}
+        traces.update({name: [0] * cap for name in rv.VOICE_AUDIO_TRACES})
+        traces["mixer.output"] = [0] * cap
+        return {
+            "id": "synthetic",
+            "traces": traces,
+            "norm_diag": {"normalized_branch": False, "peak_word": 0,
+                          "gain_word": 0},
+            "norm_counters": type("C", (), {"total": lambda self: 0})(),
+            "sine_aux": {"counters": {"records": []}, "clamps": 7},
+            "vco2_sats": 11,
+            "prefix_aux": {cap: {"sine_sats": 3, "sine_clamps": 5,
+                                 "vco2_sats": 9}},
+            "lfo": [{"clamps": 0}, {"clamps": 0}],
+            "matrix_sats": 0,
+            "mix_truth": {"streams": {}, "aux": {"sats": 0, "rounds": 0}},
+            "sound_index": 0,
+        }
+
+    def test_declared_prefix_cap_checks_sat_and_clamp_counters(self):
+        cap = rv.VOICE_MUTATION_WALK_CAP
+        ops = rv.voice_expected(self._case(cap), cap)["ops"]
+        self.assertEqual(ops[("V1", 1)][4], 3)
+        self.assertEqual(ops[("V1", 1)][5], 5)
+        self.assertEqual(ops[("V2", 1)][3], 9)
+
+    def test_full_walk_uses_the_whole_clip_tallies(self):
+        case = self._case(rv.VOICE_MUTATION_WALK_CAP)
+        case["traces"] = {
+            name: [0] * CONTROL_TICKS for name in rv.VOICE_CTL_TRACES
+        }
+        case["traces"].update(
+            {name: [0] * rv.AUDIO_SAMPLES for name in rv.VOICE_AUDIO_TRACES}
+        )
+        case["traces"]["mixer.output"] = [0] * rv.AUDIO_SAMPLES
+        ops = rv.voice_expected(case, rv.AUDIO_SAMPLES)["ops"]
+        self.assertEqual(ops[("V1", 1)][5], 7)
+        self.assertEqual(ops[("V2", 1)][3], 11)
+
+    def test_an_undeclared_walk_length_leaves_them_unchecked(self):
+        case = self._case(rv.VOICE_MUTATION_WALK_CAP)
+        case["traces"] = {
+            name: [0] * CONTROL_TICKS for name in rv.VOICE_CTL_TRACES
+        }
+        case["traces"].update(
+            {name: [0] * 64 for name in rv.VOICE_AUDIO_TRACES}
+        )
+        ops = rv.voice_expected(case, 64)["ops"]
+        self.assertIsNone(ops[("V1", 1)][4])
+        self.assertIsNone(ops[("V2", 1)][3])
+
+
 class CasePartitionMatchesFrozenReceipt(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -123,10 +123,11 @@ jobs:
     #
     # The profile is 2 committed cases (one bypass branch, one divide) at
     # 1,764 control ticks + 2 x 176,400 audio samples each, 2 clean
-    # full-length simulations for artifact-hash identity, a back-to-back
-    # replay pair + solo, and 12 all-RTL mutation simulations -- 10 of which
-    # are full-length (the four normalization controls must be, because the
-    # branch decision is only reached at sample 176,400). Measured ~12 min
+    # full-length simulations for artifact-hash identity, a binding-distinct
+    # prefix baseline, a back-to-back replay pair + solo, and 13 all-RTL
+    # mutation simulations -- four of them full-length (the normalization
+    # controls must be, because the branch decision is only reached at
+    # sample 176,400). Eight full-length simulations in all. Measured ~12 min
     # per full-length simulation and ~2 h total on the dev Mac (Apple
     # silicon, iverilog 13.0, serial); the step budget below is ~2.5x that
     # for a slower hosted runner. This is the most expensive lane in the

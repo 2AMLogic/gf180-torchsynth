@@ -97,10 +97,45 @@ control-to-audio crossing in the profile.
   branch). Declared because the receipt's own divide-branch cases
   (`global-0/2/52/63`) are digest-custody corpus items whose physical
   parameters are never committed, so no stimulus can be built from them.
+- **derived fixture** `voice:binding-distinct`: `special:stress` with every
+  stimulus symmetry broken — see "The binding case" below.
 
 The regression profile is `normalization:below` (bypass branch,
 param-committed) plus `voice:divide-distinct-levels` (divide branch): the
 smallest set that covers both normalization branches at full clip length.
+`voice:binding-distinct` is additionally derived and run pristine over the
+declared prefix cap in `regression`, and is a committed full-length case in
+`full`.
+
+### The binding case (and why a uniform stimulus is not enough)
+
+`special:stress` is deliberately uniform: **all twenty modulation depths are
+1.0, all six envelope parameter sets are identical, and the two LFO sides are
+identical.** Under that stimulus a whole class of genuine RTL binding faults
+produces *bit-identical* output — permuting the matrix source columns, swapping
+the LFO rate/gain envelope roles, or swapping two amplitude or pitch routes all
+exchange equal words. This is not a hypothetical: **the first run of this lane
+reported four controls as NOT DETECTED for exactly this reason.** A control
+that cannot fail is not a control.
+
+`voice:binding-distinct` breaks every such symmetry:
+
+- twenty **mutually distinct** modulation depths, laid out so each *route* row
+  occupies its own band and the two pitch rows sit at opposite ends of the
+  range (`vco_1_pitch` 0.07–0.17 against `vco_2_pitch` 0.89–0.97), so a pitch
+  swap is not a sub-quantum perturbation;
+- six **distinct** envelope formations, each with an attack shorter than the
+  prefix-capped walk (6,000 audio samples = 60 control ticks = 0.136 s), and
+  with each side's rate envelope differing from its gain envelope;
+- two **distinct** LFO sides (rate, depth, initial phase and shape mix);
+- three distinct mixer level words.
+
+`tests/test_oneshot_voice.py` asserts each of those properties — and asserts
+that the base fixture really is degenerate — so a future edit cannot quietly
+restore a uniform stimulus and turn six controls back into no-ops. The pristine
+RTL is proven bit-exact on this case over the prefix cap **before** any mutant
+is planted, so a DETECTED verdict is attributable to the mutation and not to a
+pre-existing divergence.
 
 ### Compared traces (27 named traces + the output clip)
 
@@ -130,20 +165,40 @@ controls were stimulus-only: the RTL that owns the parameter-shuffle,
 wrong-noise, interpolation and gain/route faults is now composed in, so each
 fault is planted **in RTL**.
 
-| Control | Mutated source | Planted fault |
-| --- | --- | --- |
-| `matrix-column-shuffle` | `one_shot_voice_top.sv` | the matrix's four source columns permuted against the pinned (adsr_1, adsr_2, lfo_1, lfo_2) order the twenty depth words are packed in |
-| `lfo-envelope-swap` | `one_shot_voice_top.sv` | the LFO rate-envelope and control-VCA gain-envelope roles swapped on both sides |
-| `amp-route-swap` | `one_shot_voice_top.sv` | the vco_1 VCA driven by the noise amplitude column |
-| `pitch-route-swap` | `one_shot_voice_top.sv` | the vco_1 pitch driven by the vco_2 pitch column |
-| `wrong-noise` | `one_shot_voice_top.sv` | the mixer consumes the *previous* noise sample (one-sample lag on the exact C8 stream) |
-| `missing-sample` | `one_shot_voice_top.sv` | one mixer sample (index 1000) dropped at the link seam; **must** localize to `link.replay_input[pass1]` sample 1000 or the run fails |
-| `interpolation-zoh` | `upsample_engine.sv` | zero-order hold instead of the endpoint-aligned blend |
-| `mixer-truncate` | `audio_mix_engine.sv` | truncation instead of half-even at the mixer narrowing |
-| `normalization-always-off` | `normalization_replay_engine.sv` | never divides (on a divide case) |
-| `normalization-always-on` | `normalization_replay_engine.sv` | always divides (on a bypass case) |
-| `normalization-wrong-reciprocal` | `normalization_replay_engine.sv` | U1.22 gain word +1 ULP |
-| `normalization-wrong-peak` | `normalization_replay_engine.sv` | peak tracker keeps the last sample, not the max |
+| Control | Mutated source | Case | Planted fault |
+| --- | --- | --- | --- |
+| `matrix-column-shuffle` | `one_shot_voice_top.sv` | binding | the matrix's four source columns permuted against the pinned (adsr_1, adsr_2, lfo_1, lfo_2) order the twenty depth words are packed in |
+| `lfo-envelope-swap` | `one_shot_voice_top.sv` | binding | the LFO rate-envelope and control-VCA gain-envelope roles swapped on both sides |
+| `amp-route-swap` | `one_shot_voice_top.sv` | binding | the vco_1 VCA driven by the noise amplitude column |
+| `pitch-column-load-swap` | `one_shot_voice_top.sv` | binding | the two pitch route words land in each other's upsample column memory at the control/audio crossing |
+| `vco-pitch-wire-swap` | `one_shot_voice_top.sv` | binding | vco_1's pitch *wire* driven by the vco_2 pitch column — caught only on an op counter, see below |
+| `wrong-noise` | `one_shot_voice_top.sv` | binding | the mixer consumes the *previous* noise sample (one-sample lag on the exact C8 stream) |
+| `missing-sample` | `one_shot_voice_top.sv` | divide | one mixer sample (index 1000) dropped at the link seam; **must** localize to `link.replay_input[pass1]` sample 1000 or the run fails |
+| `interpolation-zoh` | `upsample_engine.sv` | divide | zero-order hold instead of the endpoint-aligned blend |
+| `mixer-truncate` | `audio_mix_engine.sv` | divide | truncation instead of half-even at the mixer narrowing |
+| `normalization-always-off` | `normalization_replay_engine.sv` | divide | never divides (on a divide case) |
+| `normalization-always-on` | `normalization_replay_engine.sv` | bypass | always divides (on a bypass case) |
+| `normalization-wrong-reciprocal` | `normalization_replay_engine.sv` | divide | U1.22 gain word +1 ULP |
+| `normalization-wrong-peak` | `normalization_replay_engine.sv` | divide | peak tracker keeps the last sample, not the max |
+
+**The pitch wire is observable only on an op counter, and that is a property of
+the ratified architecture.** `vco-pitch-wire-swap` changes **no** compared
+sample trace. The frequency both VCOs integrate is the host-replayed `exp2`
+shadow word (DR-0010's 2026-09-22 amendment), so inside the engine `up_pitch`'s
+only consumer is the C4 MIDI sum, which is not an output of the #73 engine. The
+control is still killed — by that engine's own declared op-count conformance
+surface, where the wrong column changes the measured MIDI-clamp count
+(`ops.V1.*[5]`: 0 against 5,683 on the binding case's first 6,000 samples). For
+this to be a real gate, a prefix-capped walk must check those counters, so
+`voice_derive_case` computes **prefix-exact** saturation and clamp tallies for
+each declared cap by re-walking the model's own mirrors over the first *cap*
+pitch words (exact, not an estimate: both mirrors are strictly sequential
+per-sample walks). Closing the *trace*-level gap would require the #73 engine to
+export its MIDI sum — an RTL change to a qualified module, so out of this
+verification issue's scope and recorded under "What is still open".
+
+`pitch-column-load-swap` covers the same route ordering one stage earlier,
+where it *is* directly observable on `control_upsample.vco_1_pitch`.
 
 Each must be DETECTED; an undetected control fails the run. Every anchor is
 asserted to occur **exactly once** in the source it names
@@ -154,11 +209,11 @@ still elaborate.
 **Mutation walk lengths are declared, not incidental.** The four
 normalization controls are demonstrated on a **full-length** walk, because the
 replay controller's branch decision is only reached at sample 176,400. The
-other eight are demonstrated on the first 6,000 audio samples
+other nine are demonstrated on the first 6,000 audio samples
 (`VOICE_MUTATION_WALK_CAP`); each demonstrably bites inside that prefix, and
-the control walk is never capped. The declared walk of every control is
-recorded per-control in the evidence record, so a reader never has to assume
-which length a given verdict came from.
+the control walk is never capped. The declared walk **and case** of every
+control are recorded per-control in the evidence record, so a reader never has
+to assume which length or which stimulus a given verdict came from.
 
 ### First-mismatch localization
 
@@ -184,8 +239,8 @@ committed case copies its whole raw artifact directory to a printed
 
 | Profile | Cases | Command | Role |
 | --- | --- | --- | --- |
-| `regression` (default) | `normalization:below` + `voice:divide-distinct-levels`, plus the two hash simulations, the replay pair/solo and the twelve mutation simulations | `python3 tb/run_voice.py --profile regression --workdir <dir>` | PR/CI gate (`tb-sim.yml` job `oneshot-whole-voice`) |
-| `full` | all 26 receipt cases + 3 directed fixtures + the derived fixture, same pair/hash/mutation simulations | `python3 tb/run_voice.py --profile full --workdir <dir>` | release-era evidence; remote AWS box per `CLAUDE.md` |
+| `regression` (default) | `normalization:below` + `voice:divide-distinct-levels` at full length, the `voice:binding-distinct` prefix baseline, the two hash simulations, the replay pair/solo and the thirteen mutation simulations | `python3 tb/run_voice.py --profile regression --workdir <dir>` | PR/CI gate (`tb-sim.yml` job `oneshot-whole-voice`) |
+| `full` | all 26 receipt cases + 3 directed fixtures + both derived fixtures, same baseline/pair/hash/mutation simulations | `python3 tb/run_voice.py --profile full --workdir <dir>` | release-era evidence; remote AWS box per `CLAUDE.md` |
 
 Both profiles walk the complete clip twice for every committed case; neither
 caps a committed walk. Simulator-free harness checks:
@@ -195,10 +250,11 @@ Measured on the dev Mac (Apple silicon, Icarus Verilog 13.0, serial): one
 full-length case costs about 30 s of model derivation, 0.7 s of stimulus
 writing, **12 min of Icarus simulation** (1.42 M simulated cycles; ~23 min
 when a second Icarus simulation is running concurrently on the same machine)
-and ~10 s of exact comparison. The regression profile runs ten full-length
-simulations (2 committed cases, 2 clean hash simulations, 4 full-length
-normalization mutants, plus the two the replay pair and eight prefix-capped
-mutants add in aggregate), so expect roughly **two hours** of wall-clock. One
+and ~10 s of exact comparison. The regression profile runs **eight**
+full-length simulations (2 committed cases, 2 clean hash simulations, 4
+normalization mutants) plus about twelve prefix-capped ones (the binding
+baseline, nine capped mutants, the replay pair and its solo), so expect roughly
+**two hours** of wall-clock. One
 full-length case retains ~35 MB of raw artifacts under `--workdir`
 (`audiocap` alone is ~25 MB). These are indicative single-machine figures,
 not bounds. The `full` profile is roughly fifteen times the committed-case
@@ -255,7 +311,7 @@ amplitude column / a +1-ULP noise level word, because the RTL owning those
 faults is not composed in that top. The other six (four normalization
 mutations, `missing-sample`, `mixer-truncate`) are genuine RTL mutations, and
 `normalization-wrong-reciprocal` is its only genuine RTL *gain* fault. **The
-whole-voice lane above closes exactly this gap**: all twelve of its controls
+whole-voice lane above closes exactly this gap**: all thirteen of its controls
 are genuine RTL mutations.
 
 Back-to-back replay note (both lanes): the replay engine's op counters are
@@ -271,7 +327,7 @@ and all non-counter status must match the solo run exactly.
 | --- | --- | --- | --- |
 | 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **Met for the declared `regression` profile** (both cases, 1,764 control ticks + 2 x 176,400 samples over 27 named traces + the output clip + every status/op counter). **Not yet run at `full`.** | Met for the tail chain only |
 | 2 | First mismatch localized by trace/cycle/sample, raw artifacts retained | **Met.** `voice_rows` / `voice_print_rows`; rows ordered by cycle; `missing-sample` must localize to `link.replay_input[pass1]` sample 1000 or the run fails; failed cases retain their raw artifact tree | Met |
-| 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all twelve controls are genuine RTL mutations** (no stimulus-only control remains) | Met at the chain boundary; four controls stimulus-only |
+| 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all thirteen controls are genuine RTL mutations** (no stimulus-only control remains). Six are demonstrated on the declared binding-distinct stimulus because a uniform one cannot kill them | Met at the chain boundary; four controls stimulus-only |
 | 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases |
 | 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met |
 | 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Partially.** The record carries the sha256 of every RTL/vector file, the `git_head` it ran on and a dirty-tree flag; comparisons are exact integer equality with `float_tolerance: null`. **No commit-exact record is committed yet** -- structurally impossible inside the PR that introduces the flow | Same |
@@ -281,8 +337,14 @@ and all non-counter status must match the solo run exactly.
 
 1. **A committed, commit-exact evidence record** for the whole-voice lane,
    generated on a merged commit with a clean tree.
-2. **The `full` profile run** (30 cases) the record must cite -- an AWS-box
+2. **The `full` profile run** (31 cases) the record must cite -- an AWS-box
    command, not a PR gate.
+2b. **A trace-level kill for the VCO pitch wire.** `vco-pitch-wire-swap` is
+   killed only on the #73 engine's MIDI-clamp op counter, because the engine
+   does not export its C4 MIDI sum and the frequency it integrates is the
+   host-replayed `exp2` shadow word. Exporting that sum (and comparing it) is
+   an RTL change to a qualified module, so it is a follow-up rather than part
+   of this verification increment.
 3. Neither lane is folded into the #78 aggregate gate
    (`tools/qualify_rtl_modules.py`): that gate's lane list is derived from
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
