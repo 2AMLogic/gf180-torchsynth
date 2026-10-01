@@ -239,17 +239,6 @@ def analytic_periodic(samples, reference_hz):
     )
 
 
-def property_row(measurement, property_name, expected, tolerance):
-    measured = measurement["estimates"].get(property_name)
-    status = measurement["status"]
-    if status != "valid" or measured is None:
-        return {"property": property_name, "observed": None, "verdict": "NO VERDICT",
-                "expected": expected, "tolerance": tolerance, "refusal": measurement["reason"]}
-    within = abs(measured - expected) <= tolerance
-    return {"property": property_name, "observed": measured, "verdict": "PASS" if within else "FAIL",
-            "expected": expected, "tolerance": tolerance, "refusal": None}
-
-
 def binding():
     return family.fixture_binding(family.fixture_identity())
 

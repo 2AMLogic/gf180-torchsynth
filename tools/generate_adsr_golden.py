@@ -77,16 +77,6 @@ def apply_overrides(physical: dict, overrides: dict) -> dict:
     return merged
 
 
-def per_instance(physical: dict, stage_values: dict) -> dict:
-    """Overrides for one case: {prefix: {stage: value}} -> full name map."""
-
-    overrides = {}
-    for prefix, stages in stage_values.items():
-        for stage, value in stages.items():
-            overrides[prefix + stage] = value
-    return apply_overrides(physical, overrides)
-
-
 def build_case_document(
     formats: AcceptedFormats,
     fcp: FixedControlPath,
