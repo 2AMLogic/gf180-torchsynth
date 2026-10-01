@@ -88,6 +88,31 @@ jobs:
         timeout-minutes: 10
         run: python3 tb/run_tb.py normreplay
 
+  oneshot-tail-chain:
+    # Issue #79's integrated mixer -> replay-controller chain, regression
+    # profile (8 cases x 2 x 176,400 samples + replay/hash/mutation sims;
+    # ~18 min wall-clock on the dev Mac with iverilog 13.0). Its own job, not
+    # a sim-lanes step: it runs in parallel with sim-lanes, and adding its
+    # budget there would push the step sum past sim-lanes' cap (and past
+    # GitHub-hosted runners' 360-minute job limit). The full profile (the 26
+    # param-committed receipt cases + 3 directed fixtures + 1 derived
+    # fixture) is the release-era evidence command (spec/ONESHOT-E2E.md),
+    # not a PR gate.
+    runs-on: ubuntu-24.04
+    # >= the one lane step budget (150) plus install/checkout margin, so a
+    # runaway run is caught by its own step timeout rather than the job cap.
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: "One-shot tail chain lane, regression profile (issue 79, iverilog, PDK-free)"
+        timeout-minutes: 150
+        run: python3 tb/run_oneshot.py --profile regression
+
   rtl-module-qualification:
     # Issue #78's aggregation/gating layer. sim-lanes above already re-proves
     # every lane's own bit-exact conformance individually; this job proves
