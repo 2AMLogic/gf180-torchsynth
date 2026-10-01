@@ -25,10 +25,15 @@ jobs:
         run: python -m unittest discover -s tests -p test_mutations.py -v
       - name: Test the committed bidirectional matrix publication structure
         run: python -m unittest discover -s tests -p test_mutations_matrix.py -v
-      - name: Qualify controls and fault matrix, then check the committed publication
+      - name: Check the committed publication, then requalify controls and fault matrix
+        # --check MUST run first, against the untouched checked-out
+        # sim/reference/mutation-framework-v1.json. The bare invocation rewrites
+        # that file, so running it first would make --check compare a freshly
+        # generated artifact against itself and committed-artifact drift could
+        # never fail CI (#257).
         run: |
-          python tools/qualify_mutations.py
           python tools/qualify_mutations.py --check
+          python tools/qualify_mutations.py
       - name: Check the committed actual-Voice runtime publication
         run: python tools/qualify_mutations_runtime.py --check-publication
 
@@ -111,7 +116,12 @@ jobs:
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
         run: uv run --no-sync python -c "import numpy"
-      - name: Compose the bidirectional matrix, then check the committed publication
+      - name: Check the committed publication, then recompose the bidirectional matrix
+        # --check MUST run first, against the untouched checked-out
+        # sim/reference/mutation-matrix-v1.json. The bare invocation rewrites
+        # that file, so running it first would make --check compare a freshly
+        # composed artifact against itself and committed-artifact drift could
+        # never fail CI (#257).
         run: |
-          uv run --no-sync python tools/qualify_mutations_matrix.py
           uv run --no-sync python tools/qualify_mutations_matrix.py --check
+          uv run --no-sync python tools/qualify_mutations_matrix.py
