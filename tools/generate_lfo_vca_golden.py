@@ -100,16 +100,6 @@ def apply_overrides(physical: dict, overrides: dict) -> dict:
     return merged
 
 
-def per_side(mapping: dict, physical: dict) -> dict:
-    """Overrides {side: {param: value}} -> full parameter-name map."""
-
-    merged = dict(physical)
-    for side, params in mapping.items():
-        for name, value in params.items():
-            merged[side + name] = value
-    return merged
-
-
 def owned_traces(fcp: FixedControlPath, words: dict) -> list:
     """Render the four owned traces through the model."""
 
