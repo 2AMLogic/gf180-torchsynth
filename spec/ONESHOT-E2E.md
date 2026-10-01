@@ -61,15 +61,16 @@ sequencing signals (`start`, mixer `trigger`, `mix_done`).
 
 ### The mutation caveat (AC3)
 
-"Parameter shuffle", "wrong noise" and "interpolation" are faults of logic
-that lives *upstream* of this chain (patch parameter routing, the noise
-stream, the control upsample). They are therefore planted as **stimulus-side**
-mutations: the pristine RTL is fed a wrong level order / a one-slot-rotated
-noise stream / a zero-order-hold amplitude column, and the chain must expose
-each against the model's expected traces. That proves the chain is *sensitive*
-to those faults, not that RTL implementing those upstream blocks catches them
--- that RTL is not composed here. The gain, normalization and missing-sample
-mutations are genuine RTL mutations of the composed hardware.
+"Parameter shuffle", "wrong noise", "interpolation" and "gain" are faults of
+logic that lives *upstream* of this chain (patch parameter routing, the noise
+stream, the control upsample, the host-fed noise level word). They are
+therefore planted as **stimulus-side** mutations: the pristine RTL is fed a
+wrong level order / a one-slot-rotated noise stream / a zero-order-hold
+amplitude column / a +1 ULP noise level word, and the chain must expose each
+against the model's expected traces. That proves the chain is *sensitive* to
+those faults, not that RTL implementing those upstream blocks catches them --
+that RTL is not composed here. The normalization and missing-sample mutations
+are genuine RTL mutations of the composed hardware.
 
 | Control | Kind | Planted fault |
 | --- | --- | --- |

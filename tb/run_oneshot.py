@@ -85,14 +85,14 @@ ONESHOT_HASH_CASES = ("oneshot:divide-distinct-levels", "normalization:below")
 #: Sample the missing-sample link mutation drops (same index the #75 slip
 #: mutations use).
 ONESHOT_DROP_SAMPLE = 1000
-ONESHOT_LINK_ANCHOR = "wire link_valid = mix_out_valid;"
+ONESHOT_LINK_ANCHOR = "assign link_valid = mix_out_valid;"
 ONESHOT_LINK_MISSING_SAMPLE = (
     "reg [31:0] drop_count;\n"
     "    always @(posedge clk) begin\n"
     "        if (rst) drop_count <= 32'd0;\n"
     "        else if (mix_out_valid) drop_count <= drop_count + 32'd1;\n"
     "    end\n"
-    "    wire link_valid = mix_out_valid && !(drop_count == 32'd%d);"
+    "    assign link_valid = mix_out_valid && !(drop_count == 32'd%d);"
     "  // MUTANT: one sample dropped at the link" % ONESHOT_DROP_SAMPLE
 )
 ONESHOT_ARTIFACTS = (

@@ -87,10 +87,25 @@ jobs:
       - name: "Normalization replay + one-shot top lane (issue 77, iverilog, PDK-free)"
         timeout-minutes: 10
         run: python3 tb/run_tb.py normreplay
-      # Issue #79's integrated mixer -> replay-controller chain, regression
-      # profile (8 cases x 2 x 176,400 samples + hash/replay/mutation sims).
-      # The full-profile run (all 34 receipt cases + 3 fixtures) is the
-      # release-era evidence command (spec/ONESHOT-E2E.md), not a PR gate.
+
+  sim-lanes-oneshot:
+    # Issue #79's integrated mixer -> replay-controller chain, regression
+    # profile (8 cases x 2 x 176,400 samples + hash/replay/mutation sims),
+    # split into its own job (rather than a step of sim-lanes above) so its
+    # 150-minute budget runs in parallel with the other lanes instead of
+    # pushing their job cap past GitHub-hosted's 360-minute hard stop. The
+    # full-profile run (26 receipt cases + 3 fixtures) is the release-era
+    # evidence command (spec/ONESHOT-E2E.md), not a PR gate.
+    runs-on: ubuntu-24.04
+    # >= the single step budget below (150) plus install/checkout margin.
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: "One-shot tail chain lane, regression profile (issue 79, iverilog, PDK-free)"
         timeout-minutes: 150
         run: python3 tb/run_oneshot.py --profile regression

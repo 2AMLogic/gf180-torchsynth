@@ -8,8 +8,11 @@
 //   - run<r>_params.txt: three C1 Q2.21 level entry words, unsigned 32-bit
 //     bit patterns ("level_vco_1 level_vco_2 level_noise").
 //   - run<r>_streams.txt: 176,400 lines "raw1 raw2 rawn amp1 amp2 ampn".
-//   - run<r>_mixcap.txt: one line per mixer-valid cycle "cycle pass word"
-//     (pass is the replay engine's own pass_index at that edge).
+//   - run<r>_mixcap.txt: one line per link-valid cycle "cycle pass word"
+//     (pass is the replay engine's own pass_index at that edge). Sampled on
+//     link_valid, not mix_out_valid, so it reflects what the replay engine
+//     actually consumed -- a link-side drop/duplicate/re-time mutation is
+//     visible here, localized to the cycle it happens on.
 //   - run<r>_outcap.txt: one line per released output "cycle word".
 //   - run<r>_status.txt: one line "error error_code peak gain branch done
 //     pass compares selects recip_divs mults narrows saturations mix_peak".
@@ -42,6 +45,7 @@ module tb;
     wire signed [C1_WIDTH-1:0] post_vca_1, post_vca_2, post_vca_n, mix_word;
     wire        [C1_WIDTH-1:0] mix_abs, mix_peak_word;
     wire                       mix_out_valid;
+    wire                       link_valid;
     wire [31:0] m_m, m_a, m_n, m_s, m_r, m_p, m_f;
     wire signed [C1_WIDTH-1:0] audio_out;
     wire        audio_out_valid, busy, done, error, branch_normalized;
@@ -65,6 +69,7 @@ module tb;
         .mix_op_mults(m_m), .mix_op_adds(m_a), .mix_op_narrows(m_n),
         .mix_op_sats(m_s), .mix_op_rounds(m_r), .mix_op_peak_cmps(m_p),
         .mix_op_acc_faults(m_f),
+        .link_valid(link_valid),
         .start(start), .mix_done(mix_done),
         .audio_out(audio_out), .audio_out_valid(audio_out_valid),
         .busy(busy), .done(done), .error(error), .error_code(error_code),
@@ -94,7 +99,7 @@ module tb;
     always @(posedge clk) begin
         cyc <= cyc + 1;
         if (!rst && r >= 0) begin
-            if (mix_out_valid)
+            if (link_valid)
                 $fwrite(mixcap_fd[r], "%0d %0d %0d\n", cyc, pass_index, mix_word);
             if (audio_out_valid)
                 $fwrite(outcap_fd[r], "%0d %0d\n", cyc, audio_out);

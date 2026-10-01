@@ -127,7 +127,7 @@ class MutationSeamsAreAnchored(unittest.TestCase):
             ro.ONESHOT_LINK_MISSING_SAMPLE,
             "missing-sample",
         )
-        self.assertEqual(mutated.count("wire link_valid"), 1)
+        self.assertEqual(mutated.count("assign link_valid"), 1)
         self.assertIn("MUTANT", mutated)
 
     @unittest.skipUnless(has_iverilog(), "Icarus Verilog not installed")

@@ -29,7 +29,12 @@
 //
 // The ``link_valid`` wire is a named mutation seam (the tb runner plants a
 // missing-sample fault there and requires the status/trace comparison to
-// catch it). PDK-free plain SystemVerilog for Icarus Verilog (-g2012).
+// catch it). It is exposed as a port so the testbench can capture the
+// mixer-output trace on link_valid rather than mix_out_valid -- a link-side
+// drop would otherwise be invisible to a capture gated on the mixer's own
+// valid, since mix_out_valid itself never skips a cycle (see
+// spec/ONESHOT-E2E.md AC2). PDK-free plain SystemVerilog for Icarus Verilog
+// (-g2012).
 
 `timescale 1ns/1ps
 
@@ -66,6 +71,7 @@ module one_shot_tail_top (
     output wire [31:0] mix_op_rounds,
     output wire [31:0] mix_op_peak_cmps,
     output wire [31:0] mix_op_acc_faults,
+    output wire                       link_valid,
 
     // --- #77 replay side -------------------------------------------------
     input  wire start,
@@ -121,7 +127,7 @@ module one_shot_tail_top (
 
     // The link. A mutant that drops, duplicates or re-times a sample here is
     // exactly the "missing-sample" regression tb/run_oneshot.py must catch.
-    wire link_valid = mix_out_valid;
+    assign link_valid = mix_out_valid;
 
     normalization_replay_engine replay (
         .clk               (clk),
