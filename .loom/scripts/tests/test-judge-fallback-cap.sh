@@ -136,46 +136,18 @@ export PATH="$STUB_DIR:$PATH"
 
 # #9537: the guard asks `loom-daemon forge is-fleet`. Pin the daemon to stubs
 # so the result never depends on whichever binary this machine has installed.
-# Default: an OLD daemon without the is-fleet verb (clap-style exit 2), which
-# makes the guard use its built-in default-family fallback — but it DOES
-# answer `forge trusted-comments` (#9548/#9716), filtering stdin the same way
-# the real predicate does for these fixtures' shapes: trusted iff
-# author_association/authorAssociation is an insider one, or the author is
-# App-spelled (`x[bot]` / `app/x`) and names the default fleet family. This
-# mirrors test-classify-ac-verification.sh's stub daemon.
-TRUSTED_COMMENTS_FILTER='
-  def who: (.user // .author // {});
-  def assoc: ((.author_association // .authorAssociation // "") | ascii_upcase);
-  def lg: (who | .login // "");
-  def norm: (lg | ascii_downcase | ltrimstr("app/") | rtrimstr("[bot]"));
-  def app: ((lg | test("\\[bot\\]$")) or (lg | test("^app/")));
-  [.[] | select((assoc | IN("OWNER","MEMBER","COLLABORATOR"))
-                or (app and (norm == "loom-fleet-dispatch")))]'
-cat > "$STUB_DIR/daemon-old" <<EOS
+# Default: an OLD daemon without the verb (clap-style exit 2), which makes the
+# guard use its built-in default-family fallback.
+cat > "$STUB_DIR/daemon-old" <<'EOS'
 #!/usr/bin/env bash
-if [[ "\$1 \$2" == "forge trusted-comments" ]]; then
-  if [[ -f "\${LOOM_TEST_STUB_DIR:-}/trust-verb-missing" ]]; then
-    echo "error: unrecognized subcommand 'trusted-comments'" >&2
-    exit 2
-  fi
-  exec jq -c '$TRUSTED_COMMENTS_FILTER'
-fi
-echo "error: unrecognized subcommand '\$2'" >&2
+echo "error: unrecognized subcommand '$2'" >&2
 exit 2
 EOS
 # A NEW daemon whose roster is: writer loom-fleet-dispatch, reader loom-fleet-reader-1.
-# Also answers `forge trusted-comments` the same way as daemon-old above.
-cat > "$STUB_DIR/daemon-new" <<EOS
+cat > "$STUB_DIR/daemon-new" <<'EOS'
 #!/usr/bin/env bash
-if [[ "\$1 \$2" == "forge trusted-comments" ]]; then
-  if [[ -f "\${LOOM_TEST_STUB_DIR:-}/trust-verb-missing" ]]; then
-    echo "error: unrecognized subcommand 'trusted-comments'" >&2
-    exit 2
-  fi
-  exec jq -c '$TRUSTED_COMMENTS_FILTER'
-fi
-[[ "\$1 \$2" == "forge is-fleet" ]] || exit 2
-case "\$3" in
+[[ "$1 $2" == "forge is-fleet" ]] || exit 2
+case "$3" in
   app/loom-fleet-dispatch) echo writer; exit 0 ;;
   app/loom-fleet-reader-1) echo reader; exit 0 ;;
   *) exit 1 ;;
@@ -192,23 +164,14 @@ hours_ago() {
 }
 
 marker_comment() {
-    # marker_comment <created_at> <sha> [login] [author_association]
-    #
-    # Default author is this fleet's own writer App, App-spelled
-    # (`loom-fleet-dispatch[bot]`) — Judge is the one that actually posts this
-    # marker, so every PRE-#9716 test case keeps counting its markers exactly
-    # as before once the guard's trust filter is in place. Tests that exercise
-    # the filter itself (#9548/#9716) pass an explicit untrusted author.
-    local login="${3:-loom-fleet-dispatch[bot]}" assoc="${4:-NONE}"
-    printf '{"created_at":"%s","body":"Looks good.\\n\\n<!-- loom:fallback-evaluated sha=%s -->","user":{"login":"%s"},"author_association":"%s"}' \
-        "$1" "$2" "$login" "$assoc"
+    # marker_comment <created_at> <sha>
+    printf '{"created_at":"%s","body":"Looks good.\\n\\n<!-- loom:fallback-evaluated sha=%s -->"}' "$1" "$2"
 }
 
 reset_state() {
     rm -f "$STUB_DIR"/pr-*.json "$STUB_DIR"/comments-*.json
     rm -f "$STUB_DIR"/pr-view-fail-* "$STUB_DIR"/comments-fail-*
     rm -f "$STUB_DIR"/pr-view-stderr-* "$STUB_DIR"/comments-stderr-*
-    rm -f "$STUB_DIR/trust-verb-missing"
 }
 
 run_guard() {
