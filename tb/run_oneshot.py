@@ -112,6 +112,15 @@ def oneshot_simulate(workdir: Path, runs: int, top_sv: Path = None,
                      mixer_sv: Path = None, replay_sv: Path = None) -> list:
     """Compile + run the integrated top's tb; return per-run captures."""
 
+    # Every simulator invocation runs with cwd=workdir (the bench opens its
+    # stimulus and capture files by bare name), so any path handed to the
+    # tools must be ABSOLUTE. A relative --workdir otherwise makes
+    # ``iverilog -o <relative>/oneshot.vvp`` resolve against the
+    # already-entered directory and fail with "No such file or directory" --
+    # the same defect class PR #253 fixed in run_voice.py's voice_simulate.
+    # Resolving here, rather than only in ``main``, keeps every caller safe.
+    workdir = Path(workdir).resolve()
+
     top_sv = top_sv or ONESHOT_TOP_SV
     mixer_sv = mixer_sv or MIX_DUT_SV
     replay_sv = replay_sv or NORMREPLAY_DUT_SV
@@ -653,7 +662,9 @@ def main(argv=None) -> int:
         return 3
     if args.workdir is not None:
         args.workdir.mkdir(parents=True, exist_ok=True)
-        return oneshot(args.workdir, "iverilog")
+        # Absolute from here on, matching run_voice.py's main(): printed
+        # artifact paths stay meaningful after the simulator has chdir'd.
+        return oneshot(args.workdir.resolve(), "iverilog")
     with tempfile.TemporaryDirectory(prefix="tb-oneshot-") as tmp:
         return oneshot(Path(tmp), "iverilog")
 
