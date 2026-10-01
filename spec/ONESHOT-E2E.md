@@ -2,10 +2,15 @@
 
 Status: **the integrated whole-voice one-shot top now exists** and is proven
 bit-identical to the frozen fixed model over its declared regression profile.
-Issue #79 nonetheless stays open on two items that cannot be discharged
-inside a pull request: a **committed, commit-exact** evidence record, and the
-`full` profile run that record must cite. See "What is still open" below.
-Nothing here releases the "must pass before FPGA/gf180 fit claims" gate.
+A **committed, commit-exact** evidence record for the whole-voice lane's
+regression profile now exists (`sim/evidence/oneshot-whole-voice-regression-v1.json`,
+citing commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, which predates and
+is unaffected by the current pull request -- see "Evidence identity"). Issue
+#79 nonetheless stays open on: the tail-chain lane's own committed record (now
+mechanically unblocked, not yet generated -- see below), and the `full`
+profile run for both lanes that a release-era record must cite. See "What is
+still open" below. Nothing here releases the "must pass before FPGA/gf180 fit
+claims" gate.
 
 This record covers two lanes, landed in that order:
 
@@ -293,10 +298,35 @@ under review, is not citeable evidence.** Note that on a `pull_request` event
 record's `git_head` names that merge commit rather than the branch head — still
 exact, but a different object than a local run on the same branch.
 
-No record is committed with this increment, for the same structural reason the
-tail-chain increment committed none: a record can only cite its own commit
-exactly while that commit is still `HEAD`, so committing it would invalidate its
-own citation. A committed record must be generated on the merged commit.
+**A committed record now exists**:
+`sim/evidence/oneshot-whole-voice-regression-v1.json`. It was generated on
+commit `97ee7dd94d068bd7341f5ee02247e63f99597336` -- the clean tip of `main`
+this pull request branched from, not a commit this pull request itself
+introduces, which is the structural requirement explained below -- before any
+file in this increment's own diff was written, so `identity.git_tree_dirty`
+is `false` and `identity.git_head` names a commit this PR neither creates nor
+modifies. Verified committable by
+`python3 tools/verify_oneshot_evidence.py sim/evidence/oneshot-whole-voice-regression-v1.json --expect-head 97ee7dd94d068bd7341f5ee02247e63f99597336`
+(exit 0) before being added here. It reports `result: PASS`, both branches
+covered, and 13/13 mutations `DETECTED` -- the same regression-profile result
+narrated in PR #253, now pinned as a committed artifact rather than only a CI
+upload.
+
+**Why this was possible even though a record cannot cite its own commit**:
+the record's `git_head` names the commit the *flow ran on*, not the commit
+*the record file itself lands in*. Those are different commits whenever the
+flow is run before adding anything to the tree -- which is exactly what
+happened here. What is still structurally impossible is citing a commit that
+does not yet exist (this repository squash-merges, so a PR branch's own
+intermediate commits never reach `main` -- only the squash commit GitHub
+creates at merge time does, and no one can know that SHA in advance). The
+tail-chain lane below remains open for exactly that reason: its flow had a
+defect that made it impossible to generate a clean record from before this
+increment, and the fix is itself new, uncommitted work in this diff, so this
+PR cannot (and does not try to) produce a citeable tail-chain record. The
+`full`-profile record for either lane has the same requirement again, every
+time: it must be generated on an already-existing, clean, already-landed
+commit, never predicted or faked from inside a PR.
 
 ---
 
@@ -338,6 +368,43 @@ free-running until reset, so the tail-chain replay check requires the second
 run's counters to equal the solo run's plus the first run's; sample streams
 and all non-counter status must match the solo run exactly.
 
+### A discovered defect: a relative `--workdir` broke every tail-chain simulator invocation
+
+PR #253 fixed this exact defect class in `tb/run_voice.py`'s `voice_simulate`
+("A relative `--workdir` broke every simulator invocation") but did not
+backport it to `tb/run_oneshot.py`, because the tail-chain's own CI job
+(`tb-sim.yml`'s `oneshot-tail-chain`) calls `run_oneshot.py` with no
+`--workdir` at all -- it uses a `tempfile.TemporaryDirectory`, whose path is
+always absolute, so the defect never fired there. It fires on exactly the
+invocation this spec itself documents as the release-era command
+(`--workdir <dir>`) whenever `<dir>` is relative: every simulator invocation
+runs with `cwd=workdir` (the bench opens its files by bare name), so
+`iverilog -o out/tail-chain/case-.../oneshot.vvp` resolved against the
+already-entered `out/tail-chain`, looked for
+`out/tail-chain/out/tail-chain/case-.../oneshot.vvp`, and failed with "No such
+file or directory" -- discovered by running exactly the evidence-generating
+command this increment needed, `python3 tb/run_oneshot.py --profile
+regression --workdir out/tail-chain` (a relative path), which crashed on the
+first case before producing any record. Fixed the same way PR #253 fixed it:
+`oneshot_simulate` now resolves its `workdir` to an absolute path before
+building any tool command, and `main` resolves `--workdir` the same way for
+every other caller. Re-running the identical command after the fix completes
+the full regression profile and reports `ONESHOT RUN PASSED`.
+
+This fix is itself new, uncommitted work in this increment's diff, so no
+tail-chain evidence record generated on a tree containing it is a clean
+citation of an already-landed commit (`identity.git_tree_dirty` is correctly
+`true` on every run this increment made). The record becomes generatable --
+not generated by this PR -- on the next already-landed, clean commit that
+contains the fix (this PR's own merge commit, at the earliest):
+
+```
+python3 tb/run_oneshot.py --profile regression --workdir <absolute-or-relative-dir>
+python3 tools/verify_oneshot_evidence.py <dir>/oneshot-evidence.json --expect-head <that commit>
+# only if the verifier exits 0:
+cp <dir>/oneshot-evidence.json sim/evidence/oneshot-tail-chain-regression-v1.json
+```
+
 ---
 
 ## 3. Acceptance-criteria ledger (issue #79)
@@ -349,15 +416,20 @@ and all non-counter status must match the solo run exactly.
 | 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all thirteen controls are genuine RTL mutations** (no stimulus-only control remains). Six are demonstrated on the declared binding-distinct stimulus because a uniform one cannot kill them | Met at the chain boundary; four controls stimulus-only |
 | 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases |
 | 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met |
-| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Partially.** The record carries the sha256 of every RTL/vector file, the `git_head` it ran on and a dirty-tree flag; comparisons are exact integer equality with `float_tolerance: null`. **No commit-exact record is committed yet** -- structurally impossible inside the PR that introduces the flow | Same |
-| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** Requires AC1 at `full` and AC6's committed, commit-exact record. The gate stays closed | Not satisfied |
+| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`. **Not met at `full`** (AC1 at `full` has not run either) | **Not met yet.** A workdir-path defect (see "A discovered defect" below) made generating a clean record impossible before this increment; the fix is uncommitted new work in this diff, so no record this PR produces can cite an already-landed commit. Mechanically unblocked: the exact post-merge command is documented below |
+| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** Requires AC1 at `full` and AC6's committed, commit-exact record **for both lanes**. The gate stays closed | Not satisfied |
 
 ## What is still open
 
-1. **A committed, commit-exact evidence record** for the whole-voice lane,
-   generated on a merged commit with a clean tree.
-2. **The `full` profile run** (31 cases) the record must cite -- an AWS-box
-   command, not a PR gate.
+1. **A committed, commit-exact evidence record for the tail-chain lane's
+   `regression` profile.** Mechanically unblocked by this increment (the
+   workdir-path fix + `tools/verify_oneshot_evidence.py`), not yet generated
+   -- see "A discovered defect" under the tail-chain lane above for the exact
+   command. The whole-voice lane's own regression-profile record is committed
+   (`sim/evidence/oneshot-whole-voice-regression-v1.json`, citing commit
+   `97ee7dd94d068bd7341f5ee02247e63f99597336`).
+2. **The `full` profile run** (31 cases) for *both* lanes, which a
+   release-era record must cite -- an AWS-box command, not a PR gate.
 2b. **A trace-level kill for the VCO pitch wire.** `vco-pitch-wire-swap` is
    killed only on the #73 engine's MIDI-clamp op counter, because the engine
    does not export its C4 MIDI sum and the frequency it integrates is the
