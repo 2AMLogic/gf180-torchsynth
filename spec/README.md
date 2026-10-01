@@ -9,6 +9,10 @@ details are allowed to become the de facto product.
 - [`NORMALIZATION-REPLAY.md`](NORMALIZATION-REPLAY.md) records the fixed-path
   normalization reciprocal-precision measurement (#52): the DR-0003
   acceptance decision input, candidate-pending-ratification.
+- [`ONESHOT-E2E.md`](ONESHOT-E2E.md) is the end-to-end one-shot RTL
+  bit-identity and mutation-sensitivity record (#79): the whole-voice and
+  tail-chain compositions, their acceptance-criteria ledger, the
+  runtime/regression partition and the evidence commands.
 - [`RUBRIC.md`](RUBRIC.md) is the frozen verification rubric v0 (#48): the
   composed release decision procedure over every landed measurement family.
 - [`CANONICAL-REFERENCE-QUALIFICATION.md`](CANONICAL-REFERENCE-QUALIFICATION.md)
