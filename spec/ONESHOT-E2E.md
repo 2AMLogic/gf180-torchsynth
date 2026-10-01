@@ -121,7 +121,7 @@ samples each) and the 176,400-sample released output.
 
 Both profiles walk the complete clip twice; neither caps a walk. The
 regression profile compiles and simulates roughly twenty-five times; a full
-regression run on the dev Mac took on the order of 40 minutes wall-clock
+regression run on the dev Mac took tens of minutes wall-clock
 (single machine, serial; indicative, not a bound). Pass `--workdir` to retain every raw
 artifact (`run0_{params,streams,mixcap,outcap,status,ops}.txt`) and the
 evidence record `oneshot-evidence.json`. Exit status is the lane's own
