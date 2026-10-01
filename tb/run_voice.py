@@ -664,6 +664,14 @@ def voice_simulate(workdir: Path, runs: int, sources: dict = None) -> list:
     """
 
     sources = sources or {}
+    # Every simulator invocation runs with cwd=workdir (the bench opens its
+    # stimulus and capture files by bare name), so any path handed to the
+    # tools must be ABSOLUTE. A relative ``--workdir`` -- which is exactly
+    # what the CI lane passes -- otherwise makes ``iverilog -o
+    # <relative>/voice.vvp`` resolve against the already-entered directory
+    # and fail with "No such file or directory". Resolving here, rather than
+    # only in ``main``, keeps every caller of this function safe.
+    workdir = Path(workdir).resolve()
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
     # Two distinct tables: the accepted C5 Q1.22 audio-path table the
     # #73/#74 engines read (+lut), and the control path's Q1.23 table the
@@ -1304,7 +1312,9 @@ def main(argv=None) -> int:
         return 3
     if args.workdir is not None:
         args.workdir.mkdir(parents=True, exist_ok=True)
-        return voice(args.workdir)
+        # Absolute from here on: printed artifact paths stay meaningful after
+        # the simulator has chdir'd, and the record names a real location.
+        return voice(args.workdir.resolve())
     with tempfile.TemporaryDirectory(prefix="tb-voice-") as tmp:
         return voice(Path(tmp))
 

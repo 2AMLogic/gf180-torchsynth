@@ -560,6 +560,84 @@ class LfoTableSelectionIsBackwardCompatible(unittest.TestCase):
         )
 
 
+class SimulatorPathsAreAbsolute(unittest.TestCase):
+    """A relative ``--workdir`` must still work -- the CI lane passes one.
+
+    Every simulator invocation runs with ``cwd=workdir`` (the bench opens its
+    stimulus and capture files by bare name), so a relative path handed to
+    ``iverilog -o`` resolves against the already-entered directory and fails
+    with "No such file or directory". That is not hypothetical: the first CI
+    run of the ``oneshot-whole-voice`` job failed in 34 s this way, while the
+    local run passed because it used an absolute ``--workdir``. This check
+    needs no simulator, so it runs on every PR in ``ci.yml``.
+    """
+
+    class _Captured(Exception):
+        pass
+
+    def _commands_for(self, workdir):
+        from torchsynth_voice.fixed_voice import AcceptedFormats
+        from torchsynth_voice.format_sweep import FixedControlPath
+
+        formats = AcceptedFormats()
+        saved_tables = dict(rv._LUT_TABLES)
+        rv._LUT_TABLES["audio"] = formats.table
+        rv._LUT_TABLES["control"] = FixedControlPath(formats.control_spec).table
+        self.addCleanup(
+            lambda: (rv._LUT_TABLES.clear(), rv._LUT_TABLES.update(saved_tables))
+        )
+        seen = []
+        real_run = rv._run
+
+        def fake_run(command, cwd=None, **kwargs):
+            seen.append((list(command), cwd))
+            raise SimulatorPathsAreAbsolute._Captured()
+
+        rv._run = fake_run
+        try:
+            rv.voice_simulate(workdir, 1)
+        except SimulatorPathsAreAbsolute._Captured:
+            pass
+        finally:
+            rv._run = real_run
+        return seen
+
+    def test_relative_workdir_still_yields_an_absolute_output_path(self):
+        with tempfile.TemporaryDirectory(prefix="voice-relpath-") as tmp:
+            cwd = Path.cwd()
+            try:
+                import os
+
+                os.chdir(tmp)
+                Path("out/whole-voice").mkdir(parents=True)
+                seen = self._commands_for(Path("out/whole-voice"))
+            finally:
+                os.chdir(cwd)
+        self.assertTrue(seen, "no simulator invocation was captured")
+        command, _cwd = seen[0]
+        self.assertEqual(command[0], "iverilog")
+        out = command[command.index("-o") + 1]
+        self.assertTrue(
+            Path(out).is_absolute(),
+            "iverilog -o path %r is relative; it will not resolve once the "
+            "simulator has chdir'd into the work directory" % out,
+        )
+
+    def test_the_simulator_cwd_is_the_resolved_workdir(self):
+        with tempfile.TemporaryDirectory(prefix="voice-relpath-") as tmp:
+            cwd = Path.cwd()
+            try:
+                import os
+
+                os.chdir(tmp)
+                Path("out/whole-voice").mkdir(parents=True)
+                seen = self._commands_for(Path("out/whole-voice"))
+            finally:
+                os.chdir(cwd)
+        _command, run_cwd = seen[0]
+        self.assertTrue(Path(run_cwd).is_absolute())
+
+
 class CiJobBudgetsAreConsistent(unittest.TestCase):
     WORKFLOW = ROOT / ".github/workflows/tb-sim.yml"
 
