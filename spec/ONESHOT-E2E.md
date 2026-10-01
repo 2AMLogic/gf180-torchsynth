@@ -246,19 +246,31 @@ Both profiles walk the complete clip twice for every committed case; neither
 caps a committed walk. Simulator-free harness checks:
 `python3 -m unittest tests.test_oneshot_voice`.
 
-Measured on the dev Mac (Apple silicon, Icarus Verilog 13.0, serial): one
-full-length case costs about 30 s of model derivation, 0.7 s of stimulus
-writing, **12 min of Icarus simulation** (1.42 M simulated cycles; ~23 min
-when a second Icarus simulation is running concurrently on the same machine)
-and ~10 s of exact comparison. The regression profile runs **eight**
-full-length simulations (2 committed cases, 2 clean hash simulations, 4
-normalization mutants) plus about twelve prefix-capped ones (the binding
-baseline, nine capped mutants, the replay pair and its solo), so expect roughly
-**two hours** of wall-clock. One
-full-length case retains ~35 MB of raw artifacts under `--workdir`
-(`audiocap` alone is ~25 MB). These are indicative single-machine figures,
-not bounds. The `full` profile is roughly fifteen times the committed-case
-work and is an AWS-box command, not a PR gate.
+Measured wall-clock for the whole `regression` profile:
+
+| Host | Simulator | Total |
+| --- | --- | --- |
+| GitHub `ubuntu-24.04` (`oneshot-whole-voice` job, run 36894315125) | Icarus 12.0 (apt) | **33 min 32 s** |
+| dev Mac, Apple silicon, serial | Icarus 13.0 | **54 min** |
+
+Per full-length case on the dev Mac: ~30 s of model derivation, 0.7 s of
+stimulus writing, **~10 min of Icarus simulation** (1.42 M simulated cycles;
+~23 min if a second Icarus simulation shares the machine) and ~10 s of exact
+comparison. The profile runs **eight** full-length simulations (2 committed
+cases, 2 clean hash simulations, 4 normalization mutants) plus about twelve
+prefix-capped ones (the binding baseline, nine capped mutants, the replay pair
+and its solo). One full-length case retains ~35 MB of raw artifacts under
+`--workdir` (`audiocap` alone is ~25 MB). The CI step budget is ~3.5x the
+slower of the two measurements. These are indicative figures, not bounds. The
+`full` profile is roughly fifteen times the committed-case work and is an
+AWS-box command, not a PR gate.
+
+**Pass a work directory the simulator can reach.** Every simulator invocation
+runs with `cwd=<workdir>`, because the bench opens its stimulus and capture
+files by bare name; the flow therefore resolves `--workdir` to an absolute path
+before building any tool command. A relative path is fine to *pass* (the CI
+lane passes `out/whole-voice` so the record can be uploaded as an artifact) —
+it is simply never handed to a tool unresolved.
 
 Exit status is the lane's own pass/fail; **exit 3 means Icarus Verilog is
 absent and nothing ran** -- never reported as a pass.
@@ -266,7 +278,9 @@ absent and nothing ran** -- never reported as a pass.
 ### Evidence identity
 
 `voice-evidence.json` (schema
-`gf180-torchsynth/oneshot-whole-voice-evidence-v1`) records `git_head`,
+`gf180-torchsynth/oneshot-whole-voice-evidence-v1`) is written on every run and
+uploaded by the CI lane as the `oneshot-whole-voice-evidence` artifact. It
+records `git_head`,
 `git_tree_dirty` (whether `tb/`, `src/` or `spec/reference/` carried
 uncommitted changes), the `iverilog` version banner, and sha256 of every RTL
 and testbench source, the constants package,
@@ -274,10 +288,15 @@ and testbench source, the constants package,
 mutation verdict with its declared walk length and `float_tolerance: null`.
 
 **A record produced from a dirty tree, or whose `git_head` is not the commit
-under review, is not citeable evidence.** No record is committed with this
-increment, for the same structural reason the tail-chain increment committed
-none: a record can only cite its own commit exactly if it is generated after
-that commit exists.
+under review, is not citeable evidence.** Note that on a `pull_request` event
+`actions/checkout@v4` checks out the PR's *merge* commit, so a CI-produced
+record's `git_head` names that merge commit rather than the branch head — still
+exact, but a different object than a local run on the same branch.
+
+No record is committed with this increment, for the same structural reason the
+tail-chain increment committed none: a record can only cite its own commit
+exactly while that commit is still `HEAD`, so committing it would invalidate its
+own citation. A committed record must be generated on the merged commit.
 
 ---
 

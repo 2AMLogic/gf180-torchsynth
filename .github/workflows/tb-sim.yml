@@ -127,20 +127,23 @@ jobs:
     # prefix baseline, a back-to-back replay pair + solo, and 13 all-RTL
     # mutation simulations -- four of them full-length (the normalization
     # controls must be, because the branch decision is only reached at
-    # sample 176,400). Eight full-length simulations in all. Measured ~12 min
-    # per full-length simulation and ~2 h total on the dev Mac (Apple
-    # silicon, iverilog 13.0, serial); the step budget below is ~2.5x that
-    # for a slower hosted runner. This is the most expensive lane in the
-    # repository on purpose: it is the end-to-end bit-identity gate.
+    # sample 176,400). Eight full-length simulations in all.
+    #
+    # Budgets are ~3.5x MEASURED wall-clock, matching the convention the
+    # sim-lanes comment above states. Observed: 33m32s for this whole job on
+    # ubuntu-24.04 with the apt iverilog 12.0 (run 36894315125), against
+    # 54 min on the dev Mac (Apple silicon, iverilog 13.0, serial) -- the
+    # hosted runner is the faster of the two for this workload, so the
+    # budget is set from the slower figure.
     #
     # The full profile (26 param-committed receipt cases + 3 directed
-    # fixtures + 1 derived fixture, ~15x this work) is the release-era
+    # fixtures + 2 derived fixtures, ~15x this work) is the release-era
     # AWS-box evidence command in spec/ONESHOT-E2E.md, not a PR gate.
     runs-on: ubuntu-24.04
-    # >= the one lane step budget (300) plus install/checkout margin, and
-    # within GitHub-hosted's 360-minute hard job limit, so a runaway run is
-    # caught by its own step timeout rather than by the job cap.
-    timeout-minutes: 330
+    # >= the one lane step budget (120) plus install/checkout margin, and
+    # far inside GitHub-hosted's 360-minute hard job limit, so a runaway run
+    # is caught by its own step timeout rather than by the job cap.
+    timeout-minutes: 140
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -151,7 +154,7 @@ jobs:
       - name: Make evidence output directory
         run: mkdir -p out/whole-voice
       - name: "Whole-voice one-shot lane, regression profile (issue 79, iverilog, PDK-free)"
-        timeout-minutes: 300
+        timeout-minutes: 120
         run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice
       - name: Upload whole-voice evidence record
         if: always()
