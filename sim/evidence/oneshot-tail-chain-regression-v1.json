@@ -1,0 +1,72 @@
+{
+  "artifact_hashes": {
+    "normalization:below": {
+      "run0_linkcap.txt": "001336b94583c996fb7ecc10337bae365bba9025c18fd39715ff605a54062181",
+      "run0_mixcap.txt": "001336b94583c996fb7ecc10337bae365bba9025c18fd39715ff605a54062181",
+      "run0_ops.txt": "83772e57af65d8a4f69cd86ad791485aae57d264c6a48557dd9edcbd6792da99",
+      "run0_outcap.txt": "d87077128627bd615feb89ba63fb021db0378a92d1c76263572c19313f397b48",
+      "run0_params.txt": "b9480b50277c6df3d79a6b7af783f23ea34757d85dd6dbc9cefc362919c94c89",
+      "run0_status.txt": "aec1a25cf1476a5250488f9e79f0d7393b5c9e46a5bc4553736755e75c34360a",
+      "run0_streams.txt": "1a50832d4eab99a03438b29034daaaab4f6945962828ac12b54120959134c9b0"
+    },
+    "oneshot:divide-distinct-levels": {
+      "run0_linkcap.txt": "2be5ec95226fa1419a4013067572cb8c5c83a59198953a6ce16af315bcd0e4f8",
+      "run0_mixcap.txt": "2be5ec95226fa1419a4013067572cb8c5c83a59198953a6ce16af315bcd0e4f8",
+      "run0_ops.txt": "653c9c87ad9409240414ea92f4535922ea827207ab4b6a093c19850b78aa5f5e",
+      "run0_outcap.txt": "91086636f3d5da6e06b804e5437f70e2b17a871862601ccf47d8c384b4b15807",
+      "run0_params.txt": "8ca1ce71ea8e26a3cdbb303e5ae8e33b2340a2adbab08cb8fcdf8e808a3a1de0",
+      "run0_status.txt": "d6e4b36b1091137e3f909ee56ed38601a5ca9944cc1cdc47178aa1594a99930f",
+      "run0_streams.txt": "1c3c2661e0afff1cb0398949359783912c5109d456ca1008df9108f1c007d360"
+    }
+  },
+  "branch_coverage": {
+    "bypass": true,
+    "divide": true
+  },
+  "case_count": 8,
+  "cases": [
+    "normalization:above",
+    "normalization:below",
+    "normalization:tie",
+    "normalization-stress:anchor-3.9478583336",
+    "source:noise",
+    "special:silence",
+    "special:stress",
+    "oneshot:divide-distinct-levels"
+  ],
+  "float_tolerance": null,
+  "identity": {
+    "fixed_vector_sha256": {
+      "directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+      "fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07"
+    },
+    "git_head": "64ffd399b8843658a2a5afc74a9a53ba8ad23e03",
+    "git_tree_dirty": false,
+    "iverilog": "Icarus Verilog version 13.0 (stable) (v13_0)",
+    "rtl_sha256": {
+      "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "one_shot_tail_top.sv": "5fc988e97dc249f532b7277b66aa2844875e1f3755f01af772130626b0473290",
+      "tb_one_shot_tail.sv": "4619f70dff7d0e7065da75103eebe38efb33db6c888b8a56678d2a65d6d330ef"
+    }
+  },
+  "mutations": {
+    "gain-one-ulp": "DETECTED",
+    "interpolation-zoh": "DETECTED",
+    "missing-sample": "DETECTED",
+    "mixer-truncate": "DETECTED",
+    "normalization-always-off": "DETECTED",
+    "normalization-always-on": "DETECTED",
+    "normalization-wrong-peak": "DETECTED",
+    "normalization-wrong-reciprocal": "DETECTED",
+    "parameter-shuffle": "DETECTED",
+    "wrong-noise": "DETECTED"
+  },
+  "passes_per_case": 2,
+  "profile": "regression",
+  "result": "PASS",
+  "samples_per_case": 176400,
+  "schema": "gf180-torchsynth/oneshot-tail-chain-evidence-v1",
+  "scope": "mixer(#76) -> replay controller(#77) chain over host-fed source/amplitude streams; NOT the whole-voice top"
+}
