@@ -221,9 +221,13 @@ artifact-hash identical over all six artifact families; the no-reset
 back-to-back replay pair reproducing its solo run; and **13/13 all-RTL
 mutations `DETECTED`**, each localized to a trace/cycle/sample -- or, for
 `vco-pitch-wire-swap`, to `ops.V1.1[5]` (0 against 5,683), the op counter
-that was then its only observable (that record predates #263, which added the
-`vco_1.midi_sum` trace kill; the committed evidence records have not been
-regenerated). No float tolerance anywhere.
+that was then its only observable. No float tolerance anywhere. **Those figures
+describe the RTL at the commit the record cites, not the current tree:** #263
+changed `one_shot_voice_top.sv`, `sine_vco_engine.sv` and
+`tb_one_shot_voice.sv`, so both committed whole-voice records are stale
+against this tree until they are regenerated on a landed commit (see "What is
+still open"). Neither the mutation count nor the `vco_1.midi_sum` kill is
+established for the current RTL by any committed record.
 
 So the three directed vectors have now actually been walked through the
 integrated top, and `special:silence` has actually exercised the replay
@@ -366,7 +370,7 @@ fault is planted **in RTL**.
 | `lfo-envelope-swap` | `one_shot_voice_top.sv` | binding | the LFO rate-envelope and control-VCA gain-envelope roles swapped on both sides |
 | `amp-route-swap` | `one_shot_voice_top.sv` | binding | the vco_1 VCA driven by the noise amplitude column |
 | `pitch-column-load-swap` | `one_shot_voice_top.sv` | binding | the two pitch route words land in each other's upsample column memory at the control/audio crossing |
-| `vco-pitch-wire-swap` | `one_shot_voice_top.sv` | binding | vco_1's pitch *wire* driven by the vco_2 pitch column — killed twice, independently: the `vco_1.midi_sum` sample trace and the `ops.V1.*[5]` op counter, see below |
+| `vco-pitch-wire-swap` | `one_shot_voice_top.sv` | binding | vco_1's pitch *wire* driven by the vco_2 pitch column — the flow requires two independent kills, the `vco_1.midi_sum` sample trace and the `ops.V1.*[5]` op counter; only the op-counter kill is in a committed record (pre-#263), the trace kill is not yet established by one, see below |
 | `wrong-noise` | `one_shot_voice_top.sv` | binding | the mixer consumes the *previous* noise sample (one-sample lag on the exact C8 stream) |
 | `missing-sample` | `one_shot_voice_top.sv` | divide | one mixer sample (index 1000) dropped at the link seam; **must** localize to `link.replay_input[pass1]` sample 1000 or the run fails |
 | `interpolation-zoh` | `upsample_engine.sv` | divide | zero-order hold instead of the endpoint-aligned blend |
@@ -376,18 +380,23 @@ fault is planted **in RTL**.
 | `normalization-wrong-reciprocal` | `normalization_replay_engine.sv` | divide | U1.22 gain word +1 ULP |
 | `normalization-wrong-peak` | `normalization_replay_engine.sv` | divide | peak tracker keeps the last sample, not the max |
 
-**The pitch wire has two independent kills (#263).** The frequency both VCOs
+**The pitch wire is gated on two independent kills (#263); only one is in a
+committed record so far.** The frequency both VCOs
 integrate is the host-replayed `exp2` shadow word (DR-0010's 2026-09-22
 amendment), so inside the engine `up_pitch`'s only consumer is the C4 MIDI
 sum. Since #263 the #73 engine exports that sum (`midi_sum`: the Q10.21 value
 after C7 saturation and *before* the model's MIDI clamp, registered alongside
 `vco_word`), and the whole-voice lane compares it as the engine-internal trace
 `vco_1.midi_sum` (both passes, all samples), localized by trace/cycle/sample
-like every other trace. The control is therefore killed by (1) that sample
-trace and (2) the engine's own op-count conformance surface, where the wrong
-column changes the measured MIDI-clamp count (`ops.V1.*[5]`: 0 against 5,683
-on the binding case's first 6,000 samples). `tb/run_voice.py` requires **both**
-to fire (`VOICE_PITCH_WIRE_KILLS`), not merely the first. For the counter kill
+like every other trace. The flow therefore expects the control to be killed by
+(1) that sample trace and (2) the engine's own op-count conformance surface,
+where the wrong column changes the measured MIDI-clamp count (`ops.V1.*[5]`: 0
+against 5,683 on the binding case's first 6,000 samples, per the pre-#263
+committed records). `tb/run_voice.py` requires **both** to fire
+(`VOICE_PITCH_WIRE_KILLS`), not merely the first. **The trace kill (1) is not
+yet established by a committed record:** both committed whole-voice records
+predate #263 and show only the op-counter kill; it becomes evidence only once
+those records are regenerated on a landed commit that contains #263. For the counter kill
 to be a real gate, a prefix-capped walk must check those counters, so
 `voice_derive_case` computes **prefix-exact** saturation and clamp tallies for
 each declared cap by re-walking the model's own mirrors over the first *cap*
@@ -906,13 +915,23 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
    (and it did not get it: it ran alongside other live sweeps), and the
    contrast is why the two halves of this item separated rather than landing
    together.
-2. Neither lane is folded into the #78 aggregate gate
+2. **Regenerating both whole-voice records after #263.** #263 changed
+   `one_shot_voice_top.sv`, `sine_vco_engine.sv` and `tb_one_shot_voice.sv`,
+   so `oneshot-whole-voice-regression-v1.json` and
+   `oneshot-whole-voice-directed-v1.json` no longer describe the tree. They
+   can only be regenerated on a landed commit that contains #263 (a record
+   produced on the pull-request branch cites a commit that, under squash
+   merge, never reaches `main`), using the same run/verify/copy sequence as
+   item 1 with `--profile regression` and `--profile directed`. Until that
+   lands, the `vco_1.midi_sum` trace kill and the post-#263 mutation count
+   are not established by any committed record.
+3. Neither lane is folded into the #78 aggregate gate
    (`tools/qualify_rtl_modules.py`, tracked in #264): that gate's lane list is
    derived from
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
    toolchain, so folding either flow in requires a matching re-baseline. A
    documented follow-up, not a silent skip.
-3. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
+4. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
    GitHub-hosted's 360-minute job limit (tracked in #265). Pre-existing on
    `main` and unchanged
    here; fixing it needs a `sim-lanes` split.

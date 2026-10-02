@@ -232,24 +232,29 @@ registered with `vco_word`. It is the only consumer of `up_pitch` and was
 previously visible only as the `op_clamps` count. Behavior of every existing
 output is unchanged; the change is purely additive.
 
-Re-qualification evidence for this change:
+Re-qualification for this change:
 
 - `tb/sv/tb_sine_vco_engine.sv` now captures `midi_sum` as a third column and
   `tb/run_tb.py`'s `vco_check_case` compares it sample-exactly against
   `vco_golden.mirror_sine_lane`'s new `midi` stream (the pre-clamp sum), on
   every case the lane already walks, including the capped mutation walks.
-- `python3 tb/run_tb.py vco` (Icarus) was re-run on the changed engine:
-  `SINE-VCO RUN PASSED`, with every RTL and stimulus-side mutation still
-  DETECTED. `dropped-tuning-term` is now additionally localized on
-  `vco_1.midi_sum[0]`.
 - The whole-voice lane (`spec/ONESHOT-E2E.md`) compares the same word as
-  `vco_1.midi_sum` and makes `vco-pitch-wire-swap` a two-kill control.
+  `vco_1.midi_sum` and requires `vco-pitch-wire-swap` to be killed by both
+  that trace and the op counter.
 
-The aggregate record this document describes (`--record`) is a generated CI
-artifact and is not committed, so there is no committed record to refresh; the
-lane re-run above is the evidence, and it is reproducible from the command
-shown. The aggregate lint ledger was not re-baselined here (the ledger is
-pinned to CI's linter versions, see above).
+**No committed record yet establishes the changed engine.** A local
+`python3 tb/run_tb.py vco` (Icarus) run on the PR branch reported
+`SINE-VCO RUN PASSED`, with the lane's mutations DETECTED and
+`dropped-tuning-term` additionally localized on `vco_1.midi_sum[0]`. That run
+is reproducible from the command shown, but it is a local claim, not a
+committed record. The aggregate record this document describes (`--record`)
+is a generated CI artifact and is not committed. The committed whole-voice
+records (`sim/evidence/oneshot-whole-voice-*-v1.json`) predate this change and
+are stale against it. They must be regenerated on a landed commit that
+contains it before #73's qualification counts as re-established with committed
+evidence (`spec/ONESHOT-E2E.md`, "What is still open"). The aggregate lint
+ledger was not re-baselined here (the ledger is pinned to CI's linter
+versions, see above).
 
 ## Evidence record
 
