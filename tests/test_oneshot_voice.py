@@ -72,7 +72,10 @@ def synthetic_expected(n=8, full=False):
                    5 * CONTROL_TICKS, 0]
     for pas in (1, 2):
         for route in range(5):
-            ops[("U", pas, route)] = [n - 1, n - 1, n - 1, n - 1, n, None, n]
+            # Position 5 is the upsample engine's sticky saturation counter
+            # (#254). It is a real expectation at every walk length, never
+            # None -- a None here would make the comparator skip it.
+            ops[("U", pas, route)] = [n - 1, n - 1, n - 1, n - 1, n, 0, n]
         ops[("V1", pas)] = [3 * n, 7 * n, 4 * n, n, None, None]
         ops[("V2", pas)] = [8 * n, 8 * n, 7 * n, None]
         ops[("MIX", pas)] = [6 * n, 2 * n, 4 * n, None, None, n, 0]
@@ -451,6 +454,7 @@ class PrefixWalksStillCheckTheVcoOpCounters(unittest.TestCase):
                                  "vco2_sats": 9}},
             "lfo": [{"clamps": 0}, {"clamps": 0}],
             "matrix_sats": 0,
+            "up_sats": {route: 0 for route in range(5)},
             "mix_truth": {"streams": {}, "aux": {"sats": 0, "rounds": 0}},
             "sound_index": 0,
         }
@@ -486,6 +490,151 @@ class PrefixWalksStillCheckTheVcoOpCounters(unittest.TestCase):
         ops = rv.voice_expected(case, 64)["ops"]
         self.assertIsNone(ops[("V1", 1)][4])
         self.assertIsNone(ops[("V2", 1)][3])
+
+
+class UpsampleSaturationCounterIsCheckedAtEveryWalkLength(unittest.TestCase):
+    """``ops.U.*[5]`` must not be silently skipped (#254).
+
+    Position 5 of each ``U`` op row is the upsample engine's sticky
+    saturation counter (``upsample_engine.sv``'s ``op_sats``, the sixth
+    ``U`` field the bench emits). It used to be expected ``None`` for every
+    route, every pass and **every** walk length -- and ``voice_rows`` skips a
+    ``None`` expectation -- so this lane never compared it at all, not even
+    on the full-length committed cases. That is unlike the other ``None``s
+    in :func:`run_voice.voice_expected`, which are walk-conditional and do
+    get compared on a full walk.
+
+    These checks pin that the position now carries the model's own per-route
+    tally, that a capped walk still compares it whenever that is exact, and
+    that a wrong count is actually reported as a mismatch.
+    """
+
+    def _case(self, up_sats, walk):
+        cap = rv.VOICE_MUTATION_WALK_CAP
+        traces = {name: [0] * CONTROL_TICKS for name in rv.VOICE_CTL_TRACES}
+        traces.update({name: [0] * walk for name in rv.VOICE_AUDIO_TRACES})
+        traces["mixer.output"] = [0] * walk
+        return {
+            "id": "synthetic",
+            "traces": traces,
+            "norm_diag": {"normalized_branch": False, "peak_word": 0,
+                          "gain_word": 0},
+            "norm_counters": type("C", (), {"total": lambda self: 0})(),
+            "sine_aux": {"counters": {"records": []}, "clamps": 0},
+            "vco2_sats": 0,
+            "prefix_aux": {cap: {"sine_sats": 0, "sine_clamps": 0,
+                                 "vco2_sats": 0}},
+            "lfo": [{"clamps": 0}, {"clamps": 0}],
+            "matrix_sats": 0,
+            "up_sats": dict(up_sats),
+            "mix_truth": {"streams": {}, "aux": {"sats": 0, "rounds": 0}},
+            "sound_index": 0,
+        }
+
+    def test_full_walk_compares_the_models_per_route_tally(self):
+        # Distinct per-route values, so the route ordering is pinned too and
+        # not merely "all zero happens to match".
+        up_sats = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}
+        ops = rv.voice_expected(
+            self._case(up_sats, rv.AUDIO_SAMPLES), rv.AUDIO_SAMPLES)["ops"]
+        for pas in (1, 2):
+            for route in range(5):
+                self.assertEqual(ops[("U", pas, route)][5], up_sats[route],
+                                 (pas, route))
+
+    def test_the_full_walk_expectation_is_never_none(self):
+        # The regression this class exists for: a None here is invisible to
+        # the comparator, so the counter would be unchecked on exactly the
+        # runs the committed evidence records are made from.
+        ops = rv.voice_expected(
+            self._case({route: 0 for route in range(5)}, rv.AUDIO_SAMPLES),
+            rv.AUDIO_SAMPLES)["ops"]
+        for pas in (1, 2):
+            for route in range(5):
+                self.assertIsNotNone(ops[("U", pas, route)][5], (pas, route))
+
+    def test_declared_prefix_cap_still_compares_a_zero_tally(self):
+        # A zero full-clip tally forces zero on every prefix (the counter is
+        # sticky and monotone in the walk length), so a capped walk is exact
+        # here rather than unchecked.
+        cap = rv.VOICE_MUTATION_WALK_CAP
+        ops = rv.voice_expected(
+            self._case({route: 0 for route in range(5)}, cap), cap)["ops"]
+        for pas in (1, 2):
+            for route in range(5):
+                self.assertEqual(ops[("U", pas, route)][5], 0, (pas, route))
+
+    def test_a_nonzero_tally_is_unchecked_only_on_a_capped_walk(self):
+        # An aggregate count cannot be localized to a prefix, so a non-zero
+        # tally is honestly left unchecked on a capped walk -- never guessed
+        # -- while the full walk still compares it exactly.
+        cap = rv.VOICE_MUTATION_WALK_CAP
+        up_sats = {0: 0, 1: 0, 2: 7, 3: 0, 4: 0}
+        capped = rv.voice_expected(self._case(up_sats, cap), cap)["ops"]
+        self.assertIsNone(capped[("U", 1, 2)][5])
+        self.assertEqual(capped[("U", 1, 0)][5], 0)
+        full = rv.voice_expected(
+            self._case(up_sats, rv.AUDIO_SAMPLES), rv.AUDIO_SAMPLES)["ops"]
+        self.assertEqual(full[("U", 1, 2)][5], 7)
+
+    def test_an_overcounted_saturation_is_reported_as_a_mismatch(self):
+        # End to end through the comparator: before #254 this capture was
+        # indistinguishable from a conforming one.
+        expected = synthetic_expected(full=True)
+        capture = clean_capture(expected)
+        capture["ops"][("U", 2, 3)][5] += 1
+        rows = rv.voice_rows(capture, expected)
+        self.assertEqual([row[0] for row in rows], ["ops.U.2.3[5]"])
+        self.assertEqual(rows[0][3:], (0, 1))
+
+
+class UpsampleSaturationTallyIsTheModelsOwnValue(unittest.TestCase):
+    """The compared tally comes from the model, not from a constant (#254).
+
+    ``voice_derive_case`` must reach ``up_sats`` through the same model call
+    the #72 module lane uses (``mod_matrix_golden.mirror_upsample`` over the
+    case's own matrix column), so a model change moves this lane's
+    expectation instead of leaving a baked-in number silently disagreeing
+    with it. Re-derived here independently on one regression case, which is
+    pure Python -- no simulator.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from run_tb import mix_load_receipt
+        from torchsynth_voice.format_sweep import FixedControlPath
+
+        _receipt, cls.formats, cls.cases = mix_load_receipt()
+        cls.fcp = FixedControlPath(cls.formats.control_spec)
+        cls._saved = dict(rv._LUT_TABLES)
+        rv._LUT_TABLES["audio"] = cls.formats.table
+        rv._LUT_TABLES["control"] = cls.fcp.table
+        cls.case_id = rv.VOICE_MUTATION_BYPASS_CASE
+        frozen = cls.cases[cls.case_id]
+        cls.case = rv.voice_derive_case(
+            cls.formats, cls.fcp, cls.case_id, frozen["parameters"], None,
+            frozen,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        rv._LUT_TABLES.clear()
+        rv._LUT_TABLES.update(cls._saved)
+
+    def test_every_route_carries_a_tally(self):
+        self.assertEqual(sorted(self.case["up_sats"]), list(range(5)))
+
+    def test_each_tally_equals_an_independent_mirror_walk(self):
+        from torchsynth_voice import mod_matrix_golden as mm
+
+        traces = self.case["traces"]
+        for index, route in enumerate(rv.MOD_MATRIX_OUTPUTS):
+            stream, counters = mm.mirror_upsample(
+                self.fcp, traces["mod_matrix." + route], route)
+            self.assertEqual(stream, traces["control_upsample." + route],
+                             route)
+            self.assertEqual(self.case["up_sats"][index],
+                             counters["total_saturation"], route)
 
 
 class CasePartitionMatchesFrozenReceipt(unittest.TestCase):

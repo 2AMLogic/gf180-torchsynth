@@ -322,6 +322,31 @@ of all sixteen engine instances.
 `float_voice.voice_checkpoints()` minus the two host-fed keyboard
 checkpoints, so no declared checkpoint can be silently left uncompared.
 
+**The five upsample columns' sticky saturation counters are compared too, at
+every walk length** (`ops.U.<pass>.<route>[5]`, the `op_sats` output of each
+`upsample_engine` instance). Until #254 they were the one op counter this
+lane expected `None` for unconditionally, and the comparator skips a `None`
+expectation -- so that counter was never compared here, not even on the
+full-length committed cases the evidence records are made from, while the
+#72 module lane did compare it. The expectation is now the model's own
+per-route tally, reached through the same `mod_matrix_golden.mirror_upsample`
+call the #72 lane makes over this case's own matrix column (and refused if
+that mirror disagrees with the composed model's rendered
+`control_upsample.*` trace). A capped walk is **prefix-exact whenever that
+tally is zero**: the counter is sticky and monotone non-decreasing in the
+walk length, so a zero full-clip total forces zero on every prefix. A
+non-zero total cannot be localized to a prefix from an aggregate count and
+is left unchecked on a capped walk rather than guessed -- the full-length
+committed cases still compare it exactly. Every case either profile plans
+tallies **zero** on all five routes, and that is structural rather than
+lucky: each matrix column word is already saturated into the route's
+accepted format, and the blend is a convex combination of two adjacent
+column words with one round-to-nearest, so it cannot leave that format. The
+claim this check therefore discharges is one-sided and stated as such -- that
+the integrated engines do not saturate where the model does not -- exactly
+like the already-compared `ops.M[3]` matrix tally and the `ops.NZ[3..4]`
+noise error registers.
+
 ### Negative controls -- every one is a genuine RTL mutation
 
 This is the substantive difference from the tail-chain lane, where four of ten
