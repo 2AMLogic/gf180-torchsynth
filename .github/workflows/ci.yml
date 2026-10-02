@@ -17,7 +17,7 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history, not the default shallow depth-1 fetch.
           # tests/test_committed_oneshot_evidence.py asserts that every
