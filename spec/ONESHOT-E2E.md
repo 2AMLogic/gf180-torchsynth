@@ -9,7 +9,9 @@ exist for *both* lanes:
 `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
 `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`, the merge commit of PR #259 that
 landed the tail-chain workdir-path fix this record's own generation depended
-on) -- see "Evidence identity". Issue #79 nonetheless stays open on the
+on) -- see "Evidence identity". Both records are re-hashed against the tree's
+own RTL and frozen vectors on every CI run, so neither can quietly go stale
+after an engine edit. Issue #79 nonetheless stays open on the
 `full` profile run for both lanes that a release-era record must cite. See
 "What is still open" below. Nothing here releases the "must pass before
 FPGA/gf180 fit claims" gate.
@@ -288,17 +290,49 @@ absent and nothing ran** -- never reported as a pass.
 `gf180-torchsynth/oneshot-whole-voice-evidence-v1`) is written on every run and
 uploaded by the CI lane as the `oneshot-whole-voice-evidence` artifact. It
 records `git_head`,
-`git_tree_dirty` (whether `tb/`, `src/` or `spec/reference/` carried
-uncommitted changes), the `iverilog` version banner, and sha256 of every RTL
+`git_tree_dirty` (whether any path in the declared evidence scope
+`tb/`, `src/`, `spec/reference/`, `sim/reference/` carried uncommitted
+changes — `run_tb.EVIDENCE_TREE_SCOPE`), the `iverilog` version banner, and
+sha256 of every RTL
 and testbench source, the constants package,
 `fixed-voice-golden-v1.json` and `directed-voice-v1.json`, plus every
 mutation verdict with its declared walk length and `float_tolerance: null`.
+
+**The dirtiness scope must contain every digested input, and now does.**
+`sim/reference/` was originally missing from it even though
+`fixed-voice-golden-v1.json` — the frozen receipt both lanes pin their expected
+digests against — lives there, so an uncommitted receipt edit could have
+produced a record still reporting `git_tree_dirty: false`. Both flows now take
+the scope from one shared constant, and
+`tests/test_committed_oneshot_evidence.py` asserts that every source a
+committed record digests lies under one of its prefixes, so adding a digested
+input outside the scope fails CI instead of silently reopening the gap. Both
+committed records were re-checked against the blobs at the commits they cite
+(`97ee7dd9…`, `64ffd399…`): every digest matches, so the widened scope does not
+retroactively weaken either record.
 
 **A record produced from a dirty tree, or whose `git_head` is not the commit
 under review, is not citeable evidence.** Note that on a `pull_request` event
 `actions/checkout@v4` checks out the PR's *merge* commit, so a CI-produced
 record's `git_head` names that merge commit rather than the branch head — still
 exact, but a different object than a local run on the same branch.
+
+**A record also stops being evidence when the sources it names change, and
+none of its own fields notice.** Editing an engine leaves the committed record
+untouched: `result` stays `PASS`, `git_tree_dirty` stays `false`, and the cited
+`git_head` keeps naming a commit whose RTL is no longer the RTL in the tree —
+so a changed engine would inherit the previous version's bit-identity proof.
+`tools/verify_oneshot_evidence.py` therefore re-hashes every source named in
+`identity.rtl_sha256` / `identity.fixed_vector_sha256` against the tree being
+checked (on by default; `--skip-tree-check` disables it and says so loudly in
+the output and in the exit narration). A name that resolves to no file, or to
+more than one under the declared roots (`tb/sv`, `spec/reference`,
+`sim/reference`), is an error rather than a skip.
+`tests/test_committed_oneshot_evidence.py` runs that same check against both
+committed records on every CI run, and proves the gate bites by planting a
+one-byte change in a throwaway mirror tree. **A stale record is regenerated,
+never re-pinned by hand** — the failure message prints the lane's own
+regeneration command.
 
 **A committed record now exists**:
 `sim/evidence/oneshot-whole-voice-regression-v1.json`. It was generated on
@@ -431,7 +465,7 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
 | 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all thirteen controls are genuine RTL mutations** (no stimulus-only control remains). Six are demonstrated on the declared binding-distinct stimulus because a uniform one cannot kill them | Met at the chain boundary; four controls stimulus-only |
 | 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases |
 | 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met |
-| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`. **Not met at `full`** (AC1 at `full` has not run either) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`. **Not met at `full`** |
+| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, and its 15 cited sources are re-hashed against the tree on every CI run, so an engine edit cannot inherit this pass. **Not met at `full`** (AC1 at `full` has not run either) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, with the same per-CI-run re-hash of its 7 cited sources. **Not met at `full`** |
 | 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** Requires AC1 at `full` and AC6's committed, commit-exact record **for both lanes**. The gate stays closed | Not satisfied |
 
 ## What is still open
@@ -444,19 +478,22 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
    `97ee7dd94d068bd7341f5ee02247e63f99597336`) and
    `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
    `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`).
-2. **A trace-level kill for the VCO pitch wire.** `vco-pitch-wire-swap` is
+2. **A trace-level kill for the VCO pitch wire** (tracked in #263).
+   `vco-pitch-wire-swap` is
    killed only on the #73 engine's MIDI-clamp op counter, because the engine
    does not export its C4 MIDI sum and the frequency it integrates is the
    host-replayed `exp2` shadow word. Exporting that sum (and comparing it) is
    an RTL change to a qualified module, so it is a follow-up rather than part
    of this verification increment.
 3. Neither lane is folded into the #78 aggregate gate
-   (`tools/qualify_rtl_modules.py`): that gate's lane list is derived from
+   (`tools/qualify_rtl_modules.py`, tracked in #264): that gate's lane list is
+   derived from
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
    toolchain, so folding either flow in requires a matching re-baseline. A
    documented follow-up, not a silent skip.
 4. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
-   GitHub-hosted's 360-minute job limit. Pre-existing on `main` and unchanged
+   GitHub-hosted's 360-minute job limit (tracked in #265). Pre-existing on
+   `main` and unchanged
    here; fixing it needs a `sim-lanes` split.
 
 ## Honesty

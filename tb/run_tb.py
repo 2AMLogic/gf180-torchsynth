@@ -413,6 +413,21 @@ ADSR_DUT_SV = TB_ROOT / "sv/adsr_engine.sv"
 ADSR_TB_SV = TB_ROOT / "sv/tb_adsr_engine.sv"
 CONSTANTS_PKG_SV = TB_ROOT / "sv/gf180_rtl_constants_pkg.sv"
 
+#: Repository paths whose uncommitted state invalidates an issue-#79 evidence
+#: record (``spec/ONESHOT-E2E.md`` -> "Evidence identity"). Such a record pairs
+#: ``git_head`` with ``git_tree_dirty``; that pair only means "this record
+#: describes the tree at that commit" if every input the comparison consumes is
+#: inside the dirtiness scope. ``sim/reference`` is in the list because the
+#: frozen whole-voice receipt (``VCO_RECEIPT_PATH``) -- which every one-shot
+#: lane pins its expected digests against -- lives there; it was omitted when
+#: these flows were first written, so an uncommitted receipt edit could have
+#: produced a record still reporting ``git_tree_dirty: false``.
+#: ``tests/test_committed_oneshot_evidence.py`` asserts that every source a
+#: committed record digests lies under one of these prefixes, so adding a
+#: digested input outside the scope fails CI rather than silently widening the
+#: gap again.
+EVIDENCE_TREE_SCOPE = ("tb", "src", "spec/reference", "sim/reference")
+
 #: Committed ADSR golden vectors (issue #70).
 ADSR_VECTOR_DIR = ROOT / "sim/reference/adsr-golden-v1"
 #: The case mutations are demonstrated on (default-envelope sustain 0.75).

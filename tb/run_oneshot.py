@@ -35,7 +35,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from run_tb import (  # noqa: E402
-    CONSTANTS_PKG_SV, MIX_DUT_SV, MIX_FIXTURE_CASES, MIX_RTL_MUTATIONS,
+    CONSTANTS_PKG_SV, EVIDENCE_TREE_SCOPE, MIX_DUT_SV, MIX_FIXTURE_CASES,
+    MIX_RTL_MUTATIONS,
     NORMREPLAY_ALWAYS_OFF_MUTANT, NORMREPLAY_ALWAYS_ON_ANCHOR,
     NORMREPLAY_ALWAYS_ON_MUTANT, NORMREPLAY_DUT_SV,
     NORMREPLAY_WRONG_PEAK_ANCHOR, NORMREPLAY_WRONG_PEAK_MUTANT,
@@ -338,8 +339,8 @@ def oneshot_tool_identity() -> dict:
 
     return {
         "git_head": git("rev-parse", "HEAD"),
-        "git_tree_dirty": bool(git("status", "--porcelain", "--", "tb", "src",
-                                   "spec/reference")),
+        "git_tree_dirty": bool(git("status", "--porcelain", "--",
+                                   *EVIDENCE_TREE_SCOPE)),
         "iverilog": iverilog,
         "rtl_sha256": {
             path.name: digest(path)
