@@ -116,6 +116,61 @@ smallest set that covers both normalization branches at full clip length.
 declared prefix cap in `regression`, and is a committed full-length case in
 `full`.
 
+### The directed vectors, and the peak envelope's low end
+
+Issue #79 asks for the integrated top over "compact directed vectors **and**
+the selected regression corpus". The `regression` pair above is only the
+second half of that; the three directed fixtures are the first, and until the
+`directed` profile existed they were reachable **only** inside the 31-case
+`full` profile, which has never been run. So the integrated top's bit-identity
+claim had never seen any of them.
+
+That is not a cosmetic gap, because of where they sit on the normalization
+peak:
+
+| case | branch | peak word | what it contributes |
+| --- | --- | --- | --- |
+| `special:silence` | bypass | **0** | the only committed stimulus with a zero peak — the replay controller's zero-peak path, where a reciprocal is undefined |
+| `special:near-silence` | bypass | **2** | a two-ULP peak: the smallest non-zero peak of any case either profile plans |
+| `special:stress` | divide | 8388608 | the un-overridden parameter set both derived fixtures are built from. Its ceiling peak is **also** reached by `voice:divide-distinct-levels`, so this vector widens the parameters, not the peak range |
+
+The two regression cases reach the ceiling end but **not** the low end:
+`normalization:below` bypasses at exactly unity (`2^21`) and
+`voice:divide-distinct-levels` saturates to the ceiling. Neither has a zero or
+near-zero peak. Only the low end is exclusive to the directed vectors, and
+only that is claimed — `tests/test_oneshot_voice.py` asserts both halves of
+that statement (zero is unreachable from `regression`, the ceiling *is*
+reachable from it) against the frozen fixtures, so the claim cannot rot into a
+comment that used to be true. The first draft of this increment overstated it
+in the other direction and that check is what caught it.
+
+**The low end is a pass condition, not a happy accident.** In any profile that
+plans a directed vector, the flow requires the peak envelope's ends to have
+actually been reached:
+
+```
+peak envelope (3 directed vectors planned): zero peak True, ceiling peak
+8388608 True, observed [...] -> OK
+```
+
+and fails the run otherwise. The ceiling is **derived** from the accepted
+audio format (`-formats.audio.min_int`, the magnitude of the Q2.21 word's own
+negative rail), never a literal, so a format change moves the gate with it
+rather than silently passing a stale constant. In `regression`, where no
+directed vector is planned, the flow prints the observed peaks and says
+plainly that the envelope's ends are proven by the `directed` and `full`
+profiles and not there — an unrun check is never reported as a pass.
+
+The `directed` profile is a strict **superset** of `regression`: every
+regression case, the binding baseline, the two-clean-simulation hash identity,
+the back-to-back replay pair and all thirteen all-RTL mutations run unchanged,
+and the three directed vectors are added as further full-length committed
+cases. Superset rather than a narrow extra lane on purpose: a profile that
+widened case coverage while dropping the mutation lane would produce a record
+that reads stronger and proves less. `tests/test_oneshot_voice.py` enforces
+the superset relation, that the three vectors are exactly the declared
+`MIX_FIXTURE_CASES`, and that no case is planned twice.
+
 ### The binding case (and why a uniform stimulus is not enough)
 
 `special:stress` is deliberately uniform: **all twenty modulation depths are
@@ -232,7 +287,9 @@ then orders the sequence rows by the capture's own cycle number -- so `rows[0]`
 is the earliest observable divergence in simulated time, not merely the first
 trace in a list. An `x`-state emission is a mismatch, not a skip. A failed
 committed case copies its whole raw artifact directory to a printed
-`voice-failed-*` temp dir; `--workdir` retains everything unconditionally.
+`voice-failed-*` temp dir; `--workdir` retains everything unconditionally. A
+*corrupt* capture is reported separately and never as a localized mismatch —
+see "A corrupt capture is inconclusive, not a verdict" below.
 
 ### Determinism and state independence
 
@@ -249,11 +306,15 @@ committed case copies its whole raw artifact directory to a printed
 | Profile | Cases | Command | Role |
 | --- | --- | --- | --- |
 | `regression` (default) | `normalization:below` + `voice:divide-distinct-levels` at full length, the `voice:binding-distinct` prefix baseline, the two hash simulations, the replay pair/solo and the thirteen mutation simulations | `python3 tb/run_voice.py --profile regression --workdir <dir>` | PR/CI gate (`tb-sim.yml` job `oneshot-whole-voice`) |
+| `directed` | **everything `regression` runs**, plus the three directed vectors (`special:silence`, `special:near-silence`, `special:stress`) as full-length committed cases, with the peak-envelope gate armed | `python3 tb/run_voice.py --profile directed --workdir <dir>` | the "compact directed vectors" half of issue #79's AC1. One session's work on an 8-core box; too slow for the PR gate, far cheaper than `full` |
 | `full` | all 26 receipt cases + 3 directed fixtures + both derived fixtures, same baseline/pair/hash/mutation simulations | `python3 tb/run_voice.py --profile full --workdir <dir>` | release-era evidence; remote AWS box per `CLAUDE.md` |
 
-Both profiles walk the complete clip twice for every committed case; neither
-caps a committed walk. Simulator-free harness checks:
-`python3 -m unittest tests.test_oneshot_voice`.
+All three profiles walk the complete clip twice for every committed case; none
+caps a committed walk. The profiles are **nested** — `regression` ⊂ `directed`
+⊂ `full` on committed cases, with every stage shared — so a `directed` record
+supersedes a `regression` one rather than sitting beside it, and no reader has
+to compare two records to work out which checks ran. Simulator-free harness
+checks: `python3 -m unittest tests.test_oneshot_voice`.
 
 Measured wall-clock for the whole `regression` profile:
 
@@ -281,8 +342,50 @@ before building any tool command. A relative path is fine to *pass* (the CI
 lane passes `out/whole-voice` so the record can be uploaded as an artifact) —
 it is simply never handed to a tool unresolved.
 
-Exit status is the lane's own pass/fail; **exit 3 means Icarus Verilog is
-absent and nothing ran** -- never reported as a pass.
+Exit status is the lane's own pass/fail, and two of the four statuses are
+**not verdicts**:
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | pass |
+| `1` | a real bit-identity or mutation-sensitivity failure — a verdict against the RTL |
+| `3` | Icarus Verilog is absent and **nothing ran** — never reported as a pass |
+| `4` | a capture file was corrupt, so the run is **INCONCLUSIVE** — see below |
+
+### A corrupt capture is inconclusive, not a verdict
+
+`CLAUDE.md` requires that a check which did not run is never reported as a
+pass. The corollary, which this lane now enforces, is that it must not be
+reported as a **failure of the RTL** either.
+
+The bench's capture `$fwrite` has a fixed column count, so a row with the
+wrong number of fields cannot come from the simulator. It can only come from
+bytes lost between that `$fwrite` and the file — a writeback that failed on a
+full or failing filesystem. When a block is dropped mid-file the surviving
+bytes splice the prefix of one row onto the suffix of a much later one, and
+the resulting field count is wrong. `voice_capture_rows` detects exactly that
+signature and raises `VoiceCaptureIntegrityError`, which the flow turns into
+exit `4` with a diagnosis naming the file, the line, both field counts, the
+file's byte and row totals, and the sentence "not an RTL/model disagreement".
+**No evidence record is written**, because none was earned.
+
+This is not hypothetical. The first `directed`-profile run lost **9,987 of
+352,800** `audiocap` rows in five spliced holes (25,761,768 bytes against the
+26,286,160 the same case had written complete, and compared bit-exact,
+twenty-five minutes earlier in the same run) on a shared 8-core box. The
+flow's reaction at the time was the opaque message `audiocap row '...' does
+not carry 15 fields` — which a reader would reasonably misread as an RTL
+defect, and which is the misdiagnosis this change exists to prevent.
+
+Two scope limits, stated rather than glossed:
+
+- an `x`-state emission has the *right* field count and **is** a genuine
+  mismatch; the comparator still owns it. Conflating the two would let a real
+  RTL defect hide behind "inconclusive".
+- a lost block that happened to land exactly on row boundaries would leave a
+  well-formed but **short** file, which is not distinguishable from a bench
+  that stopped early. That still surfaces as the case's count mismatch. Only
+  the spliced-row signature is diagnosable, and only that is claimed.
 
 ### Evidence identity
 
@@ -297,6 +400,22 @@ sha256 of every RTL
 and testbench source, the constants package,
 `fixed-voice-golden-v1.json` and `directed-voice-v1.json`, plus every
 mutation verdict with its declared walk length and `float_tolerance: null`.
+
+Three further fields make a record say *which stimulus* produced the pass
+rather than only how many cases did, so AC1's "all required cases" is
+auditable from the record alone:
+
+| Field | Contents |
+| --- | --- |
+| `case_diagnostics` | per committed case: `branch`, `peak_word`, `gain_word`, whether it is `frozen_pinned` to a receipt entry, and its own `PASS`/`FAIL` |
+| `directed_cases` | which of the three declared directed vectors this run actually planned (empty in `regression`) |
+| `peak_envelope` | `zero_peak`, `ceiling_peak`, the derived `ceiling_peak_word`, and the sorted `observed_peaks` of every committed case |
+
+The schema name is unchanged: these are additive fields, so
+`tools/verify_oneshot_evidence.py` and the two already-committed
+`regression` records keep validating untouched. A reader comparing a
+`directed` record against a `regression` one can see from `directed_cases`
+and `peak_envelope` alone which of the two is the stronger claim.
 
 **The dirtiness scope must contain every digested input, and now does.**
 `sim/reference/` was originally missing from it even though
