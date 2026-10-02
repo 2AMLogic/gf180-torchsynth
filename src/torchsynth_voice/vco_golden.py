@@ -128,6 +128,7 @@ def mirror_sine_lane(
     vco: List[int] = []
     phases: List[int] = []
     fqs: List[int] = []
+    sums: List[int] = []
     clamps = 0
     total = len(up_pitch) if samples is None else min(samples, len(up_pitch))
     for n in range(total):
@@ -139,6 +140,7 @@ def mirror_sine_lane(
             midi_f0_word + tuning_word + product,
             midi_fmt, OverflowPolicy.SATURATE, counters, "sine.pitch_sum",
         )
+        sums.append(pitch_sum)
         if clamp_pitch:
             if pitch_sum < MIDI_CLAMP_MIN:
                 pitch_sum = MIDI_CLAMP_MIN
@@ -166,7 +168,7 @@ def mirror_sine_lane(
 
     tally = counters.as_json()
     return (
-        {"vco": vco, "phase": phases, "fq": fqs},
+        {"vco": vco, "phase": phases, "fq": fqs, "midi": sums},
         {"counters": tally, "clamps": clamps},
     )
 

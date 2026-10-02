@@ -219,6 +219,38 @@ These exclusions are also declared on the `rtl-modules` node in
 `spec/capabilities-v1.json`, so a reader of `docs/CAPABILITIES.md` sees them
 next to the claim.
 
+## Interface changes to qualified modules
+
+A qualified module's interface change is re-qualified by re-running its own
+lane, never inferred from a neighbouring lane's pass.
+
+### `vco` (#73): `midi_sum` output (#263)
+
+`tb/sv/sine_vco_engine.sv` gained one output, `midi_sum` (`C4_WIDTH`, signed):
+the Q10.21 pitch sum after C7 saturation and before the model's MIDI clamp,
+registered with `vco_word`. It is the only consumer of `up_pitch` and was
+previously visible only as the `op_clamps` count. Behavior of every existing
+output is unchanged; the change is purely additive.
+
+Re-qualification evidence for this change:
+
+- `tb/sv/tb_sine_vco_engine.sv` now captures `midi_sum` as a third column and
+  `tb/run_tb.py`'s `vco_check_case` compares it sample-exactly against
+  `vco_golden.mirror_sine_lane`'s new `midi` stream (the pre-clamp sum), on
+  every case the lane already walks, including the capped mutation walks.
+- `python3 tb/run_tb.py vco` (Icarus) was re-run on the changed engine:
+  `SINE-VCO RUN PASSED`, with every RTL and stimulus-side mutation still
+  DETECTED. `dropped-tuning-term` is now additionally localized on
+  `vco_1.midi_sum[0]`.
+- The whole-voice lane (`spec/ONESHOT-E2E.md`) compares the same word as
+  `vco_1.midi_sum` and makes `vco-pitch-wire-swap` a two-kill control.
+
+The aggregate record this document describes (`--record`) is a generated CI
+artifact and is not committed, so there is no committed record to refresh; the
+lane re-run above is the evidence, and it is reproducible from the command
+shown. The aggregate lint ledger was not re-baselined here (the ledger is
+pinned to CI's linter versions, see above).
+
 ## Evidence record
 
 `--record` writes a record conforming to

@@ -221,8 +221,9 @@ artifact-hash identical over all six artifact families; the no-reset
 back-to-back replay pair reproducing its solo run; and **13/13 all-RTL
 mutations `DETECTED`**, each localized to a trace/cycle/sample -- or, for
 `vco-pitch-wire-swap`, to `ops.V1.1[5]` (0 against 5,683), the op counter
-that is its only observable, exactly as declared above. No float tolerance
-anywhere.
+that was then its only observable (that record predates #263, which added the
+`vco_1.midi_sum` trace kill; the committed evidence records have not been
+regenerated). No float tolerance anywhere.
 
 So the three directed vectors have now actually been walked through the
 integrated top, and `special:silence` has actually exercised the replay
@@ -323,7 +324,9 @@ of all sixteen engine instances.
 
 `tests/test_oneshot_voice.py` asserts that this compared set is **exactly**
 `float_voice.voice_checkpoints()` minus the two host-fed keyboard
-checkpoints, so no declared checkpoint can be silently left uncompared.
+checkpoints, so no declared checkpoint can be silently left uncompared. The
+one engine-internal addition, `vco_1.midi_sum` (#263), is compared *in
+addition* to that set and is asserted disjoint from it.
 
 **The five upsample columns' sticky saturation counters are compared too, at
 every walk length** (`ops.U.<pass>.<route>[5]`, the `op_sats` output of each
@@ -363,7 +366,7 @@ fault is planted **in RTL**.
 | `lfo-envelope-swap` | `one_shot_voice_top.sv` | binding | the LFO rate-envelope and control-VCA gain-envelope roles swapped on both sides |
 | `amp-route-swap` | `one_shot_voice_top.sv` | binding | the vco_1 VCA driven by the noise amplitude column |
 | `pitch-column-load-swap` | `one_shot_voice_top.sv` | binding | the two pitch route words land in each other's upsample column memory at the control/audio crossing |
-| `vco-pitch-wire-swap` | `one_shot_voice_top.sv` | binding | vco_1's pitch *wire* driven by the vco_2 pitch column — caught only on an op counter, see below |
+| `vco-pitch-wire-swap` | `one_shot_voice_top.sv` | binding | vco_1's pitch *wire* driven by the vco_2 pitch column — killed twice, independently: the `vco_1.midi_sum` sample trace and the `ops.V1.*[5]` op counter, see below |
 | `wrong-noise` | `one_shot_voice_top.sv` | binding | the mixer consumes the *previous* noise sample (one-sample lag on the exact C8 stream) |
 | `missing-sample` | `one_shot_voice_top.sv` | divide | one mixer sample (index 1000) dropped at the link seam; **must** localize to `link.replay_input[pass1]` sample 1000 or the run fails |
 | `interpolation-zoh` | `upsample_engine.sv` | divide | zero-order hold instead of the endpoint-aligned blend |
@@ -373,21 +376,28 @@ fault is planted **in RTL**.
 | `normalization-wrong-reciprocal` | `normalization_replay_engine.sv` | divide | U1.22 gain word +1 ULP |
 | `normalization-wrong-peak` | `normalization_replay_engine.sv` | divide | peak tracker keeps the last sample, not the max |
 
-**The pitch wire is observable only on an op counter, and that is a property of
-the ratified architecture.** `vco-pitch-wire-swap` changes **no** compared
-sample trace. The frequency both VCOs integrate is the host-replayed `exp2`
-shadow word (DR-0010's 2026-09-22 amendment), so inside the engine `up_pitch`'s
-only consumer is the C4 MIDI sum, which is not an output of the #73 engine. The
-control is still killed — by that engine's own declared op-count conformance
-surface, where the wrong column changes the measured MIDI-clamp count
-(`ops.V1.*[5]`: 0 against 5,683 on the binding case's first 6,000 samples). For
-this to be a real gate, a prefix-capped walk must check those counters, so
+**The pitch wire has two independent kills (#263).** The frequency both VCOs
+integrate is the host-replayed `exp2` shadow word (DR-0010's 2026-09-22
+amendment), so inside the engine `up_pitch`'s only consumer is the C4 MIDI
+sum. Since #263 the #73 engine exports that sum (`midi_sum`: the Q10.21 value
+after C7 saturation and *before* the model's MIDI clamp, registered alongside
+`vco_word`), and the whole-voice lane compares it as the engine-internal trace
+`vco_1.midi_sum` (both passes, all samples), localized by trace/cycle/sample
+like every other trace. The control is therefore killed by (1) that sample
+trace and (2) the engine's own op-count conformance surface, where the wrong
+column changes the measured MIDI-clamp count (`ops.V1.*[5]`: 0 against 5,683
+on the binding case's first 6,000 samples). `tb/run_voice.py` requires **both**
+to fire (`VOICE_PITCH_WIRE_KILLS`), not merely the first. For the counter kill
+to be a real gate, a prefix-capped walk must check those counters, so
 `voice_derive_case` computes **prefix-exact** saturation and clamp tallies for
 each declared cap by re-walking the model's own mirrors over the first *cap*
 pitch words (exact, not an estimate: both mirrors are strictly sequential
-per-sample walks). Closing the *trace*-level gap would require the #73 engine to
-export its MIDI sum — an RTL change to a qualified module, so out of this
-verification issue's scope and recorded under "What is still open".
+per-sample walks).
+
+`vco_1.midi_sum` is **not** a declared model checkpoint. It is an integer
+mirror word of `vco_golden.mirror_sine_lane`, so the normative checkpoint set
+(`float_voice.voice_checkpoints()`) is unchanged and no decision record was
+needed; `tests/test_oneshot_voice.py` asserts it is disjoint from that set.
 
 `pitch-column-load-swap` covers the same route ordering one stage earlier,
 where it *is* directly observable on `control_upsample.vco_1_pitch`.
@@ -896,20 +906,13 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
    (and it did not get it: it ran alongside other live sweeps), and the
    contrast is why the two halves of this item separated rather than landing
    together.
-2. **A trace-level kill for the VCO pitch wire** (tracked in #263).
-   `vco-pitch-wire-swap` is
-   killed only on the #73 engine's MIDI-clamp op counter, because the engine
-   does not export its C4 MIDI sum and the frequency it integrates is the
-   host-replayed `exp2` shadow word. Exporting that sum (and comparing it) is
-   an RTL change to a qualified module, so it is a follow-up rather than part
-   of this verification increment.
-3. Neither lane is folded into the #78 aggregate gate
+2. Neither lane is folded into the #78 aggregate gate
    (`tools/qualify_rtl_modules.py`, tracked in #264): that gate's lane list is
    derived from
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
    toolchain, so folding either flow in requires a matching re-baseline. A
    documented follow-up, not a silent skip.
-4. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
+3. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
    GitHub-hosted's 360-minute job limit (tracked in #265). Pre-existing on
    `main` and unchanged
    here; fixing it needs a `sim-lanes` split.
