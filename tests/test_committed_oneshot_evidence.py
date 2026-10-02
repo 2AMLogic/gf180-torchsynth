@@ -1,8 +1,8 @@
 """The committed issue-#79 evidence records must stay committable (#79).
 
-``sim/evidence/oneshot-whole-voice-regression-v1.json`` and
-``sim/evidence/oneshot-tail-chain-regression-v1.json`` are evidence, not
-just documentation: each is a real ``tb/run_oneshot.py`` / ``tb/run_voice.py``
+Every record under ``sim/evidence/`` named in ``COMMITTED_RECORDS`` below is
+evidence, not just documentation: each is a real ``tb/run_oneshot.py`` /
+``tb/run_voice.py``
 output, verified committable by ``tools/verify_oneshot_evidence.py`` before
 being added (see ``spec/ONESHOT-E2E.md`` -> "Evidence identity"). This suite
 re-runs that same mechanical check against the files as committed, so a
@@ -36,6 +36,18 @@ closes that, and the record's ``profile`` is additionally required to be one
 its own flow's CLI accepts, so the regeneration command printed on a stale
 record is always a command that runs. Both are paired with a check that they
 discriminate.
+
+A fourth hole opens the moment a single lane has records for **two** profiles
+at once, which the tail chain is the first to (``regression`` and ``full``,
+#79). The profiles are declared *nested* -- ``regression`` < ``directed`` <
+``full`` on committed cases, with every later stage shared -- and that nesting
+is the whole reason ``spec/ONESHOT-E2E.md`` can say a stronger record
+*supersedes* a weaker one rather than sitting beside it. Nothing checked it:
+a ``full`` record regenerated from a trimmed case list would still name a
+profile its flow accepts, still agree with its filename, and still hash fresh,
+while quietly covering *less* than the ``regression`` record it claims to
+supersede. ``test_profiles_of_one_lane_are_nested`` refuses that, and is
+paired with its own discrimination check.
 """
 
 import contextlib
@@ -129,6 +141,46 @@ def flow_accepts_profile(flow, profile: str) -> bool:
         return exit_code.code == 0
     return False
 
+#: The declared profile nesting (``spec/ONESHOT-E2E.md``): weakest first. A
+#: stronger profile plans every committed case a weaker one does, plus more,
+#: and shares every other stage -- which is what lets a stronger record
+#: supersede a weaker one instead of a reader having to compare the two.
+PROFILE_ORDER = ("regression", "directed", "full")
+
+
+def nesting_errors(weaker: dict, stronger: dict) -> list:
+    """Reasons ``stronger`` fails to cover everything ``weaker`` proves.
+
+    Compares the two records' own declared contents, not their filenames: the
+    committed-case list, the negative-control list, and the per-case walk
+    shape. An empty list means the nesting ``spec/ONESHOT-E2E.md`` claims
+    actually holds between these two records.
+    """
+
+    errors = []
+    dropped = sorted(set(weaker["cases"]) - set(stronger["cases"]))
+    if dropped:
+        errors.append(
+            "profile %r drops %d case(s) the weaker %r profile covers: %s"
+            % (stronger["profile"], len(dropped), weaker["profile"], dropped)
+        )
+    lost = sorted(set(weaker["mutations"]) - set(stronger["mutations"]))
+    if lost:
+        errors.append(
+            "profile %r drops negative control(s) the weaker %r profile "
+            "demonstrates: %s" % (stronger["profile"], weaker["profile"], lost)
+        )
+    for field in ("samples_per_case", "passes_per_case"):
+        if weaker[field] != stronger[field]:
+            errors.append(
+                "%s differs between profiles %r and %r (%r vs %r); a stronger "
+                "profile may add cases, never shorten a walk"
+                % (field, weaker["profile"], stronger["profile"],
+                   weaker[field], stronger[field])
+            )
+    return errors
+
+
 #: The flow that owns each schema -- the one whose ``--profile`` choices a
 #: committed record's ``profile`` field must be drawn from, and whose command
 #: ``REGENERATE`` above names.
@@ -146,6 +198,9 @@ COMMITTED_RECORDS = {
         "gf180-torchsynth/oneshot-whole-voice-evidence-v1"
     ),
     "oneshot-tail-chain-regression-v1.json": (
+        "gf180-torchsynth/oneshot-tail-chain-evidence-v1"
+    ),
+    "oneshot-tail-chain-full-v1.json": (
         "gf180-torchsynth/oneshot-tail-chain-evidence-v1"
     ),
 }
@@ -219,6 +274,60 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
         # whole-voice lane gained `directed` (#79); the tail chain has not.
         self.assertTrue(flow_accepts_profile(run_voice, "directed"))
         self.assertFalse(flow_accepts_profile(run_oneshot, "directed"))
+
+    def test_profiles_of_one_lane_are_nested(self):
+        # The tail chain is the first lane to carry two records at once
+        # (`regression` and `full`, #79), and the whole-voice lane carries
+        # `regression` and `directed`. Both pairs must satisfy the nesting
+        # spec/ONESHOT-E2E.md relies on to call the stronger one a
+        # superseding record rather than a second, incomparable claim.
+        by_lane = {}
+        for name, schema in COMMITTED_RECORDS.items():
+            record = json.loads((EVIDENCE_DIR / name).read_text())
+            by_lane.setdefault(schema, []).append((name, record))
+        compared = 0
+        for schema, records in by_lane.items():
+            records.sort(key=lambda pair: PROFILE_ORDER.index(
+                pair[1]["profile"]))
+            for (weak_name, weak), (strong_name, strong) in zip(
+                    records, records[1:]):
+                compared += 1
+                with self.subTest(lane=schema, weaker=weak_name,
+                                  stronger=strong_name):
+                    self.assertEqual(
+                        nesting_errors(weak, strong), [],
+                        "%s does not cover everything %s proves"
+                        % (strong_name, weak_name),
+                    )
+        self.assertGreater(
+            compared, 0,
+            "no lane has two committed profiles, so this check was vacuous -- "
+            "if that is now true, the nesting it guards no longer applies",
+        )
+
+    def test_a_stronger_profile_that_covers_less_is_detected(self):
+        # Proof the check above is not vacuous, in this suite's style: the
+        # real `full` record with one of the `regression` record's own cases
+        # removed from its case list. Every other check here still passes it.
+        weak = json.loads(
+            (EVIDENCE_DIR / "oneshot-tail-chain-regression-v1.json").read_text()
+        )
+        strong = json.loads(
+            (EVIDENCE_DIR / "oneshot-tail-chain-full-v1.json").read_text()
+        )
+        victim = weak["cases"][0]
+        trimmed = {**strong,
+                   "cases": [c for c in strong["cases"] if c != victim]}
+        errors = nesting_errors(weak, trimmed)
+        self.assertTrue(errors, "a trimmed `full` case list went undetected")
+        self.assertIn(victim, errors[0])
+        # ...and the same for a dropped negative control.
+        control = sorted(weak["mutations"])[0]
+        without = {k: v for k, v in strong["mutations"].items()
+                   if k != control}
+        errors = nesting_errors(weak, {**strong, "mutations": without})
+        self.assertTrue(errors, "a dropped negative control went undetected")
+        self.assertIn(control, errors[0])
 
     def test_each_record_is_committable(self):
         for name, expected_schema in COMMITTED_RECORDS.items():

@@ -4,21 +4,27 @@ Status: **the integrated whole-voice one-shot top now exists** and is proven
 bit-identical to the frozen fixed model over its declared `regression`
 profile, and -- as of the `directed`-profile run recorded below -- over the
 three compact directed vectors as well.
-**Committed, commit-exact** evidence records now exist for three runs across
+**Committed, commit-exact** evidence records now exist for four runs across
 the two lanes:
 `sim/evidence/oneshot-whole-voice-regression-v1.json` (citing commit
 `97ee7dd94d068bd7341f5ee02247e63f99597336`),
 `sim/evidence/oneshot-whole-voice-directed-v1.json` (citing commit
-`8abf93efb42b359b79eb547ac62c36fd2bec509d`) and
+`8abf93efb42b359b79eb547ac62c36fd2bec509d`),
 `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
 `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`, the merge commit of PR #259 that
 landed the tail-chain workdir-path fix this record's own generation depended
-on) -- see "Evidence identity". All three are re-hashed against the tree's
-own RTL and frozen vectors on every CI run, so none can quietly go stale
-after an engine edit. Issue #79 nonetheless stays open on the `full` profile
-run for both lanes that a release-era record must cite. See "What is still
-open" below. Nothing here releases the "must pass before FPGA/gf180 fit
-claims" gate.
+on) and -- new -- `sim/evidence/oneshot-tail-chain-full-v1.json` (citing
+commit `787fd304b7c60ff0cdb3d37211e44ce56587ee48`), the **first
+`full`-profile record of either lane**: all 30 tail-chain cases bit-exact,
+`ONESHOT RUN PASSED`. See "Evidence identity". All four are re-hashed against
+the tree's own RTL and frozen vectors on every CI run, so none can quietly go
+stale after an engine edit, and the two tail-chain records are additionally
+checked to be *nested* -- the `full` one must cover every case and every
+negative control the `regression` one does, or it is not the superseding
+record it claims to be. Issue #79 nonetheless stays open on the
+**whole-voice** lane's `full`-profile run, which the release-era record must
+also cite. See "What is still open" below. Nothing here releases the "must
+pass before FPGA/gf180 fit claims" gate.
 
 **The `directed` profile below has been run, has passed, and its record is now
 committed.** The run is real: all five committed cases bit-exact, both ends of
@@ -617,10 +623,12 @@ PR #259's workdir-path fix to land and then cited that merge commit, and the
 `directed` record waited for PR #269 to land the profile and then cited the
 landed commit. Each time, the sequence was *land the enabling change, then
 re-run on the landed commit* -- and `--require-reachable` is what now makes
-skipping it a failing check rather than an oversight. The `full`-profile record
-for either lane has the same requirement again, every time: it must be
-generated on an already-existing, clean, already-landed commit, never predicted
-or faked from inside a PR.
+skipping it a failing check rather than an oversight. The tail chain's
+`full`-profile record cleared it the same way a fourth time, on the landed
+commit `787fd304b7c60ff0cdb3d37211e44ce56587ee48`; the whole-voice lane's
+still-missing `full` record faces the same requirement again, as every record
+does: it must be generated on an already-existing, clean, already-landed
+commit, never predicted or faked from inside a PR.
 
 ---
 
@@ -638,13 +646,72 @@ regression profile is `normalization:above/below/tie`,
 `normalization-stress:anchor-3.9478583336`, `source:noise`, `special:silence`,
 `special:stress` and `oneshot:divide-distinct-levels`.
 
-| Profile | Command | Role |
-| --- | --- | --- |
-| `regression` (default) | `python3 tb/run_oneshot.py --profile regression` | PR/CI gate (`tb-sim.yml` job `oneshot-tail-chain`) |
-| `full` | `python3 tb/run_oneshot.py --profile full --workdir <dir>` | release-era evidence; remote AWS box |
+| Profile | Cases | Command | Role |
+| --- | --- | --- | --- |
+| `regression` (default) | 8 | `python3 tb/run_oneshot.py --profile regression` | PR/CI gate (`tb-sim.yml` job `oneshot-tail-chain`) |
+| `full` | 30 | `python3 tb/run_oneshot.py --profile full --workdir <dir>` | release-era evidence. **Run, passed, and committed** -- see "The `full`-profile run" below |
+
+The two are **nested**: `full` plans every `regression` case plus the other 22,
+and shares every later stage (the replay pair, the two hash simulations, all
+ten negative controls) unchanged. So the `full` record supersedes the
+`regression` one rather than sitting beside it, and
+`tests/test_committed_oneshot_evidence.py` asserts that nesting against the
+two committed records -- a `full` record that covered fewer cases, or
+demonstrated fewer controls, than the `regression` one would be refused rather
+than read as the stronger proof its filename claims.
 
 Simulator-free harness checks:
 `python3 -m unittest tests.test_oneshot_tail_chain`.
+
+### The `full`-profile run
+
+`python3 tb/run_oneshot.py --profile full --workdir <dir>`, Icarus Verilog
+13.0, **`ONESHOT RUN PASSED`** (exit `0`). Every stage ran; none was skipped.
+
+All **30** cases -- the 26 param-committed receipt cases, the three directed
+fixtures (`special:silence`, `special:near-silence`, `special:stress`) and the
+derived `oneshot:divide-distinct-levels` -- walked 176,400 samples x 2 passes
+and compared bit-exact across every named trace, status/error register and op
+counter. Both normalization branches covered (28 bypass, 2 divide). Observed
+peak words span **0** (`special:silence`, the zero-peak path where a
+reciprocal is undefined) through **2** (`special:near-silence`) to the ceiling
+**8388608** (`special:stress` and `oneshot:divide-distinct-levels`, both on the
+divide branch). The no-reset back-to-back replay pair reproduced its solo run;
+two clean full-length simulations of each of `oneshot:divide-distinct-levels`
+and `normalization:below` were artifact-hash identical over all seven files;
+and **10/10 mutations `DETECTED`**, each localized to a trace/cycle/sample.
+No float tolerance anywhere.
+
+Total wall-clock: **15 min 20 s** on a shared 8-core x86-64 Linux dispatch box
+(Icarus 13.0, serial, run niced, other sweeps live on the same cores, root
+filesystem at ~81% used) -- 46 full-length Icarus simulations (30 committed
+cases in the first 9 min 4 s, so ~18 s each, then the replay pair and its
+solo, four hash simulations and ten mutation simulations), retaining **831 MB**
+of raw artifacts under `--workdir`. Indicative figures, not bounds. This is
+roughly 3.7x the `regression` profile's committed-case work, which is why this
+lane's `full` profile is affordable in one session while the whole-voice
+lane's -- whose single cases cost ~4 min each rather than ~18 s -- is not.
+
+Its record is committed as `sim/evidence/oneshot-tail-chain-full-v1.json`,
+citing commit `787fd304b7c60ff0cdb3d37211e44ce56587ee48` -- the already-landed
+tip of `main` the run was made on, with a clean tree, before any file in this
+increment's diff was written. Verified by
+
+```
+python3 tools/verify_oneshot_evidence.py \
+    sim/evidence/oneshot-tail-chain-full-v1.json \
+    --expect-head 787fd304b7c60ff0cdb3d37211e44ce56587ee48 --require-reachable
+```
+
+(exit 0, `COMMITTABLE`, `git_head reachable on origin/main`) before being
+added here.
+
+**What this record does not establish.** It is the tail chain's own scope and
+nothing wider: `audio_mix_engine` -> `normalization_replay_engine` over
+host-fed source and amplitude streams, with four of its ten negative controls
+stimulus-only (see the caveat below). It is **not** a whole-voice
+`full`-profile result, and the FPGA/gf180 gate stays closed on that one -- see
+"What is still open".
 
 **Its mutation caveat, retained verbatim because it still describes that
 lane:** four of its ten controls (`parameter-shuffle`, `wrong-noise`,
@@ -718,31 +785,39 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
 
 | # | Criterion | Whole-voice lane | Tail-chain lane |
 | --- | --- | --- | --- |
-| 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **Met for the declared `regression` profile** (both cases, 1,764 control ticks + 2 x 176,400 samples over 27 named traces + the output clip + every status/op counter). **Also met for the `directed` profile**, which discharges the criterion's "compact directed vectors" half: `special:silence` / `special:near-silence` / `special:stress` have each been walked through the integrated top at full length and compared bit-exact, with the peak-envelope gate armed and both ends reached -- `VOICE RUN PASSED`, see "The `directed`-profile run", and now pinned as a committed record. **Not yet run at `full`.** | Met for the tail chain only |
+| 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **Met for the declared `regression` profile** (both cases, 1,764 control ticks + 2 x 176,400 samples over 27 named traces + the output clip + every status/op counter). **Also met for the `directed` profile**, which discharges the criterion's "compact directed vectors" half: `special:silence` / `special:near-silence` / `special:stress` have each been walked through the integrated top at full length and compared bit-exact, with the peak-envelope gate armed and both ends reached -- `VOICE RUN PASSED`, see "The `directed`-profile run", and now pinned as a committed record. **Not yet run at `full`.** | **Met at `full`** for the tail chain's own scope: all 30 cases (26 receipt + 3 directed fixtures + 1 derived) walked 176,400 samples x 2 passes bit-exact with exact status/trace sequences, `ONESHOT RUN PASSED` -- see "The `full`-profile run". Still the tail chain only, never the whole-voice top |
 | 2 | First mismatch localized by trace/cycle/sample, raw artifacts retained | **Met.** `voice_rows` / `voice_print_rows`; rows ordered by cycle; `missing-sample` must localize to `link.replay_input[pass1]` sample 1000 or the run fails; failed cases retain their raw artifact tree | Met |
 | 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all thirteen controls are genuine RTL mutations** (no stimulus-only control remains). Six are demonstrated on the declared binding-distinct stimulus because a uniform one cannot kill them | Met at the chain boundary; four controls stimulus-only |
-| 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases |
-| 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met |
-| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, and its 15 cited sources are re-hashed against the tree on every CI run, so an engine edit cannot inherit this pass. **Also met for the `directed` profile:** `sim/evidence/oneshot-whole-voice-directed-v1.json` is committed, cites the already-landed commit `8abf93efb42b359b79eb547ac62c36fd2bec509d`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified by `tools/verify_oneshot_evidence.py … --require-reachable` (exit 0), which additionally establishes that the cited commit is reachable on `origin/main` -- the one condition the earlier, uncommittable `directed` record failed. **Not met at `full`** (AC1 has not run there) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, with the same per-CI-run re-hash of its 7 cited sources. **Not met at `full`** |
-| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** AC1's directed-vector half is discharged and AC6 is now met at both `regression` and `directed`, but the gate additionally requires AC1 **and** AC6 at `full` for **both lanes**, and `full` has never run on either. The gate stays closed | Not satisfied |
+| 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases, at both `regression` and `full` |
+| 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met, now with measured `full`-profile wall-clock and the nesting relation between its two profiles stated and tested |
+| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, and its 15 cited sources are re-hashed against the tree on every CI run, so an engine edit cannot inherit this pass. **Also met for the `directed` profile:** `sim/evidence/oneshot-whole-voice-directed-v1.json` is committed, cites the already-landed commit `8abf93efb42b359b79eb547ac62c36fd2bec509d`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified by `tools/verify_oneshot_evidence.py … --require-reachable` (exit 0), which additionally establishes that the cited commit is reachable on `origin/main` -- the one condition the earlier, uncommittable `directed` record failed. **Not met at `full`** (AC1 has not run there) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, with the same per-CI-run re-hash of its 7 cited sources. **Also met at `full`:** `sim/evidence/oneshot-tail-chain-full-v1.json` is committed, cites the already-landed commit `787fd304b7c60ff0cdb3d37211e44ce56587ee48`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified by `tools/verify_oneshot_evidence.py … --expect-head … --require-reachable` (exit 0, reachable on `origin/main`), and asserted to be a strict superset of the `regression` record it supersedes |
+| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** AC1's directed-vector half is discharged and AC6 is now met at both `regression` and `directed`, but the gate additionally requires AC1 **and** AC6 at `full` for **both lanes**, and the whole-voice lane has never run at `full`. The gate stays closed | **Satisfied for this lane's own scope** at `full`, which is the narrower claim it has always been: the tail chain is the mixer -> replay-controller chain over host-fed streams, with four stimulus-only controls. The *gate* is not released, because it is a whole-voice gate and that lane's `full` run is still outstanding |
 
 ## What is still open
 
-1. **The `full` profile run** (31 cases) for *both* lanes, and the
-   committed, commit-exact evidence record it must produce -- an AWS-box
-   command, not a PR gate (tracked in #261), and roughly fifteen times the
-   committed-case work of `regression`. Because the profiles are nested, a
-   `full` record supersedes both the `directed` and `regression` ones. Three
-   records are now committed; `full` is the only profile with none:
+1. **The whole-voice lane's `full` profile run** (31 cases) and the
+   committed, commit-exact evidence record it must produce -- not a PR gate
+   (tracked in #261), and roughly fifteen times the committed-case work of
+   `regression`. Because the profiles are nested, a `full` record supersedes
+   both the `directed` and `regression` ones.
+
+   **The tail-chain half of this item is now done**, which is what narrows it
+   from "both lanes" to one: `sim/evidence/oneshot-tail-chain-full-v1.json`
+   (citing commit `787fd304b7c60ff0cdb3d37211e44ce56587ee48`) is committed,
+   all 30 cases bit-exact, 10/10 controls detected, 15 min 20 s of Icarus 13.0
+   on a shared 8-core box. Four records are now committed in total; the
+   whole-voice `full` profile is the only planned run with none:
    `sim/evidence/oneshot-whole-voice-regression-v1.json` (citing commit
    `97ee7dd94d068bd7341f5ee02247e63f99597336`),
    `sim/evidence/oneshot-whole-voice-directed-v1.json` (citing commit
-   `8abf93efb42b359b79eb547ac62c36fd2bec509d`) and
+   `8abf93efb42b359b79eb547ac62c36fd2bec509d`),
    `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
-   `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`).
+   `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`) and
+   `sim/evidence/oneshot-tail-chain-full-v1.json`.
 
-   The sequence a `full` record must follow is the one the `directed` record
-   just executed, and it is now mechanically enforced rather than narrated:
+   The sequence the remaining record must follow is the one the `directed` and
+   tail-chain `full` records both executed, and it is mechanically enforced
+   rather than narrated:
 
    ```
    python3 tb/run_voice.py --profile full --workdir <dir>      # on an already-landed, clean commit
@@ -757,16 +832,24 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
    `tests/test_committed_oneshot_evidence.py`'s `COMMITTED_RECORDS` -- that
    suite refuses an undeclared record, and separately refuses a record whose
    filename and `profile` disagree, so a `-full-v1` name cannot end up over a
-   weaker run.
+   weaker run -- and, since the tail chain became the first lane with two
+   committed profiles, also refuses a `full` record that covers fewer cases or
+   demonstrates fewer negative controls than the `regression` one it claims to
+   supersede.
 
    **Run it somewhere with headroom.** The *first* `directed` attempt was
    reported INCONCLUSIVE (exit `4`) rather than passed or failed: a shared
    8-core box at ~91% full lost 9,987 `audiocap` rows to a failed writeback
    partway through. That is the incident the corrupt-capture guard was written
    for. `directed` is eleven full-length simulations and about 43 minutes of
-   simulator time on a lightly-loaded 8-core box; `full` is roughly fifteen
-   times the committed-case work, so it wants a machine not simultaneously
-   running other sweeps.
+   simulator time on a lightly-loaded 8-core box; the whole-voice `full`
+   profile is roughly fifteen times the committed-case work, so it wants a
+   machine not simultaneously running other sweeps. The tail chain's `full`
+   run, by contrast, fit in 15 min 20 s on a *shared* box at ~81% disk with
+   ~831 MB retained -- that lane is cheap enough not to need the same care
+   (and it did not get it: it ran alongside other live sweeps), and the
+   contrast is why the two halves of this item separated rather than landing
+   together.
 2. **A trace-level kill for the VCO pitch wire** (tracked in #263).
    `vco-pitch-wire-swap` is
    killed only on the #73 engine's MIDI-clamp op counter, because the engine
@@ -798,9 +881,16 @@ execute is reported here as a pass. In particular:
   never exist on `main`. The committed record is the *second* execution of the
   profile, and this document says so rather than quietly presenting one run's
   numbers under the other's SHA;
-- the `full` profile is still **machinery, not a result**: it has never been
-  run and has no record. Nothing above is a `full`-profile claim, and the
-  FPGA/gf180 gate stays closed on it;
+- the `full` profile has now produced a result **for the tail chain only**,
+  reported above with its own case count, branch split, peak span, control
+  verdicts and wall-clock rather than as a bare "30 cases passed". For the
+  **whole-voice** lane `full` is still **machinery, not a result**: it has
+  never been run and has no record. Nothing above is a whole-voice
+  `full`-profile claim, and the FPGA/gf180 gate stays closed on it. A
+  tail-chain `full` pass is not a smaller version of a whole-voice one -- it
+  covers two engines over host-fed streams, with four stimulus-only controls,
+  and no amount of case coverage in that lane substitutes for the integrated
+  top;
 - the first `directed` attempt is recorded as INCONCLUSIVE, which is neither a
   pass nor a verdict against the RTL;
 - `--require-reachable` is a check on a record's *citation*, not on the RTL. It
