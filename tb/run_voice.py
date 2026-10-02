@@ -493,6 +493,27 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
         record["count"] for record in matrix_counters["records"]
         if record["kind"] == "saturation"
     )
+    # Per-route upsample sticky saturation tallies, route-indexed exactly as
+    # the bench's ``U <pass> <route>`` rows are (#254). The #72 module lane
+    # compares this counter sample-exactly against the model's own mirror;
+    # this lane expected ``None`` for it at every walk length, and
+    # ``voice_rows`` skips a ``None`` -- so the one counter of the upsample
+    # engine's seven that is a *data-dependent* measurement was never
+    # compared under the integrated stimulus, not even on a full-length
+    # committed case. Reusing ``mirror_upsample`` here is the same model
+    # call the #72 lane makes, over this case's own matrix column, so the
+    # expectation moves with the model instead of being a baked-in number;
+    # and, as with every other mirror in this function, a drift between the
+    # mirror and the composed model's rendered trace refuses the run rather
+    # than silently weakening the comparison.
+    up_sats = {}
+    for index, route in enumerate(MOD_MATRIX_OUTPUTS):
+        up_stream, up_counters = mm.mirror_upsample(fcp, matrix[route], route)
+        if up_stream != traces["control_upsample." + route]:
+            raise SystemExit(
+                "upsample mirror drift on %s/%s" % (case_id, route)
+            )
+        up_sats[index] = up_counters["total_saturation"]
 
     # --- #73/#74: the two audio sources and their declared shadow streams
     midi_f0_word = traces["keyboard.midi_f0"][0]
@@ -612,6 +633,7 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
         "lfo": lfo_cases,
         "depths": depths,
         "matrix_sats": matrix_sats,
+        "up_sats": up_sats,
         "statics": {
             "midi_f0": midi_f0_word,
             "vco1_tuning": vco1_tuning,
@@ -943,10 +965,27 @@ def voice_expected(case: dict, walk: int) -> dict:
         20 * CONTROL_SAMPLES, 15 * CONTROL_SAMPLES, 5 * CONTROL_SAMPLES,
         case["matrix_sats"],
     ]
+    # The upsample engine's sticky saturation counter (#254). The full-clip
+    # expectation is the model's own per-route tally
+    # (``voice_derive_case``'s ``mirror_upsample`` call -- the #72 module
+    # lane's own model call). A capped walk is prefix-exact whenever that
+    # tally is zero: the counter is sticky and monotone non-decreasing in
+    # the walk length, so a zero full-clip total forces zero on every
+    # prefix. A non-zero total cannot be localized to a prefix from an
+    # aggregate count, so it is left unchecked (None) on a capped walk
+    # rather than guessed -- the full-length committed cases still compare
+    # it exactly. Missing key is deliberate: a case built without the tally
+    # must fail loudly, not quietly skip the comparison.
+    up_sats = case["up_sats"]
+    exp_up_sats = {
+        route: (total if (full or total == 0) else None)
+        for route, total in up_sats.items()
+    }
     for pas in (1, 2):
         for route in range(5):
             ops[("U", pas, route)] = [
-                interior, interior, interior, interior, coord_steps, None, n,
+                interior, interior, interior, interior, coord_steps,
+                exp_up_sats[route], n,
             ]
         ops[("V1", pas)] = [
             3 * n, 7 * n, 4 * n, n, exp_sine_sats, exp_sine_clamps,
