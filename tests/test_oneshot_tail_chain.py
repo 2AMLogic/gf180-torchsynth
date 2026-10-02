@@ -337,5 +337,111 @@ class CiJobBudgetsAreConsistent(unittest.TestCase):
         self.assertLessEqual(job["cap"], self.HOSTED_JOB_LIMIT)
 
 
+class SimulatorPathsAreAbsolute(unittest.TestCase):
+    """A relative ``--workdir`` must still reach the simulator as absolute.
+
+    Every simulator invocation runs with ``cwd=workdir`` (the bench opens its
+    stimulus and capture files by bare name), so a relative path handed to
+    ``iverilog -o`` resolves against the already-entered directory and fails
+    with "No such file or directory". PR #253 fixed exactly that in
+    ``run_voice.py``'s ``voice_simulate`` and pinned it with the equivalent
+    pair in ``tests/test_oneshot_voice.py``; PR #259 backported the fix to
+    ``run_oneshot.py`` but not the pinning tests (#260). The
+    ``oneshot-tail-chain`` CI job always passes an absolute work directory (a
+    ``tempfile.TemporaryDirectory``), so only these checks can catch a
+    regression. They need no simulator, so they run on every PR in ``ci.yml``.
+    """
+
+    class _Captured(Exception):
+        pass
+
+    def _commands_for(self, workdir):
+        seen = []
+        real_run = ro._run
+
+        def fake_run(command, cwd=None, **kwargs):
+            seen.append((list(command), cwd))
+            raise SimulatorPathsAreAbsolute._Captured()
+
+        ro._run = fake_run
+        try:
+            ro.oneshot_simulate(workdir, 1)
+        except SimulatorPathsAreAbsolute._Captured:
+            pass
+        finally:
+            ro._run = real_run
+        return seen
+
+    def _commands_from_relative_workdir(self):
+        with tempfile.TemporaryDirectory(prefix="oneshot-relpath-") as tmp:
+            cwd = Path.cwd()
+            try:
+                import os
+
+                os.chdir(tmp)
+                relative = Path("out/oneshot")
+                relative.mkdir(parents=True)
+                self.assertFalse(relative.is_absolute())
+                return self._commands_for(relative)
+            finally:
+                os.chdir(cwd)
+
+    def test_relative_workdir_still_yields_an_absolute_output_path(self):
+        seen = self._commands_from_relative_workdir()
+        self.assertTrue(seen, "no simulator invocation was captured")
+        command, _cwd = seen[0]
+        self.assertEqual(command[0], "iverilog")
+        out = command[command.index("-o") + 1]
+        self.assertTrue(
+            Path(out).is_absolute(),
+            "iverilog -o path %r is relative; it will not resolve once the "
+            "simulator has chdir'd into the work directory" % out,
+        )
+
+    def test_the_simulator_cwd_is_the_resolved_workdir(self):
+        seen = self._commands_from_relative_workdir()
+        self.assertTrue(seen, "no simulator invocation was captured")
+        _command, run_cwd = seen[0]
+        self.assertTrue(Path(run_cwd).is_absolute())
+
+    def test_main_resolves_a_relative_workdir_before_running(self):
+        # main() must not hand its own relative --workdir down the chain:
+        # printed artifact paths stay meaningful only if they survive the
+        # simulator's chdir. Captured without a simulator by standing in for
+        # both the iverilog probe and oneshot() itself.
+        seen = []
+
+        class _Shutil:
+            def __getattr__(self, name):
+                return getattr(shutil, name)
+
+            @staticmethod
+            def which(_name):
+                return "/nonexistent/iverilog"
+
+        real_shutil, real_oneshot = ro.shutil, ro.oneshot
+        ro.shutil = _Shutil()
+        ro.oneshot = lambda workdir, simulator: seen.append(workdir) or 0
+        self.addCleanup(
+            lambda: (setattr(ro, "shutil", real_shutil),
+                     setattr(ro, "oneshot", real_oneshot))
+        )
+        with tempfile.TemporaryDirectory(prefix="oneshot-relpath-") as tmp:
+            cwd = Path.cwd()
+            try:
+                import os
+
+                os.chdir(tmp)
+                status = ro.main(["--workdir", "out/oneshot"])
+            finally:
+                os.chdir(cwd)
+        self.assertEqual(status, 0)
+        self.assertEqual(len(seen), 1)
+        self.assertTrue(
+            seen[0].is_absolute(),
+            "main() passed a relative workdir %r to oneshot()" % (seen[0],),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
