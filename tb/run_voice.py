@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Issue #79: the integrated WHOLE-VOICE one-shot top, end to end.
 
-``python3 tb/run_voice.py [--profile regression|full] [--workdir DIR]``
+``python3 tb/run_voice.py [--profile regression|directed|full] [--workdir DIR]``
+
+Exit status: ``0`` pass, ``1`` a real bit-identity / mutation-sensitivity
+failure, ``3`` Icarus Verilog is absent and nothing ran, ``4`` a capture file
+was corrupt so the run is INCONCLUSIVE (see
+:class:`VoiceCaptureIntegrityError`). Only ``0`` is a pass and only ``1`` is a
+verdict against the RTL.
 
 Drives ``tb/sv/one_shot_voice_top.sv`` -- every landed Epic #2 RTL engine
 (#70 ADSR x6, #71 LFO/control-VCA x2, #72 mod matrix + 5 upsample columns,
@@ -86,6 +92,52 @@ VOICE_REGRESSION_CASES = (
     "normalization:below",              # bypass branch, param-committed
     "voice:divide-distinct-levels",     # divide branch, three distinct levels
 )
+#: Issue #79 asks for the integrated top over "compact directed vectors AND
+#: the selected regression corpus". The regression corpus above is the second
+#: half; these three are the first -- the declared directed fixtures of
+#: ``spec/DIRECTED-FIXTURES.md`` (``directed-voice-v1.json``), the same tuple
+#: the ``full`` profile and the #76 module lane plan. They are the *only*
+#: committed cases that reach the degenerate ends of the normalization
+#: envelope, and until the ``directed`` profile below existed none of them had
+#: ever been walked through the integrated top:
+#:
+#: ======================== ======= ======= ===========================
+#: case                     branch  peak    what it contributes
+#: ======================== ======= ======= ===========================
+#: ``special:silence``      bypass        0 a **zero** peak word -- the
+#:                                          only committed stimulus that
+#:                                          reaches the replay
+#:                                          controller's zero-peak path,
+#:                                          where a reciprocal is
+#:                                          undefined
+#: ``special:near-silence`` bypass        2 a peak of **two ULPs** -- the
+#:                                          smallest non-zero peak of any
+#:                                          case either profile plans
+#: ``special:stress``       divide  8388608 the un-overridden parameter
+#:                                          set the two derived fixtures
+#:                                          are built from (its ceiling
+#:                                          peak is *also* reached by the
+#:                                          regression divide case -- this
+#:                                          vector widens the parameters,
+#:                                          not the peak range)
+#: ======================== ======= ======= ===========================
+#:
+#: The two ``regression`` cases reach the ceiling end but not the low end:
+#: ``normalization:below`` bypasses at exactly unity (2^21) and
+#: ``voice:divide-distinct-levels`` saturates to the ceiling. **Neither has
+#: a zero or near-zero peak**, so until this profile existed, no integrated
+#: run had ever exercised the zero-peak path at all. That asymmetry -- not a
+#: general wish for more cases -- is what makes these their own declared
+#: profile; ``tests/test_oneshot_voice.py`` asserts it against the frozen
+#: fixtures so it cannot rot into a comment that used to be true.
+VOICE_DIRECTED_CASES = MIX_FIXTURE_CASES
+#: The ``directed`` profile is a strict **superset** of ``regression``: every
+#: regression case, stage, mutation and determinism check runs unchanged, and
+#: the three directed vectors are added as further full-length committed
+#: cases. Superset rather than a separate narrow lane on purpose -- a profile
+#: that widened case coverage while dropping the mutation lane would be a
+#: record that looks stronger and proves less.
+VOICE_DIRECTED_PROFILE_CASES = VOICE_REGRESSION_CASES + VOICE_DIRECTED_CASES
 #: Per-route modulation depths for the binding-distinct fixture below. Every
 #: one of the twenty words is distinct, and the two PITCH rows are pushed to
 #: opposite ends of the range so a pitch-route fault is not merely a small
@@ -658,6 +710,78 @@ def voice_write_case(workdir: Path, run: int, case: dict,
         encoding="utf-8")
 
 
+class VoiceCaptureIntegrityError(Exception):
+    """A capture file is malformed, so this run produced no verdict at all.
+
+    This is deliberately **not** a comparison failure. A bit-identity
+    mismatch means the RTL and the model disagree and is reported by
+    :func:`voice_rows` with a trace / cycle / sample. A malformed capture
+    means the bytes the simulator was supposed to write are not all there,
+    so there is nothing to compare -- and per ``CLAUDE.md`` a check that did
+    not run must never be reported as a pass, nor as a failure of the thing
+    it was going to check.
+
+    The distinguishing evidence is a row whose field count is wrong. A
+    simulator never emits one: the bench's capture ``$fwrite`` has a fixed
+    column count, so a short or spliced row can only come from lost bytes
+    between ``$fwrite`` and the file (a writeback that failed -- a full or
+    failing filesystem -- or a truncated file). When writeback drops a block
+    mid-file, the surviving bytes splice the prefix of one row onto the
+    suffix of a much later one, which is exactly what the wrong field count
+    detects.
+
+    Observed in practice, which is why this exists: a ``directed``-profile
+    run on a shared 8-core box lost 9,987 of 352,800 ``audiocap`` rows this
+    way, in five spliced holes, on a case that had written all 352,800 rows
+    and compared bit-exact twenty-five minutes earlier in the same run. The
+    flow's reaction at the time was an opaque ``audiocap row '...' does not
+    carry 15 fields`` -- a message a reader would reasonably misread as an
+    RTL defect.
+
+    A hole that happened to land exactly on row boundaries would leave a
+    well-formed but short file instead, which is **not** distinguishable from
+    a bench that stopped early; that case is still reported as a count
+    mismatch on the case. Only the spliced-row signature is diagnosable, and
+    only that is claimed here.
+    """
+
+
+def voice_capture_rows(path: Path, name: str, width: int) -> list:
+    """Parse one capture file into fixed-width integer rows.
+
+    ``None`` stands for a row carrying an ``x``-state emission -- a genuine
+    mismatch, handled by the comparator. A row with the wrong *number* of
+    fields is not a mismatch at all and raises
+    :class:`VoiceCaptureIntegrityError`.
+    """
+
+    text = path.read_text(encoding="utf-8")
+    out = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        fields = line.split()
+        if len(fields) != width:
+            raise VoiceCaptureIntegrityError(
+                "capture %s is CORRUPT, so this run produced no verdict: "
+                "%s line %d carries %d fields, not %d (%r). The file holds "
+                "%d bytes over %d non-empty rows. A simulator cannot emit a "
+                "wrong-width row -- this is lost bytes between the bench's "
+                "$fwrite and the file (a failed writeback: a full or failing "
+                "filesystem), not an RTL/model disagreement. Re-run on a "
+                "filesystem with headroom; do NOT read this as a bit-"
+                "identity result in either direction."
+                % (name, path, number, len(fields), width, line,
+                   len(text.encode("utf-8")),
+                   sum(1 for row in text.splitlines() if row.strip()))
+            )
+        try:
+            out.append([int(f) for f in fields])
+        except ValueError:
+            out.append(None)   # an x-state emission: a mismatch
+    return out
+
+
 def voice_simulate(workdir: Path, runs: int, sources: dict = None) -> list:
     """Compile + run the integrated top's bench; return per-run captures.
 
@@ -694,21 +818,9 @@ def voice_simulate(workdir: Path, runs: int, sources: dict = None) -> list:
     captures = []
     for run in range(runs):
         def rows(name, width):
-            out = []
-            for line in (workdir / ("run%d_%s.txt" % (run, name))).read_text(
-                    encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                fields = line.split()
-                if len(fields) != width:
-                    raise SystemExit(
-                        "%s row %r does not carry %d fields" % (name, line, width)
-                    )
-                try:
-                    out.append([int(f) for f in fields])
-                except ValueError:
-                    out.append(None)   # an x-state emission: a mismatch
-            return out
+            return voice_capture_rows(
+                workdir / ("run%d_%s.txt" % (run, name)), name, width
+            )
 
         ctl = rows("ctlcap", 16)
         audio = rows("audiocap", 15)
@@ -1011,6 +1123,13 @@ def voice(workdir: Path) -> int:
         plan = [(cid, cases[cid]) for cid in sorted(cases)]
         plan += [(cid, None) for cid in MIX_FIXTURE_CASES]
         plan += [(cid, None) for cid in sorted(VOICE_DERIVED_CASES)]
+    elif profile == "directed":
+        # Strict superset of `regression`: the same committed cases, plus the
+        # three declared directed vectors at the same full clip length. Every
+        # later stage (binding baseline, hash identity, replay, all thirteen
+        # RTL mutations) is shared code below and runs unchanged.
+        plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
+        plan += [(cid, None) for cid in VOICE_DIRECTED_CASES]
     else:
         plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
 
@@ -1024,6 +1143,10 @@ def voice(workdir: Path) -> int:
     ok = True
     derived = {}
     divide_seen = bypass_seen = False
+    #: Per-case normalization diagnostics, recorded for every committed case so
+    #: a reader of the evidence record can see which peak/gain words were
+    #: actually walked rather than taking "5 cases passed" on trust.
+    diagnostics = {}
 
     # 1. Committed cases: every declared checkpoint bit-exact over the full
     #    176,400-sample clip, both passes, plus exact status/op sequences.
@@ -1070,6 +1193,14 @@ def voice(workdir: Path) -> int:
         ok = ok and case_ok
         divide_seen = divide_seen or bool(case["norm_diag"]["normalized_branch"])
         bypass_seen = bypass_seen or not case["norm_diag"]["normalized_branch"]
+        diagnostics[case_id] = {
+            "branch": ("divide" if case["norm_diag"]["normalized_branch"]
+                       else "bypass"),
+            "peak_word": case["norm_diag"]["peak_word"],
+            "gain_word": case["norm_diag"]["gain_word"],
+            "frozen_pinned": frozen is not None,
+            "result": "PASS" if case_ok else "FAIL",
+        }
         print("case %s: 1764 ticks + 176400 samples x 2 passes over %d named "
               "traces, branch %s, peak %d, gain %d, frozen-pinned %s -> %s"
               % (case_id, len(VOICE_CTL_TRACES) + len(VOICE_AUDIO_TRACES) + 1,
@@ -1080,6 +1211,43 @@ def voice(workdir: Path) -> int:
     print("branch coverage: divide %s, bypass %s -> %s"
           % (divide_seen, bypass_seen, "OK" if branches_ok else "FAIL"))
     ok = ok and branches_ok
+
+    # 1a. Peak-envelope coverage. Branch coverage alone says the controller
+    #     took both decisions; it says nothing about *where* in the peak
+    #     range it took them. The directed vectors are the only committed
+    #     cases that reach the ends -- a zero peak (reciprocal undefined) and
+    #     a full-scale peak -- so in any profile that plans them, reaching
+    #     both ends is a pass condition, not a happy accident. If a fixture
+    #     edit ever stopped producing a zero peak, this fails loudly instead
+    #     of quietly shrinking the proof.
+    #     The ceiling is DERIVED from the accepted audio format, never a
+    #     literal: the peak is a magnitude of the Q2.21 mix word, so the
+    #     largest value it can take is the magnitude of that format's own
+    #     negative rail.
+    ceiling = -formats.audio.min_int
+    peaks = sorted(row["peak_word"] for row in diagnostics.values())
+    zero_peak_seen = 0 in peaks
+    ceiling_peak_seen = ceiling in peaks
+    envelope = {"zero_peak": zero_peak_seen,
+                "ceiling_peak": ceiling_peak_seen,
+                "ceiling_peak_word": ceiling,
+                "observed_peaks": peaks}
+    directed_planned = [cid for cid, _ in plan if cid in VOICE_DIRECTED_CASES]
+    if directed_planned:
+        envelope_ok = zero_peak_seen and ceiling_peak_seen
+        print("peak envelope (%d directed vectors planned): zero peak %s, "
+              "ceiling peak %d %s, observed %s -> %s"
+              % (len(directed_planned), zero_peak_seen, ceiling,
+                 ceiling_peak_seen, peaks, "OK" if envelope_ok else "FAIL"))
+        if not envelope_ok:
+            print("VOICE FAILED: the directed vectors are planned but the "
+                  "peak envelope's ends were not both reached -- a fixture "
+                  "change has shrunk the proof this profile exists to make")
+        ok = ok and envelope_ok
+    else:
+        print("peak envelope: no directed vector planned in profile %s "
+              "(observed peaks %s); the envelope's ends are proven by the "
+              "directed and full profiles, not here" % (profile, peaks))
 
     # 1b. The binding case. Every *binding* control below needs a stimulus
     #     that distinguishes the two things the fault confuses; the uniform
@@ -1259,6 +1427,10 @@ def voice(workdir: Path) -> int:
         "host_fed_checkpoints": ["keyboard.midi_f0", "keyboard.duration"],
         "float_tolerance": None,
         "branch_coverage": {"divide": divide_seen, "bypass": bypass_seen},
+        "case_diagnostics": diagnostics,
+        "directed_cases": [cid for cid, _ in plan
+                           if cid in VOICE_DIRECTED_CASES],
+        "peak_envelope": envelope,
         "mutations": {
             label: {
                 "verdict": "DETECTED" if det else "NOT DETECTED",
@@ -1302,7 +1474,7 @@ def main(argv=None) -> int:
     global VOICE_PROFILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", default="regression",
-                        choices=["regression", "full"])
+                        choices=["regression", "directed", "full"])
     parser.add_argument("--workdir", type=Path, default=None,
                         help="keep raw artifacts here instead of a temp dir")
     args = parser.parse_args(argv)
@@ -1311,13 +1483,25 @@ def main(argv=None) -> int:
         print("ERROR: iverilog is not installed; the whole-voice run cannot "
               "execute here. An unrun check is never a pass.")
         return 3
-    if args.workdir is not None:
-        args.workdir.mkdir(parents=True, exist_ok=True)
-        # Absolute from here on: printed artifact paths stay meaningful after
-        # the simulator has chdir'd, and the record names a real location.
-        return voice(args.workdir.resolve())
-    with tempfile.TemporaryDirectory(prefix="tb-voice-") as tmp:
-        return voice(Path(tmp))
+    try:
+        if args.workdir is not None:
+            args.workdir.mkdir(parents=True, exist_ok=True)
+            # Absolute from here on: printed artifact paths stay meaningful
+            # after the simulator has chdir'd, and the record names a real
+            # location.
+            return voice(args.workdir.resolve())
+        with tempfile.TemporaryDirectory(prefix="tb-voice-") as tmp:
+            return voice(Path(tmp))
+    except VoiceCaptureIntegrityError as error:
+        # Its own exit status, distinct from both 0 (pass) and 1 (a real
+        # bit-identity failure), for the same reason exit 3 is distinct for
+        # "iverilog is absent": neither may be read as a verdict. No
+        # evidence record is written, because none was earned -- the run did
+        # not complete, so there is nothing to certify in either direction.
+        print("VOICE RUN INCONCLUSIVE -- a capture file is corrupt, so "
+              "nothing was proven and nothing was disproven:")
+        print("  %s" % error)
+        return 4
 
 
 if __name__ == "__main__":

@@ -11,7 +11,11 @@ These checks run everywhere and need no simulator. They prove:
 - that every mutation seam's anchor occurs exactly once in the RTL it names,
   so a drifted source refuses instead of silently testing nothing, and that
   every planted mutant still elaborates;
-- that the declared case partition agrees with the frozen receipt;
+- that the declared case partition agrees with the frozen receipt, that the
+  ``directed`` profile is a strict superset of ``regression``, and that the
+  ends of the normalization peak envelope (a zero peak and the accepted audio
+  format's ceiling) are reachable **only** through the directed vectors --
+  the claim that profile exists to discharge;
 - that the closed-form upsample interior count agrees with the model's own
   coordinate table;
 - that the CI lane's step budgets fit under their job cap.
@@ -526,6 +530,251 @@ class CasePartitionMatchesFrozenReceipt(unittest.TestCase):
     def test_regression_set_covers_both_normalization_branches(self):
         self.assertNotEqual(rv.VOICE_MUTATION_DIVIDE_CASE,
                             rv.VOICE_MUTATION_BYPASS_CASE)
+
+
+class DirectedProfileIsASupersetOfRegression(unittest.TestCase):
+    """The ``directed`` profile widens case coverage and drops nothing (#79).
+
+    Issue #79 asks for the integrated top over "compact directed vectors
+    **and** the selected regression corpus". The ``regression`` profile is
+    only the second half; ``directed`` adds the first without weakening any
+    stage, which is a property worth enforcing rather than trusting: a
+    profile that added cases while quietly dropping the mutation lane or a
+    determinism check would produce a record that reads stronger and proves
+    less.
+    """
+
+    def test_directed_vectors_are_exactly_the_declared_directed_fixtures(self):
+        from run_tb import MIX_FIXTURE_CASES
+
+        self.assertEqual(rv.VOICE_DIRECTED_CASES, MIX_FIXTURE_CASES)
+
+    def test_directed_profile_contains_every_regression_case(self):
+        for case_id in rv.VOICE_REGRESSION_CASES:
+            self.assertIn(case_id, rv.VOICE_DIRECTED_PROFILE_CASES)
+
+    def test_directed_profile_is_strictly_larger_than_regression(self):
+        self.assertGreater(len(rv.VOICE_DIRECTED_PROFILE_CASES),
+                           len(rv.VOICE_REGRESSION_CASES))
+        self.assertEqual(
+            len(set(rv.VOICE_DIRECTED_PROFILE_CASES)),
+            len(rv.VOICE_DIRECTED_PROFILE_CASES),
+            "a case is planned twice in the directed profile",
+        )
+
+    def test_directed_vectors_are_not_already_regression_cases(self):
+        # If they were, the profile would add nothing.
+        self.assertFalse(
+            set(rv.VOICE_DIRECTED_CASES) & set(rv.VOICE_REGRESSION_CASES)
+        )
+
+    def test_the_cli_accepts_the_directed_profile(self):
+        import contextlib
+        import io
+
+        for profile in ("regression", "directed", "full"):
+            with self.subTest(profile=profile):
+                # --help exits 0 after parsing choices; an unknown choice
+                # exits 2 from argparse before that.
+                buffer = io.StringIO()
+                with contextlib.redirect_stdout(buffer):
+                    with self.assertRaises(SystemExit) as raised:
+                        rv.main(["--profile", profile, "--help"])
+                self.assertEqual(raised.exception.code, 0)
+        buffer = io.StringIO()
+        with contextlib.redirect_stderr(buffer):
+            with self.assertRaises(SystemExit) as raised:
+                rv.main(["--profile", "not-a-profile"])
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_every_directed_vector_is_a_declared_fixture_with_parameters(self):
+        from run_tb import mix_load_fixtures
+
+        _manifest, fixtures = mix_load_fixtures()
+        for case_id in rv.VOICE_DIRECTED_CASES:
+            with self.subTest(case=case_id):
+                self.assertIn(case_id, fixtures)
+                self.assertTrue(fixtures[case_id]["physical"])
+
+
+class PeakEnvelopeEndsComeOnlyFromTheDirectedVectors(unittest.TestCase):
+    """The **low** end of the peak envelope is reachable only via directed.
+
+    This is the whole reason the ``directed`` profile exists, so it is
+    asserted against the frozen fixtures rather than asserted in prose. The
+    peak is a magnitude of the accepted Q2.21 audio word, so its ceiling is
+    the magnitude of that format's own negative rail -- derived here, never a
+    literal, for the same reason the flow derives it.
+
+    Stated precisely, because the first draft of this suite overstated it and
+    this check is what caught that: the regression pair **does** reach the
+    ceiling (``voice:divide-distinct-levels`` saturates there). What it never
+    reaches is a zero or near-zero peak. Only the low end is exclusive to the
+    directed vectors, and only that is claimed.
+
+    No simulator is needed: the peak word is a property of the frozen fixed
+    model's own normalization diagnostic, which is pure Python.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        from run_tb import mix_load_fixtures, mix_load_receipt
+        from torchsynth_voice.format_sweep import FixedControlPath
+
+        _receipt, cls.formats, cls.cases = mix_load_receipt()
+        _manifest, cls.fixtures = mix_load_fixtures()
+        cls.fcp = FixedControlPath(cls.formats.control_spec)
+        cls._saved = dict(rv._LUT_TABLES)
+        rv._LUT_TABLES["audio"] = cls.formats.table
+        rv._LUT_TABLES["control"] = cls.fcp.table
+
+    @classmethod
+    def tearDownClass(cls):
+        rv._LUT_TABLES.clear()
+        rv._LUT_TABLES.update(cls._saved)
+
+    def _peak(self, case_id):
+        if case_id in rv.VOICE_DERIVED_CASES:
+            base_id, overrides = rv.VOICE_DERIVED_CASES[case_id]
+            physical = dict(self.fixtures[base_id]["physical"])
+            physical.update(overrides)
+            normalized = self.fixtures[base_id]["normalized"]
+            frozen = None
+        elif case_id in self.fixtures:
+            physical = self.fixtures[case_id]["physical"]
+            normalized = self.fixtures[case_id]["normalized"]
+            frozen = None
+        else:
+            frozen = self.cases[case_id]
+            physical, normalized = frozen["parameters"], None
+        case = rv.voice_derive_case(self.formats, self.fcp, case_id, physical,
+                                    normalized, frozen)
+        return case["norm_diag"]["peak_word"]
+
+    def test_ceiling_is_the_audio_format_negative_rail_magnitude(self):
+        self.assertEqual(-self.formats.audio.min_int, 1 << 23)
+
+    def test_a_directed_vector_reaches_a_zero_peak(self):
+        peaks = {cid: self._peak(cid) for cid in rv.VOICE_DIRECTED_CASES}
+        self.assertIn(0, peaks.values(), peaks)
+
+    def test_a_directed_vector_reaches_the_ceiling_peak(self):
+        ceiling = -self.formats.audio.min_int
+        peaks = {cid: self._peak(cid) for cid in rv.VOICE_DIRECTED_CASES}
+        self.assertIn(ceiling, peaks.values(), peaks)
+
+    def test_the_regression_cases_alone_never_reach_a_zero_peak(self):
+        # The claim the directed profile is built on. If a future edit made
+        # a regression case reach zero, this failing is the signal to
+        # re-state the partition, not to delete the check.
+        peaks = {cid: self._peak(cid) for cid in rv.VOICE_REGRESSION_CASES}
+        self.assertNotIn(0, peaks.values(), peaks)
+
+    def test_the_regression_cases_do_reach_the_ceiling(self):
+        # Recorded, not glossed over: the ceiling end is NOT what the
+        # directed vectors add. Asserting it here keeps the spec's claim
+        # ("widens the parameters, not the peak range") honest.
+        ceiling = -self.formats.audio.min_int
+        peaks = {cid: self._peak(cid) for cid in rv.VOICE_REGRESSION_CASES}
+        self.assertIn(ceiling, peaks.values(), peaks)
+
+    def test_near_silence_is_the_smallest_non_zero_peak_either_profile_plans(
+            self):
+        planned = set(rv.VOICE_DIRECTED_PROFILE_CASES)
+        peaks = {cid: self._peak(cid) for cid in planned}
+        non_zero = {cid: p for cid, p in peaks.items() if p}
+        self.assertEqual(min(non_zero.values()), peaks["special:near-silence"],
+                         peaks)
+
+
+class CorruptCaptureIsInconclusiveNotAVerdict(unittest.TestCase):
+    """A capture with lost bytes must not be reported as a result (#79).
+
+    ``CLAUDE.md``: a test that did not run must never be reported as a pass.
+    The corollary this suite pins down is that it must not be reported as a
+    *failure of the RTL* either. A row with the wrong field count can only
+    come from bytes lost between the bench's fixed-column ``$fwrite`` and
+    the file, so it is diagnosable -- and must be diagnosed, not folded into
+    the bit-identity verdict.
+
+    The corrupt row below is verbatim from the real occurrence: a
+    ``directed``-profile run on a shared box lost 9,987 of 352,800
+    ``audiocap`` rows in five spliced holes, on a case that had already
+    written all 352,800 rows and compared bit-exact earlier in the same run.
+    """
+
+    GOOD = "1017235 2 2 0 0 0 0 0 1656376 -42602 708392 0 0 0 0\n"
+    #: Note the doubled space: a 15-column row's prefix spliced onto a much
+    #: later row's suffix, giving 17 fields.
+    SPLICED = ("1017239 2 2 0 0 0  0 0 0 0 872194 -63157 -1090888 0 0 0 0\n")
+
+    def _write(self, text):
+        tmp = tempfile.mkdtemp(prefix="voice-capture-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        path = Path(tmp) / "run0_audiocap.txt"
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def test_a_well_formed_capture_parses(self):
+        rows = rv.voice_capture_rows(self._write(self.GOOD * 3), "audiocap", 15)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(rows[0][0], 1017235)
+
+    def test_a_spliced_row_raises_capture_integrity_not_a_mismatch(self):
+        path = self._write(self.GOOD + self.SPLICED + self.GOOD)
+        with self.assertRaises(rv.VoiceCaptureIntegrityError) as raised:
+            rv.voice_capture_rows(path, "audiocap", 15)
+        message = str(raised.exception)
+        # The diagnosis must name the file, the line, both field counts, and
+        # say plainly that this is not a bit-identity result.
+        self.assertIn("CORRUPT", message)
+        self.assertIn("line 2", message)
+        self.assertIn("17 fields", message)
+        self.assertIn(str(path), message)
+        self.assertIn("not an RTL/model disagreement", message)
+
+    def test_an_x_state_row_is_still_a_mismatch_not_a_corruption(self):
+        # An x-state emission has the RIGHT number of fields and IS a
+        # genuine mismatch; the comparator owns it. Conflating the two would
+        # turn a real RTL defect into an "inconclusive" excuse.
+        xrow = "1017239 2 2 0 0 0 0 0 x -39083 502598 0 0 0 0\n"
+        rows = rv.voice_capture_rows(self._write(self.GOOD + xrow),
+                                     "audiocap", 15)
+        self.assertEqual(rows[1], None)
+
+    def test_blank_lines_are_skipped_rather_than_called_corrupt(self):
+        rows = rv.voice_capture_rows(self._write("\n" + self.GOOD + "\n"),
+                                     "audiocap", 15)
+        self.assertEqual(len(rows), 1)
+
+    def test_the_flow_exits_4_and_writes_no_record_on_a_corrupt_capture(self):
+        # Exit 4 is distinct from 0 (pass) and 1 (a verdict against the
+        # RTL), for the same reason exit 3 is distinct for "no simulator".
+        import contextlib
+        import io
+
+        tmp = tempfile.mkdtemp(prefix="voice-inconclusive-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        real_voice = rv.voice
+
+        def fake_voice(workdir):
+            raise rv.VoiceCaptureIntegrityError("capture audiocap is CORRUPT")
+
+        rv.voice = fake_voice
+        self.addCleanup(lambda: setattr(rv, "voice", real_voice))
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            status = rv.main(["--profile", "regression", "--workdir", tmp])
+        if status == 3:
+            self.skipTest("iverilog absent; the flow exits 3 before running")
+        self.assertEqual(status, 4)
+        self.assertIn("INCONCLUSIVE", buffer.getvalue())
+        self.assertFalse((Path(tmp) / "voice-evidence.json").exists())
+
+    def test_exit_statuses_are_documented_in_the_module_docstring(self):
+        doc = rv.__doc__
+        for fragment in ("``0`` pass", "``3``", "``4``", "INCONCLUSIVE"):
+            self.assertIn(fragment, doc)
 
 
 class LfoTableSelectionIsBackwardCompatible(unittest.TestCase):
