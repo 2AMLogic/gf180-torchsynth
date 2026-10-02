@@ -83,6 +83,10 @@ module sine_vco_engine (
     output reg  signed [C1_WIDTH-1:0]  vco_word,   // vco_1.raw, Q2.21
     output reg  [C2_WIDTH-1:0]         phase_out,  // post-step phase
     output reg                         out_valid,
+    // C4 Q10.21 MIDI pitch sum (post-C7-saturation, PRE-MIDI-clamp), the
+    // only consumer of up_pitch; exported so a mis-wired pitch column is
+    // observable on a compared sample trace (#263). Aligned with vco_word.
+    output reg signed [C4_WIDTH-1:0]   midi_sum,
     // Op counters since trigger (op-count conformance surface).
     output reg  [31:0] op_mults,    // multiply-class ops (3 per sample)
     output reg  [31:0] op_adds,     // adds/compares (7 per sample)
@@ -280,6 +284,7 @@ module sine_vco_engine (
             vco_word   <= {C1_WIDTH{1'b0}};
             phase_out  <= {C2_WIDTH{1'b0}};
             out_valid  <= 1'b0;
+            midi_sum   <= {C4_WIDTH{1'b0}};
             op_mults   <= 32'd0;
             op_adds    <= 32'd0;
             op_narrows <= 32'd0;
@@ -306,6 +311,7 @@ module sine_vco_engine (
                 // requires detection.
                 vco_word  <= vco_sat[C1_WIDTH-1:0];
                 out_valid <= 1'b1;
+                midi_sum  <= sum_eff[C4_WIDTH-1:0];
                 op_mults   <= op_mults   + 32'd3;
                 op_adds    <= op_adds    + 32'd7;
                 op_narrows <= op_narrows + 32'd4;

@@ -3841,18 +3841,21 @@ def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
     for run in range(runs):
         vco_words = []
         phase_words = []
+        midi_words = []
         for line in (
             workdir / ("run%d_captured.txt" % run)
         ).read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
-            v_word, p_word = line.split()
+            v_word, p_word, m_word = line.split()
             try:
                 vco_words.append(int(v_word))
                 phase_words.append(int(p_word))
+                midi_words.append(int(m_word))
             except ValueError:
                 vco_words.append(None)  # an x-state emission: a mismatch
                 phase_words.append(None)
+                midi_words.append(None)
         cycles = int(
             (workdir / ("run%d_cycles.txt" % run))
             .read_text(encoding="utf-8").strip()
@@ -3869,7 +3872,8 @@ def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
                     except ValueError:
                         ops.append(None)  # an x-state counter: a mismatch
         captures.append(
-            {"vco": vco_words, "phase": phase_words, "cycles": cycles,
+            {"vco": vco_words, "phase": phase_words, "midi": midi_words,
+             "cycles": cycles,
              "ops": ops}
         )
     return captures
@@ -3884,7 +3888,7 @@ def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
     inside the captured prefix is.
     """
 
-    for stream_name in ("vco", "phase"):
+    for stream_name in ("vco", "phase", "midi"):
         got = capture[stream_name]
         want = case["mirror"][stream_name]
         if prefix:
@@ -3895,8 +3899,8 @@ def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
             if a != b:
                 print(
                     "SINE-VCO FAILED: %s differs (%s %s[%d]: expected %s "
-                    "got %s)" % (stream_name, case_id, "vco_1.raw"
-                                 if stream_name == "vco" else "phase",
+                    "got %s)" % (stream_name, case_id, {"vco": "vco_1.raw", "phase": "phase",
+                                  "midi": "vco_1.midi_sum"}[stream_name],
                                  index, b, a)
                 )
                 return False

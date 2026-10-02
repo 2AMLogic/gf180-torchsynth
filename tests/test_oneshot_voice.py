@@ -59,6 +59,7 @@ def synthetic_expected(n=8, full=False):
         name: [(-1) ** j * ((index + 2) * (j + 1)) for j in range(n)]
         for index, name in enumerate(rv.VOICE_AUDIO_TRACES)
     }
+    audio["vco_1.midi_sum"] = [7 * (j + 3) for j in range(n)]
     out = [w * 2 for w in audio["mixer.pre_normalization"]] if full else None
     status = [0, 0, 8, 4194304, 1, 1, 3, n, n, 1, n, n, 0, 8] if full else None
     ops = {}
@@ -97,6 +98,7 @@ def clean_capture(expected):
         return [
             [base + j, pas, pas]
             + [expected["audio"][name][j] for name in rv.VOICE_AUDIO_TRACES]
+            + [expected["audio"][name][j] for name in rv.VOICE_AUX_AUDIO_TRACES]
             for j in range(n)
         ]
 
@@ -243,6 +245,30 @@ class ComparedTracesCoverEveryDeclaredCheckpoint(unittest.TestCase):
         host_fed = {"keyboard.midi_f0", "keyboard.duration"}
         self.assertEqual(set(voice_checkpoints()), compared | host_fed)
         self.assertFalse(compared & host_fed)
+
+    def test_engine_internal_traces_are_not_model_checkpoints(self):
+        # #263: the exported MIDI sum is an engine-internal mirror trace; it
+        # must not silently join (or be confused with) the normative set.
+        from torchsynth_voice.float_voice import voice_checkpoints
+
+        aux = set(rv.VOICE_AUX_AUDIO_TRACES)
+        self.assertEqual(aux, {"vco_1.midi_sum"})
+        self.assertFalse(aux & set(voice_checkpoints()))
+        self.assertFalse(aux & set(rv.VOICE_AUDIO_TRACES))
+
+    def test_pitch_wire_swap_requires_both_kills(self):
+        self.assertEqual(rv.VOICE_PITCH_WIRE_KILLS,
+                         ("vco_1.midi_sum[pass1]", "ops.V1.1[5]"))
+
+    def test_wrong_midi_sum_is_a_localized_trace_mismatch(self):
+        expected = synthetic_expected()
+        capture = clean_capture(expected)
+        col = 3 + len(rv.VOICE_AUDIO_TRACES)
+        capture["audio1"][4][col] += 1
+        rows = rv.voice_rows(capture, expected)
+        self.assertEqual(rows[0][0], "vco_1.midi_sum[pass1]")
+        self.assertEqual(rows[0][1], 10_004)
+        self.assertEqual(rows[0][2], 4)
 
     def test_no_trace_is_compared_twice(self):
         names = list(rv.VOICE_CTL_TRACES) + list(rv.VOICE_AUDIO_TRACES)
@@ -449,6 +475,7 @@ class PrefixWalksStillCheckTheVcoOpCounters(unittest.TestCase):
                           "gain_word": 0},
             "norm_counters": type("C", (), {"total": lambda self: 0})(),
             "sine_aux": {"counters": {"records": []}, "clamps": 7},
+            "sine_midi_sum": list(range(10_000)),
             "vco2_sats": 11,
             "prefix_aux": {cap: {"sine_sats": 3, "sine_clamps": 5,
                                  "vco2_sats": 9}},
@@ -521,6 +548,7 @@ class UpsampleSaturationCounterIsCheckedAtEveryWalkLength(unittest.TestCase):
                           "gain_word": 0},
             "norm_counters": type("C", (), {"total": lambda self: 0})(),
             "sine_aux": {"counters": {"records": []}, "clamps": 0},
+            "sine_midi_sum": list(range(10_000)),
             "vco2_sats": 0,
             "prefix_aux": {cap: {"sine_sats": 0, "sine_clamps": 0,
                                  "vco2_sats": 0}},
