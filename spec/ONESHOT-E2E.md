@@ -263,13 +263,16 @@ digests fresh against <tree>, git_head reachable on origin/main
 Without the flag the tool now *says* that reachability was not checked rather
 than letting a bare `COMMITTABLE` imply it. Every way of not knowing the
 answer -- a shallow clone that lacks the commit, a checkout with no
-default-branch ref, a path that is not a repository -- is an error, never a
-silent pass, because a check that could not run must never look like one that
-passed. `tests/test_committed_oneshot_evidence.py` re-asserts the condition for
-every committed record on every CI run, which is why `.github/workflows/ci.yml`
-checks out at `fetch-depth: 0`: the default depth-1 fetch cannot answer an
-ancestry question, and the check fails rather than passing vacuously if that
-depth is ever reverted.
+default-branch ref, a path that is not a repository -- exits distinctly as
+`REACHABILITY UNDECIDABLE` (exit 2), never as a silent pass and never folded
+into the same failure a genuinely nonexistent commit gets, because a check
+that could not run must never look like one that passed *or* like one that
+definitely failed ("Evidence identity" below has the full three-way
+breakdown). `tests/test_committed_oneshot_evidence.py` re-asserts the
+condition for every committed record on every CI run, which is why
+`.github/workflows/ci.yml` checks out at `fetch-depth: 0`: the default
+depth-1 fetch cannot answer an ancestry question, and the check reports
+undecided rather than passing vacuously if that depth is ever reverted.
 
 ### The binding case (and why a uniform stimulus is not enough)
 
@@ -609,11 +612,29 @@ now asks `git` whether `identity.git_head` is an ancestor of the default
 branch (`origin/main`, or an explicit `--default-branch-ref`), and
 `tests/test_committed_oneshot_evidence.py` re-asserts it for every committed
 record on every CI run -- which is why `.github/workflows/ci.yml` checks out at
-`fetch-depth: 0`. Each way of *not knowing* the answer is reported as an error
-with its remedy, never as a pass: a clone that lacks the commit, a checkout
-with no default-branch ref, a path that is not a repository. Without the flag
-the tool prints a note saying reachability was **not** checked, so a bare
-`COMMITTABLE` can no longer be read as implying it.
+`fetch-depth: 0`.
+
+Reachability has three possible answers, not two, and the tool's exit code
+keeps them apart rather than folding the latter two together (issue #268):
+`identity.git_head` is an ancestor of the default branch (`COMMITTABLE`, exit
+0); it definitely is not -- the commit exists but is not an ancestor, or
+never existed under that SHA at all in a checkout with full history
+(`NOT COMMITTABLE`, exit 1); or the checkout cannot tell, most commonly
+because it is a *shallow* clone (`git rev-parse --is-shallow-repository`)
+that may simply not have fetched far enough back to see a commit that is
+genuinely absent either way (`REACHABILITY UNDECIDABLE`, exit 2). The first
+cut of this check folded "commit absent" and "commit absent from a shallow
+clone" into one message regardless of which was actually true, which told a
+reader to deepen a clone that, in the nonexistent-commit case, would never
+produce the commit no matter how deep it went. A checkout with no
+default-branch ref, or a path that is not a repository at all, are also
+`UNDECIDABLE` rather than `NOT COMMITTABLE` -- they are a gap in the checkout,
+not a defect in the record. None of the three is ever printed, or exits, the
+same way as either of the other two, so an undecided answer can never be
+mistaken for a pass, and a record that was never created under its cited SHA
+is never mistaken for one that merely needs a deeper fetch. Without
+`--require-reachable` at all, the tool prints a note saying reachability was
+**not** checked, so a bare `COMMITTABLE` can no longer be read as implying it.
 
 **Two committed whole-voice records now exist**, one per run profile:
 `sim/evidence/oneshot-whole-voice-regression-v1.json` and
