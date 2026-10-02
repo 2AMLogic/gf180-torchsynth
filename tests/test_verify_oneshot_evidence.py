@@ -12,6 +12,7 @@ import contextlib
 import hashlib
 import io
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -176,6 +177,148 @@ class TreeFreshnessTest(unittest.TestCase):
                              [])
 
 
+def _git(root: Path, *args: str) -> str:
+    """Run ``git`` in ``root`` with identity/signing pinned, return stdout."""
+
+    completed = subprocess.run(
+        ("git", "-C", str(root),
+         "-c", "user.email=evidence@example.invalid",
+         "-c", "user.name=Evidence Test",
+         "-c", "commit.gpgsign=false") + args,
+        check=True, capture_output=True, text=True,
+    )
+    return completed.stdout.strip()
+
+
+def _git_repo(tmp: str):
+    """A throwaway repo with one landed commit and one branch-only commit.
+
+    This is the shape the reachability check exists for: both commits are
+    perfectly clean and both produce records that pass every *other* check,
+    but only one of them is an ancestor of ``main``. The working tree is
+    left on ``main`` with the pristine source content, so freshness checks
+    run against it still pass and a rejection is attributable to
+    reachability alone.
+    """
+
+    root = _tree(tmp)
+    _git(root, "init", "--quiet")
+    _git(root, "add", "-A")
+    _git(root, "commit", "--quiet", "--no-verify", "-m", "landed")
+    _git(root, "branch", "-M", "main")
+    landed = _git(root, "rev-parse", "HEAD")
+    _git(root, "checkout", "--quiet", "-b", "feature/not-landed")
+    (root / FAKE_SOURCE).write_bytes(FAKE_BODY + b"// branch only\n")
+    _git(root, "add", "-A")
+    _git(root, "commit", "--quiet", "--no-verify", "-m", "branch only")
+    branch_only = _git(root, "rev-parse", "HEAD")
+    _git(root, "checkout", "--quiet", "main")
+    return root, landed, branch_only
+
+
+class ReachabilityTest(unittest.TestCase):
+    """``identity.git_head`` must name a commit a reader can resolve.
+
+    Checks 1-4 of the tool are all satisfied by a record produced on a
+    pristine pull-request branch commit, and this repository squash-merges,
+    so such a commit never reaches ``main``: the record cites a SHA that
+    resolves for nobody. That is not hypothetical -- issue #79's
+    ``directed``-profile record was held back for exactly this reason, with
+    ``spec/ONESHOT-E2E.md`` able only to tell a reader to check by hand.
+    """
+
+    def test_a_landed_commit_is_reachable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, _ = _git_repo(tmp)
+            record = _record(identity={"git_head": landed})
+            self.assertEqual(voe.reachability_errors(record, root), [])
+
+    def test_a_branch_only_commit_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            record = _record(identity={"git_head": branch_only})
+            errors = voe.reachability_errors(record, root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("not reachable", errors[0])
+            self.assertIn(branch_only, errors[0])
+            self.assertIn("squash-merge", errors[0])
+
+    def test_the_branch_only_record_passes_every_other_check(self):
+        # Proof the gate is load-bearing rather than redundant: the record
+        # the check above refuses is otherwise flawless, so without this
+        # check it would be committed as a citation to nowhere.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            record = _record(identity={"git_head": branch_only})
+            self.assertEqual(voe.verify(record, None, repo_root=root), [])
+
+    def test_a_commit_absent_from_the_clone_is_an_error_not_a_pass(self):
+        # A shallow clone genuinely cannot answer the question. "Cannot
+        # answer" must never render as "yes".
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, _ = _git_repo(tmp)
+            record = _record(identity={"git_head": "b" * 40})
+            errors = voe.reachability_errors(record, root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("does not contain commit", errors[0])
+            self.assertIn("fetch-depth: 0", errors[0])
+
+    def test_a_tree_with_no_default_branch_ref_is_an_error_not_a_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, _ = _git_repo(tmp)
+            _git(root, "branch", "-M", "main", "trunk")
+            record = _record(identity={"git_head": landed})
+            errors = voe.reachability_errors(record, root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("no default-branch ref resolved", errors[0])
+            self.assertIn("fetch-depth: 0", errors[0])
+
+    def test_an_explicit_ref_overrides_the_candidate_list(self):
+        # The escape hatch for a checkout whose default branch is spelled
+        # some other way -- and proof the candidate list is not hardcoded
+        # into the ancestry question itself.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, branch_only = _git_repo(tmp)
+            _git(root, "branch", "-M", "main", "trunk")
+            self.assertEqual(
+                voe.reachability_errors(
+                    _record(identity={"git_head": landed}), root, "trunk"),
+                [])
+            self.assertEqual(
+                len(voe.reachability_errors(
+                    _record(identity={"git_head": branch_only}), root,
+                    "trunk")),
+                1)
+
+    def test_a_non_repository_is_an_error_not_a_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record = _record(identity={"git_head": GOOD_HEAD})
+            self.assertNotEqual(
+                voe.reachability_errors(record, Path(tmp)), [],
+                "a directory that cannot answer the question was accepted",
+            )
+
+    def test_a_malformed_head_is_rejected_before_git_is_consulted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, _ = _git_repo(tmp)
+            errors = voe.reachability_errors(
+                _record(identity={"git_head": "not-a-sha"}), root)
+            self.assertEqual(len(errors), 1, errors)
+            self.assertIn("40-character", errors[0])
+
+    def test_a_record_with_no_identity_block_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, _ = _git_repo(tmp)
+            record = _record()
+            del record["identity"]
+            self.assertNotEqual(voe.reachability_errors(record, root), [])
+
+    def test_this_repository_resolves_a_default_branch(self):
+        # The candidate list must actually cover this checkout, or the gate
+        # in tests/test_committed_oneshot_evidence.py could only ever fail.
+        self.assertIsNotNone(voe.resolve_default_branch(ROOT))
+
+
 class CliTreeCheckTest(unittest.TestCase):
     """The CLI checks the tree by default; skipping it must be explicit."""
 
@@ -217,6 +360,50 @@ class CliTreeCheckTest(unittest.TestCase):
             self.assertEqual(
                 self._main([str(evidence), "--against-tree", str(root),
                            "--expect-head", GOOD_HEAD]), 0)
+
+    def test_require_reachable_rejects_a_branch_only_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            evidence = self._written(tmp, _record(
+                identity={"git_head": branch_only}))
+            self.assertEqual(
+                self._main([str(evidence), "--against-tree", str(root),
+                            "--require-reachable"]), 1)
+
+    def test_require_reachable_accepts_a_landed_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, _ = _git_repo(tmp)
+            evidence = self._written(tmp, _record(
+                identity={"git_head": landed}))
+            self.assertEqual(
+                self._main([str(evidence), "--against-tree", str(root),
+                            "--require-reachable",
+                            "--expect-head", landed]), 0)
+
+    def test_without_the_flag_the_branch_only_record_still_passes(self):
+        # The flag is opt-in, so the default must be documented as a gap
+        # rather than mistaken for a check. This is the behavior the
+        # COMMITTABLE line now prints a NOTE about.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            evidence = self._written(tmp, _record(
+                identity={"git_head": branch_only}))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                status = voe.main([str(evidence), "--against-tree", str(root)])
+            self.assertEqual(status, 0)
+            self.assertIn("reachability NOT checked", out.getvalue())
+            self.assertIn("--require-reachable", out.getvalue())
+
+    def test_a_passing_reachability_run_says_which_ref_it_used(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, _ = _git_repo(tmp)
+            evidence = self._written(tmp, _record(
+                identity={"git_head": landed}))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                status = voe.main([str(evidence), "--against-tree", str(root),
+                                   "--require-reachable"])
+            self.assertEqual(status, 0)
+            self.assertIn("git_head reachable on main", out.getvalue())
 
 
 if __name__ == "__main__":

@@ -24,15 +24,26 @@ citeable only if:
    about its own ``result``/``git_head``/``git_tree_dirty`` fields notices.
    That staleness is what this check refuses: an edited engine must be
    re-proven, not inherit the previous record's pass.
+5. its ``identity.git_head`` is **reachable on the default branch**
+   (``--require-reachable``). Checks 1-4 are all satisfied by a record
+   produced on a perfectly clean *pull-request branch* commit -- and this
+   repository squash-merges, so a branch's own commits never reach ``main``.
+   Such a record cites a SHA no reader can ever resolve: a citation to
+   nowhere that every other check here calls committable. Until this flag
+   existed ``spec/ONESHOT-E2E.md`` could only tell a reader to check
+   reachability by hand, which is exactly the kind of step that gets skipped
+   (issue #79 open item 1 was blocked on precisely this for two increments).
 
 This script is the mechanical form of that checklist, so "is this record
 committable" is answered by an exit code rather than by eyeballing JSON.
 It does not run any simulation itself and is simulator-free -- it only reads
-an already-produced evidence file and hashes the named source files.
+an already-produced evidence file, hashes the named source files, and (with
+``--require-reachable``) asks ``git`` an ancestry question.
 
 Usage::
 
     python3 tools/verify_oneshot_evidence.py <evidence.json> [--expect-head SHA]
+    python3 tools/verify_oneshot_evidence.py <evidence.json> --require-reachable
     python3 tools/verify_oneshot_evidence.py <evidence.json> --skip-tree-check
 
 Exit 0 only if every check above passes (and, when given, ``--expect-head``
@@ -45,6 +56,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,6 +81,109 @@ DIGEST_BLOCKS = ("rtl_sha256", "fixed_vector_sha256")
 
 #: Default repository root: this file lives in ``<root>/tools/``.
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+#: Spellings of "the default branch" the reachability check will accept,
+#: tried in order. A bare clone has ``origin/main``; a checkout that is
+#: itself ``main`` has ``main``; ``actions/checkout`` on a ``pull_request``
+#: event leaves a detached HEAD at the merge commit but, at
+#: ``fetch-depth: 0``, does create ``refs/remotes/origin/main``. The list is
+#: declared rather than guessed so a failure can name what it looked for.
+DEFAULT_BRANCH_REFS = ("origin/main", "refs/remotes/origin/main",
+                       "main", "refs/heads/main")
+
+
+def git_ok(repo_root: Path, *args: str) -> bool:
+    """Whether ``git <args>`` exits 0 in ``repo_root`` (output discarded)."""
+
+    try:
+        completed = subprocess.run(
+            ("git", "-C", str(repo_root)) + args,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        return False
+    return completed.returncode == 0
+
+
+def git_capture(repo_root: Path, *args: str) -> str:
+    """``git <args>`` stdout in ``repo_root``, or ``""`` if it fails."""
+
+    try:
+        completed = subprocess.run(
+            ("git", "-C", str(repo_root)) + args,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            check=False, text=True,
+        )
+    except OSError:
+        return ""
+    return completed.stdout.strip() if completed.returncode == 0 else ""
+
+
+def resolve_default_branch(repo_root: Path,
+                           refs=DEFAULT_BRANCH_REFS) -> str | None:
+    """The first of ``refs`` that names a commit in ``repo_root``."""
+
+    for ref in refs:
+        if git_ok(repo_root, "rev-parse", "--verify", "--quiet",
+                  "%s^{commit}" % ref):
+            return ref
+    return None
+
+
+def reachability_errors(record: dict, repo_root: Path,
+                        ref: str | None = None) -> list[str]:
+    """Return every reason ``record``'s ``git_head`` is not citeable.
+
+    "Citeable" means: a reader handed this record can `git show` the commit
+    it names on the default branch. A clean record produced on a
+    pull-request branch is *not* citeable -- this repository squash-merges,
+    so that commit is never an ancestor of ``main`` and resolves for nobody
+    but the agent that produced it.
+
+    Every way of not knowing the answer is an error, never a silent pass: a
+    missing default-branch ref and a commit absent from this clone (a
+    shallow checkout) are each reported with the remedy, because a check
+    that could not run must never look like one that passed.
+    """
+
+    identity = record.get("identity")
+    if not isinstance(identity, dict):
+        return ["record carries no identity block, so it names no commit"]
+    git_head = identity.get("git_head")
+    if not isinstance(git_head, str) or len(git_head) != 40:
+        return ["identity.git_head is not a 40-character commit SHA: %r"
+                % git_head]
+    if not git_ok(repo_root, "rev-parse", "--git-dir"):
+        return ["%s is not a git repository, so reachability cannot be "
+                "checked there -- point --against-tree at a real checkout"
+                % repo_root]
+    branch = ref or resolve_default_branch(repo_root)
+    if branch is None:
+        return [
+            "no default-branch ref resolved in %s (tried %s), so there is "
+            "nothing to measure reachability against -- deepen the clone "
+            "(CI: actions/checkout with fetch-depth: 0) or pass the ref "
+            "explicitly" % (repo_root, ", ".join(
+                [ref] if ref else list(DEFAULT_BRANCH_REFS)))
+        ]
+    if not git_ok(repo_root, "cat-file", "-e", "%s^{commit}" % git_head):
+        return [
+            "%s does not contain commit %s at all, so its reachability on "
+            "%s is unknown -- a shallow clone cannot answer this; deepen it "
+            "(CI: actions/checkout with fetch-depth: 0)"
+            % (repo_root, git_head, branch)
+        ]
+    if not git_ok(repo_root, "merge-base", "--is-ancestor", git_head, branch):
+        return [
+            "identity.git_head %s is not reachable on %s -- a record may "
+            "only cite a commit that has actually landed. A pull-request "
+            "branch commit is the usual cause: this repository squash-merges,"
+            " so branch commits never reach the default branch. Regenerate "
+            "the record on an already-landed clean commit."
+            % (git_head, branch)
+        ]
+    return []
 
 
 def resolve_source(name: str, repo_root: Path) -> list[Path]:
@@ -139,11 +254,17 @@ def stale_sources(record: dict, repo_root: Path) -> list[str]:
 
 
 def verify(record: dict, expect_head: str | None,
-           repo_root: Path | None = None) -> list[str]:
+           repo_root: Path | None = None,
+           reachable_in: Path | None = None,
+           default_branch_ref: str | None = None) -> list[str]:
     """Return every reason ``record`` is not committable (empty = committable).
 
     ``repo_root`` opts the freshness check in; passing ``None`` checks only
-    the record's self-consistent fields.
+    the record's self-consistent fields. ``reachable_in`` separately opts the
+    reachability check in, against that checkout's default branch -- it is
+    opt-in because a record is legitimately inspected away from any clone
+    that has the history (and because the moment before a record's own
+    commit lands is the one moment it cannot pass).
     """
 
     errors: list[str] = []
@@ -185,6 +306,9 @@ def verify(record: dict, expect_head: str | None,
         )
     if repo_root is not None:
         errors.extend(stale_sources(record, repo_root))
+    if reachable_in is not None:
+        errors.extend(reachability_errors(record, reachable_in,
+                                          default_branch_ref))
     return errors
 
 
@@ -206,6 +330,18 @@ def main(argv=None) -> int:
                               "produced from; a record that passes only with "
                               "this flag is NOT established as describing any "
                               "tree you have")
+    parser.add_argument("--require-reachable", action="store_true",
+                         help="additionally require identity.git_head to be "
+                              "reachable on the default branch of "
+                              "--against-tree. Use this before committing a "
+                              "record: a clean record produced on a "
+                              "pull-request branch passes every other check "
+                              "while citing a commit that, because this "
+                              "repository squash-merges, never lands")
+    parser.add_argument("--default-branch-ref", default=None,
+                         help="the ref --require-reachable measures against "
+                              "(default: the first of %s that resolves)"
+                              % ", ".join(DEFAULT_BRANCH_REFS))
     args = parser.parse_args(argv)
 
     if not args.evidence.is_file():
@@ -213,7 +349,10 @@ def main(argv=None) -> int:
         return 1
     record = json.loads(args.evidence.read_text(encoding="utf-8"))
     repo_root = None if args.skip_tree_check else args.against_tree
-    errors = verify(record, args.expect_head, repo_root=repo_root)
+    reachable_in = args.against_tree if args.require_reachable else None
+    errors = verify(record, args.expect_head, repo_root=repo_root,
+                    reachable_in=reachable_in,
+                    default_branch_ref=args.default_branch_ref)
     if errors:
         print("NOT COMMITTABLE: %s" % args.evidence)
         for error in errors:
@@ -226,9 +365,17 @@ def main(argv=None) -> int:
         freshness = "tree check SKIPPED"
     else:
         freshness = "digests fresh against %s" % repo_root
-    print("COMMITTABLE: %s (schema %s, git_head %s, %s)"
+    if reachable_in is None:
+        print("NOTE: --require-reachable was not given; identity.git_head "
+              "was NOT checked for reachability on the default branch, so "
+              "this run does not establish that a reader can resolve it.")
+        reachability = "reachability NOT checked"
+    else:
+        reachability = "git_head reachable on %s" % (
+            args.default_branch_ref or resolve_default_branch(reachable_in))
+    print("COMMITTABLE: %s (schema %s, git_head %s, %s, %s)"
           % (args.evidence, record["schema"], record["identity"]["git_head"],
-             freshness))
+             freshness, reachability))
     return 0
 
 

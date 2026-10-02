@@ -1,0 +1,217 @@
+{
+  "artifact_hash_case": "voice:divide-distinct-levels",
+  "artifact_hashes": {
+    "run0_audiocap.txt": "ff5bcc66fa6bf15c1041e716bcb3c3fafa6eb5518ef1e46351032198c002a654",
+    "run0_ctlcap.txt": "63de07eb86b696991a34443e44f0bc6ad14819e6f9234de2d96bababea6cd2b5",
+    "run0_linkcap.txt": "0341cf97ff7dff411a5a01bba1fb11fb44f0df97eaf6dc68ab67f4bf1b432d2a",
+    "run0_ops.txt": "876c84303fec9f4ce63d2ccee21302baef20419c1d1bd6ccb34653f9dd28ec31",
+    "run0_outcap.txt": "601d7feb42c4db4b26385b5a3fe809a2dd02b91c92ec9b47347abbe387efd2f1",
+    "run0_status.txt": "d6e4b36b1091137e3f909ee56ed38601a5ca9944cc1cdc47178aa1594a99930f"
+  },
+  "binding_baseline": "PASS",
+  "binding_case": "voice:binding-distinct",
+  "branch_coverage": {
+    "bypass": true,
+    "divide": true
+  },
+  "case_count": 5,
+  "case_diagnostics": {
+    "normalization:below": {
+      "branch": "bypass",
+      "frozen_pinned": true,
+      "gain_word": 4194304,
+      "peak_word": 2097152,
+      "result": "PASS"
+    },
+    "special:near-silence": {
+      "branch": "bypass",
+      "frozen_pinned": false,
+      "gain_word": 4194304,
+      "peak_word": 2,
+      "result": "PASS"
+    },
+    "special:silence": {
+      "branch": "bypass",
+      "frozen_pinned": false,
+      "gain_word": 4194304,
+      "peak_word": 0,
+      "result": "PASS"
+    },
+    "special:stress": {
+      "branch": "divide",
+      "frozen_pinned": false,
+      "gain_word": 1048576,
+      "peak_word": 8388608,
+      "result": "PASS"
+    },
+    "voice:divide-distinct-levels": {
+      "branch": "divide",
+      "frozen_pinned": false,
+      "gain_word": 1048576,
+      "peak_word": 8388608,
+      "result": "PASS"
+    }
+  },
+  "cases": [
+    "normalization:below",
+    "voice:divide-distinct-levels",
+    "special:silence",
+    "special:near-silence",
+    "special:stress"
+  ],
+  "control_ticks_per_case": 1764,
+  "directed_cases": [
+    "special:silence",
+    "special:near-silence",
+    "special:stress"
+  ],
+  "float_tolerance": null,
+  "host_fed_checkpoints": [
+    "keyboard.midi_f0",
+    "keyboard.duration"
+  ],
+  "identity": {
+    "fixed_vector_sha256": {
+      "directed-voice-v1.json": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+      "fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07"
+    },
+    "git_head": "8abf93efb42b359b79eb547ac62c36fd2bec509d",
+    "git_tree_dirty": false,
+    "iverilog": "Icarus Verilog version 13.0 (stable) (v13_0)",
+    "rtl_sha256": {
+      "adsr_engine.sv": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+      "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "lfo_vca_engine.sv": "fdd347eba0150822bd485444e1209a686df6c9741a664c06fcc7357392ae7021",
+      "mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+      "noise_stream_dut.sv": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+      "normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "one_shot_voice_top.sv": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+      "quarter_wave_lut.sv": "ce933d1ba7f7d54342f9442054897e5023ccd4ff481358195d9b3f1499bea8a4",
+      "sine_vco_engine.sv": "a8eaa792a678b56b96a4cab03728ddd1da4c2333d191ad0dbedf93657ca9ffbd",
+      "square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+      "tb_one_shot_voice.sv": "43fe1f3ad389ff35b4ea6b7ce2ebf02a4340c1591fe16c8d7928a7d01eaa4598",
+      "upsample_engine.sv": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679"
+    }
+  },
+  "mutation_kind": "all-RTL",
+  "mutation_walk_cap": 6000,
+  "mutations": {
+    "amp-route-swap": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "interpolation-zoh": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "lfo-envelope-swap": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "matrix-column-shuffle": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "missing-sample": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "mixer-truncate": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "normalization-always-off": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 176400
+    },
+    "normalization-always-on": {
+      "case": "normalization:below",
+      "verdict": "DETECTED",
+      "walk": 176400
+    },
+    "normalization-wrong-peak": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 176400
+    },
+    "normalization-wrong-reciprocal": {
+      "case": "voice:divide-distinct-levels",
+      "verdict": "DETECTED",
+      "walk": 176400
+    },
+    "pitch-column-load-swap": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "vco-pitch-wire-swap": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    },
+    "wrong-noise": {
+      "case": "voice:binding-distinct",
+      "verdict": "DETECTED",
+      "walk": 6000
+    }
+  },
+  "named_traces_compared": [
+    "adsr_1.output",
+    "adsr_2.output",
+    "lfo_1_rate_adsr.output",
+    "lfo_2_rate_adsr.output",
+    "lfo_1_amp_adsr.output",
+    "lfo_2_amp_adsr.output",
+    "lfo_1.raw",
+    "lfo_2.raw",
+    "lfo_1.post_control_vca",
+    "lfo_2.post_control_vca",
+    "mod_matrix.vco_1_pitch",
+    "mod_matrix.vco_1_amp",
+    "mod_matrix.vco_2_pitch",
+    "mod_matrix.vco_2_amp",
+    "mod_matrix.noise_amp",
+    "control_upsample.vco_1_pitch",
+    "control_upsample.vco_1_amp",
+    "control_upsample.vco_2_pitch",
+    "control_upsample.vco_2_amp",
+    "control_upsample.noise_amp",
+    "vco_1.raw",
+    "vco_2.raw",
+    "noise.raw",
+    "vco_1.post_vca",
+    "vco_2.post_vca",
+    "noise.post_vca",
+    "mixer.pre_normalization",
+    "mixer.output",
+    "mixer.peak",
+    "mixer.gain"
+  ],
+  "passes_per_case": 2,
+  "peak_envelope": {
+    "ceiling_peak": true,
+    "ceiling_peak_word": 8388608,
+    "observed_peaks": [
+      0,
+      2,
+      2097152,
+      8388608,
+      8388608
+    ],
+    "zero_peak": true
+  },
+  "profile": "directed",
+  "replay_walk_cap": 6000,
+  "result": "PASS",
+  "samples_per_case": 176400,
+  "schema": "gf180-torchsynth/oneshot-whole-voice-evidence-v1",
+  "scope": "integrated whole-voice one-shot top: #70 x6, #71 x2, #72 (matrix + 5 upsample columns), #73, #74, #75, #76, #77. Host supplies the ratified host-replayed shadow words, the S1 entry words, the exact C8 noise bytes and the phase enables. No synthesis/layout/signoff/hardware claim."
+}

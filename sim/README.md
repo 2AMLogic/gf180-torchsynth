@@ -8,10 +8,19 @@ records. These do not imply an RTL or ASIC result.
 
 `evidence/` holds committed RTL/testbench evidence records produced by
 `tb/run_oneshot.py` / `tb/run_voice.py` (issue #79) and verified committable
-by `tools/verify_oneshot_evidence.py` before being added here: `result:
-PASS`, a clean tree (`identity.git_tree_dirty: false`) and an exact
-`identity.git_head` citation. A record here is evidence for the regression
-(not `full`) profile of its named lane only; see `spec/ONESHOT-E2E.md` for
-what each one does and does not establish, and for the structural reason a
-record can only be committed on an already-existing, clean commit -- never
-inside the pull request that introduces the RTL/flow it certifies.
+by `tools/verify_oneshot_evidence.py --require-reachable` before being added
+here: `result: PASS`, a clean tree (`identity.git_tree_dirty: false`), an exact
+`identity.git_head` citation, and that commit actually reachable on the default
+branch. That last condition is why `--require-reachable` exists and why it is
+not optional for a record being committed: every other check is satisfied by a
+pristine record produced on a pull-request branch, and this repository
+squash-merges, so such a record cites a SHA that resolves for nobody.
+
+A record here is evidence for the **named profile** of its named lane only --
+its filename is `oneshot-<lane>-<profile>-v1.json`, and
+`tests/test_committed_oneshot_evidence.py` refuses a filename that disagrees
+with the `profile` inside. No `full`-profile record exists yet. See
+`spec/ONESHOT-E2E.md` for what each one does and does not establish, and for
+the structural reason a record can only be committed on an already-existing,
+clean, already-landed commit -- never inside the pull request that introduces
+the RTL/flow it certifies.

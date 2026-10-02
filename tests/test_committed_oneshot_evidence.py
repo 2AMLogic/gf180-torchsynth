@@ -142,6 +142,9 @@ COMMITTED_RECORDS = {
     "oneshot-whole-voice-regression-v1.json": (
         "gf180-torchsynth/oneshot-whole-voice-evidence-v1"
     ),
+    "oneshot-whole-voice-directed-v1.json": (
+        "gf180-torchsynth/oneshot-whole-voice-evidence-v1"
+    ),
     "oneshot-tail-chain-regression-v1.json": (
         "gf180-torchsynth/oneshot-tail-chain-evidence-v1"
     ),
@@ -232,6 +235,53 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
                 self.assertIs(record["identity"]["git_tree_dirty"], False)
                 git_head = record["identity"]["git_head"]
                 self.assertEqual(len(git_head), 40)
+
+    def test_each_record_cites_a_commit_reachable_on_the_default_branch(self):
+        # The last hole a record's own fields cannot close. Every check
+        # above is satisfied by a pristine record produced on a
+        # *pull-request branch* commit -- and this repository squash-merges,
+        # so a branch's commits never reach `main`. Such a record cites a
+        # SHA that resolves for nobody, and until this check existed
+        # spec/ONESHOT-E2E.md could only ask a reader to verify it by hand.
+        #
+        # This needs real history, so .github/workflows/ci.yml checks out at
+        # fetch-depth: 0. If that is ever reverted the check reports that it
+        # could not run (and fails) rather than passing vacuously --
+        # tests/test_verify_oneshot_evidence.py pins both of those outcomes.
+        for name in COMMITTED_RECORDS:
+            with self.subTest(record=name):
+                record = json.loads((EVIDENCE_DIR / name).read_text())
+                errors = voe.reachability_errors(record, ROOT)
+                self.assertEqual(
+                    errors, [],
+                    "%s does not cite a resolvable commit: %s" % (name, errors),
+                )
+
+    def test_the_reachability_gate_rejects_a_branch_only_commit(self):
+        # Proof the gate above is not vacuous, in this suite's style: a real
+        # committed record with its git_head replaced by a commit that
+        # exists in this clone but is not on the default branch. HEAD itself
+        # is that commit whenever this suite runs on a feature branch; when
+        # it runs on main there is no such commit, and the gate is instead
+        # shown to discriminate against a syntactically valid SHA no clone
+        # has.
+        record = json.loads(
+            (EVIDENCE_DIR / "oneshot-whole-voice-regression-v1.json").read_text()
+        )
+        head = voe.git_capture(ROOT, "rev-parse", "HEAD")
+        branch = voe.resolve_default_branch(ROOT)
+        self.assertIsNotNone(branch, "no default-branch ref in this checkout")
+        if head and not voe.git_ok(ROOT, "merge-base", "--is-ancestor",
+                                   head, branch):
+            unreachable = head
+            expect = "not reachable"
+        else:
+            unreachable = "b" * 40
+            expect = "does not contain commit"
+        record["identity"] = {**record["identity"], "git_head": unreachable}
+        errors = voe.reachability_errors(record, ROOT)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn(expect, errors[0])
 
     def test_each_record_is_fresh_against_the_tree(self):
         # The substantive gate: every RTL source and frozen vector the record
