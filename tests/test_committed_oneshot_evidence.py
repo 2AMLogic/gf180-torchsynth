@@ -355,16 +355,26 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
         #
         # This needs real history, so .github/workflows/ci.yml checks out at
         # fetch-depth: 0. If that is ever reverted the check reports that it
-        # could not run (and fails) rather than passing vacuously --
-        # tests/test_verify_oneshot_evidence.py pins both of those outcomes.
+        # could not run -- UNDECIDABLE, not REACHABLE, so it still fails
+        # here rather than passing vacuously (#268) -- and
+        # tests/test_verify_oneshot_evidence.py pins that outcome directly
+        # against a real shallow clone. Asserting the status itself, not
+        # just the flat error list, is what exercises that distinction
+        # against real committed records
+        # (`97ee7dd94d068bd7341f5ee02247e63f99597336`,
+        # `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`, among the four here)
+        # rather than only the synthetic fixtures in
+        # tests/test_verify_oneshot_evidence.py.
         for name in COMMITTED_RECORDS:
             with self.subTest(record=name):
                 record = json.loads((EVIDENCE_DIR / name).read_text())
-                errors = voe.reachability_errors(record, ROOT)
+                status, errors = voe.reachability_status(record, ROOT)
                 self.assertEqual(
-                    errors, [],
-                    "%s does not cite a resolvable commit: %s" % (name, errors),
+                    status, voe.REACHABLE,
+                    "%s does not cite a resolvable commit (status=%s): %s"
+                    % (name, status, errors),
                 )
+                self.assertEqual(errors, [])
 
     def test_the_reachability_gate_rejects_a_branch_only_commit(self):
         # Proof the gate above is not vacuous, in this suite's style: a real

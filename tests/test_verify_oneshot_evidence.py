@@ -216,6 +216,29 @@ def _git_repo(tmp: str):
     return root, landed, branch_only
 
 
+def _shallow_clone(src: Path, tmp: str, depth: int = 1) -> Path:
+    """A genuine ``git clone --depth <depth>`` of ``src``'s default branch.
+
+    Real shallow-ness, not a stand-in for it: ``is_shallow_clone`` on the
+    result must say ``True``, and the clone must not contain any commit
+    outside its fetched window (in particular, not a commit that only ever
+    existed on a non-default branch of ``src``, which a depth-limited clone
+    of the default branch never fetches at all).
+    """
+
+    dest = Path(tmp) / "shallow-clone"
+    # A plain local-path clone takes git's "local" fast path (hardlinks),
+    # which silently ignores --depth -- a depth-limited clone of a local
+    # repository must go through the file:// transport to actually be
+    # shallow, which is what this helper exists to guarantee.
+    subprocess.run(
+        ("git", "clone", "--quiet", "--depth", str(depth),
+         "file://%s" % src, str(dest)),
+        check=True, capture_output=True, text=True,
+    )
+    return dest
+
+
 class ReachabilityTest(unittest.TestCase):
     """``identity.git_head`` must name a commit a reader can resolve.
 
@@ -225,6 +248,13 @@ class ReachabilityTest(unittest.TestCase):
     resolves for nobody. That is not hypothetical -- issue #79's
     ``directed``-profile record was held back for exactly this reason, with
     ``spec/ONESHOT-E2E.md`` able only to tell a reader to check by hand.
+
+    Issue #268 adds a second axis on top of plain reachable/not: a commit
+    that is simply absent is ``UNREACHABLE`` (an established failure -- the
+    commit never existed under that SHA) only when the checkout is *not*
+    shallow. When it *is* shallow, "absent" does not mean "never existed" --
+    it may just be outside the fetched window -- so the same absence must
+    report ``UNDECIDABLE`` instead, distinct from both a pass and a failure.
     """
 
     def test_a_landed_commit_is_reachable(self):
@@ -232,6 +262,8 @@ class ReachabilityTest(unittest.TestCase):
             root, landed, _ = _git_repo(tmp)
             record = _record(identity={"git_head": landed})
             self.assertEqual(voe.reachability_errors(record, root), [])
+            self.assertEqual(
+                voe.reachability_status(record, root), (voe.REACHABLE, []))
 
     def test_a_branch_only_commit_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -242,6 +274,9 @@ class ReachabilityTest(unittest.TestCase):
             self.assertIn("not reachable", errors[0])
             self.assertIn(branch_only, errors[0])
             self.assertIn("squash-merge", errors[0])
+            status, messages = voe.reachability_status(record, root)
+            self.assertEqual(status, voe.UNREACHABLE)
+            self.assertEqual(messages, errors)
 
     def test_the_branch_only_record_passes_every_other_check(self):
         # Proof the gate is load-bearing rather than redundant: the record
@@ -252,18 +287,64 @@ class ReachabilityTest(unittest.TestCase):
             record = _record(identity={"git_head": branch_only})
             self.assertEqual(voe.verify(record, None, repo_root=root), [])
 
-    def test_a_commit_absent_from_the_clone_is_an_error_not_a_pass(self):
-        # A shallow clone genuinely cannot answer the question. "Cannot
-        # answer" must never render as "yes".
+    def test_a_nonexistent_commit_in_a_full_clone_is_unreachable(self):
+        # `root` is a plain `git init` repo -- not shallow -- so an absent
+        # commit here was never created under that SHA at all. This must be
+        # a definite UNREACHABLE failure, not an "ask me again with more
+        # history" undecidable -- no amount of fetching ever produces a
+        # commit that was never made.
         with tempfile.TemporaryDirectory() as tmp:
             root, _, _ = _git_repo(tmp)
+            self.assertFalse(voe.is_shallow_clone(root))
             record = _record(identity={"git_head": "b" * 40})
-            errors = voe.reachability_errors(record, root)
+            status, errors = voe.reachability_status(record, root)
+            self.assertEqual(status, voe.UNREACHABLE)
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("does not contain commit", errors[0])
-            self.assertIn("fetch-depth: 0", errors[0])
+            self.assertIn("never created", errors[0])
+            self.assertNotIn("fetch-depth", errors[0])
+            self.assertEqual(voe.reachability_errors(record, root), errors)
 
-    def test_a_tree_with_no_default_branch_ref_is_an_error_not_a_pass(self):
+    def test_a_commit_missing_from_a_shallow_clone_is_undecidable(self):
+        # The commit that `_git_repo` only ever put on the non-default
+        # branch is, by construction, outside a depth-1 clone of the
+        # default branch -- genuinely absent from this checkout's history,
+        # but not provably nonexistent the way the case above is. That
+        # distinction is the entire point of issue #268: this must read as
+        # "cannot tell", never as either a pass or the same failure a truly
+        # nonexistent commit gets.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            shallow = _shallow_clone(root, tmp)
+            self.assertTrue(voe.is_shallow_clone(shallow))
+            record = _record(identity={"git_head": branch_only})
+            status, messages = voe.reachability_status(record, shallow)
+            self.assertEqual(status, voe.UNDECIDABLE)
+            self.assertEqual(len(messages), 1, messages)
+            self.assertIn("shallow clone", messages[0])
+            self.assertIn(branch_only, messages[0])
+            self.assertIn("fetch-depth: 0", messages[0])
+            # reachability_errors() still reports this as non-committable --
+            # it is the flat-list view that cannot distinguish the two
+            # failure-shaped outcomes, by design (status is what does).
+            self.assertEqual(voe.reachability_errors(record, shallow),
+                             messages)
+
+    def test_a_landed_commit_is_still_reachable_from_a_shallow_clone(self):
+        # Shallow-ness alone must not make an otherwise-decidable answer
+        # undecidable: the commit this depth-1 clone's single commit *is*
+        # must still read REACHABLE, not UNDECIDABLE just because the clone
+        # happens to be shallow.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, landed, _ = _git_repo(tmp)
+            shallow = _shallow_clone(root, tmp)
+            self.assertTrue(voe.is_shallow_clone(shallow))
+            record = _record(identity={"git_head": landed})
+            self.assertEqual(
+                voe.reachability_status(record, shallow),
+                (voe.REACHABLE, []))
+
+    def test_a_tree_with_no_default_branch_ref_is_undecidable(self):
         with tempfile.TemporaryDirectory() as tmp:
             root, landed, _ = _git_repo(tmp)
             _git(root, "branch", "-M", "main", "trunk")
@@ -272,6 +353,9 @@ class ReachabilityTest(unittest.TestCase):
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("no default-branch ref resolved", errors[0])
             self.assertIn("fetch-depth: 0", errors[0])
+            status, messages = voe.reachability_status(record, root)
+            self.assertEqual(status, voe.UNDECIDABLE)
+            self.assertEqual(messages, errors)
 
     def test_an_explicit_ref_overrides_the_candidate_list(self):
         # The escape hatch for a checkout whose default branch is spelled
@@ -290,13 +374,17 @@ class ReachabilityTest(unittest.TestCase):
                     "trunk")),
                 1)
 
-    def test_a_non_repository_is_an_error_not_a_pass(self):
+    def test_a_non_repository_is_undecidable_not_a_pass(self):
         with tempfile.TemporaryDirectory() as tmp:
             record = _record(identity={"git_head": GOOD_HEAD})
+            errors = voe.reachability_errors(record, Path(tmp))
             self.assertNotEqual(
-                voe.reachability_errors(record, Path(tmp)), [],
+                errors, [],
                 "a directory that cannot answer the question was accepted",
             )
+            status, messages = voe.reachability_status(record, Path(tmp))
+            self.assertEqual(status, voe.UNDECIDABLE)
+            self.assertEqual(messages, errors)
 
     def test_a_malformed_head_is_rejected_before_git_is_consulted(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -305,6 +393,9 @@ class ReachabilityTest(unittest.TestCase):
                 _record(identity={"git_head": "not-a-sha"}), root)
             self.assertEqual(len(errors), 1, errors)
             self.assertIn("40-character", errors[0])
+            status, _messages = voe.reachability_status(
+                _record(identity={"git_head": "not-a-sha"}), root)
+            self.assertEqual(status, voe.UNREACHABLE)
 
     def test_a_record_with_no_identity_block_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -404,6 +495,27 @@ class CliTreeCheckTest(unittest.TestCase):
                                    "--require-reachable"])
             self.assertEqual(status, 0)
             self.assertIn("git_head reachable on main", out.getvalue())
+
+    def test_undecidable_reachability_exits_2_not_0_or_1(self):
+        # The exit code the whole point of issue #268 rests on: a shallow
+        # clone that cannot decide reachability must be its own outcome,
+        # distinguishable from both COMMITTABLE (0) and the plain failure
+        # NOT COMMITTABLE already uses (1) -- never read as a pass, and
+        # never silently identical to an established failure either.
+        with tempfile.TemporaryDirectory() as tmp:
+            root, _, branch_only = _git_repo(tmp)
+            shallow = _shallow_clone(root, tmp)
+            evidence = self._written(tmp, _record(
+                identity={"git_head": branch_only}))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                status = voe.main([str(evidence), "--against-tree",
+                                   str(shallow), "--require-reachable"])
+            self.assertEqual(status, 2)
+            printed = out.getvalue()
+            self.assertIn("REACHABILITY UNDECIDABLE", printed)
+            self.assertNotIn("NOT COMMITTABLE", printed)
+            self.assertNotIn("\nCOMMITTABLE", printed)
+            self.assertIn("shallow clone", printed)
 
 
 if __name__ == "__main__":
