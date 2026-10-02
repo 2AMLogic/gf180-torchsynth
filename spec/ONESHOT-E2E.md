@@ -4,33 +4,37 @@ Status: **the integrated whole-voice one-shot top now exists** and is proven
 bit-identical to the frozen fixed model over its declared `regression`
 profile, and -- as of the `directed`-profile run recorded below -- over the
 three compact directed vectors as well.
-**Committed, commit-exact** evidence records for the `regression` profile now
-exist for *both* lanes:
+**Committed, commit-exact** evidence records now exist for three runs across
+the two lanes:
 `sim/evidence/oneshot-whole-voice-regression-v1.json` (citing commit
-`97ee7dd94d068bd7341f5ee02247e63f99597336`) and
+`97ee7dd94d068bd7341f5ee02247e63f99597336`),
+`sim/evidence/oneshot-whole-voice-directed-v1.json` (citing commit
+`8abf93efb42b359b79eb547ac62c36fd2bec509d`) and
 `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
 `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`, the merge commit of PR #259 that
 landed the tail-chain workdir-path fix this record's own generation depended
-on) -- see "Evidence identity". Both records are re-hashed against the tree's
-own RTL and frozen vectors on every CI run, so neither can quietly go stale
-after an engine edit. Issue #79 nonetheless stays open on a committable
-`directed` record and on the `full` profile run for both lanes that a
-release-era record must cite. See "What is still open" below. Nothing here
-releases the "must pass before FPGA/gf180 fit claims" gate.
+on) -- see "Evidence identity". All three are re-hashed against the tree's
+own RTL and frozen vectors on every CI run, so none can quietly go stale
+after an engine edit. Issue #79 nonetheless stays open on the `full` profile
+run for both lanes that a release-era record must cite. See "What is still
+open" below. Nothing here releases the "must pass before FPGA/gf180 fit
+claims" gate.
 
-**The `directed` profile below has now been run, and passed -- but its record
-is not committed, because it cannot yet be.** The run is real: all five
-committed cases bit-exact, both ends of the peak envelope reached, 13/13
-all-RTL mutations detected, `VOICE RUN PASSED` (see "The `directed`-profile
-run" below for the full result). What it does **not** yet have is a
-*citeable* record: a record must be generated on an already-landed clean
-commit, and this run's `identity.git_head` names the branch commit that
-introduces the profile -- a commit that, because this repository
-squash-merges, will never exist on `main`. So AC1's "compact directed
-vectors" clause is discharged by a run, while AC6 at `directed` is not, and
-the committed-record half stays open exactly as it did for the tail chain
-between PR #259 and PR #262. The acceptance-criteria ledger splits it that
-way deliberately.
+**The `directed` profile below has been run, has passed, and its record is now
+committed.** The run is real: all five committed cases bit-exact, both ends of
+the peak envelope reached, 13/13 all-RTL mutations detected, `VOICE RUN
+PASSED` (see "The `directed`-profile run" below for the full result). The
+first passing `directed` run could not be *committed*, because a record must
+be generated on an already-landed clean commit and that run's
+`identity.git_head` named the branch commit introducing the profile itself --
+a commit that, because this repository squash-merges, never reaches `main`.
+The profile has since landed (PR #269), so the run was repeated on the landed
+commit `8abf93efb42b359b79eb547ac62c36fd2bec509d` and the resulting record is
+citeable. That reachability condition is no longer a rule a reader has to
+remember to apply by hand: `tools/verify_oneshot_evidence.py
+--require-reachable` now answers it with an exit code, and
+`tests/test_committed_oneshot_evidence.py` re-asserts it for every committed
+record on every CI run. AC1 and AC6 are therefore both met at `directed`.
 
 This record covers two lanes, landed in that order:
 
@@ -219,19 +223,47 @@ integrated top, and `special:silence` has actually exercised the replay
 controller's zero-peak path. That is AC1's "compact directed vectors" clause,
 and it is the thing no previous increment could say.
 
-**The record this run wrote is nevertheless not committed, and must not be.**
-`identity.git_tree_dirty` is `false` and every digest is fresh, but
-`identity.git_head` names the branch commit that introduces the `directed`
-profile itself. Because this repository squash-merges, that commit never
-reaches `main`, so a record citing it would cite an object no reader can
-resolve -- the same structural bar PR #259 hit for the tail chain, and which
-PR #262 cleared only by re-running on the already-landed merge commit.
-`tools/verify_oneshot_evidence.py` prints `COMMITTABLE` for this record, which
-is worth being precise about: the verifier checks dirtiness, result, float
-tolerance and digest freshness, and does **not** check that `git_head` is
-reachable on the default branch. That last condition is a rule this document
-states and a human must still apply; see open item 1 for the command that
-satisfies it.
+**The record is committed:
+`sim/evidence/oneshot-whole-voice-directed-v1.json`.** Getting there took the
+run twice, and the reason is worth keeping on the record. The *first* passing
+`directed` run was clean in every respect a record can describe --
+`identity.git_tree_dirty` `false`, every digest fresh, `result: PASS`,
+`float_tolerance: null` -- yet its `identity.git_head` named the branch commit
+that introduced the `directed` profile itself. Because this repository
+squash-merges, that commit never reaches `main`, so the record cited an object
+no reader can resolve: the same structural bar PR #259 hit for the tail chain
+and PR #262 cleared by re-running on the already-landed merge commit. The
+profile has since landed (PR #269), so the run above was repeated on the
+landed commit `8abf93efb42b359b79eb547ac62c36fd2bec509d` with a clean tree,
+and that run's record is the committed one. Its figures are the table above,
+reproduced independently of the first attempt: the same five PASSes, the same
+peak envelope, the same 13/13 detections. Wall-clock for the eleven
+simulations on an 8-core Linux box under light other load: 43m09s.
+
+**The reachability condition is now mechanical, not a rule a reader must
+remember.** `tools/verify_oneshot_evidence.py` checks dirtiness, result, float
+tolerance and digest freshness -- all four of which the uncommittable first
+record passed -- and, with `--require-reachable`, additionally asks `git`
+whether `identity.git_head` is an ancestor of the default branch:
+
+```
+python3 tools/verify_oneshot_evidence.py \
+    sim/evidence/oneshot-whole-voice-directed-v1.json \
+    --expect-head 8abf93efb42b359b79eb547ac62c36fd2bec509d --require-reachable
+COMMITTABLE: ... git_head 8abf93efb42b359b79eb547ac62c36fd2bec509d,
+digests fresh against <tree>, git_head reachable on origin/main
+```
+
+Without the flag the tool now *says* that reachability was not checked rather
+than letting a bare `COMMITTABLE` imply it. Every way of not knowing the
+answer -- a shallow clone that lacks the commit, a checkout with no
+default-branch ref, a path that is not a repository -- is an error, never a
+silent pass, because a check that could not run must never look like one that
+passed. `tests/test_committed_oneshot_evidence.py` re-asserts the condition for
+every committed record on every CI run, which is why `.github/workflows/ci.yml`
+checks out at `fetch-depth: 0`: the default depth-1 fetch cannot answer an
+ancestry question, and the check fails rather than passing vacuously if that
+depth is ever reverted.
 
 ### The binding case (and why a uniform stimulus is not enough)
 
@@ -368,7 +400,7 @@ see "A corrupt capture is inconclusive, not a verdict" below.
 | Profile | Cases | Command | Role |
 | --- | --- | --- | --- |
 | `regression` (default) | `normalization:below` + `voice:divide-distinct-levels` at full length, the `voice:binding-distinct` prefix baseline, the two hash simulations, the replay pair/solo and the thirteen mutation simulations | `python3 tb/run_voice.py --profile regression --workdir <dir>` | PR/CI gate (`tb-sim.yml` job `oneshot-whole-voice`) |
-| `directed` | **everything `regression` runs**, plus the three directed vectors (`special:silence`, `special:near-silence`, `special:stress`) as full-length committed cases, with the peak-envelope gate armed | `python3 tb/run_voice.py --profile directed --workdir <dir>` | the "compact directed vectors" half of issue #79's AC1. One session's work on an 8-core box; too slow for the PR gate, far cheaper than `full`. **Run, and passed** -- see "The `directed`-profile run"; its record is not yet committable (open item 1) |
+| `directed` | **everything `regression` runs**, plus the three directed vectors (`special:silence`, `special:near-silence`, `special:stress`) as full-length committed cases, with the peak-envelope gate armed | `python3 tb/run_voice.py --profile directed --workdir <dir>` | the "compact directed vectors" half of issue #79's AC1. One session's work on an 8-core box; too slow for the PR gate, far cheaper than `full`. **Run, passed, and committed** as `sim/evidence/oneshot-whole-voice-directed-v1.json` (43m09s wall-clock) -- see "The `directed`-profile run" |
 | `full` | all 26 receipt cases + 3 directed fixtures + both derived fixtures, same baseline/pair/hash/mutation simulations | `python3 tb/run_voice.py --profile full --workdir <dir>` | release-era evidence; remote AWS box per `CLAUDE.md` |
 
 All three profiles walk the complete clip twice for every committed case; none
@@ -490,10 +522,11 @@ produced a record still reporting `git_tree_dirty: false`. Both flows now take
 the scope from one shared constant, and
 `tests/test_committed_oneshot_evidence.py` asserts that every source a
 committed record digests lies under one of its prefixes, so adding a digested
-input outside the scope fails CI instead of silently reopening the gap. Both
-committed records were re-checked against the blobs at the commits they cite
+input outside the scope fails CI instead of silently reopening the gap. The two
+`regression` records were re-checked against the blobs at the commits they cite
 (`97ee7dd9…`, `64ffd399…`): every digest matches, so the widened scope does not
-retroactively weaken either record.
+retroactively weaken either record. The `directed` record postdates the
+widening and was generated under the corrected scope.
 
 **A record produced from a dirty tree, or whose `git_head` is not the commit
 under review, is not citeable evidence.** Note that on a `pull_request` event
@@ -512,8 +545,8 @@ checked (on by default; `--skip-tree-check` disables it and says so loudly in
 the output and in the exit narration). A name that resolves to no file, or to
 more than one under the declared roots (`tb/sv`, `spec/reference`,
 `sim/reference`), is an error rather than a skip.
-`tests/test_committed_oneshot_evidence.py` runs that same check against both
-committed records on every CI run, and proves the gate bites by planting a
+`tests/test_committed_oneshot_evidence.py` runs that same check against every
+committed record on every CI run, and proves the gate bites by planting a
 one-byte change in a throwaway mirror tree. **A stale record is regenerated,
 never re-pinned by hand** — the failure message prints the lane's own
 regeneration command, with the record's **own** profile substituted in rather
@@ -533,8 +566,32 @@ while containing the weaker one, and every digest in it would still verify.
 additionally requires each record's `profile` to be one its own flow's CLI
 accepts — so a record can never name a profile nobody can regenerate it from.
 
-**A committed record now exists**:
-`sim/evidence/oneshot-whole-voice-regression-v1.json`. It was generated on
+**A record must also cite a commit a reader can actually resolve, and that is
+now checked rather than asked for.** Every condition above is satisfied by a
+record produced on a pristine *pull-request branch* commit -- and because this
+repository squash-merges, a branch's own commits never reach `main`, so such a
+record cites a SHA that resolves for nobody but the agent that produced it.
+That is not hypothetical: the first passing `directed` run was held back for
+exactly this reason, with this document able only to tell a reader to check
+reachability by hand. `tools/verify_oneshot_evidence.py --require-reachable`
+now asks `git` whether `identity.git_head` is an ancestor of the default
+branch (`origin/main`, or an explicit `--default-branch-ref`), and
+`tests/test_committed_oneshot_evidence.py` re-asserts it for every committed
+record on every CI run -- which is why `.github/workflows/ci.yml` checks out at
+`fetch-depth: 0`. Each way of *not knowing* the answer is reported as an error
+with its remedy, never as a pass: a clone that lacks the commit, a checkout
+with no default-branch ref, a path that is not a repository. Without the flag
+the tool prints a note saying reachability was **not** checked, so a bare
+`COMMITTABLE` can no longer be read as implying it.
+
+**Two committed whole-voice records now exist**, one per run profile:
+`sim/evidence/oneshot-whole-voice-regression-v1.json` and
+`sim/evidence/oneshot-whole-voice-directed-v1.json`. The `directed` one was
+generated on the already-landed commit
+`8abf93efb42b359b79eb547ac62c36fd2bec509d` with a clean tree, and verified by
+`python3 tools/verify_oneshot_evidence.py sim/evidence/oneshot-whole-voice-directed-v1.json --expect-head 8abf93efb42b359b79eb547ac62c36fd2bec509d --require-reachable`
+(exit 0, `COMMITTABLE`, `git_head reachable on origin/main`) before being
+added here. The `regression` one was generated on
 commit `97ee7dd94d068bd7341f5ee02247e63f99597336` -- the clean tip of `main`
 this pull request branched from, not a commit this pull request itself
 introduces, which is the structural requirement explained below -- before any
@@ -554,14 +611,16 @@ flow is run before adding anything to the tree -- which is exactly what
 happened here. What is still structurally impossible is citing a commit that
 does not yet exist (this repository squash-merges, so a PR branch's own
 intermediate commits never reach `main` -- only the squash commit GitHub
-creates at merge time does, and no one can know that SHA in advance). The
-tail-chain lane below remains open for exactly that reason: its flow had a
-defect that made it impossible to generate a clean record from before this
-increment, and the fix is itself new, uncommitted work in this diff, so this
-PR cannot (and does not try to) produce a citeable tail-chain record. The
-`full`-profile record for either lane has the same requirement again, every
-time: it must be generated on an already-existing, clean, already-landed
-commit, never predicted or faked from inside a PR.
+creates at merge time does, and no one can know that SHA in advance). Both
+later records cleared that bar the same way: the tail-chain record waited for
+PR #259's workdir-path fix to land and then cited that merge commit, and the
+`directed` record waited for PR #269 to land the profile and then cited the
+landed commit. Each time, the sequence was *land the enabling change, then
+re-run on the landed commit* -- and `--require-reachable` is what now makes
+skipping it a failing check rather than an oversight. The `full`-profile record
+for either lane has the same requirement again, every time: it must be
+generated on an already-existing, clean, already-landed commit, never predicted
+or faked from inside a PR.
 
 ---
 
@@ -659,73 +718,69 @@ artifact. Total Icarus 13.0 wall-clock on the dev Mac: 16m07s.
 
 | # | Criterion | Whole-voice lane | Tail-chain lane |
 | --- | --- | --- | --- |
-| 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **Met for the declared `regression` profile** (both cases, 1,764 control ticks + 2 x 176,400 samples over 27 named traces + the output clip + every status/op counter). **Also met for the `directed` profile**, which discharges the criterion's "compact directed vectors" half: `special:silence` / `special:near-silence` / `special:stress` have each been walked through the integrated top at full length and compared bit-exact, with the peak-envelope gate armed and both ends reached -- `VOICE RUN PASSED`, see "The `directed`-profile run". **Not yet run at `full`.** | Met for the tail chain only |
+| 1 | All required cases produce exactly 176,400 bit-exact samples and exact status/trace sequences | **Met for the declared `regression` profile** (both cases, 1,764 control ticks + 2 x 176,400 samples over 27 named traces + the output clip + every status/op counter). **Also met for the `directed` profile**, which discharges the criterion's "compact directed vectors" half: `special:silence` / `special:near-silence` / `special:stress` have each been walked through the integrated top at full length and compared bit-exact, with the peak-envelope gate armed and both ends reached -- `VOICE RUN PASSED`, see "The `directed`-profile run", and now pinned as a committed record. **Not yet run at `full`.** | Met for the tail chain only |
 | 2 | First mismatch localized by trace/cycle/sample, raw artifacts retained | **Met.** `voice_rows` / `voice_print_rows`; rows ordered by cycle; `missing-sample` must localize to `link.replay_input[pass1]` sample 1000 or the run fails; failed cases retain their raw artifact tree | Met |
 | 3 | Parameter shuffle, wrong noise, interpolation, gain, normalization, missing-sample mutations detected | **Met, and all thirteen controls are genuine RTL mutations** (no stimulus-only control remains). Six are demonstrated on the declared binding-distinct stimulus because a uniform one cannot kill them | Met at the chain boundary; four controls stimulus-only |
 | 4 | Two clean simulations artifact-hash identical | **Met** for `voice:divide-distinct-levels` at full length, over all six artifact families | Met for two cases |
 | 5 | Runtime/regression partition and full evidence commands documented | **Met** (table above, with declared mutation walk caps and measured dev-Mac figures) | Met |
-| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, and its 15 cited sources are re-hashed against the tree on every CI run, so an engine edit cannot inherit this pass. **Not met at `directed`**, even though AC1 now *is*: the `directed` run passed and its record is clean, but that record's `git_head` is a branch commit this squash-merging repository never lands, so it is not citeable and is not committed (open item 1 holds the command that fixes it). **Not met at `full`** (AC1 has not run there) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, with the same per-CI-run re-hash of its 7 cited sources. **Not met at `full`** |
-| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** AC1's directed-vector half is now discharged, but the gate additionally requires AC1 at `full` and AC6's committed, commit-exact record **for both lanes** -- and AC6 is currently met only at `regression`. The gate stays closed | Not satisfied |
+| 6 | Passing result cites exact RTL/fixed-vector/tool commits; no float tolerance | **Met for the `regression` profile.** `sim/evidence/oneshot-whole-voice-regression-v1.json` is committed, cites commit `97ee7dd94d068bd7341f5ee02247e63f99597336`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, and its 15 cited sources are re-hashed against the tree on every CI run, so an engine edit cannot inherit this pass. **Also met for the `directed` profile:** `sim/evidence/oneshot-whole-voice-directed-v1.json` is committed, cites the already-landed commit `8abf93efb42b359b79eb547ac62c36fd2bec509d`, `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified by `tools/verify_oneshot_evidence.py … --require-reachable` (exit 0), which additionally establishes that the cited commit is reachable on `origin/main` -- the one condition the earlier, uncommittable `directed` record failed. **Not met at `full`** (AC1 has not run there) | **Met for the `regression` profile.** `sim/evidence/oneshot-tail-chain-regression-v1.json` is committed, cites commit `64ffd399b8843658a2a5afc74a9a53ba8ad23e03` (PR #259's merge commit, which landed the workdir-path fix this record's generation depended on), `git_tree_dirty: false`, `result: PASS`, `float_tolerance: null`; verified committable by `tools/verify_oneshot_evidence.py`, with the same per-CI-run re-hash of its 7 cited sources. **Not met at `full`** |
+| 7 | Must pass before FPGA/gf180 fit claims | **Not satisfied.** AC1's directed-vector half is discharged and AC6 is now met at both `regression` and `directed`, but the gate additionally requires AC1 **and** AC6 at `full` for **both lanes**, and `full` has never run on either. The gate stays closed | Not satisfied |
 
 ## What is still open
 
-1. **A *committable* `directed`-profile record** for the whole-voice lane.
-   The run itself is done and passed (AC1 above); what is missing is a record
-   whose `git_head` is a commit a reader can resolve on `main`. A record must
-   be generated on an already-landed clean commit, and the commit that
-   introduces the `directed` profile is by construction not one -- this
-   repository squash-merges, so a PR branch's own commits never reach `main`.
-   So this is mechanically unblocked the moment the profile lands, and the
-   sequence is identical in shape to the one PR #259 documented and PR #262
-   then executed for the tail chain:
-
-   ```
-   python3 tb/run_voice.py --profile directed --workdir <dir>
-   python3 tools/verify_oneshot_evidence.py <dir>/voice-evidence.json --expect-head <the landed commit>
-   # only if the verifier exits 0 AND <the landed commit> is reachable on main:
-   cp <dir>/voice-evidence.json sim/evidence/oneshot-whole-voice-directed-v1.json
-   ```
-
-   Note the second condition in that comment: the verifier does not check
-   reachability, so a reader must. Once copied in, the record needs an entry
-   in `tests/test_committed_oneshot_evidence.py`'s `COMMITTED_RECORDS` --
-   that suite refuses an undeclared record, and separately refuses a record
-   whose filename and `profile` disagree, so the `-directed-v1` name cannot
-   end up over a `regression` run.
-
-   **Run it somewhere with headroom.** The *first* attempt at this profile was
-   reported INCONCLUSIVE (exit `4`) rather than passed or failed: a shared
-   8-core box at ~91% full lost 9,987 `audiocap` rows to a failed writeback
-   partway through. That is the incident the corrupt-capture guard was written
-   for. The passing run above came from a retry on the same box once a core
-   and some headroom were free; it is eleven full-length simulations and
-   roughly 40 minutes of simulator time, so it wants a machine not
-   simultaneously running other sweeps.
-
-2. **The `full` profile run** (31 cases) for *both* lanes, and the
+1. **The `full` profile run** (31 cases) for *both* lanes, and the
    committed, commit-exact evidence record it must produce -- an AWS-box
    command, not a PR gate (tracked in #261), and roughly fifteen times the
    committed-case work of `regression`. Because the profiles are nested, a
-   `full` record supersedes both the `directed` and `regression` ones. The
-   `regression`-profile record is now committed for both lanes:
+   `full` record supersedes both the `directed` and `regression` ones. Three
+   records are now committed; `full` is the only profile with none:
    `sim/evidence/oneshot-whole-voice-regression-v1.json` (citing commit
-   `97ee7dd94d068bd7341f5ee02247e63f99597336`) and
+   `97ee7dd94d068bd7341f5ee02247e63f99597336`),
+   `sim/evidence/oneshot-whole-voice-directed-v1.json` (citing commit
+   `8abf93efb42b359b79eb547ac62c36fd2bec509d`) and
    `sim/evidence/oneshot-tail-chain-regression-v1.json` (citing commit
    `64ffd399b8843658a2a5afc74a9a53ba8ad23e03`).
-3. **A trace-level kill for the VCO pitch wire** (tracked in #263).
+
+   The sequence a `full` record must follow is the one the `directed` record
+   just executed, and it is now mechanically enforced rather than narrated:
+
+   ```
+   python3 tb/run_voice.py --profile full --workdir <dir>      # on an already-landed, clean commit
+   python3 tools/verify_oneshot_evidence.py <dir>/voice-evidence.json \
+       --expect-head <the landed commit> --require-reachable
+   # only if that exits 0:
+   cp <dir>/voice-evidence.json sim/evidence/oneshot-whole-voice-full-v1.json
+   ```
+
+   `--require-reachable` is what makes the "already-landed" part a check
+   instead of a rule to remember. Once copied in, the record needs an entry in
+   `tests/test_committed_oneshot_evidence.py`'s `COMMITTED_RECORDS` -- that
+   suite refuses an undeclared record, and separately refuses a record whose
+   filename and `profile` disagree, so a `-full-v1` name cannot end up over a
+   weaker run.
+
+   **Run it somewhere with headroom.** The *first* `directed` attempt was
+   reported INCONCLUSIVE (exit `4`) rather than passed or failed: a shared
+   8-core box at ~91% full lost 9,987 `audiocap` rows to a failed writeback
+   partway through. That is the incident the corrupt-capture guard was written
+   for. `directed` is eleven full-length simulations and about 43 minutes of
+   simulator time on a lightly-loaded 8-core box; `full` is roughly fifteen
+   times the committed-case work, so it wants a machine not simultaneously
+   running other sweeps.
+2. **A trace-level kill for the VCO pitch wire** (tracked in #263).
    `vco-pitch-wire-swap` is
    killed only on the #73 engine's MIDI-clamp op counter, because the engine
    does not export its C4 MIDI sum and the frequency it integrates is the
    host-replayed `exp2` shadow word. Exporting that sum (and comparing it) is
    an RTL change to a qualified module, so it is a follow-up rather than part
    of this verification increment.
-4. Neither lane is folded into the #78 aggregate gate
+3. Neither lane is folded into the #78 aggregate gate
    (`tools/qualify_rtl_modules.py`, tracked in #264): that gate's lane list is
    derived from
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
    toolchain, so folding either flow in requires a matching re-baseline. A
    documented follow-up, not a silent skip.
-5. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
+4. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
    GitHub-hosted's 360-minute job limit (tracked in #265). Pre-existing on
    `main` and unchanged
    here; fixing it needs a `sim-lanes` split.
@@ -737,11 +792,17 @@ sound-fidelity claim; neither uses a float tolerance; and no run that did not
 execute is reported here as a pass. In particular:
 
 - the `directed` profile **has** run and passed, and that run is reported above
-  with its own per-case numbers rather than as a bare "5 cases passed" -- but
-  it has **no committed record**, because the record it produced cites a commit
-  that will never exist on `main`. AC1 and AC6 are therefore split for it, and
-  the ledger says so;
+  with its own per-case numbers rather than as a bare "5 cases passed". Its
+  record is now committed, and it is the record of a run on an already-landed
+  commit -- not the earlier, uncommittable one, which cited a commit that will
+  never exist on `main`. The committed record is the *second* execution of the
+  profile, and this document says so rather than quietly presenting one run's
+  numbers under the other's SHA;
 - the `full` profile is still **machinery, not a result**: it has never been
-  run and has no record;
+  run and has no record. Nothing above is a `full`-profile claim, and the
+  FPGA/gf180 gate stays closed on it;
 - the first `directed` attempt is recorded as INCONCLUSIVE, which is neither a
-  pass nor a verdict against the RTL.
+  pass nor a verdict against the RTL;
+- `--require-reachable` is a check on a record's *citation*, not on the RTL. It
+  establishes that a reader can resolve the commit a record names; it adds no
+  bit-identity evidence of its own.

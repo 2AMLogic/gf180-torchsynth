@@ -18,6 +18,17 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history, not the default shallow depth-1 fetch.
+          # tests/test_committed_oneshot_evidence.py asserts that every
+          # committed issue-#79 evidence record cites a commit reachable on
+          # the default branch -- a record produced on a pull-request branch
+          # passes every other check while citing a SHA that, because this
+          # repository squash-merges, never lands. That is an ancestry
+          # question, and a shallow clone cannot answer it: the check reports
+          # "cannot run" and FAILS rather than passing vacuously, so this
+          # depth is what lets it be a check at all. The pack is ~27 MiB.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
