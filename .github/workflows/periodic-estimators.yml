@@ -31,7 +31,7 @@ jobs:
         run: uv run --no-sync python tests/test_periodic_estimators.py --numerical
       - name: Execute the complete qualification and primary sentinels
         run: uv run --no-sync python tools/qualify_periodic_estimators.py --output periodic-ci.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: periodic-${{ matrix.python }}
