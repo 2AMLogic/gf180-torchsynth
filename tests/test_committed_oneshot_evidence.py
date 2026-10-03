@@ -38,9 +38,11 @@ record is always a command that runs. Both are paired with a check that they
 discriminate.
 
 A fourth hole opens the moment a single lane has records for **two** profiles
-at once, which the tail chain is the first to (``regression`` and ``full``,
-#79). The profiles are declared *nested* -- ``regression`` < ``directed`` <
-``full`` on committed cases, with every later stage shared -- and that nesting
+at once, which the tail chain was the first to (``regression`` and ``full``,
+#79) and which the whole-voice lane now extends to all three (``regression``,
+``directed`` and ``full``). The profiles are declared *nested* --
+``regression`` < ``directed`` < ``full`` on committed cases, with every later
+stage shared -- so the check compares each **adjacent** pair, and that nesting
 is the whole reason ``spec/ONESHOT-E2E.md`` can say a stronger record
 *supersedes* a weaker one rather than sitting beside it. Nothing checked it:
 a ``full`` record regenerated from a trimmed case list would still name a
@@ -197,6 +199,9 @@ COMMITTED_RECORDS = {
     "oneshot-whole-voice-directed-v1.json": (
         "gf180-torchsynth/oneshot-whole-voice-evidence-v1"
     ),
+    "oneshot-whole-voice-full-v1.json": (
+        "gf180-torchsynth/oneshot-whole-voice-evidence-v1"
+    ),
     "oneshot-tail-chain-regression-v1.json": (
         "gf180-torchsynth/oneshot-tail-chain-evidence-v1"
     ),
@@ -276,11 +281,14 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
         self.assertFalse(flow_accepts_profile(run_oneshot, "directed"))
 
     def test_profiles_of_one_lane_are_nested(self):
-        # The tail chain is the first lane to carry two records at once
-        # (`regression` and `full`, #79), and the whole-voice lane carries
-        # `regression` and `directed`. Both pairs must satisfy the nesting
-        # spec/ONESHOT-E2E.md relies on to call the stronger one a
-        # superseding record rather than a second, incomparable claim.
+        # The tail chain carries `regression` and `full`, and the whole-voice
+        # lane is now the first to carry all three (`regression`, `directed`
+        # and `full`, #79) -- so this compares adjacent pairs rather than a
+        # single pair per lane, and a `full` record must cover the `directed`
+        # one, which must in turn cover the `regression` one. Every pair must
+        # satisfy the nesting spec/ONESHOT-E2E.md relies on to call the
+        # stronger one a superseding record rather than a second,
+        # incomparable claim.
         by_lane = {}
         for name, schema in COMMITTED_RECORDS.items():
             record = json.loads((EVIDENCE_DIR / name).read_text())
