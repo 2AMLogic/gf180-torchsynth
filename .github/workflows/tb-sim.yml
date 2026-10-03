@@ -16,7 +16,7 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Install Icarus Verilog (PDK-free)
@@ -46,7 +46,7 @@ jobs:
     timeout-minutes: 400
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 170
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
@@ -146,7 +146,7 @@ jobs:
     timeout-minutes: 140
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
@@ -177,7 +177,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog + Verilator (PDK-free)
