@@ -172,6 +172,13 @@ bytes):
    integrated lane would consume them — and require every one to be
    DETECTED against the pristine frozen truth.
 
+The ``vco`` lane exits ``4`` (INCONCLUSIVE, never a pass and never an RTL
+verdict) when a simulation's captures cannot be trusted — a ``$readmemh`` /
+bench fault in the simulator log, a truncated or spliced capture row, a
+missing file, or a short bench walk (``VcoCaptureIntegrityError``, issue
+#277). An ``x``-state word on a run with a clean log stays a comparator
+mismatch (exit ``1``).
+
 ``vco2`` (issue #74) runs the bit-exact square/saw VCO engine
 (tb/sv/square_saw_vco_engine.sv + tb/sv/quarter_wave_lut.sv) against the
 frozen fixed model's committed golden vectors
@@ -3810,10 +3817,192 @@ def vco_write_case(workdir: Path, run: int, case: dict):
     )
 
 
+#: Width, in characters, of the DUT's ``+lut=`` plusarg buffer:
+#: ``reg [1023:0] lut_file`` in ``tb/sv/sine_vco_engine.sv``. Icarus keeps
+#: only the LAST 128 characters of a longer ``%s`` plusarg, so an absolute
+#: lut path past this length is silently front-truncated, ``$readmemh``
+#: cannot open it, the ROM stays ``x`` and every emitted vco word is ``x``
+#: (issue #277: macOS ``$TMPDIR`` + the longest receipt case ids crossed
+#: it). The runner therefore hands the DUT the bare file name with
+#: ``cwd=workdir`` and refuses any plusarg that would not fit.
+VCO_LUT_PLUSARG_CHARS = 128
+#: Simulator-log lines that mean an INPUT never reached the bench or DUT
+#: (a lut / stimulus file that did not open, a bench that stopped early).
+#: Any of them makes the run's captures meaningless in both directions.
+VCO_HARNESS_FAULT_MARKERS = ("$readmemh", "Unable to open", "TB-ERROR",
+                             "DUT-ERROR")
+#: The vco bench's fixed capture column count ("vco phase").
+VCO_CAPTURE_FIELDS = 2
+#: The vco bench's fixed ops-row column count ("V" + 6 counters).
+VCO_OPS_FIELDS = 7
+
+
+class VcoCaptureIntegrityError(Exception):
+    """The vco lane's captures are not trustworthy, so there is no verdict.
+
+    The sine-VCO analogue of ``tb/run_voice.py``'s
+    ``VoiceCaptureIntegrityError`` (see ``spec/ONESHOT-E2E.md``, "A corrupt
+    capture is inconclusive, not a verdict"). ``main`` turns it into exit
+    ``4`` (INCONCLUSIVE), distinct from ``1`` (a real bit-identity verdict
+    against the RTL) and ``3`` (nothing ran). Raised for evidence that the
+    harness, not the DUT, is at fault:
+
+    - the simulator log carries a harness-fault marker
+      (:data:`VCO_HARNESS_FAULT_MARKERS`): a ``$readmemh`` that could not
+      open the lut (issue #277's ``x``-state rows), a bench ``TB-ERROR``,
+      or a missing ``TB-DONE`` completion line;
+    - a capture / ops row has the wrong field count (a truncated or
+      spliced file: lost bytes, which a fixed-width ``$fwrite`` cannot
+      emit);
+    - a capture, cycles or ops file is missing, or the bench's own walk
+      counter is short of the requested walk (the bench stopped early);
+    - the lut plusarg would not fit the DUT's buffer
+      (:data:`VCO_LUT_PLUSARG_CHARS`).
+
+    An ``x``-state emission on a run whose log is clean is NOT raised
+    here: it has the right field count and stays a genuine mismatch owned
+    by the comparator (``spec/ONESHOT-E2E.md``'s scope limit -- conflating
+    the two would let a real RTL defect hide behind "inconclusive"). The
+    ``x`` rows issue #277 observed are raised, because they came with the
+    ``$readmemh`` failure that explains them.
+    """
+
+
+def _run_logged(command: list, cwd: Path, log_path: Path) -> str:
+    """``_run`` that also returns (and keeps) the tool's combined output."""
+
+    print("+ %s" % " ".join(command))
+    result = subprocess.run(
+        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, errors="replace",
+    )
+    log_path.write_text(result.stdout, encoding="utf-8")
+    sys.stdout.write(result.stdout)
+    sys.stdout.flush()
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode, command, output=result.stdout
+        )
+    return result.stdout
+
+
+def vco_check_sim_log(log_text: str, runs: int, where: Path) -> None:
+    """Raise :class:`VcoCaptureIntegrityError` on a harness-fault log."""
+
+    for line in log_text.splitlines():
+        if any(marker in line for marker in VCO_HARNESS_FAULT_MARKERS):
+            raise VcoCaptureIntegrityError(
+                "simulation in %s reported a harness fault, so its captures "
+                "prove nothing in either direction: %r. An input the bench "
+                "or DUT needed (lut / stimulus file) did not load; this is "
+                "not an RTL/model disagreement." % (where, line.strip())
+            )
+    if ("TB-DONE %d" % runs) not in log_text:
+        raise VcoCaptureIntegrityError(
+            "simulation in %s never printed 'TB-DONE %d': the bench did not "
+            "complete, so its captures are not a verdict." % (where, runs)
+        )
+
+
+def vco_read_captures(workdir: Path, runs: int, expected_walk: int) -> list:
+    """Parse the bench's per-run files, guarding capture integrity.
+
+    ``None`` marks an ``x``-state word (a comparator mismatch, not an
+    integrity fault). Wrong-width rows, missing files and a short bench
+    walk raise :class:`VcoCaptureIntegrityError`.
+    """
+
+    def read(path: Path) -> str:
+        if not path.is_file():
+            raise VcoCaptureIntegrityError(
+                "%s is missing: the bench never wrote it, so this run "
+                "produced no verdict." % path
+            )
+        return path.read_text(encoding="utf-8")
+
+    def corrupt(path: Path, number: int, line: str, width: int, text: str):
+        return VcoCaptureIntegrityError(
+            "capture %s is CORRUPT, so this run produced no verdict: line %d "
+            "carries %d fields, not %d (%r); the file holds %d non-empty "
+            "rows. A fixed-width $fwrite cannot emit that row -- it is a "
+            "truncated or spliced file (lost bytes), not an RTL/model "
+            "disagreement." % (path, number, len(line.split()), width, line,
+                               sum(1 for row in text.splitlines()
+                                   if row.strip()))
+        )
+
+    captures = []
+    for run in range(runs):
+        vco_words = []
+        phase_words = []
+        cap_path = workdir / ("run%d_captured.txt" % run)
+        text = read(cap_path)
+        for number, line in enumerate(text.splitlines(), start=1):
+            if not line.strip():
+                continue
+            fields = line.split()
+            if len(fields) != VCO_CAPTURE_FIELDS:
+                raise corrupt(cap_path, number, line, VCO_CAPTURE_FIELDS,
+                              text)
+            v_word, p_word = fields
+            try:
+                vco_words.append(int(v_word))
+                phase_words.append(int(p_word))
+            except ValueError:
+                vco_words.append(None)  # an x-state emission: a mismatch
+                phase_words.append(None)
+        cycles_path = workdir / ("run%d_cycles.txt" % run)
+        cycles_text = read(cycles_path).strip()
+        try:
+            cycles = int(cycles_text)
+        except ValueError:
+            raise VcoCaptureIntegrityError(
+                "%s carries %r, not an integer walk count; this run produced "
+                "no verdict." % (cycles_path, cycles_text)
+            ) from None
+        if cycles != expected_walk:
+            raise VcoCaptureIntegrityError(
+                "%s: the bench walked %d samples, not the requested %d -- it "
+                "stopped early, so run %d's capture is SHORT and is not a "
+                "verdict." % (cycles_path, cycles, expected_walk, run)
+            )
+        ops = None
+        ops_path = workdir / ("run%d_ops.txt" % run)
+        ops_text = read(ops_path)
+        for number, line in enumerate(ops_text.splitlines(), start=1):
+            if line.strip():
+                if len(line.split()) != VCO_OPS_FIELDS:
+                    raise corrupt(ops_path, number, line, VCO_OPS_FIELDS,
+                                  ops_text)
+                ops = []
+                for raw in line.split()[1:]:
+                    try:
+                        ops.append(int(raw))
+                    except ValueError:
+                        ops.append(None)  # an x-state counter: a mismatch
+        if ops is None:
+            raise VcoCaptureIntegrityError(
+                "%s holds no counter row; this run produced no verdict."
+                % ops_path
+            )
+        captures.append(
+            {"vco": vco_words, "phase": phase_words, "cycles": cycles,
+             "ops": ops}
+        )
+    return captures
+
+
 def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
                  max_n: int = None) -> list:
-    """Compile and run the file-driven tb; return per-run captures."""
+    """Compile and run the file-driven tb; return per-run captures.
 
+    Raises :class:`VcoCaptureIntegrityError` when the run's captures cannot
+    be trusted (see its docstring); ``main`` reports that as INCONCLUSIVE.
+    """
+
+    # Absolute from here on (the #253 defect class): every tool runs with
+    # cwd=workdir, so a relative workdir would be resolved twice.
+    workdir = Path(workdir).resolve()
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
     if simulator == "iverilog":
         vvp = workdir / "sine_vco.vvp"
@@ -3824,55 +4013,32 @@ def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
             ],
             cwd=workdir,
         )
-        lut_arg = "+lut=%s" % (workdir / "lut.memh")
-        if max_n is None:
-            _run(["vvp", "-n", str(vvp), lut_arg], cwd=workdir)
-        else:
-            _run(
-                ["vvp", "-n", str(vvp), lut_arg, "+max_n=%d" % max_n],
-                cwd=workdir,
+        # The bare name, resolved by the simulator against cwd=workdir: an
+        # absolute path can overflow the DUT's 128-char plusarg buffer
+        # (issue #277).
+        lut_name = "lut.memh"
+        if len(lut_name) > VCO_LUT_PLUSARG_CHARS:
+            raise VcoCaptureIntegrityError(
+                "lut plusarg %r exceeds the DUT's %d-char buffer"
+                % (lut_name, VCO_LUT_PLUSARG_CHARS)
             )
+        if not (workdir / lut_name).is_file():
+            raise VcoCaptureIntegrityError(
+                "%s is missing: the DUT ROM would load nothing, so no run "
+                "here could be a verdict." % (workdir / lut_name)
+            )
+        command = ["vvp", "-n", str(vvp), "+lut=%s" % lut_name]
+        if max_n is not None:
+            command.append("+max_n=%d" % max_n)
+        log_text = _run_logged(command, workdir, workdir / "vvp.log")
     else:
         raise SystemExit(
             "simulator %r is not wired up; this runner is PDK-free and "
             "currently supports iverilog" % simulator
         )
-    captures = []
-    for run in range(runs):
-        vco_words = []
-        phase_words = []
-        for line in (
-            workdir / ("run%d_captured.txt" % run)
-        ).read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            v_word, p_word = line.split()
-            try:
-                vco_words.append(int(v_word))
-                phase_words.append(int(p_word))
-            except ValueError:
-                vco_words.append(None)  # an x-state emission: a mismatch
-                phase_words.append(None)
-        cycles = int(
-            (workdir / ("run%d_cycles.txt" % run))
-            .read_text(encoding="utf-8").strip()
-        )
-        ops = None
-        for line in (
-            workdir / ("run%d_ops.txt" % run)
-        ).read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                ops = []
-                for raw in line.split()[1:]:
-                    try:
-                        ops.append(int(raw))
-                    except ValueError:
-                        ops.append(None)  # an x-state counter: a mismatch
-        captures.append(
-            {"vco": vco_words, "phase": phase_words, "cycles": cycles,
-             "ops": ops}
-        )
-    return captures
+    vco_check_sim_log(log_text, runs, workdir)
+    expected_walk = gv.CANONICAL_SAMPLE_COUNT if max_n is None else max_n
+    return vco_read_captures(workdir, runs, expected_walk)
 
 
 def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
@@ -4047,6 +4213,20 @@ def vco_run_mutation(workdir: Path, simulator: str, label: str, case_id: str,
     )
 
 
+def vco_verdict_text(case_ok: bool) -> str:
+    """Per-case result phrase that never pairs FAIL with "sample-exact".
+
+    Integrity faults (lut not loaded, short / corrupt capture) never reach
+    this line -- they raise :class:`VcoCaptureIntegrityError` first -- so a
+    MISMATCH here is a genuine bit-identity disagreement whose first
+    differing sample is named on the preceding ``SINE-VCO FAILED`` line.
+    """
+
+    if case_ok:
+        return "RTL sample-exact -> OK"
+    return "RTL/mirror MISMATCH (first difference above) -> FAIL"
+
+
 def vco(workdir: Path, simulator: str) -> int:
     """Issue #73 flow: the sine VCO engine vs the frozen model's traces."""
 
@@ -4104,11 +4284,10 @@ def vco(workdir: Path, simulator: str) -> int:
         if case["sidecar"]:
             sidecar_count += 1
         print(
-            "case %s: %d samples (clamps %d, sats %d, sidecar %s), "
-            "RTL sample-exact -> %s"
+            "case %s: %d samples (clamps %d, sats %d, sidecar %s), %s"
             % (case_id, len(case["mirror"]["vco"]), case["clamps"],
                case["sats"], bool(case["sidecar"]),
-               "OK" if case_ok else "FAIL")
+               vco_verdict_text(case_ok))
         )
         case_dirs[case_id] = (case_dir, case)
 
@@ -4148,11 +4327,11 @@ def vco(workdir: Path, simulator: str) -> int:
         regime = case["regime"]
         print(
             "directed %s [freq %s / phase %s / %s]: %d samples "
-            "(clamps %d, sats %d, sidecar %s), RTL sample-exact -> %s"
+            "(clamps %d, sats %d, sidecar %s), %s"
             % (case["id"], regime.get("frequency"), regime.get("phase"),
                regime.get("modulation"), len(case["mirror"]["vco"]),
                case["clamps"], case["sats"], bool(case["sidecar"]),
-               "OK" if case_ok else "FAIL")
+               vco_verdict_text(case_ok))
         )
         directed_cases[name] = case
         if name == SINE_BUDGET_CASE:
@@ -7686,13 +7865,26 @@ def main(argv=None) -> int:
     }
     command = commands[args.command]
 
-    if args.workdir is not None:
-        workdir = args.workdir
-        workdir.mkdir(parents=True, exist_ok=True)
-        return command(workdir, args.simulator)
+    try:
+        if args.workdir is not None:
+            args.workdir.mkdir(parents=True, exist_ok=True)
+            # Absolute from here on (the #253 fix, as in run_voice.py /
+            # run_oneshot.py): every simulator runs with cwd=<case dir>, so
+            # a relative --workdir would otherwise be resolved twice.
+            return command(args.workdir.resolve(), args.simulator)
 
-    with tempfile.TemporaryDirectory(prefix="tb-%s-" % args.command) as tmp:
-        return command(Path(tmp), args.simulator)
+        with tempfile.TemporaryDirectory(
+            prefix="tb-%s-" % args.command
+        ) as tmp:
+            return command(Path(tmp), args.simulator)
+    except VcoCaptureIntegrityError as error:
+        # Its own exit status, distinct from 0 (pass), 1 (a real bit-
+        # identity verdict against the RTL) and 3 (nothing ran): a run
+        # whose captures cannot be trusted proved nothing either way.
+        print("SINE-VCO RUN INCONCLUSIVE -- a capture is untrustworthy, so "
+              "nothing was proven and nothing was disproven:")
+        print("  %s" % error)
+        return 4
 
 
 if __name__ == "__main__":

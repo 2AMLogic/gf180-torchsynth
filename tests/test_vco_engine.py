@@ -5,7 +5,9 @@ when Icarus Verilog is installed (CI's tb-sim job arbitrates on such a
 host; an unrun check is never reported as a pass).
 """
 
+import contextlib
 import hashlib
+import io
 import json
 import math
 import os
@@ -15,6 +17,7 @@ import sys
 import tempfile
 import unittest
 from fractions import Fraction
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -459,12 +462,300 @@ class SineVcoRtlTest(unittest.TestCase):
                 timeout=5400,
             )
             if result.returncode != 0:
-                self.fail(
-                    "vco tb flow failed (%d):\n%s\n%s"
-                    % (result.returncode, result.stdout[-4000:],
-                       result.stderr[-2000:])
-                )
+                self.fail(flow_failure_report("vco", result))
             self.assertIn("SINE-VCO RUN PASSED", result.stdout)
+
+
+#: Lines that mark a flow's first failing stage (issue #277: a bare stdout
+#: tail hid it entirely).
+FAILURE_MARKERS = ("FAILED", "INCONCLUSIVE", "ERROR", "-> FAIL",
+                   "NOT DETECTED", "Traceback")
+#: How much of the flow's stdout tail the failure message still carries.
+FAILURE_TAIL_CHARS = 20000
+
+
+def flow_failure_report(lane: str, result) -> str:
+    """A failure message from which the FIRST failing stage is recoverable.
+
+    The complete stdout/stderr go to a persistent log file (outside the
+    test's temporary workdir, so it survives cleanup); the message names
+    that file, quotes the first marker lines in order, and keeps a generous
+    tail.
+    """
+
+    fd, log_name = tempfile.mkstemp(prefix="tb-%s-test-" % lane,
+                                    suffix=".log")
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write("$ exit %d\n--- stdout ---\n%s\n--- stderr ---\n%s\n"
+                     % (result.returncode, result.stdout, result.stderr))
+    first = [
+        line for line in result.stdout.splitlines()
+        if any(marker in line for marker in FAILURE_MARKERS)
+    ][:20]
+    return (
+        "%s tb flow failed (exit %d); full log: %s\n"
+        "--- first failing lines ---\n%s\n"
+        "--- stdout tail (last %d chars) ---\n%s\n--- stderr tail ---\n%s"
+        % (lane, result.returncode, log_name,
+           "\n".join(first) or "(no marker line found)",
+           FAILURE_TAIL_CHARS, result.stdout[-FAILURE_TAIL_CHARS:],
+           result.stderr[-FAILURE_TAIL_CHARS:])
+    )
+
+
+def load_run_tb():
+    """Import tb/run_tb.py as a module (heavy, so only where needed)."""
+
+    if str(ROOT / "tb") not in sys.path:
+        sys.path.insert(0, str(ROOT / "tb"))
+    import run_tb  # noqa: E402
+
+    return run_tb
+
+
+class VcoCaptureIntegrityTest(unittest.TestCase):
+    """Issue #277: an untrustworthy vco capture is INCONCLUSIVE (exit 4).
+
+    A capture the harness could not trust must never read as a bit-
+    identity FAIL against the RTL (nor, a fortiori, as a pass).
+    """
+
+    #: The exact Icarus 13.0 line issue #277's failing runs carried (the
+    #: path is front-truncated to the DUT's 128-char plusarg buffer).
+    READMEMH_LINE = (
+        "ERROR: tb/sv/sine_vco_engine.sv:126: $readmemh: Unable to open "
+        "i277/xxxx/case-boundary:mod_matrix.adsr_1->vco_2_amp:near-upper/"
+        "lut.memh for reading."
+    )
+
+    @classmethod
+    def setUpClass(cls):
+        cls.rt = load_run_tb()
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory(prefix="tb-vco-integrity-")
+        self.addCleanup(self._tmp.cleanup)
+        self.dir = Path(self._tmp.name)
+
+    def write_run(self, captured: str, walked: int = 4,
+                  ops: str = "V 12 28 16 4 0 0\n", run: int = 0):
+        (self.dir / ("run%d_captured.txt" % run)).write_text(
+            captured, encoding="utf-8")
+        (self.dir / ("run%d_cycles.txt" % run)).write_text(
+            "%d\n" % walked, encoding="utf-8")
+        (self.dir / ("run%d_ops.txt" % run)).write_text(ops, encoding="utf-8")
+
+    GOOD = "2093032 42852275\n2080690 85704550\n2060174 128556825\n" \
+           "2031426 171409100\n"
+
+    def test_well_formed_capture_parses(self):
+        self.write_run(self.GOOD)
+        cap = self.rt.vco_read_captures(self.dir, 1, 4)[0]
+        self.assertEqual(cap["vco"][:2], [2093032, 2080690])
+        self.assertEqual(cap["ops"], [12, 28, 16, 4, 0, 0])
+
+    def test_truncated_capture_row_is_integrity_error(self):
+        # A file cut mid-row: the last row carries one field, not two.
+        self.write_run(self.GOOD[:-10])
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "CORRUPT.*1 fields, not 2"):
+            self.rt.vco_read_captures(self.dir, 1, 4)
+
+    def test_spliced_capture_row_is_integrity_error(self):
+        self.write_run("2093032 42852275\n2080690 8570 2060174 128556825\n")
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "CORRUPT"):
+            self.rt.vco_read_captures(self.dir, 1, 4)
+
+    def test_short_bench_walk_is_integrity_error(self):
+        self.write_run(self.GOOD[:34], walked=2)
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "walked 2 samples, not the requested 4"):
+            self.rt.vco_read_captures(self.dir, 1, 4)
+
+    def test_missing_capture_file_is_integrity_error(self):
+        self.write_run(self.GOOD)
+        (self.dir / "run0_captured.txt").unlink()
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "missing"):
+            self.rt.vco_read_captures(self.dir, 1, 4)
+
+    def test_corrupt_ops_row_is_integrity_error(self):
+        self.write_run(self.GOOD, ops="V 12 28 16\n")
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "4 fields, not 7"):
+            self.rt.vco_read_captures(self.dir, 1, 4)
+
+    def test_x_state_with_clean_log_stays_a_comparator_mismatch(self):
+        # spec/ONESHOT-E2E.md scope limit: an x word with the right field
+        # count and no harness fault is a genuine mismatch, not a reason to
+        # hide behind INCONCLUSIVE.
+        self.write_run("x 42852275\n" + self.GOOD.split("\n", 1)[1],
+                       ops="V 12 28 16 4 x 0\n")
+        cap = self.rt.vco_read_captures(self.dir, 1, 4)[0]
+        self.assertIsNone(cap["vco"][0])
+        self.assertIsNone(cap["ops"][4])
+        self.rt.vco_check_sim_log("TB-DONE 1\n", 1, self.dir)  # no raise
+
+    def test_readmemh_failure_in_log_is_integrity_error(self):
+        # Issue #277's x-state rows came WITH this line: the lut never
+        # loaded, so the x rows are a harness fault, not an RTL verdict.
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    r"harness fault.*\$readmemh"):
+            self.rt.vco_check_sim_log(
+                self.READMEMH_LINE + "\nTB-DONE 1\n", 1, self.dir)
+
+    def test_bench_error_and_missing_done_are_integrity_errors(self):
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "TB-ERROR"):
+            self.rt.vco_check_sim_log(
+                "TB-ERROR short streams line (sample 9, code -1)\n", 1,
+                self.dir)
+        with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
+                                    "never printed 'TB-DONE 2'"):
+            self.rt.vco_check_sim_log("TB-DONE 1\n", 2, self.dir)
+
+    def run_main_with(self, raising_vco):
+        out = io.StringIO()
+        with mock.patch.object(self.rt, "vco", raising_vco), \
+                mock.patch.object(self.rt.shutil, "which",
+                                  return_value="/usr/bin/iverilog"), \
+                contextlib.redirect_stdout(out):
+            code = self.rt.main(["vco", "--workdir", str(self.dir)])
+        return code, out.getvalue()
+
+    def test_main_maps_truncated_capture_to_exit_4(self):
+        self.write_run(self.GOOD[:-10])
+
+        def fake_vco(workdir, simulator):
+            self.rt.vco_read_captures(workdir, 1, 4)
+            return 0
+
+        code, out = self.run_main_with(fake_vco)
+        self.assertEqual(code, 4, out)
+        self.assertIn("SINE-VCO RUN INCONCLUSIVE", out)
+        self.assertIn("CORRUPT", out)
+        self.assertNotIn("SINE-VCO RUN FAILED", out)
+
+    def test_main_maps_x_state_readmemh_capture_to_exit_4(self):
+        self.write_run("x 42852275\nx 85704550\nx 128556825\nx 171409100\n",
+                       ops="V 12 28 16 4 x 0\n")
+
+        def fake_vco(workdir, simulator):
+            self.rt.vco_check_sim_log(self.READMEMH_LINE + "\nTB-DONE 1\n",
+                                      1, workdir)
+            self.rt.vco_read_captures(workdir, 1, 4)
+            return 1
+
+        code, out = self.run_main_with(fake_vco)
+        self.assertEqual(code, 4, out)
+        self.assertIn("SINE-VCO RUN INCONCLUSIVE", out)
+        self.assertIn("$readmemh", out)
+
+    def test_main_resolves_a_relative_workdir(self):
+        seen = []
+
+        def fake_vco(workdir, simulator):
+            seen.append(workdir)
+            return 0
+
+        relative = os.path.relpath(self.dir)
+        out = io.StringIO()
+        with mock.patch.object(self.rt, "vco", fake_vco), \
+                mock.patch.object(self.rt.shutil, "which",
+                                  return_value="/usr/bin/iverilog"), \
+                contextlib.redirect_stdout(out):
+            code = self.rt.main(["vco", "--workdir", relative])
+        self.assertEqual(code, 0)
+        self.assertTrue(seen[0].is_absolute(), seen[0])
+        self.assertEqual(seen[0], self.dir.resolve())
+
+    def test_verdict_text_never_pairs_fail_with_sample_exact(self):
+        self.assertEqual(self.rt.vco_verdict_text(True),
+                         "RTL sample-exact -> OK")
+        failing = self.rt.vco_verdict_text(False)
+        self.assertIn("FAIL", failing)
+        self.assertNotIn("sample-exact", failing)
+
+
+class VcoLongWorkdirRtlTest(unittest.TestCase):
+    """Issue #277 on the real simulator: path length / shape independence.
+
+    Short (64-sample) walks of the case whose id first crossed the DUT's
+    128-char ``+lut`` buffer on macOS ``$TMPDIR``; each must reproduce the
+    mirror's first words exactly, wherever the workdir lives.
+    """
+
+    CASE = "boundary:mod_matrix.adsr_1->vco_2_amp:near-upper"
+    WALK = 64
+
+    @classmethod
+    def setUpClass(cls):
+        if not has_iverilog():
+            raise unittest.SkipTest("Icarus Verilog not installed")
+        cls.rt = load_run_tb()
+        _receipt, cls.formats, cases = cls.rt.vco_load_receipt()
+        fcp = FixedControlPath(cls.formats.control_spec)
+        cls.case = cls.rt.vco_derive_case(fcp, cls.formats, cases[cls.CASE])
+
+    def simulate_in(self, case_dir: Path):
+        case_dir.mkdir(parents=True, exist_ok=True)
+        self.rt.write_lut_memh(self.formats.table, case_dir / "lut.memh")
+        self.rt.vco_write_case(case_dir, 0, self.case)
+        with contextlib.redirect_stdout(io.StringIO()):
+            return self.rt.vco_simulate(case_dir, "iverilog", 1,
+                                        self.rt.VCO_DUT_SV,
+                                        max_n=self.WALK)[0]
+
+    def assert_exact(self, capture):
+        self.assertEqual(capture["vco"],
+                         self.case["mirror"]["vco"][: self.WALK])
+        self.assertEqual(capture["phase"],
+                         self.case["mirror"]["phase"][: self.WALK])
+        self.assertNotIn(None, capture["ops"])
+
+    def test_lut_path_longer_than_the_plusarg_buffer(self):
+        with tempfile.TemporaryDirectory(prefix="tb-vco-long-") as tmp:
+            case_dir = Path(tmp) / ("d" * 80) / ("case-" + self.CASE)
+            self.assertGreater(len(str(case_dir / "lut.memh")),
+                               self.rt.VCO_LUT_PLUSARG_CHARS)
+            self.assert_exact(self.simulate_in(case_dir))
+
+    def test_workdir_with_spaces(self):
+        with tempfile.TemporaryDirectory(prefix="tb vco space ") as tmp:
+            self.assert_exact(
+                self.simulate_in(Path(tmp) / "a b" / ("case-" + self.CASE)))
+
+    def test_relative_workdir(self):
+        with tempfile.TemporaryDirectory(prefix="tb-vco-rel-") as tmp:
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                capture = self.simulate_in(Path("rel") / "case")
+            finally:
+                os.chdir(cwd)
+            self.assert_exact(capture)
+
+    def test_unloadable_lut_is_inconclusive_not_a_mismatch(self):
+        # The real issue #277 mechanism, reproduced deliberately: a lut the
+        # simulator cannot open leaves the ROM x. The run must raise the
+        # integrity error, never return x rows for the comparator.
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("root ignores file permissions")
+        with tempfile.TemporaryDirectory(prefix="tb-vco-nolut-") as tmp:
+            case_dir = Path(tmp) / "case"
+            case_dir.mkdir()
+            self.rt.write_lut_memh(self.formats.table, case_dir / "lut.memh")
+            self.rt.vco_write_case(case_dir, 0, self.case)
+            (case_dir / "lut.memh").chmod(0)
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaisesRegex(
+                            self.rt.VcoCaptureIntegrityError, r"\$readmemh"):
+                        self.rt.vco_simulate(case_dir, "iverilog", 1,
+                                             self.rt.VCO_DUT_SV, max_n=8)
+            finally:
+                (case_dir / "lut.memh").chmod(0o644)
 
 
 if __name__ == "__main__":
