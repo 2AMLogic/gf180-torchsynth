@@ -617,6 +617,22 @@ Two scope limits, stated rather than glossed:
   that stopped early. That still surfaces as the case's count mismatch. Only
   the spliced-row signature is diagnosable, and only that is claimed.
 
+The same guard now covers the per-engine sine-VCO lane (`tb/run_tb.py vco`,
+issue #277), as `VcoCaptureIntegrityError`, with the same exit `4`. That lane
+can diagnose two more signatures, because its bench writes a walk counter
+and its simulator log is read: a **short** capture whose bench walk counter
+is below the requested walk, and a harness-fault line in the log (a
+`$readmemh` that could not open the lut, a `TB-ERROR`, or a missing
+`TB-DONE`). Issue #277 is what prompted this. On macOS the `$TMPDIR` path plus the
+longest receipt case ids pushed the absolute `+lut=` path past the DUT's
+128-character plusarg buffer (`reg [1023:0] lut_file`). Icarus front-truncated
+the path, `$readmemh` failed, the ROM stayed `x`, and the lane printed
+`expected 2093032 got None` with `-> FAIL`, which reads as an RTL verdict.
+The runner now passes the bare `lut.memh` with `cwd` set to the case
+directory, and resolves `--workdir` to an absolute path (the #253 defect
+class). The `x`-state scope limit above still holds: an `x` word on a run
+whose log is clean stays a comparator mismatch.
+
 ### Evidence identity
 
 `voice-evidence.json` (schema
