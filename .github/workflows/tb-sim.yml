@@ -201,7 +201,7 @@ jobs:
       - name: Upload tail-chain evidence record
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oneshot-tail-chain-evidence
           path: |
@@ -265,7 +265,7 @@ jobs:
       - name: Upload whole-voice evidence record
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oneshot-whole-voice-evidence
           path: |
@@ -328,14 +328,14 @@ jobs:
       # always(): a failure before this point already fails the job.
       - name: Download tail-chain evidence (same revision)
         timeout-minutes: 5
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: oneshot-tail-chain-evidence
           merge-multiple: true
           path: out/integrated-artifacts/oneshot-tail-chain
       - name: Download whole-voice evidence (same revision)
         timeout-minutes: 5
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: oneshot-whole-voice-evidence
           merge-multiple: true
@@ -356,7 +356,7 @@ jobs:
       - name: Upload qualification evidence
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rtl-modules-evidence
           path: out/
