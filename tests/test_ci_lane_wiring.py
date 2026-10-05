@@ -162,10 +162,16 @@ LANE_STEP_TIMEOUTS = {
     "mix": 30,  # issue #76
     "normreplay": 10,  # issue #77
 }
+# Issue #264 (a deliberate, spec-recorded change -- spec/ONESHOT-E2E.md,
+# "What is still open"): both one-shot lanes now tee their transcript next to
+# their evidence record so the aggregate gate can consume both. Same profile,
+# same harness, same timeout; the tee is only safe under `shell: bash`
+# (`-eo pipefail`), which _inventory_violations requires of a piped lane.
 ONESHOT_STEP_TIMEOUTS = {
-    "python3 tb/run_oneshot.py --profile regression": 150,
-    "python3 tb/run_voice.py --profile regression --workdir out/whole-voice":
-        120,
+    "python3 tb/run_oneshot.py --profile regression --workdir out/tail-chain"
+    " 2>&1 | tee out/tail-chain/transcript.log": 150,
+    "python3 tb/run_voice.py --profile regression --workdir out/whole-voice"
+    " 2>&1 | tee out/whole-voice/transcript.log": 120,
 }
 
 _TIMEOUT_LINE = re.compile(r"^timeout-minutes:\s*(\S.*?)\s*(?:#.*)?$")
@@ -176,6 +182,8 @@ _STATUS_DISCARD = re.compile(r"\|\|\s*(?:true\b|:(?=\s|$)|exit\s+0\b)")
 # cancellation. Harmless on an artifact upload; a verdict-masking aggregator
 # anywhere else.
 _RUNS_REGARDLESS = re.compile(r"\b(?:always|cancelled|failure)\s*\(")
+# A job's flow-style `needs: [a, b]` (or a single `needs: a`).
+_NEEDS_LINE = re.compile(r"^needs:\s*(?:\[([^\]]*)\]|([A-Za-z0-9_-]+))\s*$")
 
 
 def _expected_inventory() -> dict:
@@ -353,6 +361,17 @@ def _inventory_violations(text: str) -> list:
                     "%s: the job running %r is conditional; a skipped job "
                     "is not a lane verdict" % (name, command)
                 )
+            if "|" in command and _step_field(step, "shell") != "bash":
+                # The default `run` shell is `bash -e` WITHOUT pipefail, so
+                # `harness | tee log` would report tee's status, not the
+                # harness's: a failing lane would pass. Only an explicit
+                # `shell: bash` (`bash --noprofile --norc -eo pipefail`)
+                # keeps the harness's failure.
+                violations.append(
+                    "%s: %r is piped without `shell: bash`; the default "
+                    "shell has no pipefail, so the pipe discards the lane's "
+                    "exit status" % (name, command)
+                )
             if not any("iverilog" in line for s in job["steps"]
                        for line in s["lines"]):
                 violations.append(
@@ -375,7 +394,8 @@ def _masking_violations(text: str) -> list:
             )
     for name, job in _parse_jobs(text).items():
         for key in job["keys"]:
-            if key.startswith("if:") and _RUNS_REGARDLESS.search(key):
+            if (key.startswith("if:") and _RUNS_REGARDLESS.search(key)
+                    and not _forwards_every_producer_result(job)):
                 violations.append(
                     "%s: job-level %r runs regardless of failed/cancelled "
                     "producers (an aggregation that can accept missing "
@@ -391,6 +411,48 @@ def _masking_violations(text: str) -> list:
                     "evidence upload may" % (name, step["label"])
                 )
     return violations
+
+
+def _job_needs(job: dict):
+    """The job's ``needs`` list, ``[]`` if none, ``None`` if unparseable."""
+    for key in job["keys"]:
+        if key.startswith("needs:"):
+            match = _NEEDS_LINE.match(key)
+            if not match:
+                return None
+            names = match.group(1) if match.group(1) is not None else (
+                match.group(2))
+            return [n.strip() for n in names.split(",") if n.strip()]
+    return []
+
+
+def _forwards_every_producer_result(job: dict) -> bool:
+    """Issue #264's one admitted job-level ``always()``.
+
+    An aggregation job may run regardless of its producers' outcome -- so a
+    failed or cancelled producer cannot turn it into a *skipped* (and so
+    possibly green) required check -- only if it hands EVERY producer's
+    result to a gate that fails closed on anything but ``success``:
+    ``--producer-result <job>=${{ needs.<job>.result }}`` for each job it
+    ``needs``, in a step it runs unconditionally. A job with no (or an
+    unparseable) ``needs`` has no producer results to forward and is never
+    admitted; nor is one that drops a single forwarding.
+    """
+    needs = _job_needs(job)
+    if not needs:
+        return False
+    for producer in needs:
+        forwarding = re.compile(
+            r"--producer-result\s+%s=\$\{\{\s*needs\.%s\.result\s*\}\}"
+            % (re.escape(producer), re.escape(producer))
+        )
+        if not any(
+            _step_field(step, "if") is None
+            and forwarding.search("\n".join(step["lines"]))
+            for step in job["steps"]
+        ):
+            return False
+    return True
 
 
 def _mutate(test: unittest.TestCase, text: str, old: str, new: str) -> str:
@@ -878,11 +940,14 @@ class TestLaneInventoryIsPinned(unittest.TestCase):
     def test_rejects_a_missing_oneshot_lane(self):
         mutated = _mutate(
             self, self.text,
-            "        run: python3 tb/run_oneshot.py --profile regression\n",
+            "        run: python3 tb/run_oneshot.py --profile regression "
+            "--workdir out/tail-chain 2>&1 | tee out/tail-chain/transcript.log"
+            "\n",
             "",
         )
         self.assertTrue(any(
-            "run_oneshot.py --profile regression' is not run" in v
+            "run_oneshot.py --profile regression --workdir out/tail-chain "
+            "2>&1 | tee out/tail-chain/transcript.log' is not run" in v
             for v in _inventory_violations(mutated)
         ))
 
@@ -890,13 +955,13 @@ class TestLaneInventoryIsPinned(unittest.TestCase):
         mutated = _mutate(
             self, self.text,
             "run: python3 tb/run_voice.py --profile regression "
-            "--workdir out/whole-voice\n",
+            "--workdir out/whole-voice 2>&1",
             "run: python3 tb/run_voice.py --profile directed "
-            "--workdir out/whole-voice\n",
+            "--workdir out/whole-voice 2>&1",
         )
         self.assertTrue(any(
-            "run_voice.py --profile regression --workdir out/whole-voice' "
-            "is not run" in v
+            "run_voice.py --profile regression --workdir out/whole-voice "
+            "2>&1 | tee out/whole-voice/transcript.log' is not run" in v
             for v in _inventory_violations(mutated)
         ))
 
@@ -927,6 +992,27 @@ class TestLaneInventoryIsPinned(unittest.TestCase):
         self.assertTrue(any(
             "is run by 2 steps" in v for v in _inventory_violations(mutated)
         ))
+
+    def test_rejects_a_piped_lane_without_pipefail(self):
+        # Issue #264's tee: without `shell: bash` the default shell has no
+        # pipefail, so tee's success would mask a failing harness.
+        for lane in ("tail-chain", "whole-voice"):
+            with self.subTest(lane=lane):
+                anchor = (
+                    "        shell: bash\n"
+                    "        run: python3 tb/run_%s.py --profile regression "
+                    "--workdir out/%s" % (
+                        "oneshot" if lane == "tail-chain" else "voice", lane)
+                )
+                mutated = _mutate(
+                    self, self.text, anchor,
+                    anchor.replace("        shell: bash\n", ""),
+                )
+                self.assertTrue(any(
+                    "--workdir out/%s" % lane in v
+                    and "piped without `shell: bash`" in v
+                    for v in _inventory_violations(mutated)
+                ), _inventory_violations(mutated))
 
     def test_rejects_a_conditional_lane_job(self):
         mutated = _mutate(
@@ -998,6 +1084,68 @@ class TestNoFailureMasking(unittest.TestCase):
         )
         self.assertTrue(any(
             v.startswith("lanes-summary: job-level 'if: always()'")
+            for v in _masking_violations(mutated)
+        ))
+
+    def test_admits_the_aggregate_gate_only_with_every_result_forwarded(self):
+        # Issue #264: rtl-module-qualification is `if: always()` over its
+        # two producers and forwards both results to the fail-closed gate.
+        jobs = _parse_jobs(self.text)
+        job = jobs["rtl-module-qualification"]
+        self.assertIn("if: always()", job["keys"])
+        self.assertEqual(
+            _job_needs(job), ["oneshot-tail-chain", "oneshot-whole-voice"])
+        self.assertTrue(_forwards_every_producer_result(job))
+
+    def test_rejects_the_aggregate_gate_dropping_a_forwarded_result(self):
+        for producer in ("oneshot-tail-chain", "oneshot-whole-voice"):
+            with self.subTest(producer=producer):
+                line = (
+                    "            --producer-result %s=${{ needs.%s.result }}"
+                    " \\\n" % (producer, producer)
+                )
+                mutated = _mutate(self, self.text, line, "")
+                self.assertTrue(any(
+                    v.startswith(
+                        "rtl-module-qualification: job-level 'if: always()'")
+                    for v in _masking_violations(mutated)
+                ), _masking_violations(mutated))
+
+    def test_rejects_the_aggregate_gate_forwarding_a_constant(self):
+        # A hard-coded `=success` is not a forwarded producer result.
+        mutated = _mutate(
+            self, self.text,
+            "oneshot-whole-voice=${{ needs.oneshot-whole-voice.result }}",
+            "oneshot-whole-voice=success",
+        )
+        self.assertTrue(any(
+            v.startswith("rtl-module-qualification: job-level 'if: always()'")
+            for v in _masking_violations(mutated)
+        ))
+
+    def test_rejects_the_aggregate_gate_with_an_unlisted_producer(self):
+        # A new producer added to `needs` must be forwarded too.
+        mutated = _mutate(
+            self, self.text,
+            "    needs: [oneshot-tail-chain, oneshot-whole-voice]\n",
+            "    needs: [oneshot-tail-chain, oneshot-whole-voice, "
+            "sim-lanes-vco]\n",
+        )
+        self.assertTrue(any(
+            v.startswith("rtl-module-qualification: job-level 'if: always()'")
+            for v in _masking_violations(mutated)
+        ))
+
+    def test_rejects_the_aggregate_gate_on_a_conditional_step(self):
+        # The forwarding must sit in a step that runs unconditionally.
+        mutated = _mutate(
+            self, self.text,
+            "        timeout-minutes: 25\n",
+            "        if: github.event_name == 'push'\n"
+            "        timeout-minutes: 25\n",
+        )
+        self.assertTrue(any(
+            v.startswith("rtl-module-qualification: job-level 'if: always()'")
             for v in _masking_violations(mutated)
         ))
 
