@@ -1,0 +1,97 @@
+name: RTL lint baseline (manual, CI toolchain)
+
+# Issue #264: tb/rtl-lint-baseline.json is calibrated to THIS toolchain
+# (apt iverilog 12.0 / verilator 5.020 on ubuntu-24.04), not to any developer
+# machine. This manual job is the only sanctioned way to (re)generate the
+# integrated one-shot lanes' lint/runtime waivers: it runs
+# `--update-baseline` on that toolchain against a completed tb-sim run's
+# artifacts for the SAME revision, and uploads the regenerated ledger for a
+# human to review (every added waiver reason and count) and commit. It never
+# commits, and the enforcement job in tb-sim.yml never regenerates anything.
+#
+# "The same revision" is the revision the producer jobs actually ran on, which
+# is NOT the dispatched ref: a pull_request tb-sim run checks out GitHub's
+# test merge commit (refs/pull/<N>/merge), so its evidence records that merge
+# SHA, not the run's headSha. The job therefore reads the revision the
+# evidence records, checks out exactly that commit, and binds it to the run
+# (tools/bind_producer_revision.py: == headSha for push; a merge commit whose
+# second parent is headSha for pull_request) before regenerating. Dispatch it
+# from any ref that carries this workflow (the PR branch or main).
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "tb-sim.yml run id whose oneshot-* artifacts to baseline (the job checks out the revision those artifacts recorded)"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # Full history so the producers' revision (and, for a PR run, both of
+      # its merge parents) can be fetched and inspected below.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog + Verilator (the ledger's toolchain)
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator
+      - name: Record the toolchain
+        run: |
+          iverilog -V | head -1
+          verilator --version
+      - name: Download the producer artifacts (and require their jobs to have succeeded)
+        # Artifacts go under RUNNER_TEMP, outside the work tree, so they can
+        # neither block the checkout below nor make the tree dirty.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$RUN_ID" --json workflowName --jq .workflowName)" = "TB sim"
+          head_sha="$(gh run view "$RUN_ID" --json headSha --jq .headSha)"
+          event="$(gh run view "$RUN_ID" --json event --jq .event)"
+          echo "tb-sim run $RUN_ID: event=$event headSha=$head_sha"
+          for lane in oneshot-tail-chain oneshot-whole-voice; do
+            conclusion="$(gh run view "$RUN_ID" --json jobs --jq ".jobs[] | select(.name==\"$lane\") | .conclusion")"
+            test "$conclusion" = "success"
+            gh run download "$RUN_ID" -n "$lane-evidence" -D "$RUNNER_TEMP/integrated-artifacts/$lane"
+          done
+          echo "RUN_HEAD_SHA=$head_sha" >> "$GITHUB_ENV"
+          echo "RUN_EVENT=$event" >> "$GITHUB_ENV"
+      - name: Check out exactly the revision the producers recorded
+        run: |
+          set -euo pipefail
+          rev="$(python3 tools/bind_producer_revision.py recorded --artifacts "$RUNNER_TEMP/integrated-artifacts")"
+          echo "producers recorded $rev"
+          git fetch --no-tags origin "$rev"
+          git checkout --detach "$rev"
+      - name: Bind HEAD to the producers' run (head SHA or its PR test merge)
+        # Runs the checked-out revision's own copy of the helper. Fails on a
+        # HEAD != recorded revision, a dirty tree, an unsupported event, or a
+        # revision that is not this run's headSha / merge-of-headSha.
+        run: |
+          python3 tools/bind_producer_revision.py verify \
+            --artifacts "$RUNNER_TEMP/integrated-artifacts" \
+            --run-head-sha "$RUN_HEAD_SHA" --run-event "$RUN_EVENT"
+      - name: Regenerate the baseline (lint tier + integrated lanes)
+        run: |
+          python3 tools/qualify_rtl_modules.py --lint --update-baseline \
+            --integrated all --integrated-profile regression \
+            --integrated-artifacts "$RUNNER_TEMP/integrated-artifacts" \
+            --producer-result oneshot-tail-chain=success \
+            --producer-result oneshot-whole-voice=success
+      - name: Upload the regenerated ledger for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-lint-baseline-regenerated
+          path: tb/rtl-lint-baseline.json
+          retention-days: 30

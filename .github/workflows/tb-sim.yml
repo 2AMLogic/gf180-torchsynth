@@ -24,8 +24,12 @@ jobs:
   # Setup budgets are generous against measured wall-clock (checkout and
   # setup-python ~2-3 s, apt Icarus install ~11-16 s on ubuntu-24.04).
   # Nothing here is continue-on-error or `|| true`: a failed, timed-out or
-  # cancelled step fails its job, and there is no aggregation job that could
-  # turn a missing/cancelled producer into success.
+  # cancelled step fails its job. The one aggregation job,
+  # rtl-module-qualification (issue 264), runs `if: always()` over its
+  # producers so it is never silently skipped, and hands each producer's
+  # `needs.<job>.result` to the gate, which fails closed on anything but
+  # "success" -- so a missing/cancelled producer is a gate failure, never a
+  # pass. The guard admits that always() only with every forwarding present.
 
   sim-selftest:
     runs-on: ubuntu-24.04
@@ -167,9 +171,10 @@ jobs:
     # fixture) is the release-era evidence command (spec/ONESHOT-E2E.md),
     # not a PR gate.
     runs-on: ubuntu-24.04
-    # Step budgets: 20 setup + 150 lane = 170. Cap 190: 20 minutes over the
-    # step sum (so a runaway run is caught by its own step timeout rather
-    # than the job cap), 170 minutes under the 360-minute hosted limit.
+    # Step budgets: 20 setup + 1 mkdir + 150 lane + 5 upload = 176. Cap 190:
+    # 14 minutes over the step sum (so a runaway run is caught by its own
+    # step timeout rather than the job cap), 170 minutes under the
+    # 360-minute hosted limit.
     timeout-minutes: 190
     steps:
       - uses: actions/checkout@v4
@@ -181,9 +186,29 @@ jobs:
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Make evidence output directory
+        timeout-minutes: 1
+        run: mkdir -p out/tail-chain
       - name: "One-shot tail chain lane, regression profile (issue 79, iverilog, PDK-free)"
         timeout-minutes: 150
-        run: python3 tb/run_oneshot.py --profile regression
+        # An explicit `shell: bash` runs as `bash -eo pipefail`, so a failing
+        # harness still fails the step through the tee (the default shell has
+        # no pipefail; tests/test_ci_lane_wiring.py rejects a piped lane
+        # without it). The transcript is what the aggregate gate (issue 264)
+        # scans for runtime diagnostics.
+        shell: bash
+        run: python3 tb/run_oneshot.py --profile regression --workdir out/tail-chain 2>&1 | tee out/tail-chain/transcript.log
+      - name: Upload tail-chain evidence record
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneshot-tail-chain-evidence
+          path: |
+            out/tail-chain/oneshot-evidence.json
+            out/tail-chain/transcript.log
+          retention-days: 30
+          if-no-files-found: ignore
 
   oneshot-whole-voice:
     # Issue #79's INTEGRATED WHOLE-VOICE top: every landed Epic #2 engine
@@ -233,14 +258,19 @@ jobs:
         run: mkdir -p out/whole-voice
       - name: "Whole-voice one-shot lane, regression profile (issue 79, iverilog, PDK-free)"
         timeout-minutes: 120
-        run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice
+        # `bash -eo pipefail` (see oneshot-tail-chain): the tee cannot mask a
+        # failing harness.
+        shell: bash
+        run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice 2>&1 | tee out/whole-voice/transcript.log
       - name: Upload whole-voice evidence record
         if: always()
         timeout-minutes: 5
         uses: actions/upload-artifact@v4
         with:
           name: oneshot-whole-voice-evidence
-          path: out/whole-voice/voice-evidence.json
+          path: |
+            out/whole-voice/voice-evidence.json
+            out/whole-voice/transcript.log
           retention-days: 30
           if-no-files-found: ignore
 
@@ -252,12 +282,28 @@ jobs:
     # tb/rtl-lint-baseline.json's ratchet, checks the declared coverage/negative-control obligations, and
     # writes the indexed evidence record over the bounded FAST_LANES subset
     # (tools/qualify_rtl_modules.py). See spec/RTL-MODULE-QUALIFICATION.md.
+    #
+    # Issue 264: it also folds in both one-shot lanes by CONSUMING the
+    # artifacts oneshot-tail-chain / oneshot-whole-voice produced on this same
+    # revision, rather than re-running ~1.5 h of simulation. `if: always()`
+    # (never a bare `needs`) keeps a failed or cancelled producer from
+    # silently skipping this job -- a skipped required check can read as a
+    # pass -- and each producer's own result is handed to the gate, which
+    # fails closed on anything but "success". This is the one job-level
+    # always() tests/test_ci_lane_wiring.py admits, and only because every
+    # job it `needs` has its `needs.<job>.result` forwarded to the gate as a
+    # --producer-result; drop either forwarding and that guard fails.
     runs-on: ubuntu-24.04
-    # Step budgets: 20 setup + 5 evaluator + 1 mkdir + 25 aggregate gate
-    # + 5 upload = 56 (measured: ~11 s install, ~2 s evaluator, ~2.5 min
-    # aggregate gate, run 37281310453). Cap 70: 14 minutes over the step
-    # sum, 290 minutes under the 360-minute hosted limit.
-    timeout-minutes: 70
+    needs: [oneshot-tail-chain, oneshot-whole-voice]
+    if: always()
+    # Step budgets: 20 setup + 5 evaluator + 1 mkdir + 2 x 5 artifact
+    # download + 25 aggregate gate + 5 upload = 66 (measured before #264:
+    # ~11 s install, ~2 s evaluator, ~2.5 min aggregate gate, run
+    # 37281310453). Cap 80: 14 minutes over the step sum, 280 minutes under
+    # the 360-minute hosted limit. The time spent waiting on the producers
+    # above is not charged here: a job's timeout-minutes runs from when the
+    # job starts on a runner, after its `needs` complete.
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
@@ -274,10 +320,38 @@ jobs:
       - name: Make evidence output directory
         timeout-minutes: 1
         run: mkdir -p out
-      - name: Aggregate gate -- lint tier + bounded fast-lane regression
+      # `pattern` (an exact artifact name, no glob) rather than `name`: a
+      # producer that uploaded nothing leaves its directory empty instead of
+      # failing the download, so the gate below still runs and records the
+      # absent evidence as a gate FAILURE. Any other download error fails
+      # the step, and so the job. No continue-on-error, no step-level
+      # always(): a failure before this point already fails the job.
+      - name: Download tail-chain evidence (same revision)
+        timeout-minutes: 5
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oneshot-tail-chain-evidence
+          merge-multiple: true
+          path: out/integrated-artifacts/oneshot-tail-chain
+      - name: Download whole-voice evidence (same revision)
+        timeout-minutes: 5
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oneshot-whole-voice-evidence
+          merge-multiple: true
+          path: out/integrated-artifacts/oneshot-whole-voice
+      - name: Aggregate gate -- lint tier + bounded fast-lane regression + integrated one-shot lanes
         timeout-minutes: 25
+        # An absent artifact or a non-success producer is a gate FAILURE,
+        # not a skip. The integrated lanes' verdict stays withheld (NO
+        # VERDICT) until tb/rtl-lint-baseline.json carries a CI-toolchain
+        # baseline for their lint units; see spec/RTL-MODULE-QUALIFICATION.md.
         run: |
           python3 tools/qualify_rtl_modules.py --lint --lanes fast --parallel \
+            --integrated all --integrated-profile regression \
+            --integrated-artifacts out/integrated-artifacts \
+            --producer-result oneshot-tail-chain=${{ needs.oneshot-tail-chain.result }} \
+            --producer-result oneshot-whole-voice=${{ needs.oneshot-whole-voice.result }} \
             --log out/rtl-modules.log --record out/rtl-modules-evidence.json
       - name: Upload qualification evidence
         if: always()

@@ -60,6 +60,93 @@ lists `tb/run_tb.py` hands to `iverilog`. `normreplay` has two lint units
 because its lane performs two compiles: the replay engine's bench, and issue
 #211's `render_binding_top` integration bench.
 
+## Integrated one-shot lanes (issue #264)
+
+Two further flows are *standalone harnesses*, not `tb/run_tb.py` commands, so
+they are deliberately **not** in the module-lane list above (whose equality
+with `run_tb.py`'s choices is still enforced). They are inventoried and
+dispatched separately by `tools/qualify_rtl_modules.py`
+(`INTEGRATED_LANES`), and the harnesses remain the sole owners of their
+conformance checks -- the gate never re-implements a simulation check and
+never reads a verdict out of their stdout:
+
+| Lane | Harness | Evidence it writes | What it covers |
+| --- | --- | --- | --- |
+| `oneshot-tail-chain` | `tb/run_oneshot.py` | `oneshot-evidence.json` | mixer (#76) -> replay controller (#77) over **host-fed** source/amplitude streams; **not** the whole-voice top |
+| `oneshot-whole-voice` | `tb/run_voice.py` | `voice-evidence.json` | the integrated whole-voice top (#70-#77); the host still supplies the ratified shadow words, S1 entry words, C8 noise bytes and phase enables |
+
+Per lane the aggregate ledger (the `== integrated lanes ==` block of the
+transcript, which the evidence record's log hash covers) names the harness,
+the selected profile, `executed` / `artifact` / `not-run` status, the exit
+result, the coverage numbers read from the harness's own record (cases,
+DETECTED/NOT DETECTED controls, both normalization branches), the lint units
+and a profile/scope label.
+
+**Two ways to include a lane.** `--integrated all|<list>` *executes* each
+harness (`--integrated-profile`, default `regression`; per-lane timeout; the
+harness's own `--workdir`). `--integrated-artifacts <dir>` instead *consumes*
+the artifacts the existing `tb-sim.yml` producer jobs
+(`oneshot-tail-chain`, `oneshot-whole-voice`) already wrote, so the bounded
+aggregate job does not re-run ~1.5 hours of simulation. Consumed evidence is
+bound to this revision: the producer's result (`--producer-result LANE=...`)
+must be exactly `success`, and the record must pass
+`tools/verify_oneshot_evidence.py`'s checks against `git rev-parse HEAD` -- PASS
+result, clean tree, matching `git_head`, and digested RTL/vector sources still
+byte-identical in this tree -- plus the requested profile, the lane's schema and
+its declared obligations. Anything absent, unreadable, malformed, wrong-schema,
+wrong-profile, stale, failed, timed out, cancelled, non-zero-exit (including the
+harnesses' own exit 3 = no iverilog and exit 4 = inconclusive corrupt capture)
+or carrying an undetected required mutation is a **failure**, never a pass.
+
+**Profile honesty.** A `regression` result is labelled *regression profile
+only (bounded; NOT full-profile qualification)* in the console, the ledger and
+the record's `reason`; regression evidence cannot satisfy
+`--integrated-profile full` (the profile, case-count and obligation checks all
+refuse it). The tail chain's label always carries its host-fed scope.
+
+**Verdict.** `PASS` now additionally requires every integrated lane to have
+been executed/consumed *and enforceable*: the lane's lint units and runtime
+transcript must be baselined in `tb/rtl-lint-baseline.json`, whose
+`provenance.toolchain` must be CI's (Icarus 12.0, Verilator 5.020). Until that
+CI-generated baseline is committed, the integrated lanes' diagnostics are
+**reported but not enforced** and the verdict is `NO VERDICT` with the reason
+stated -- neither silently waived nor gated against a baseline nobody
+generated for them. The partial-selection `NO VERDICT` behaviour for module
+lanes is unchanged.
+
+**Lint units.** `oneshot-tail-chain` and `oneshot-whole-voice` each lint the
+exact source set the harness hands to `iverilog` (`INTEGRATED_LINT_UNITS`).
+
+**Baseline provenance and regeneration.** `--update-baseline` refuses any
+toolchain that is not CI's unless `--allow-foreign-toolchain` is passed (which
+records the actual versions, so the lanes stay unbaselined), refuses to run
+against a failed/stale integrated lane, writes `provenance` (both tools'
+versions, command, revision, time) and an `integrated_lanes` registry, and
+preserves everything the run did not observe -- including the runtime waivers
+of lanes that did not run. The sanctioned generator is the manual
+`.github/workflows/rtl-lint-baseline.yml` (workflow_dispatch; Icarus 12.0 /
+Verilator 5.020), which uploads the regenerated ledger for a reviewer to check
+every added waiver reason and count; the enforcement job never regenerates.
+
+**Generator revision binding.** The generator runs on the revision the
+producers actually ran on, not on its dispatched ref. A `pull_request` tb-sim
+run's jobs (producers and aggregate alike, all default `actions/checkout`)
+check out GitHub's test merge commit, so their evidence records that merge
+SHA, not the run's `headSha`; a `push` run records `headSha` itself. Given a
+tb-sim `run_id`, the generator requires the run to be `TB sim` with both
+producer jobs `success`, downloads their artifacts outside the work tree, reads
+the single revision every evidence record names
+(`tools/bind_producer_revision.py recorded`; absent, malformed or disagreeing
+records fail), fetches and checks out exactly that commit, and then
+(`... verify`) requires `git rev-parse HEAD` to equal it, the tree to be clean,
+and the revision to belong to the run: equal to `headSha` for `push`, a
+two-parent merge whose second parent is `headSha` for `pull_request` (the bare
+PR head, a stale merge of an older head, or any other event fail).
+`--update-baseline` then re-applies the usual evidence checks (clean record,
+HEAD match, source digests current) against that tree. The uploaded ledger
+therefore describes the merge revision's sources; the reviewer commits it to
+the PR branch, and the next tb-sim run re-gates it.
+
 ## Diagnostic gate
 
 `tb/run_tb.py` passes no warning flags and `_run()` only checks a subprocess's
@@ -234,9 +321,11 @@ next to the claim.
   whole `tb/sv` tree, the harness, this document and the ledger.
 - `controls["one-bit-mutation"]` — `executed`/`detected` derived from the
   lanes' own observed mutation markers.
-- `result.verdict` — `PASS` only when the lint tier ran, **all** lanes ran, the
-  registered check exited 0 and nothing failed. A partial lane selection is
-  `NO VERDICT`, never a pass.
+- `result.verdict` — `PASS` only when the lint tier ran, **all** module lanes
+  ran, **both integrated one-shot lanes** were executed/consumed and are
+  baselined (see above), the registered check exited 0 and nothing failed. A
+  partial selection is `NO VERDICT`, never a pass; the integrated lanes'
+  profile is stated in `result.reason`.
 
 ### Why the record is not attached to the graph yet
 
@@ -267,9 +356,17 @@ python3 tools/qualify_rtl_modules.py --lint
 python3 tools/qualify_rtl_modules.py --lint --lanes fast --parallel \
     --log out/rtl-modules.log --record out/rtl-modules-evidence.json
 
-# The whole set; PASS is only reachable from here.
+# The whole set; PASS is only reachable from here, and only once the CI
+# lint baseline for the integrated lanes is committed.
 python3 tools/qualify_rtl_modules.py --lint --lanes all --parallel \
+    --integrated all --integrated-profile regression \
     --log out/rtl-modules.log --record out/rtl-modules-evidence.json
+
+# Fold in the one-shot producer jobs' artifacts instead of re-running them.
+python3 tools/qualify_rtl_modules.py --lint --lanes fast --parallel \
+    --integrated all --integrated-artifacts out/integrated-artifacts \
+    --producer-result oneshot-tail-chain=success \
+    --producer-result oneshot-whole-voice=success
 
 # After a deliberate source change, re-baseline and review the diff.
 python3 tools/qualify_rtl_modules.py --lint --update-baseline
