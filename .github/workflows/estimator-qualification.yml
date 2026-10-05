@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.2.0
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Execute the landed grids and reconcile the ledger

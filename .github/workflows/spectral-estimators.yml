@@ -23,7 +23,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.2.0
       - name: Install the locked numerical environment
         run: uv sync --locked --extra metrics --python '${{ matrix.python }}'
       - name: Execute numerical and contract tests
