@@ -31,6 +31,17 @@ For the same reason — a lane that cannot even compile on CI is a lane that
 never runs — ``TestLanesCompileUnderTheIcarusCiInstalls`` below also guards
 ``tb/sv/`` against the SystemVerilog loop-control statements the Icarus
 version ``tb-sim.yml`` installs cannot build.
+
+And — a job that cannot fit its platform limit is a job that cannot run to a
+verdict (issue #265) — ``TestWorkflowBudgetsFitTheHostedLimit``,
+``TestLaneInventoryIsPinned`` and ``TestNoFailureMasking`` below check every
+job in ``tb-sim.yml``: an explicit job cap safely under GitHub-hosted's
+360-minute hard limit, an explicit budget on every step (setup and artifact
+steps included) summing to comfortably under that cap, the original lane
+inventory with its exact commands and per-lane timeouts, and no construct
+that could turn a failed, timed-out or cancelled lane into a pass. Each guard
+is a pure function of the workflow text, and each has negative fixtures
+proving it rejects the defect it names.
 """
 
 import ast
@@ -44,8 +55,8 @@ RUN_TB_PATH = ROOT / "tb" / "run_tb.py"
 
 # Lanes that are not RTL golden-vector comparisons: ``selftest`` proves the
 # harness and ``anchor`` runs the format-true DUT. Both are wired into
-# ``sim-selftest`` rather than ``sim-lanes``, so they are exempt from the
-# LANES table but NOT from the "must run somewhere with Icarus" check.
+# ``sim-selftest`` rather than a ``sim-lanes-*`` job, so they are exempt
+# from the LANES table but NOT from the "must run somewhere with Icarus" check.
 NON_RTL_COMMANDS = frozenset({"selftest", "anchor"})
 
 # lane -> tb/run_tb.py subcommand, matching the table in issue #187.
@@ -117,6 +128,278 @@ def _lane_command_pattern(subcommand: str) -> re.Pattern:
     return re.compile(
         r"tb/run_tb\.py(?:\s+--\S+\s+\S+)*\s+\b" + re.escape(subcommand) + r"\b"
     )
+
+
+# --- Workflow-wide budget / inventory / masking guards (issue #265) ---------
+#
+# GitHub-hosted runners hard-stop every job at 360 minutes. A job whose
+# declared cap reaches that limit can be cancelled by the platform before its
+# own budget is spent, which surfaces as an infrastructure cancellation rather
+# than as a lane verdict. The pre-#265 ``sim-lanes`` job declared a 400-minute
+# cap over a 370-minute step sum.
+HOSTED_JOB_LIMIT_MINUTES = 360
+# Every job cap must leave at least this much room under the hosted limit.
+PLATFORM_HEADROOM_MINUTES = 30
+# Every job's step budgets must sum to at least this much under its cap, so a
+# runaway step is stopped by its own (named, attributable) step timeout and
+# not by the job cap. Setup/install and artifact-upload steps count too.
+STEP_HEADROOM_MINUTES = 10
+
+# The lane inventory and per-lane allowances as they stood before the #265
+# split (``sim-lanes`` on main @ b43042b: 10+10+10+60+90+120+30+30+10 = 370),
+# plus the two #79 one-shot regression commands. A split, regroup or rename
+# must keep every command byte-identical (same arguments) and every timeout
+# unchanged; a deliberate change to either belongs in the relevant spec/
+# document *and* here, never silently in the workflow alone.
+LANE_STEP_TIMEOUTS = {
+    "adsr": 10,  # issue #70
+    "patch": 10,  # issue #69
+    "lfo": 10,  # issue #71
+    "modmatrix": 60,  # issue #72
+    "vco": 90,  # issue #73
+    "vco2": 120,  # issue #74
+    "noise": 30,  # issue #75
+    "mix": 30,  # issue #76
+    "normreplay": 10,  # issue #77
+}
+ONESHOT_STEP_TIMEOUTS = {
+    "python3 tb/run_oneshot.py --profile regression": 150,
+    "python3 tb/run_voice.py --profile regression --workdir out/whole-voice":
+        120,
+}
+
+_TIMEOUT_LINE = re.compile(r"^timeout-minutes:\s*(\S.*?)\s*(?:#.*)?$")
+_JOB_NAME_LINE = re.compile(r"^  ([A-Za-z0-9_-]+):\s*(?:#.*)?$")
+# `|| true`, `|| :` and `|| exit 0` all discard a failing command's status.
+_STATUS_DISCARD = re.compile(r"\|\|\s*(?:true\b|:(?=\s|$)|exit\s+0\b)")
+# Expressions that let a job or step run regardless of earlier failure or
+# cancellation. Harmless on an artifact upload; a verdict-masking aggregator
+# anywhere else.
+_RUNS_REGARDLESS = re.compile(r"\b(?:always|cancelled|failure)\s*\(")
+
+
+def _expected_inventory() -> dict:
+    """Pinned run command -> pinned step timeout, for every gated lane."""
+    inventory = {
+        "python3 tb/run_tb.py %s" % lane: minutes
+        for lane, minutes in LANE_STEP_TIMEOUTS.items()
+    }
+    inventory.update(ONESHOT_STEP_TIMEOUTS)
+    return inventory
+
+
+def _parse_timeout(value: str):
+    return int(value) if value.isdigit() else None
+
+
+def _parse_jobs(text: str) -> dict:
+    """Line-oriented parse of a workflow's ``jobs:`` section.
+
+    Returns ``{job: {"cap", "keys", "steps"}}`` where ``cap`` is the
+    job-level ``timeout-minutes`` (``None`` if absent or not a literal
+    integer), ``keys`` the job's other 4-space-indent lines, and ``steps`` a
+    list of ``{"label", "timeout", "lines"}`` dicts. Same deliberate stdlib-only
+    shape as the rest of this module (``ci.yml`` carries no YAML parser); the
+    layout it relies on (2-space job keys, 4-space job fields, 6-space step
+    dashes, 8-space step fields) is the layout ``tb-sim.yml`` uses, and
+    ``TestWorkflowBudgetsFitTheHostedLimit`` asserts the parse found the
+    expected jobs and steps so a layout drift fails loudly rather than
+    parsing to nothing.
+    """
+    jobs, job, step, in_jobs = {}, None, None, False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if indent == 0:
+            in_jobs = stripped.startswith("jobs:")
+            job = step = None
+            continue
+        if not in_jobs:
+            continue
+        if indent == 2:
+            match = _JOB_NAME_LINE.match(line)
+            job = {"cap": None, "keys": [], "steps": []}
+            jobs[match.group(1) if match else stripped] = job
+            step = None
+            continue
+        if job is None:
+            continue
+        if indent == 4:
+            step = None
+            job["keys"].append(stripped)
+            match = _TIMEOUT_LINE.match(stripped)
+            if match:
+                job["cap"] = _parse_timeout(match.group(1))
+            continue
+        if indent == 6 and stripped.startswith("- "):
+            body = stripped[2:]
+            step = {"label": body, "timeout": None, "lines": [body]}
+            job["steps"].append(step)
+            match = _TIMEOUT_LINE.match(body)
+            if match:
+                step["timeout"] = _parse_timeout(match.group(1))
+            continue
+        if step is None:
+            # Nested under a job-level key (strategy/matrix, env, ...).
+            job["keys"].append(stripped)
+            continue
+        step["lines"].append(stripped)
+        if indent == 8:
+            if stripped.startswith("name:"):
+                step["label"] = stripped
+            match = _TIMEOUT_LINE.match(stripped)
+            if match:
+                step["timeout"] = _parse_timeout(match.group(1))
+    return jobs
+
+
+def _step_run(step: dict):
+    """The step's single-line ``run:`` command, else ``None``."""
+    for line in step["lines"]:
+        if line.startswith("run:"):
+            command = line[len("run:"):].strip()
+            return None if command in ("|", ">", "|-", ">-") else command
+    return None
+
+
+def _step_field(step: dict, key: str):
+    for line in step["lines"]:
+        if line.startswith(key + ":"):
+            return line[len(key) + 1:].strip()
+    return None
+
+
+def _budget_violations(text: str) -> list:
+    """Every way a job's declared budget fails to fit the hosted limit."""
+    violations = []
+    jobs = _parse_jobs(text)
+    if not jobs:
+        violations.append("no jobs parsed from the workflow")
+    for name, job in jobs.items():
+        cap = job["cap"]
+        if cap is None:
+            violations.append(
+                "%s: no explicit integer job-level timeout-minutes (the "
+                "default is the platform's own 360-minute limit)" % name
+            )
+        elif cap >= HOSTED_JOB_LIMIT_MINUTES:
+            violations.append(
+                "%s: job cap %d >= GitHub-hosted's %d-minute hard job limit"
+                % (name, cap, HOSTED_JOB_LIMIT_MINUTES)
+            )
+        elif cap > HOSTED_JOB_LIMIT_MINUTES - PLATFORM_HEADROOM_MINUTES:
+            violations.append(
+                "%s: job cap %d leaves under %d minutes of headroom below "
+                "the %d-minute hosted limit"
+                % (name, cap, PLATFORM_HEADROOM_MINUTES,
+                   HOSTED_JOB_LIMIT_MINUTES)
+            )
+        if not job["steps"]:
+            violations.append("%s: no steps parsed" % name)
+        for step in job["steps"]:
+            if step["timeout"] is None:
+                violations.append(
+                    "%s: step %r has no explicit integer timeout-minutes"
+                    % (name, step["label"])
+                )
+        total = sum(s["timeout"] for s in job["steps"] if s["timeout"])
+        if cap is not None and total + STEP_HEADROOM_MINUTES > cap:
+            violations.append(
+                "%s: step budgets sum to %d, which leaves under %d minutes "
+                "of headroom below the %d-minute job cap"
+                % (name, total, STEP_HEADROOM_MINUTES, cap)
+            )
+    return violations
+
+
+def _inventory_violations(text: str) -> list:
+    """Every pinned lane must run exactly once, unchanged, unconditionally."""
+    violations = []
+    found = {}
+    for name, job in _parse_jobs(text).items():
+        for step in job["steps"]:
+            command = _step_run(step)
+            if command in _expected_inventory():
+                found.setdefault(command, []).append((name, job, step))
+    for command, minutes in _expected_inventory().items():
+        hits = found.get(command, [])
+        if not hits:
+            violations.append(
+                "%r is not run by any step (a lane must not be silently "
+                "dropped or have its arguments changed)" % command
+            )
+            continue
+        if len(hits) > 1:
+            violations.append(
+                "%r is run by %d steps; each lane has exactly one gating "
+                "step" % (command, len(hits))
+            )
+        for name, job, step in hits:
+            if step["timeout"] != minutes:
+                violations.append(
+                    "%s: %r has timeout-minutes %r, pinned at %d (a lane's "
+                    "allowance must not change silently)"
+                    % (name, command, step["timeout"], minutes)
+                )
+            if _step_field(step, "if") is not None:
+                violations.append(
+                    "%s: %r is conditional; a skipped lane step reports as "
+                    "success" % (name, command)
+                )
+            if any(key.startswith("if:") for key in job["keys"]):
+                violations.append(
+                    "%s: the job running %r is conditional; a skipped job "
+                    "is not a lane verdict" % (name, command)
+                )
+            if not any("iverilog" in line for s in job["steps"]
+                       for line in s["lines"]):
+                violations.append(
+                    "%s: the job running %r never installs Icarus Verilog"
+                    % (name, command)
+                )
+    return violations
+
+
+def _masking_violations(text: str) -> list:
+    """Constructs that can turn a failed or cancelled lane into a pass."""
+    violations = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        code = line.split("#", 1)[0] if line.lstrip().startswith("#") else line
+        if re.search(r"continue-on-error:\s*(?!false\b)\S", code):
+            violations.append("line %d: continue-on-error" % lineno)
+        if _STATUS_DISCARD.search(code):
+            violations.append(
+                "line %d: a command's failure status is discarded" % lineno
+            )
+    for name, job in _parse_jobs(text).items():
+        for key in job["keys"]:
+            if key.startswith("if:") and _RUNS_REGARDLESS.search(key):
+                violations.append(
+                    "%s: job-level %r runs regardless of failed/cancelled "
+                    "producers (an aggregation that can accept missing "
+                    "results)" % (name, key)
+                )
+        for step in job["steps"]:
+            condition = _step_field(step, "if")
+            uses = _step_field(step, "uses") or ""
+            if (condition and _RUNS_REGARDLESS.search(condition)
+                    and not uses.startswith("actions/upload-artifact@")):
+                violations.append(
+                    "%s: step %r runs regardless of earlier failure; only "
+                    "evidence upload may" % (name, step["label"])
+                )
+    return violations
+
+
+def _mutate(test: unittest.TestCase, text: str, old: str, new: str) -> str:
+    test.assertEqual(
+        text.count(old), 1,
+        "fixture anchor %r must occur exactly once in tb-sim.yml; this "
+        "negative fixture is not exercising the path it claims to" % old,
+    )
+    return text.replace(old, new)
 
 
 class TestEveryRunTbCommandIsWired(unittest.TestCase):
@@ -354,8 +637,8 @@ class TestLanesCompileUnderTheIcarusCiInstalls(unittest.TestCase):
         # *prefix* identifier like `break_flag` is rejected by the trailing
         # `\s*;` alone, so it stays clean even with the lookbehind deleted;
         # only a suffix form distinguishes the two patterns. Dropping the
-        # lookbehind would make this guard fail `sim-lanes` on lines that
-        # compile fine.
+        # lookbehind would make this guard fail the `sim-lanes-*` jobs on
+        # lines that compile fine.
         self.assertIsNone(self._offending_keyword("x = do_break;"))
         self.assertIsNone(self._offending_keyword("assign w = sig_continue;"))
         # `$` is legal inside (though not at the start of) a SystemVerilog
@@ -407,6 +690,336 @@ class TestGuardFailsIfALaneIsRemoved(unittest.TestCase):
             "the mutation did not actually remove the vco2 lane command; "
             "this guard test is not exercising the failure path it claims to",
         )
+
+
+class TestWorkflowBudgetsFitTheHostedLimit(unittest.TestCase):
+    """Every tb-sim.yml job fits GitHub-hosted's 360-minute limit (#265)."""
+
+    EXPECTED_JOBS = {
+        "sim-selftest",
+        "sim-lanes-vco",
+        "sim-lanes-engines",
+        "oneshot-tail-chain",
+        "oneshot-whole-voice",
+        "rtl-module-qualification",
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read_workflow()
+
+    def test_parse_sees_every_job_and_their_steps(self):
+        # The guard must not pass vacuously on a layout it cannot read.
+        jobs = _parse_jobs(self.text)
+        self.assertEqual(set(jobs), self.EXPECTED_JOBS)
+        for name, job in jobs.items():
+            with self.subTest(job=name):
+                self.assertGreaterEqual(len(job["steps"]), 3)
+        self.assertEqual(len(jobs["sim-lanes-vco"]["steps"]), 3 + 2)
+        self.assertEqual(len(jobs["sim-lanes-engines"]["steps"]), 3 + 7)
+
+    def test_every_job_and_step_budget_fits(self):
+        self.assertEqual(_budget_violations(self.text), [])
+
+    def test_no_job_is_named_like_the_unsplit_sim_lanes(self):
+        # The over-limit job is gone, not merely re-capped.
+        self.assertNotIn("sim-lanes", _parse_jobs(self.text))
+
+    # --- negative fixtures -------------------------------------------------
+
+    def test_rejects_a_cap_at_or_over_the_hosted_limit(self):
+        for cap in ("360", "400"):
+            with self.subTest(cap=cap):
+                mutated = _mutate(
+                    self, self.text,
+                    "    timeout-minutes: 250\n",
+                    "    timeout-minutes: %s\n" % cap,
+                )
+                self.assertTrue(any(
+                    "sim-lanes-vco: job cap %s >=" % cap in v
+                    for v in _budget_violations(mutated)
+                ), _budget_violations(mutated))
+
+    def test_rejects_a_cap_without_platform_headroom(self):
+        mutated = _mutate(
+            self, self.text,
+            "    timeout-minutes: 250\n", "    timeout-minutes: 345\n",
+        )
+        self.assertTrue(any(
+            "sim-lanes-vco: job cap 345 leaves under" in v
+            for v in _budget_violations(mutated)
+        ), _budget_violations(mutated))
+
+    def test_rejects_an_absent_job_cap(self):
+        mutated = _mutate(self, self.text, "    timeout-minutes: 250\n", "")
+        self.assertTrue(any(
+            v.startswith("sim-lanes-vco: no explicit integer job-level")
+            for v in _budget_violations(mutated)
+        ), _budget_violations(mutated))
+
+    def test_rejects_a_non_literal_job_cap(self):
+        mutated = _mutate(
+            self, self.text,
+            "    timeout-minutes: 250\n",
+            "    timeout-minutes: ${{ inputs.cap }}\n",
+        )
+        self.assertTrue(any(
+            v.startswith("sim-lanes-vco: no explicit integer job-level")
+            for v in _budget_violations(mutated)
+        ), _budget_violations(mutated))
+
+    def test_rejects_step_totals_that_consume_the_job_cap(self):
+        # sim-lanes-vco's steps sum to 230: a cap equal to the sum, and one
+        # inside the required headroom, must both fail.
+        for cap in ("230", "235"):
+            with self.subTest(cap=cap):
+                mutated = _mutate(
+                    self, self.text,
+                    "    timeout-minutes: 250\n",
+                    "    timeout-minutes: %s\n" % cap,
+                )
+                self.assertIn(
+                    "sim-lanes-vco: step budgets sum to 230, which leaves "
+                    "under %d minutes of headroom below the %s-minute job "
+                    "cap" % (STEP_HEADROOM_MINUTES, cap),
+                    _budget_violations(mutated),
+                )
+
+    def test_rejects_the_pre_split_sim_lanes_shape(self):
+        # One job carrying all nine lanes at the original 400-minute cap.
+        mutated = _mutate(
+            self, self.text,
+            "    timeout-minutes: 200\n", "    timeout-minutes: 400\n",
+        )
+        self.assertTrue(any(
+            "sim-lanes-engines: job cap 400 >=" in v
+            for v in _budget_violations(mutated)
+        ))
+
+    def test_rejects_a_setup_step_without_a_budget(self):
+        # The guard covers checkout/setup/install, not only lane steps.
+        mutated = _mutate(
+            self, self.text,
+            "      - name: Install Icarus Verilog + Verilator (PDK-free)\n"
+            "        timeout-minutes: 10\n",
+            "      - name: Install Icarus Verilog + Verilator (PDK-free)\n",
+        )
+        self.assertTrue(any(
+            v.startswith("rtl-module-qualification: step 'name: Install")
+            and "no explicit integer timeout-minutes" in v
+            for v in _budget_violations(mutated)
+        ), _budget_violations(mutated))
+
+    def test_rejects_an_artifact_step_without_a_budget(self):
+        mutated = _mutate(
+            self, self.text,
+            "      - name: Upload qualification evidence\n"
+            "        if: always()\n"
+            "        timeout-minutes: 5\n",
+            "      - name: Upload qualification evidence\n"
+            "        if: always()\n",
+        )
+        self.assertTrue(any(
+            "Upload qualification evidence" in v
+            for v in _budget_violations(mutated)
+        ))
+
+
+class TestLaneInventoryIsPinned(unittest.TestCase):
+    """The #265 split must not drop a lane or shrink its allowance."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read_workflow()
+
+    def test_pinned_lanes_match_the_lane_registry(self):
+        self.assertEqual(set(LANE_STEP_TIMEOUTS), set(LANES))
+
+    def test_pinned_lane_budgets_are_the_original_370_minutes(self):
+        self.assertEqual(sum(LANE_STEP_TIMEOUTS.values()), 370)
+
+    def test_every_lane_runs_once_unchanged_and_unconditionally(self):
+        self.assertEqual(_inventory_violations(self.text), [])
+
+    def test_vco_group_and_engine_group_split(self):
+        jobs = _parse_jobs(self.text)
+
+        def lanes_in(job):
+            return sorted(
+                _step_run(s) for s in jobs[job]["steps"]
+                if (_step_run(s) or "").startswith("python3 tb/run_tb.py ")
+            )
+
+        self.assertEqual(
+            lanes_in("sim-lanes-vco"),
+            ["python3 tb/run_tb.py vco", "python3 tb/run_tb.py vco2"],
+        )
+        self.assertEqual(
+            lanes_in("sim-lanes-engines"),
+            sorted("python3 tb/run_tb.py %s" % lane for lane in (
+                "adsr", "patch", "lfo", "modmatrix", "noise", "mix",
+                "normreplay",
+            )),
+        )
+
+    # --- negative fixtures -------------------------------------------------
+
+    def test_rejects_a_missing_lane(self):
+        mutated = _mutate(
+            self, self.text,
+            "        run: python3 tb/run_tb.py vco2\n", "",
+        )
+        self.assertIn(
+            "'python3 tb/run_tb.py vco2' is not run by any step (a lane must "
+            "not be silently dropped or have its arguments changed)",
+            _inventory_violations(mutated),
+        )
+
+    def test_rejects_a_missing_oneshot_lane(self):
+        mutated = _mutate(
+            self, self.text,
+            "        run: python3 tb/run_oneshot.py --profile regression\n",
+            "",
+        )
+        self.assertTrue(any(
+            "run_oneshot.py --profile regression' is not run" in v
+            for v in _inventory_violations(mutated)
+        ))
+
+    def test_rejects_changed_lane_arguments(self):
+        mutated = _mutate(
+            self, self.text,
+            "run: python3 tb/run_voice.py --profile regression "
+            "--workdir out/whole-voice\n",
+            "run: python3 tb/run_voice.py --profile directed "
+            "--workdir out/whole-voice\n",
+        )
+        self.assertTrue(any(
+            "run_voice.py --profile regression --workdir out/whole-voice' "
+            "is not run" in v
+            for v in _inventory_violations(mutated)
+        ))
+
+    def test_rejects_a_reduced_lane_allowance(self):
+        mutated = _mutate(
+            self, self.text,
+            "        timeout-minutes: 120\n"
+            "        run: python3 tb/run_tb.py vco2\n",
+            "        timeout-minutes: 100\n"
+            "        run: python3 tb/run_tb.py vco2\n",
+        )
+        self.assertIn(
+            "sim-lanes-vco: 'python3 tb/run_tb.py vco2' has timeout-minutes "
+            "100, pinned at 120 (a lane's allowance must not change "
+            "silently)",
+            _inventory_violations(mutated),
+        )
+
+    def test_rejects_a_duplicated_lane(self):
+        mutated = _mutate(
+            self, self.text,
+            "        run: python3 tb/run_tb.py normreplay\n",
+            "        run: python3 tb/run_tb.py normreplay\n"
+            "      - name: duplicate\n"
+            "        timeout-minutes: 10\n"
+            "        run: python3 tb/run_tb.py normreplay\n",
+        )
+        self.assertTrue(any(
+            "is run by 2 steps" in v for v in _inventory_violations(mutated)
+        ))
+
+    def test_rejects_a_conditional_lane_job(self):
+        mutated = _mutate(
+            self, self.text,
+            "  sim-lanes-vco:\n",
+            "  sim-lanes-vco:\n    if: github.event_name == 'push'\n",
+        )
+        self.assertTrue(any(
+            "sim-lanes-vco: the job running" in v and "is conditional" in v
+            for v in _inventory_violations(mutated)
+        ))
+
+
+class TestNoFailureMasking(unittest.TestCase):
+    """No construct may read a failed/timed-out/cancelled lane as a pass."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.text = _read_workflow()
+
+    def test_workflow_has_no_masking(self):
+        self.assertEqual(_masking_violations(self.text), [])
+
+    # --- negative fixtures -------------------------------------------------
+
+    def test_rejects_continue_on_error(self):
+        mutated = _mutate(
+            self, self.text,
+            "        timeout-minutes: 90\n",
+            "        timeout-minutes: 90\n        continue-on-error: true\n",
+        )
+        self.assertTrue(any(
+            "continue-on-error" in v for v in _masking_violations(mutated)
+        ))
+
+    def test_rejects_job_level_continue_on_error(self):
+        mutated = _mutate(
+            self, self.text,
+            "    timeout-minutes: 200\n",
+            "    timeout-minutes: 200\n    continue-on-error: true\n",
+        )
+        self.assertTrue(any(
+            "continue-on-error" in v for v in _masking_violations(mutated)
+        ))
+
+    def test_rejects_a_discarded_exit_status(self):
+        for suffix in (" || true", " || :", " || exit 0"):
+            with self.subTest(suffix=suffix):
+                mutated = _mutate(
+                    self, self.text,
+                    "run: python3 tb/run_tb.py modmatrix\n",
+                    "run: python3 tb/run_tb.py modmatrix%s\n" % suffix,
+                )
+                self.assertTrue(any(
+                    "failure status is discarded" in v
+                    for v in _masking_violations(mutated)
+                ))
+
+    def test_rejects_an_aggregator_that_accepts_cancelled_producers(self):
+        mutated = self.text + (
+            "\n  lanes-summary:\n"
+            "    needs: [sim-lanes-vco, sim-lanes-engines]\n"
+            "    if: always()\n"
+            "    runs-on: ubuntu-24.04\n"
+            "    timeout-minutes: 5\n"
+            "    steps:\n"
+            "      - run: echo ok\n"
+            "        timeout-minutes: 1\n"
+        )
+        self.assertTrue(any(
+            v.startswith("lanes-summary: job-level 'if: always()'")
+            for v in _masking_violations(mutated)
+        ))
+
+    def test_rejects_a_lane_step_that_runs_regardless(self):
+        mutated = _mutate(
+            self, self.text,
+            "        timeout-minutes: 60\n"
+            "        run: python3 tb/run_tb.py modmatrix\n",
+            "        if: ${{ !cancelled() }}\n"
+            "        timeout-minutes: 60\n"
+            "        run: python3 tb/run_tb.py modmatrix\n",
+        )
+        self.assertTrue(any(
+            "runs regardless of earlier failure" in v
+            for v in _masking_violations(mutated)
+        ))
+
+    def test_artifact_upload_may_run_always(self):
+        # Pins the one allowed exception, so the guard above is not
+        # "fixed" by forbidding evidence upload after a failure.
+        self.assertIn("if: always()", self.text)
+        self.assertEqual(_masking_violations(self.text), [])
 
 
 if __name__ == "__main__":

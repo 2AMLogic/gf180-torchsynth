@@ -1033,10 +1033,20 @@ The remaining open items are **not** conformance gaps:
    `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
    toolchain, so folding either flow in requires a matching re-baseline. A
    documented follow-up, not a silent skip.
-3. `sim-lanes` itself (400-minute cap, 370-minute step sum) exceeds
-   GitHub-hosted's 360-minute job limit (tracked in #265). Pre-existing on
-   `main` and unchanged
-   here; fixing it needs a `sim-lanes` split.
+
+Resolved since this list was written: the pre-#79 `sim-lanes` job (400-minute
+cap over a 370-minute step sum, above GitHub-hosted's 360-minute job limit)
+was split by #265 into `sim-lanes-vco` (vco + vco2: 230-minute step sum under
+a 250-minute cap) and `sim-lanes-engines` (the other seven lanes: 180 under
+200). No lane command, argument, case list, walk length or per-lane timeout
+changed. Every `tb-sim.yml` job -- including this document's
+`oneshot-tail-chain` (170 under 190) and `oneshot-whole-voice` (146 under 160)
+-- now declares an explicit cap of at most 330 minutes and a budget on every
+step, setup and artifact upload included, summing to at least 10 minutes under
+that cap. `tests/test_ci_lane_wiring.py` pins those budgets, the lane
+inventory and its timeouts, and the absence of failure masking, with negative
+fixtures for each. These are declared budgets checked statically, not a
+measurement of any run.
 
 ## Honesty
 
