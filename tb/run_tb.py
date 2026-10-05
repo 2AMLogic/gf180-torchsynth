@@ -870,6 +870,11 @@ def anchor_mirror(formats: AcceptedFormats, phase_step: int, level_word: int,
 def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
                     level_word: int, sample_count: int, lut_memh: Path):
     """Compile the constants package + format-true DUT and capture streams."""
+    if lut_memh.resolve().parent != workdir.resolve():
+        raise SystemExit(
+            "anchor lut %s must be staged in the simulator workdir %s"
+            % (lut_memh, workdir)
+        )
     stim = workdir / "stimulus.txt"
     captured = workdir / "captured.txt"
     stim.write_text(
@@ -886,7 +891,9 @@ def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
             cwd=workdir,
         )
         _run(
-            ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh],
+            # Bare name + cwd=workdir: the DUT's lut_file buffer holds
+            # 128 characters, so an absolute path can truncate (#278).
+            ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh.name],
             cwd=workdir,
         )
     else:
@@ -1623,7 +1630,9 @@ def lfo_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> list
             ],
             cwd=workdir,
         )
-        _run(["vvp", "-n", str(vvp), "+lut=%s" % (workdir / "lut.memh")], cwd=workdir)
+        # Bare name + cwd=workdir: the DUT's lut_file buffer holds 128
+        # characters, so an absolute path can truncate (#278).
+        _run(["vvp", "-n", str(vvp), "+lut=lut.memh"], cwd=workdir)
     else:
         raise SystemExit(
             "simulator %r is not wired up; this runner is PDK-free and "
