@@ -117,6 +117,7 @@ CHECKS = {
             "tb/run_tb.py",
             "tb/run_voice.py",
             "tests/test_rtl_module_qualification.py",
+            "tools/bind_producer_revision.py",
             "tools/qualify_rtl_modules.py",
             "tools/run_fast_tests.py",
             "tools/verify_oneshot_evidence.py",

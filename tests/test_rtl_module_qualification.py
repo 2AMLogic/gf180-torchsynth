@@ -36,12 +36,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tools"))
 
+import bind_producer_revision as bind  # noqa: E402
 import qualify_rtl_modules as q  # noqa: E402
 from torchsynth_voice.capabilities import (  # noqa: E402
     CHECKS,
@@ -1055,6 +1057,196 @@ class VerdictAndLedgerTests(unittest.TestCase):
     def test_integrated_lint_units_run_and_are_withheld_until_baselined(self):
         diagnostics, _ = q.lint_unit(TAIL.name, ROOT)
         self.assertIsInstance(diagnostics, list)
+
+
+#: Hermetic git for the binding tests: no user/system config (hooks, signing,
+#: LFS filters), so the PR-shaped history below is cheap and reproducible.
+HERMETIC_GIT_ENV = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _git(repo: Path, *args: str, stdin: Optional[str] = None) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=repo, check=True, capture_output=True, text=True,
+        input=stdin,
+    ).stdout.strip()
+
+
+def _commit(ref: str, message: str, files: dict, parent: str,
+            merge: Optional[str] = None) -> str:
+    body = ["commit refs/heads/%s" % ref,
+            "committer t <t@example.invalid> 0 +0000",
+            "data %d" % len(message), message]
+    if parent:
+        body.append("from refs/heads/%s" % parent)
+    if merge:
+        body.append("merge refs/heads/%s" % merge)
+    for name, text in files.items():
+        body += ["M 100644 inline %s" % name, "data %d" % len(text), text]
+    return "\n".join(body) + "\n\n"
+
+
+class ProducerRevisionBindingTests(unittest.TestCase):
+    """rtl-lint-baseline.yml must bind to the revision the producers ran on.
+
+    A pull_request tb-sim run's producers check out GitHub's test merge
+    commit, so their evidence names a SHA distinct from the run's headSha.
+    The generator must accept exactly that merge (second parent == headSha)
+    and reject the bare PR head, a stale merge, and any mismatched checkout.
+    """
+
+    BASE = "a" * 40
+    HEAD = "b" * 40
+    MERGE = "c" * 40
+    STALE_HEAD = "d" * 40
+
+    def write_evidence(self, folder: Path, heads: dict) -> None:
+        for name, head in heads.items():
+            lane = q.INTEGRATED_LANES[name]
+            target = folder / lane.name / lane.evidence_name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps({"identity": {"git_head": head}}),
+                              encoding="utf-8")
+
+    def both(self, head: str) -> dict:
+        return {name: head for name in q.INTEGRATED_LANES}
+
+    # ---- pure binding rules ---------------------------------------------
+    def test_pr_merge_revision_whose_second_parent_is_head_is_accepted(self):
+        self.assertEqual(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE, self.HEAD]), [])
+
+    def test_pr_head_itself_is_rejected_for_a_pull_request_run(self):
+        errors = bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE])
+        self.assertTrue(errors)
+        self.assertIn("test merge commit", errors[0])
+
+    def test_stale_pr_merge_is_rejected(self):
+        errors = bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE, self.STALE_HEAD])
+        self.assertTrue(errors)
+        self.assertIn("stale", errors[0])
+
+    def test_merge_with_head_as_first_parent_is_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.HEAD, self.BASE]))
+
+    def test_non_merge_pr_revision_is_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.HEAD]))
+
+    def test_push_run_requires_exact_head(self):
+        self.assertEqual(bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="push",
+            parents=[self.BASE]), [])
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="push",
+            parents=[self.BASE, self.HEAD]))
+
+    def test_unsupported_event_and_malformed_shas_are_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="workflow_dispatch",
+            parents=[self.BASE]))
+        self.assertTrue(bind.binding_errors(
+            "abc", run_head_sha=self.HEAD, run_event="push", parents=[]))
+        self.assertTrue(bind.binding_errors(
+            self.HEAD, run_head_sha="", run_event="push", parents=[]))
+
+    def test_checkout_must_be_the_recorded_revision_and_clean(self):
+        self.assertEqual(bind.checkout_errors(self.MERGE, self.MERGE, ""), [])
+        self.assertTrue(bind.checkout_errors(self.MERGE, self.HEAD, ""))
+        self.assertTrue(bind.checkout_errors(self.MERGE, None, ""))
+        self.assertTrue(
+            bind.checkout_errors(self.MERGE, self.MERGE, " M tb/x.sv\n"))
+
+    # ---- reading the recorded revision ----------------------------------
+    def test_recorded_revision_requires_all_lanes_to_agree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            self.write_evidence(folder, self.both(self.MERGE))
+            self.assertEqual(bind.recorded_revision(folder), (self.MERGE, []))
+            names = list(q.INTEGRATED_LANES)
+            self.write_evidence(folder, {names[0]: self.HEAD})
+            revision, errors = bind.recorded_revision(folder)
+            self.assertIsNone(revision)
+            self.assertIn("different revisions", errors[0])
+
+    def test_recorded_revision_rejects_absent_and_malformed_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            revision, errors = bind.recorded_revision(folder)
+            self.assertIsNone(revision)
+            self.assertEqual(len(errors), len(q.INTEGRATED_LANES))
+            self.write_evidence(folder, self.both("not-a-sha"))
+            self.assertIsNone(bind.recorded_revision(folder)[0])
+            lane = next(iter(q.INTEGRATED_LANES.values()))
+            (folder / lane.name / lane.evidence_name).write_text("{", "utf-8")
+            self.assertIsNone(bind.recorded_revision(folder)[0])
+
+    # ---- end to end against a real PR-shaped history --------------------
+    @unittest.skipUnless(shutil.which("git"), "git is not installed here")
+    def test_verify_against_real_pr_head_and_merge_commits(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.dict("os.environ", HERMETIC_GIT_ENV):
+            repo, artifacts = Path(tmp) / "repo", Path(tmp) / "artifacts"
+            repo.mkdir()
+            # PR-shaped history in ONE fast-import: base; an old PR head and
+            # its (now stale) test merge; the new PR head and the test merge
+            # the producers check out (parents [base, head]).
+            stream = (
+                _commit("base", "base", {"f.txt": "base\n"}, "")
+                + _commit("oldhead", "old head", {"g.txt": "old\n"}, "base")
+                + _commit("stalemerge", "old merge", {"g.txt": "old\n"},
+                          "base", "oldhead")
+                + _commit("head", "new head", {"g.txt": "new\n"}, "oldhead")
+                + _commit("merge", "test merge", {"g.txt": "new\n"},
+                          "base", "head")
+            )
+            _git(repo, "init", "-q")
+            _git(repo, "fast-import", "--quiet", stdin=stream)
+            stale_merge, head, merge = _git(
+                repo, "rev-parse", "stalemerge", "head", "merge").split()
+            self.assertNotEqual(head, merge)
+
+            def verify(recorded, checkout, event="pull_request"):
+                self.write_evidence(artifacts, self.both(recorded))
+                _git(repo, "checkout", "-q", "--detach", checkout)
+                return bind.verify_checkout(
+                    artifacts, repo, run_head_sha=head, run_event=event)
+
+            # The live defect: evidence names the merge, run headSha the head.
+            self.assertEqual(verify(merge, merge), (merge, []))
+            # Checking out the dispatched PR branch instead fails closed.
+            self.assertTrue(verify(merge, head)[1])
+            # A stale merge (of an older PR head) is rejected, even when
+            # checked out consistently. (The bare-head, push-event and
+            # non-merge cases are the pure binding_errors tests above.)
+            errors = verify(stale_merge, stale_merge)[1]
+            self.assertTrue(any("stale" in e for e in errors), errors)
+            # A dirty tree fails closed.
+            _git(repo, "checkout", "-q", "--detach", merge)
+            (repo / "f.txt").write_text("edited\n", encoding="utf-8")
+            self.write_evidence(artifacts, self.both(merge))
+            _, errors = bind.verify_checkout(
+                artifacts, repo, run_head_sha=head, run_event="pull_request")
+            self.assertTrue(any("not clean" in e for e in errors), errors)
+
+    def test_cli_recorded_prints_the_single_revision(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.write_evidence(Path(tmp), self.both(self.MERGE))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                code = bind.main(["recorded", "--artifacts", tmp])
+            self.assertEqual(code, 0)
+            self.assertEqual(out.getvalue().strip(), self.MERGE)
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    bind.main(["recorded", "--artifacts",
+                               str(Path(tmp) / "missing")]), 1)
 
 
 if __name__ == "__main__":

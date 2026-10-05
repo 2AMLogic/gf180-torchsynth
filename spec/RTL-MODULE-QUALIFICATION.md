@@ -128,6 +128,25 @@ of lanes that did not run. The sanctioned generator is the manual
 Verilator 5.020), which uploads the regenerated ledger for a reviewer to check
 every added waiver reason and count; the enforcement job never regenerates.
 
+**Generator revision binding.** The generator runs on the revision the
+producers actually ran on, not on its dispatched ref. A `pull_request` tb-sim
+run's jobs (producers and aggregate alike, all default `actions/checkout`)
+check out GitHub's test merge commit, so their evidence records that merge
+SHA, not the run's `headSha`; a `push` run records `headSha` itself. Given a
+tb-sim `run_id`, the generator requires the run to be `TB sim` with both
+producer jobs `success`, downloads their artifacts outside the work tree, reads
+the single revision every evidence record names
+(`tools/bind_producer_revision.py recorded`; absent, malformed or disagreeing
+records fail), fetches and checks out exactly that commit, and then
+(`... verify`) requires `git rev-parse HEAD` to equal it, the tree to be clean,
+and the revision to belong to the run: equal to `headSha` for `push`, a
+two-parent merge whose second parent is `headSha` for `pull_request` (the bare
+PR head, a stale merge of an older head, or any other event fail).
+`--update-baseline` then re-applies the usual evidence checks (clean record,
+HEAD match, source digests current) against that tree. The uploaded ledger
+therefore describes the merge revision's sources; the reviewer commits it to
+the PR branch, and the next tb-sim run re-gates it.
+
 ## Diagnostic gate
 
 `tb/run_tb.py` passes no warning flags and `_run()` only checks a subprocess's
