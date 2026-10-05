@@ -1059,6 +1059,123 @@ class VerdictAndLedgerTests(unittest.TestCase):
         self.assertIsInstance(diagnostics, list)
 
 
+CI_VERSIONS = {
+    "iverilog": "Icarus Verilog version 12.0 (stable) ()",
+    "verilator": "Verilator 5.020 2024-01-01 rev (Debian 5.020-1)",
+}
+
+
+class CandidateBaselineTests(unittest.TestCase):
+    """Issue #264: a CI job can emit a reviewable CI-toolchain candidate
+    ledger (``--baseline-output``) without ever touching the committed one,
+    and the ledger's provenance names the exact Actions run behind it."""
+
+    def test_baseline_output_needs_update_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code = q.main(["--lint", "--baseline-output",
+                           str(Path(tmp) / "candidate.json")])
+        self.assertEqual(code, 2)
+        self.assertIn("--baseline-output only applies", out.getvalue())
+
+    def test_candidate_is_written_elsewhere_and_committed_ledger_untouched(self):
+        before = BASELINE.read_bytes()
+        committed = json.loads(before)
+        environ = {
+            "GITHUB_ACTIONS": "true", "GITHUB_RUN_ID": "123456",
+            "GITHUB_RUN_ATTEMPT": "1", "GITHUB_WORKFLOW": "TB sim",
+            "GITHUB_JOB": "rtl-module-qualification",
+            "GITHUB_EVENT_NAME": "pull_request", "GITHUB_SHA": "e" * 40,
+            "ImageOS": "ubuntu24", "ImageVersion": "20261001.1",
+        }
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(q, "tool_versions", return_value=CI_VERSIONS), \
+                mock.patch.object(q, "linters_available",
+                                  return_value=("verilator", "iverilog")), \
+                mock.patch.object(q, "lint_unit", return_value=([], [])), \
+                mock.patch.dict(q.os.environ, environ), \
+                contextlib.redirect_stdout(io.StringIO()):
+            target = Path(tmp) / "nested" / "candidate.json"
+            code = q.main(["--lint", "--update-baseline",
+                           "--baseline-output", str(target)])
+            candidate = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(code, 0)
+        self.assertEqual(BASELINE.read_bytes(), before,
+                         "the committed ledger must be byte-identical")
+        provenance = candidate["provenance"]
+        self.assertEqual(provenance["toolchain"], CI_VERSIONS)
+        self.assertIn("--baseline-output", provenance["command"])
+        self.assertEqual(provenance["ci_run"]["run_id"], "123456")
+        self.assertEqual(provenance["ci_run"]["runner_image_version"],
+                         "20261001.1")
+        # a lint-only regeneration keeps every runtime waiver verbatim
+        for key, waiver in committed["waivers"].items():
+            if waiver["tier"] == "runtime":
+                self.assertEqual(candidate["waivers"][key], waiver)
+        for name in q.INTEGRATED_NAMES:
+            entry = candidate[q.INTEGRATED_BASELINE_KEY][name]
+            self.assertTrue(entry["lint_baselined"])
+            self.assertEqual(entry["lint_units"],
+                             list(q.INTEGRATED_LINT_UNITS[name]))
+
+    def test_ci_run_provenance_is_empty_off_actions(self):
+        self.assertEqual(q.ci_run_provenance({"GITHUB_RUN_ID": "1"}), {})
+        self.assertEqual(
+            q.ci_run_provenance({"GITHUB_ACTIONS": "true",
+                                 "GITHUB_RUN_ID": "9", "GITHUB_SHA": ""}),
+            {"run_id": "9"})
+
+    def test_every_code_seen_in_the_integrated_units_has_a_reason(self):
+        # the codes CI's toolchain reported for the integrated lanes' units
+        # (tb-sim run 37350900654, before they were baselined)
+        for code in ("WIDTHEXPAND", "WIDTHTRUNC", "BLKSEQ", "SYNCASYNCNET",
+                     "SIM-WARNING"):
+            with self.subTest(code=code):
+                self.assertIn(code, q.WAIVER_REASONS)
+                self.assertGreater(len(q.WAIVER_REASONS[code]), 30)
+
+    @unittest.skipUnless(has_verilator(), "verilator is not installed here")
+    @unittest.skipUnless(SV_TREE.is_dir(), "tb/sv is not present in this tree")
+    def test_planted_fault_in_an_integrated_unit_fails_the_ratchet(self):
+        """A diagnostic the ledger does not waive fails the comparison.
+
+        Planted in ``one_shot_voice_top.sv``, a source only the whole-voice
+        integrated unit lints, so this exercises that unit's own path
+        through the gate rather than a module lane's.
+        """
+        baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(SV_TREE, root / "tb" / "sv")
+            top = root / "tb" / "sv" / "one_shot_voice_top.sv"
+            source = top.read_text(encoding="utf-8")
+            fault = "    wire [3:0] planted_width_fault = 32'd4294967295;\n"
+            head, sep, tail = source.rpartition("endmodule")
+            self.assertEqual(sep, "endmodule")
+            top.write_text(head + fault + sep + tail, encoding="utf-8")
+
+            clean, _ = q.lint_unit(VOICE.name, ROOT)
+            mutated, _ = q.lint_unit(VOICE.name, root)
+        key = "verilator|tb/sv/one_shot_voice_top.sv|WIDTHTRUNC"
+        self.assertGreater(
+            q.tally(mutated).get(key, {"count": 0})["count"],
+            q.tally(clean).get(key, {"count": 0})["count"],
+            "the planted fault produced no new WIDTHTRUNC; fix the mutation",
+        )
+        failures, _ = q.gate_diagnostics(
+            q.tally(mutated), baseline, tiers=("lint",))
+        self.assertTrue(
+            any(key in text for text in failures),
+            "a planted unwaived diagnostic in an integrated unit must fail "
+            "the ratchet: %r" % failures,
+        )
+        if (q.integrated_baselined(baseline, VOICE.name).get("lint_baselined")
+                and not q.toolchain_matches_ci(q.tool_versions())):
+            # on the ledger's own toolchain the unplanted unit must pass
+            self.assertEqual(q.gate_diagnostics(
+                q.tally(clean), baseline, tiers=("lint",))[0], [])
+
+
 #: Hermetic git for the binding tests: no user/system config (hooks, signing,
 #: LFS filters), so the PR-shaped history below is cheap and reproducible.
 HERMETIC_GIT_ENV = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
