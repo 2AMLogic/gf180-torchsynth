@@ -902,7 +902,9 @@ PR #253 fixed this exact defect class in `tb/run_voice.py`'s `voice_simulate`
 backport it to `tb/run_oneshot.py`, because the tail-chain's own CI job
 (`tb-sim.yml`'s `oneshot-tail-chain`) calls `run_oneshot.py` with no
 `--workdir` at all -- it uses a `tempfile.TemporaryDirectory`, whose path is
-always absolute, so the defect never fired there. It fires on exactly the
+always absolute, so the defect never fired there (since #264 that job passes
+the relative `--workdir out/tail-chain`, so CI now exercises the fixed path on
+every run). It fires on exactly the
 invocation this spec itself documents as the release-era command
 (`--workdir <dir>`) whenever `<dir>` is relative: every simulator invocation
 runs with `cwd=workdir` (the bench opens its files by bare name), so
@@ -1027,12 +1029,21 @@ The remaining open items are **not** conformance gaps:
    host-replayed `exp2` shadow word. Exporting that sum (and comparing it) is
    an RTL change to a qualified module, so it is a follow-up rather than part
    of this verification increment.
-2. Neither lane is folded into the #78 aggregate gate
-   (`tools/qualify_rtl_modules.py`, tracked in #264): that gate's lane list is
-   derived from
-   `tb/run_tb.py`'s choices and its lint ledger is calibrated to CI's
-   toolchain, so folding either flow in requires a matching re-baseline. A
-   documented follow-up, not a silent skip.
+2. **The #78 aggregate gate's integrated-lane lint baseline** (tracked in
+   #264). The aggregate gate (`tools/qualify_rtl_modules.py`) now inventories,
+   dispatches and validates both lanes -- harness, profile, executed/artifact
+   status, exit result, coverage and mutation counts, lint units -- and its
+   `rtl-module-qualification` CI job consumes the existing producer jobs'
+   artifacts bound to the same revision (`spec/RTL-MODULE-QUALIFICATION.md`,
+   "Integrated one-shot lanes"). What remains is the **lint/runtime baseline
+   for those lanes' units, which must be generated on CI's toolchain (Icarus
+   12.0 / Verilator 5.020)** via the manual
+   `.github/workflows/rtl-lint-baseline.yml`, reviewed and committed. It has
+   not been generated, so the gate reports those lanes' diagnostics without
+   enforcing them and withholds its whole-node verdict (`NO VERDICT`) rather
+   than passing. This item is removed only once that baseline and a same-PR
+   CI run of the producer jobs plus the aggregate job are committed as
+   evidence.
 
 Resolved since this list was written: the pre-#79 `sim-lanes` job (400-minute
 cap over a 370-minute step sum, above GitHub-hosted's 360-minute job limit)
@@ -1040,13 +1051,19 @@ was split by #265 into `sim-lanes-vco` (vco + vco2: 230-minute step sum under
 a 250-minute cap) and `sim-lanes-engines` (the other seven lanes: 180 under
 200). No lane command, argument, case list, walk length or per-lane timeout
 changed. Every `tb-sim.yml` job -- including this document's
-`oneshot-tail-chain` (170 under 190) and `oneshot-whole-voice` (146 under 160)
--- now declares an explicit cap of at most 330 minutes and a budget on every
-step, setup and artifact upload included, summing to at least 10 minutes under
-that cap. `tests/test_ci_lane_wiring.py` pins those budgets, the lane
-inventory and its timeouts, and the absence of failure masking, with negative
-fixtures for each. These are declared budgets checked statically, not a
-measurement of any run.
+`oneshot-tail-chain` and `oneshot-whole-voice` (146 under 160) -- now declares
+an explicit cap of at most 330 minutes and a budget on every step, setup and
+artifact upload included, summing to at least 10 minutes under that cap.
+`tests/test_ci_lane_wiring.py` pins those budgets, the lane inventory and its
+timeouts, and the absence of failure masking, with negative fixtures for each.
+These are declared budgets checked statically, not a measurement of any run.
+Since #264, `oneshot-tail-chain` also writes its evidence record and transcript
+to `out/tail-chain` and uploads them (176 under 190, lane timeout unchanged at
+150), and `rtl-module-qualification` downloads both producers' artifacts
+(66 under 80). Its job-level `if: always()` is the one the masking guard
+admits, and only because each producer's `needs.<job>.result` is forwarded to
+the gate as a `--producer-result` that fails closed on anything but
+`success`.
 
 ## Honesty
 

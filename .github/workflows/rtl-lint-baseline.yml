@@ -1,0 +1,62 @@
+name: RTL lint baseline (manual, CI toolchain)
+
+# Issue #264: tb/rtl-lint-baseline.json is calibrated to THIS toolchain
+# (apt iverilog 12.0 / verilator 5.020 on ubuntu-24.04), not to any developer
+# machine. This manual job is the only sanctioned way to (re)generate the
+# integrated one-shot lanes' lint/runtime waivers: it runs
+# `--update-baseline` on that toolchain against a completed tb-sim run's
+# artifacts for the SAME revision, and uploads the regenerated ledger for a
+# human to review (every added waiver reason and count) and commit. It never
+# commits, and the enforcement job in tb-sim.yml never regenerates anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "tb-sim.yml run id (same head SHA as this ref) whose oneshot-* artifacts to baseline"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog + Verilator (the ledger's toolchain)
+        run: sudo apt-get update && sudo apt-get install -y iverilog verilator
+      - name: Record the toolchain
+        run: |
+          iverilog -V | head -1
+          verilator --version
+      - name: Download the producer artifacts (and require their jobs to have succeeded)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$RUN_ID" --json headSha --jq .headSha)" = "$(git rev-parse HEAD)"
+          for lane in oneshot-tail-chain oneshot-whole-voice; do
+            gh run download "$RUN_ID" -n "$lane-evidence" -D "out/integrated-artifacts/$lane"
+            conclusion="$(gh run view "$RUN_ID" --json jobs --jq ".jobs[] | select(.name==\"$lane\") | .conclusion")"
+            test "$conclusion" = "success"
+          done
+      - name: Regenerate the baseline (lint tier + integrated lanes)
+        run: |
+          python3 tools/qualify_rtl_modules.py --lint --update-baseline \
+            --integrated all --integrated-profile regression \
+            --integrated-artifacts out/integrated-artifacts \
+            --producer-result oneshot-tail-chain=success \
+            --producer-result oneshot-whole-voice=success
+      - name: Upload the regenerated ledger for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-lint-baseline-regenerated
+          path: tb/rtl-lint-baseline.json
+          retention-days: 30
