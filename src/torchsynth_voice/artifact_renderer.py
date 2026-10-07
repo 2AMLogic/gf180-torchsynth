@@ -10,6 +10,7 @@ import copy
 import json
 import math
 import platform
+import re
 import stat
 import struct
 import subprocess
@@ -49,6 +50,153 @@ THREAD_ENV = {
 def require(condition, message):
     if not condition:
         raise ValidationError(message)
+
+
+# Portable attempt receipts (spec/CORPUS-RUNNER.md "Portable attempt receipts").
+PORTABLE_COMMAND_REPRESENTATION = "portable-placeholders-v1"
+PROJECT_ROOT_PLACEHOLDER = "<project-root>"
+WORKER_OUTPUT_PLACEHOLDER = "<worker-output>"
+MOUNT_PLACEHOLDERS = (PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER)
+#: Declared container roots, scoped by receipt key path (list indices ignored).
+CONTAINER_PATH_ROOTS = {
+    ("command",): ("/repo", "/output", "/opt/torchsynth"),
+    ("runtime", "torch_build"): ("/opt/rh/devtoolset-9",),
+}
+FAILURE_RECEIPT_FIELDS = frozenset(
+    {"error_type", "message", "message_sha256", "message_status"}
+)
+_TOKEN_START = r"(?:^|(?<=[\s=,:;\"'()\[\]{}<>|]))"
+_TOKEN_BODY = r"[^\s,;\"'()\[\]{}<>|]*"
+_POSIX_PATH = re.compile(_TOKEN_START + "/" + _TOKEN_BODY)
+_FOREIGN_PATHS = (
+    ("home-relative", re.compile(_TOKEN_START + r"~[/\\]" + _TOKEN_BODY)),
+    ("windows-drive", re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]" + _TOKEN_BODY)),
+    ("windows-rooted-or-unc", re.compile(_TOKEN_START + r"\\" + _TOKEN_BODY)),
+)
+_MOUNT_SOURCE = re.compile(r"(?:^|,)(?:src|source)=([^,]*)")
+
+
+class ReceiptPortabilityError(ValidationError):
+    """A receipt would publish a host path; never written to a finish record."""
+
+
+def _pointer(path):
+    """Location text that can never itself contain a path token or raw key."""
+    text = "receipt"
+    for part in path:
+        if type(part) is int:
+            text += f"[{part}]"
+        else:
+            safe = re.fullmatch(r"[A-Za-z0-9_<>-]+", part)
+            text += "." + (part if safe else "<key>")
+    return text
+
+
+def _string_findings(text, path):
+    keys = tuple(p for p in path if type(p) is str)
+    roots = CONTAINER_PATH_ROOTS.get(keys, ())
+    findings = []
+    for match in _POSIX_PATH.finditer(text):
+        token = match.group(0)
+        allowed = ".." not in token.split("/") and any(
+            token == root or token.startswith(root + "/") for root in roots
+        )
+        if not allowed:
+            findings.append((_pointer(path), "posix-absolute"))
+    for kind, pattern in _FOREIGN_PATHS:
+        if pattern.search(text):
+            findings.append((_pointer(path), kind))
+    return findings
+
+
+def host_path_findings(value, path=()):
+    """Return (location, kind) for every host-path token in a receipt.
+
+    Keys and string values are scanned at every depth; only the declared
+    field-scoped container roots are exempt. Locations never echo the
+    offending text or any key outside ``[A-Za-z0-9_<>-]``.
+    """
+    findings = []
+    if type(value) is dict:
+        for key, child in value.items():
+            findings.extend(_string_findings(str(key), path + ("<key>",)))
+            findings.extend(host_path_findings(child, path + (key,)))
+    elif type(value) in (list, tuple):
+        for index, child in enumerate(value):
+            findings.extend(host_path_findings(child, path + (index,)))
+    elif type(value) is str:
+        findings.extend(_string_findings(value, path))
+    return findings
+
+
+def require_portable_receipt(receipt):
+    """Fail closed unless a receipt satisfies the declared portable representation."""
+    if type(receipt) is not dict:
+        raise ReceiptPortabilityError("attempt receipt must be an object")
+    findings = host_path_findings(receipt)
+    if findings:
+        raise ReceiptPortabilityError(
+            "attempt receipt carries host paths at "
+            + ", ".join(f"{p} ({k})" for p, k in findings)
+        )
+    if "command" not in receipt:
+        return
+    command = receipt["command"]
+    if receipt.get("command_representation") != PORTABLE_COMMAND_REPRESENTATION:
+        raise ReceiptPortabilityError(
+            "receipt command lacks the portable command representation marker"
+        )
+    if type(command) is not list or not all(type(a) is str for a in command):
+        raise ReceiptPortabilityError("receipt command must be a list of strings")
+    for index, argument in enumerate(command):
+        sources = [m.group(1) for m in _MOUNT_SOURCE.finditer(argument)]
+        if argument.startswith(("--volume=", "-v=")):
+            sources.append(argument.split("=", 1)[1].split(":", 1)[0])
+        elif index and command[index - 1] in ("-v", "--volume"):
+            sources.append(argument.split(":", 1)[0])
+        if any(source not in MOUNT_PLACEHOLDERS for source in sources):
+            raise ReceiptPortabilityError(
+                f"receipt command mount source at receipt.command[{index}] is not a "
+                "declared placeholder"
+            )
+
+
+def failure_receipt(error):
+    """Portable diagnostic for a failed attempt: never raw path-bearing text."""
+    message = str(error)
+    portable = not host_path_findings(message)
+    return dict(
+        error_type=re.sub(r"[^A-Za-z0-9._-]", "-", type(error).__name__),
+        message=message if portable else None,
+        message_sha256=digest(message.encode("utf-8", "surrogatepass")),
+        message_status="portable" if portable else "withheld-host-path",
+    )
+
+
+def validate_failure_receipt(receipt):
+    require(
+        type(receipt) is dict and set(receipt) == FAILURE_RECEIPT_FIELDS,
+        "failed attempt receipt is not the portable diagnostic form",
+    )
+    require(
+        type(receipt["error_type"]) is str
+        and re.fullmatch(r"[A-Za-z0-9._-]+", receipt["error_type"])
+        and type(receipt["message_sha256"]) is str
+        and re.fullmatch(r"[a-f0-9]{64}", receipt["message_sha256"]),
+        "failed attempt diagnostic fields malformed",
+    )
+    status, message = receipt["message_status"], receipt["message"]
+    require(
+        (status == "portable" and type(message) is str)
+        or (status == "withheld-host-path" and message is None),
+        "failed attempt diagnostic message/status contradiction",
+    )
+    if message is not None:
+        require(
+            digest(message.encode("utf-8", "surrogatepass"))
+            == receipt["message_sha256"],
+            "failed attempt diagnostic digest mismatch",
+        )
 
 
 def release_profile_environment():
@@ -421,6 +569,8 @@ def render_artifact(request, store: ArtifactStore, backend, *, capture_provider=
     )
     record["warnings"] = sorted(set(observed["receipt"].get("warning_categories", [])))
     validate_binding(record, request)
+    # A path-bearing receipt is refused before anything is published.
+    require_portable_receipt(observed["receipt"])
     with tempfile.TemporaryDirectory(dir=store.root / ".staging") as temporary:
         stage = Path(temporary)
         for name, data in payloads.items():
@@ -499,43 +649,53 @@ class DockerBackend:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary).resolve()
             (directory / "request.json").write_bytes(json_bytes(request))
-            command = [
-                "docker",
-                "run",
-                "--rm",
-                "--pull",
-                "never",
-                "--platform",
-                "linux/amd64",
-                "--network",
-                "none",
-                "--memory",
-                "6g",
-                "--cpus",
-                "1",
-                *[
-                    part
-                    for k, v in THREAD_ENV.items()
-                    for part in ("--env", k + "=" + v)
-                ],
-                *dispatch_flags(profile),
-                "--mount",
-                "type=bind,src=" + str(self.project_root) + ",dst=/repo,readonly",
-                "--mount",
-                "type=bind,src=" + str(directory) + ",dst=/output",
-                "--entrypoint",
-                "env",
-                image,
-                *dispatch_unset_flags(profile),
-                "python",
-                "/repo/env/release-era/render_artifact.py",
-                "--request",
-                "/output/request.json",
-                "--output",
-                "/output",
-                "--source-root",
-                "/opt/torchsynth",
-            ]
+
+            def launch(project_source, output_source):
+                # One construction serves the executed argv (real sources) and
+                # the published receipt (named placeholders), so they cannot
+                # drift in image, environment, options or argument order.
+                return [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--pull",
+                    "never",
+                    "--platform",
+                    "linux/amd64",
+                    "--network",
+                    "none",
+                    "--memory",
+                    "6g",
+                    "--cpus",
+                    "1",
+                    *[
+                        part
+                        for k, v in THREAD_ENV.items()
+                        for part in ("--env", k + "=" + v)
+                    ],
+                    *dispatch_flags(profile),
+                    "--mount",
+                    "type=bind,src=" + project_source + ",dst=/repo,readonly",
+                    "--mount",
+                    "type=bind,src=" + output_source + ",dst=/output",
+                    "--entrypoint",
+                    "env",
+                    image,
+                    *dispatch_unset_flags(profile),
+                    "python",
+                    "/repo/env/release-era/render_artifact.py",
+                    "--request",
+                    "/output/request.json",
+                    "--output",
+                    "/output",
+                    "--source-root",
+                    "/opt/torchsynth",
+                ]
+
+            command = launch(str(self.project_root), str(directory))
+            portable_command = launch(
+                PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER
+            )
             result = subprocess.run(
                 command, capture_output=True, timeout=600, check=False
             )
@@ -567,7 +727,8 @@ class DockerBackend:
                 runtime_profile=PROFILE,
                 host=host,
                 image=image,
-                command=command,
+                command=portable_command,
+                command_representation=PORTABLE_COMMAND_REPRESENTATION,
                 exit_code=result.returncode,
                 stdout_sha256=digest(result.stdout),
                 stderr_sha256=digest(result.stderr),

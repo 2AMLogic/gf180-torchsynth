@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice.artifact_renderer import digest, json_bytes  # noqa: E402
-from torchsynth_voice.corpus import verify_run  # noqa: E402
+from torchsynth_voice.corpus import HISTORICAL_RECEIPTS, verify_run  # noqa: E402
 from torchsynth_voice.artifacts import (  # noqa: E402
     ValidationError,
     loads,
@@ -88,8 +88,16 @@ def _recounted(index, expected):
     return observed
 
 
-def audit_receipt(receipt, *, store=None, expected=None):
-    """Audit the receipt document; with store, additionally verify raw bytes."""
+def audit_receipt(
+    receipt, *, store=None, expected=None, receipt_policy=HISTORICAL_RECEIPTS
+):
+    """Audit the receipt document; with store, additionally verify raw bytes.
+
+    The subject is the retained #19/#20 evidence, produced before the #289
+    portable-receipt policy, so store verification defaults to the explicit
+    ``historical-v1`` receipt policy: every other check runs, and receipt
+    portability is neither checked nor claimed (spec/CORPUS-RUNNER.md).
+    """
     expected = DEVELOPMENT if expected is None else list(expected)
     require(
         type(receipt) is dict
@@ -158,7 +166,10 @@ def audit_receipt(receipt, *, store=None, expected=None):
             "store index bytes differ from the receipt-embedded index",
         )
         envelope = verify_run(
-            store, run["run_id"], expected_sha256=run["envelope_sha256"]
+            store,
+            run["run_id"],
+            expected_sha256=run["envelope_sha256"],
+            receipt_policy=receipt_policy,
         )
         require(
             envelope["counts"]["expected"] == len(expected),
@@ -213,6 +224,7 @@ def main():
                 store=None if args.store is None else str(args.store),
                 expected=len(DEVELOPMENT),
                 observed_complete=observed,
+                run_receipt_policy=None if args.store is None else HISTORICAL_RECEIPTS,
                 result="PASS" if observed == len(DEVELOPMENT) else "INCOMPLETE",
             ),
             indent=2,

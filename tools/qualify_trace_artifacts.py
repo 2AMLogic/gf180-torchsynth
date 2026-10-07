@@ -31,8 +31,11 @@ from torchsynth_voice import trace_artifacts as ta  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
     DockerBackend,
+    PORTABLE_COMMAND_REPRESENTATION,
     PROFILE,
+    PROJECT_ROOT_PLACEHOLDER,
     THREAD_ENV,
+    WORKER_OUTPUT_PLACEHOLDER,
     digest,
     dispatch_flags,
     dispatch_unset_flags,
@@ -303,37 +306,47 @@ class TracedDockerBackend:
             directory = Path(temporary).resolve()
             (directory / "request.json").write_bytes(json_bytes(request))
             (directory / "driver.py").write_text(self.driver_source)
-            command = [
-                "docker",
-                "run",
-                "--rm",
-                "--pull",
-                "never",
-                "--platform",
-                "linux/amd64",
-                "--network",
-                "none",
-                "--memory",
-                "6g",
-                "--cpus",
-                "1",
-                *[
-                    part
-                    for k, v in THREAD_ENV.items()
-                    for part in ("--env", k + "=" + v)
-                ],
-                *dispatch_flags(profile),
-                "--mount",
-                "type=bind,src=" + str(self.project_root) + ",dst=/repo,readonly",
-                "--mount",
-                "type=bind,src=" + str(directory) + ",dst=/output",
-                "--entrypoint",
-                "env",
-                image,
-                *dispatch_unset_flags(profile),
-                "python",
-                "/output/driver.py",
-            ]
+
+            def launch(project_source, output_source):
+                # Shared by the executed argv (real mount sources) and the
+                # published receipt (named placeholders); see
+                # spec/CORPUS-RUNNER.md "Portable attempt receipts".
+                return [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--pull",
+                    "never",
+                    "--platform",
+                    "linux/amd64",
+                    "--network",
+                    "none",
+                    "--memory",
+                    "6g",
+                    "--cpus",
+                    "1",
+                    *[
+                        part
+                        for k, v in THREAD_ENV.items()
+                        for part in ("--env", k + "=" + v)
+                    ],
+                    *dispatch_flags(profile),
+                    "--mount",
+                    "type=bind,src=" + project_source + ",dst=/repo,readonly",
+                    "--mount",
+                    "type=bind,src=" + output_source + ",dst=/output",
+                    "--entrypoint",
+                    "env",
+                    image,
+                    *dispatch_unset_flags(profile),
+                    "python",
+                    "/output/driver.py",
+                ]
+
+            command = launch(str(self.project_root), str(directory))
+            portable_command = launch(
+                PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER
+            )
             launched = time.monotonic()
             result = subprocess.run(
                 command, capture_output=True, timeout=900, check=False
@@ -383,7 +396,8 @@ class TracedDockerBackend:
                 runtime_profile=PROFILE,
                 host=host,
                 image=image,
-                command=command,
+                command=portable_command,
+                command_representation=PORTABLE_COMMAND_REPRESENTATION,
                 exit_code=result.returncode,
                 stdout_sha256=digest(result.stdout),
                 stderr_sha256=digest(result.stderr),
