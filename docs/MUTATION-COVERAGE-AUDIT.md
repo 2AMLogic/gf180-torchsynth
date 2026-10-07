@@ -131,6 +131,52 @@ strongest evidence class; for every row below, R evidence is absent.
 - Holdout: all fixtures are development-only; the matrix `not_run` lists
   holdout, #44 and #48 consumption, and numeric-format ratification.
 
+## Re-verification at `6d1bdffa678958bc80228e0dc0bebb913feba9fa` (2026-10-07)
+
+Re-run on the current `main` tip in `.loom/worktrees/issue-9` (macOS Darwin,
+dev host; not the AWS box, not the pinned release image) with the locked
+interpreter (`uv sync --locked --extra metrics --python 3.13`, Python 3.13.16,
+NumPy 2.5.3, `OMP/OPENBLAS/MKL/VECLIB` threads = 1). Mutation surfaces
+(`src/torchsynth_voice/mutat*`, `tools/qualify_mutations*`,
+`tests/test_mutations*`, `sim/reference/mutation-*`, the workflow) are
+unchanged since the commit above except `spec/MUTATIONS.md` (see finding).
+No publication was regenerated.
+
+| Check | Exit | Retained output (summary only; full logs not committed) |
+|---|---|---|
+| unittest `test_mutations.py` | 0 | Ran 75 tests, OK |
+| unittest `test_mutations_matrix.py` | 0 | Ran 13 tests, OK |
+| unittest `test_mutations_identity.py` | 0 | Ran 21 tests, OK |
+| unittest `test_mutations_timing.py` | 0 | Ran 36 tests, OK |
+| unittest `test_mutations_signal.py` | 0 | Ran 34 tests, OK |
+| `tools/qualify_mutations.py --check` | 0 | PASS, faults 7 |
+| `tools/qualify_mutations_identity.py --check` | 0 | PASS |
+| `tools/qualify_mutations_timing.py --check` | 0 | PASS |
+| `tools/qualify_mutations_signal.py --check` | 0 | PASS, operators 14, faults 17, tripped 17 |
+| `tools/qualify_mutations_runtime.py --check-publication` | 0 | PASS, cases 6, faults 5, attempts 8 (class P only) |
+| `tools/qualify_mutations_matrix.py --check` | **1** | `FAIL: committed publication is stale or drifted: inputs` |
+
+**Finding (new, F6): the committed matrix publication is drifted on `main`.**
+The matrix publication binds the SHA-256 of `spec/MUTATIONS.md` in its
+`inputs`. The commit that added the audit and the "Evidence audit" section
+(`37563ea`) changed that file after the matrix was last generated, so
+`--check` now fails; a direct comparison of every comparable field shows the
+`inputs` digest of `spec/MUTATIONS.md` is the only differing entry (committed
+`e98682b2...`, current `06f32a96...`). The earlier PASS row for the matrix
+above is true at `1386c4d`, before that edit. Nothing in CI catches this
+today: the `matrix-numerical` job regenerates the publication before `--check`
+(#257, open), so the drift is silently rewritten in the runner. This is
+exactly the defect class #257 describes, and it is now observed rather than
+hypothetical. Fixing it requires regenerating the matrix publication (or
+moving the audit link out of the bound file); that was out of scope for this
+audit pass and is left to F4/F6. Criterion 7 therefore stays NOT ESTABLISHED
+with this additional evidence; it does not change any other row.
+
+**UNRUN (unchanged):** CI workflow execution, `compileall` step, default
+(generating) mode of every runner, runtime runner default mode (pinned
+image), any fresh actual-Voice measurement, the AWS repo-remote box, the
+full repository test suite, Python 3.11.
+
 ## Bounded follow-ups (not performed here)
 
 - **F1** Fresh actual-Voice runtime measurement of the family operators
@@ -147,6 +193,11 @@ strongest evidence class; for every row below, R evidence is absent.
 - **F4** Fix workflow ordering (check before generate; tracked by #257), add
   the identity tests and `qualify_mutations_identity.py --check` to CI, and
   add a step that runs only the 20-row deterministic `ci_subset` sentinel.
+- **F6** Rebind the committed matrix publication to the current
+  `spec/MUTATIONS.md` digest (regenerate through the matrix runner after all
+  family `--check` runs pass) so `--check` exits 0 again, and make any later
+  edit to a bound input regenerate it in the same change. Land with F4 so CI
+  checks before generating.
 - **F5** Add explicit contract-wrong-but-perceptually-similar rows (small gain
   and one-sample delay) asserting failure of identity/property rows, without
   loosening any tolerance.
