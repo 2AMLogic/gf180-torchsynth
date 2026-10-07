@@ -198,7 +198,10 @@ def select_suite(api: Any, repo: str, branch: str, sha: str, workflow: str) -> d
     )
     result: dict[str, Any] = {"workflow": workflow, "sha": sha}
     for run in reversed(cands):
-        if run.get("status") in ACTIVE_STATUSES or run.get("status") != "completed":
+        status = run.get("status")
+        if status != "completed" and status not in ACTIVE_STATUSES:
+            raise SelectorError(f"run {run.get('id')} has unrecognised status {status!r}")
+        if status in ACTIVE_STATUSES:
             return {**result, "action": "active", "run_url": run.get("html_url"),
                     "reason": f"run {run.get('id')} is {run.get('status')}"}
     if not cands:

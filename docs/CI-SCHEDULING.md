@@ -55,7 +55,8 @@ suite, it chooses:
 
 PR runs, other workflows, other SHAs and dispatcher runs are never evidence.
 API, authentication or parse failures (including a malformed run list while
-looking for a dispatched run) fail the dispatcher step; they are never treated
+looking for a dispatched run, and a run whose `status` is missing or not a
+recognised GitHub status, which is never treated as an active execution) fail the dispatcher step; they are never treated
 as a cache hit or as "run not yet visible".  The tip is re-read after selection,
 again immediately before each suite's decision is acted on, and again
 immediately before each dispatch; if main advanced, every suite not yet acted on

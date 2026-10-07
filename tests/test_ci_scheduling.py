@@ -115,6 +115,21 @@ class SelectorTests(unittest.TestCase):
             r = decide([run(status=status, conclusion=None)])
             self.assertEqual(r["action"], "active", status)
 
+    def test_missing_or_unknown_status_is_an_error_not_active(self):
+        for status in (None, "", "not-a-github-status"):
+            bad = run(status=status, conclusion=None)
+            if status is None:
+                del bad["status"]
+            with self.assertRaises(d.SelectorError, msg=repr(status)):
+                decide([bad])
+
+    def test_run_once_fails_visibly_on_unknown_run_status(self):
+        bad = run(status="not-a-github-status", conclusion=None)
+        api = FakeApi(runs={"ci.yml": [bad], "tb-sim.yml": []}, jobs={})
+        with self.assertRaises(d.SelectorError):
+            d.run_once(api, REPO, "main", False, sleep=lambda s: None)
+        self.assertEqual(api.posts, [])
+
     def test_later_failed_attempt_not_hidden_by_older_green(self):
         runs = [run(rid=1, number=1), run(rid=2, number=2, conclusion="failure")]
         self.assertEqual(decide(runs, {1: good_jobs("ci.yml")})["action"], "dispatch")
