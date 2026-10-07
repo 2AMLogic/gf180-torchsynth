@@ -508,6 +508,44 @@ selection versus 32-trace registry boundary is unchanged: the three
 normalization seams are captured only by the #23 hash-level worker. #7 stays
 open.
 
+### Re-verification at `a4d7a3f`, 2026-10-07
+
+A fourth #7 pass re-ran the checks on the current base. It did not regenerate
+evidence, add measurements, change DSP or runtime admission, or access holdout
+data.
+
+- Base: `origin/main` at `a4d7a3f0b9f9c76a6e2dd7959bc2c474ec399b84`, branch
+  `feature/issue-7`, clean tree. Host and interpreter: Linux x86_64 shared
+  dispatch worker, `/usr/bin/python3` (Python 3.12.3). `python3.11` is not
+  installed (limitation); no Torch or Docker run took place. This host is
+  outside DR-0006's measured scope.
+- Inputs since `5400ec2`: `git diff --quiet 5400ec2 HEAD -- sim/reference
+  spec/reference tools tests env src` exited 0, so no audit input changed. The
+  registry and three publications hash as in the "Audit identity" table
+  (registry `6fd72ca9…d34c`; prototype `b074579f…29ad`; capture `b803f015…b56d`;
+  artifact smoke `0a17a7e5…022f`).
+
+| Command | Kind | Exit | Actual result |
+| --- | --- | --- | --- |
+| `python3 -m unittest discover -s tests -p test_trace_registry.py` | U | 0 | 12 tests OK |
+| `python3 -m unittest discover -s tests -p test_trace_capture.py` | U | 0 | 38 tests OK (fake Torch/Voice double; not runtime evidence) |
+| `python3 -m unittest discover -s tests -p test_trace_artifacts.py` | U | 0 | 27 tests OK (synthetic store/provider) |
+| `python3 tools/qualify_trace_capture.py --check-inputs` | U | 0 | `PASS`: 5 cases, 11 negative controls, 5 endpoint pairs |
+| `python3 tools/qualify_trace_capture.py --check-publication` | U+R | 0 | `PASS`: token `tr1-b89a589e…3259`, 5 cases |
+| `python3 tools/qualify_trace_artifacts.py --check-inputs` | U | 0 | 29-trace selection, 3 excluded normalization seams, 5 negative controls |
+| `python3 tools/qualify_trace_artifacts.py --check-publication` | U+R | 0 | Document-level validation passed. **The store-dependent payload rehash did not run**: no `--store`, `out/` absent |
+| `python3 tools/qualify_trace_capture.py --output /tmp/i7-a4d7a3f/capture` | F gate | 1 | Refused `unqualified host`: **unrun** |
+| `python3 tools/qualify_trace_artifacts.py --store /tmp/i7-a4d7a3f/store --receipt /tmp/i7-a4d7a3f/r.json` | F gate | 1 | Uncaught `CalledProcessError` from `sysctl -n machdep.cpu.brand_string`; nothing written: **unrun** |
+
+Result: no status changes. Criteria 1, 2, 3, 4, 6 and 7 remain established
+within their stated bounded scope (retained publications plus fresh
+unit/schema checks; no fresh numerical measurement). Criterion 5 remains
+**missing** (#286 receipt `UNRUN`). Criterion 8 remains **missing** for the
+development corpus (#287); only the two-case measurement and its derived
+projection exist. The artifact driver selects 29 of the 32 registry traces;
+the three normalization seams are captured only by the #23 hash-level worker,
+so not all traces are captured through the artifact path. #7 stays open.
+
 ## Directed per-path capture (#286): plan, verifier and unrun receipt
 
 The #7 criterion "at least one directed fixture demonstrates each trace path"
