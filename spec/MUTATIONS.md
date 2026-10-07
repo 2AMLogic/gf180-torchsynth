@@ -226,6 +226,17 @@ replaces the rows. #44 consumes selected mutations from this matrix and
 #48 consumes its coverage; both consumption contracts are declared in the
 publication, neither is executed by it, and holdout stays sealed.
 
+## Evidence audit
+
+`docs/MUTATION-COVERAGE-AUDIT.md` (#9) maps every original acceptance
+criterion and required mutation category to the publications above and
+separates apparatus-only proofs, publication validation and actual Voice
+runtime evidence. Only the `bridge.*` operators have actual-Voice runtime
+evidence; the family and matrix publications are apparatus-domain evidence
+revalidated by `--check`, and a schema-valid publication is never a fresh
+runtime measurement. The audit leaves several criteria unestablished with
+bounded follow-ups.
+
 ## Not run here
 
 The #31/#32/#33 fault-operator families (they register through this public
