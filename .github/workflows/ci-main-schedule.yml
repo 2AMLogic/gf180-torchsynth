@@ -1,0 +1,36 @@
+name: CI main schedule
+
+# Issue #284 / docs/CI-SCHEDULING.md.  CI and TB sim no longer run on every
+# merge to main; this dispatcher selects the newest main every three hours and
+# dispatches whichever suite lacks exact-SHA successful evidence.  A green run
+# here only means the selection ran: it is NOT a CI or TB sim pass.  The
+# dispatched suites are the evidence.
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  select-and-dispatch:
+    if: github.repository == '2AMLogic/gf180-torchsynth' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          ref: main
+      - name: Select and dispatch suites for the newest main
+        timeout-minutes: 5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tools/dispatch_main_ci.py --repo "$GITHUB_REPOSITORY" --branch main
