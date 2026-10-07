@@ -160,3 +160,6 @@ It sets two limits on this publication:
 The fresh qualified-runtime run was **unrun** on the audit host, which is
 outside DR-0006. The audit relies on retained-publication inspection plus
 fresh `--check-inputs` and `--check-publication` checks.
+A [re-verification at `a38ab0a`](TRACE-REGISTRY.md#re-verification-at-a38ab0a-2026-10-07)
+repeated those checks on unchanged inputs with the same outcomes. The
+qualified run was again refused there and remains unrun.

@@ -211,3 +211,7 @@ It records the following evidence limits for this path:
 - **Host refusal.** On a non-macOS host the default run refuses at host
   admission through an uncaught `sysctl` `CalledProcessError`, before any
   store write. That is a refusal, not a clean diagnostic.
+
+The [re-verification at `a38ab0a`](TRACE-REGISTRY.md#re-verification-at-a38ab0a-2026-10-07)
+reproduced each of these limits on unchanged inputs. The payload rehash
+still did not run, and the host refusal recurred.
