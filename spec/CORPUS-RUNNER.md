@@ -244,7 +244,9 @@ path, as a key or value, standalone or embedded, at any nesting depth. This
 extends the [artifact contract](ARTIFACT-CONTRACT.md) rule against host paths
 in artifacts, indexes and plans to `attempts[*].receipt`. It covers only receipts.
 Outer publication records such as the retained `commands[*].command` and storage
-fields are outside this decision.
+fields are outside this decision, except for the per-producer command
+descriptions adopted under
+[Portable command descriptions in evidence publications](#portable-command-descriptions-in-evidence-publications).
 
 **Command representation.** The Docker backends (`DockerBackend` and the traced
 `TracedDockerBackend` in `tools/qualify_trace_artifacts.py`) launch a real argv
@@ -335,6 +337,57 @@ historical runs. There are two ways to verify them:
 Resuming a historical run at the current commit is refused: its interim
 validation uses the portable policy. Republishing historical evidence is a
 separate decision.
+
+## Portable command descriptions in evidence publications
+
+Decision (issue #309), extending the command-representation policy above to
+non-corpus evidence publications. This is a representation change only. The
+executed argv, image and runtime admission, hashes and DSP behavior are
+unchanged. Each adopting producer builds the executed argv (real host mount
+sources) and the described argv (the two declared placeholders) from one launch
+builder (`launch_and_described` in `src/torchsynth_voice/artifact_renderer.py`),
+executes only the former and publishes only the latter. A publication that
+carries a described command sets `command_representation:
+"portable-placeholders-v1"` beside it (the `PORTABLE_COMMAND_REPRESENTATION`
+constant). Container-internal absolute paths (`/repo`, `/output`,
+`/opt/torchsynth`) are never replaced.
+
+`validate_published_command` checks only the described command, not the rest of
+the publication, which may legitimately carry other storage paths such as the
+`build_command` host paths. Without the marker the command is the retained legacy
+form and is accepted unchanged, so existing records still validate. With the
+marker, the validator rejects an unknown representation version, an undeclared
+`<...>` placeholder, a host path (POSIX, Windows, UNC or home), a `-v`/`--volume`
+or stray `src=` mount, and any mount set other than exactly
+`type=bind,src=<project-root>,dst=/repo,readonly` followed by
+`type=bind,src=<worker-output>,dst=/output`. A forged target, a dropped
+`readonly`, or a host source therefore fails.
+
+| Producer | Decision | Rationale |
+|---|---|---|
+| `tools/capture_float_sources.py` | **Adopt** | `execution.command` is described. Its tool digest `recorded_from_tool` is informational: no validator compares it, and the retained record already differs from the live file. The retained record has `command: []` (assemble-only) and stays legacy. A non-empty command is marked. |
+| `tools/qualify_trace_capture.py` | **Adopt** | `launch.command` is described. The tool is not in any retained `producer_sha256`. `--check-publication` validates marked commands and keeps accepting the retained unmarked `sim/reference/trace-capture.json`. |
+| `tools/qualify_mutations_runtime.py` | **Adopt** | `launch.command` is described. The tool is not in any retained pin. `--check-publication` applies the same rule. The retained `mutation-runtime-v1.json` stays legacy. |
+| `tools/qualify_directed_trace_paths.py` | **Defer** | `sim/reference/directed-trace-paths-v1.json` pins this tool's digest as `input_sha256.producer_sha256`, and `directed_trace_paths` rejects the record when the digest differs from the repository file. Any edit would require regenerating the record, which is a recapture and a rewrite of `sim/reference/`. |
+| `env/release-era/qualify_repeatability.py` (producer and validator) | **Defer** | Its digest is pinned in `producer_sha256` of `trace-registry-prototype.json` (enforced by `tests/test_trace_registry.py`), `trace-capture.json` and `mutation-runtime-v1.json`. Editing it breaks those pins without a recapture. |
+| `tools/probe_trace_registry.py` | **Defer** | Recapture-gated (`DISPATCH_RECAPTURE_GATED`): `trace-registry-prototype.json` pins its digest. Its bytes and gate are untouched. |
+
+**Repeatability cell binding (decision for the deferred adoption).**
+`validate_render_command` ties a described release command to its cell by two
+checks: the host output `Path(...).name` must equal `cell["directory"]`, and the
+whole command must equal `command_for(...)` rebuilt for that directory. A bare
+`<worker-output>` would erase the cell identity, so accepting it is not
+permitted. When the producer is later recaptured and adopted, the described
+output source must be the declared placeholder followed by the cell directory
+leaf (`<worker-output>/<cell.directory>`), the validator must compare that leaf to
+`cell["directory"]`, and it must keep the worker, case-group, run-id and
+rebuilt-command comparisons. The `current` runtime, which has no container,
+keeps its absolute-path checks. Until then the legacy form is the only one
+accepted and nothing in the repeatability producer or validator changes.
+
+The deferrals are not claims that those records are portable. Retained records
+under `sim/reference/` stay byte-identical, and nothing here renders,
+requalifies or alters admission.
 
 ## Validation evidence
 

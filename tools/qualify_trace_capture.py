@@ -124,6 +124,20 @@ def check_inputs_mode(registry, capture, document, constants):
     )
 
 
+def _check_launch_command(launch, require):
+    """Marked portable launch descriptions are validated; legacy ones are kept."""
+    if type(launch) is dict and "command_representation" in launch:
+        from torchsynth_voice.artifact_renderer import (
+            ReceiptPortabilityError,
+            validate_published_command,
+        )
+
+        try:
+            validate_published_command(launch)
+        except ReceiptPortabilityError as error:
+            require(False, "publication launch command: " + str(error))
+
+
 def check_publication_mode(registry, capture, document, constants):
     if not PUBLICATION_PATH.exists():
         print(
@@ -134,6 +148,7 @@ def check_publication_mode(registry, capture, document, constants):
     publication = json.loads(PUBLICATION_PATH.read_bytes())
     require = registry.require
     require(publication["status"] == "PASS", "publication did not pass")
+    _check_launch_command(publication.get("launch"), require)
     require(
         publication["capture_version"] == "trace-capture-v1",
         "unknown capture version",
@@ -217,7 +232,10 @@ def host_run(args):
     sys.path.insert(0, str(ROOT / "src"))
     from torchsynth_voice.artifact_renderer import (
         dispatch_flags,
+        PORTABLE_COMMAND_REPRESENTATION,
         dispatch_unset_flags,
+        launch_and_described,
+        mount_options,
         release_profile_environment,
     )
 
@@ -271,49 +289,51 @@ def host_run(args):
         image_info["Architecture"] == "amd64" and image_info["Os"] == "linux",
         "wrong image platform",
     )
-    command = [
-        "docker",
-        "run",
-        "--rm",
-        "--pull",
-        "never",
-        "--platform",
-        "linux/amd64",
-        "--network",
-        "none",
-        "--memory",
-        "6g",
-        "--cpus",
-        "1",
-    ]
-    for name in (
-        "OMP_NUM_THREADS",
-        "MKL_NUM_THREADS",
-        "OPENBLAS_NUM_THREADS",
-        "VECLIB_MAXIMUM_THREADS",
-        "NUMEXPR_NUM_THREADS",
-    ):
-        command += ["--env", name + "=1"]
     # Derived from the preregistered plan, never restated: capture_traces.py
     # asserts the plan's whole profile_environment["release"] before it renders
     # ("worker environment outside release-mkl-compatible-v1"; issue #3).
     profile = release_profile_environment()
-    command += [
-        *dispatch_flags(profile),
-        "--mount",
-        "type=bind,src=" + str(ROOT) + ",dst=/repo,readonly",
-        "--mount",
-        "type=bind,src=" + str(output) + ",dst=/output",
-        "--entrypoint",
-        "env",
-        image,
-        *dispatch_unset_flags(profile),
-        "python",
-        "/repo/env/release-era/capture_traces.py",
-        "--worker",
-        "--output",
-        "/output",
-    ]
+
+    def launch(project_source, output_source):
+        command = [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--platform",
+            "linux/amd64",
+            "--network",
+            "none",
+            "--memory",
+            "6g",
+            "--cpus",
+            "1",
+        ]
+        for name in (
+            "OMP_NUM_THREADS",
+            "MKL_NUM_THREADS",
+            "OPENBLAS_NUM_THREADS",
+            "VECLIB_MAXIMUM_THREADS",
+            "NUMEXPR_NUM_THREADS",
+        ):
+            command += ["--env", name + "=1"]
+        command += [
+            *dispatch_flags(profile),
+            *mount_options(project_source, output_source),
+            "--entrypoint",
+            "env",
+            image,
+            *dispatch_unset_flags(profile),
+            "python",
+            "/repo/env/release-era/capture_traces.py",
+            "--worker",
+            "--output",
+            "/output",
+        ]
+        return command
+
+    command, described = launch_and_described(launch, ROOT, output)
     result = subprocess.run(command, capture_output=True, text=True, timeout=1800)
     (output / "worker.stdout").write_text(result.stdout)
     (output / "worker.stderr").write_text(result.stderr)
@@ -364,7 +384,8 @@ def host_run(args):
         "docker_server": server,
     }
     report["launch"] = {
-        "command": command,
+        "command": described,
+        "command_representation": PORTABLE_COMMAND_REPRESENTATION,
         "exit_code": result.returncode,
         "stderr": result.stderr,
         "build_command": build,

@@ -163,6 +163,84 @@ def require_portable_receipt(receipt):
             )
 
 
+def mount_options(project_source, output_source):
+    """The two bind mounts of a worker launch, with the given mount sources."""
+    return [
+        "--mount",
+        "type=bind,src=" + project_source + ",dst=/repo,readonly",
+        "--mount",
+        "type=bind,src=" + output_source + ",dst=/output",
+    ]
+
+
+def launch_and_described(build, project_source, output_source):
+    """Build ``(executed argv, described argv)`` from one launch builder.
+
+    ``build(project_source, output_source)`` returns the argv. The first result
+    carries the real host mount sources and is the only one ever executed. The
+    second differs only by the two declared mount placeholders and is the only
+    one ever published (``command_representation``).
+    """
+    return (
+        build(str(project_source), str(output_source)),
+        build(PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER),
+    )
+
+
+_MOUNT_EXPECTED = (
+    "type=bind,src=" + PROJECT_ROOT_PLACEHOLDER + ",dst=/repo,readonly",
+    "type=bind,src=" + WORKER_OUTPUT_PLACEHOLDER + ",dst=/output",
+)
+_PLACEHOLDER_TOKEN = re.compile(r"<[^<>\s]*>")
+_VOLUME_FLAG = re.compile(r"(?:-v|--volume)(?:$|=|[^-])")
+
+
+def validate_published_command(owner, key="command"):
+    """Validate a published launch description; return ``"portable"`` or ``"legacy"``.
+
+    ``owner`` is the publication object holding ``key`` and, when the command is
+    a described launch, ``command_representation``. An absent marker is the
+    retained legacy form and is accepted unchanged (callers must not use this
+    to rewrite it). A present marker must equal ``PORTABLE_COMMAND_REPRESENTATION``
+    exactly, and then the command must contain no host path, only the declared
+    placeholders, and exactly the two declared mounts (project root read-only at
+    ``/repo``, worker output writable at ``/output``). Only the described command
+    is checked, never the surrounding publication.
+    """
+    if type(owner) is not dict:
+        raise ReceiptPortabilityError("published command owner must be an object")
+    if "command_representation" not in owner:
+        return "legacy"
+    if owner["command_representation"] != PORTABLE_COMMAND_REPRESENTATION:
+        raise ReceiptPortabilityError("unknown command representation")
+    command = owner.get(key)
+    if (
+        type(command) is not list
+        or not command
+        or not all(type(a) is str for a in command)
+    ):
+        raise ReceiptPortabilityError("portable command must be a list of strings")
+    if host_path_findings(command, ("command",)):
+        raise ReceiptPortabilityError("portable command carries a host path")
+    mounts = []
+    for index, argument in enumerate(command):
+        tokens = _PLACEHOLDER_TOKEN.findall(argument)
+        if any(token not in MOUNT_PLACEHOLDERS for token in tokens):
+            raise ReceiptPortabilityError("portable command has undeclared placeholder")
+        after_mount = index > 0 and command[index - 1] == "--mount"
+        if _VOLUME_FLAG.match(argument) or (
+            _MOUNT_SOURCE.search(argument) and not after_mount
+        ):
+            raise ReceiptPortabilityError("portable command mount outside --mount")
+        if after_mount:
+            mounts.append(argument)
+    if tuple(mounts) != _MOUNT_EXPECTED or command.count("--mount") != 2:
+        raise ReceiptPortabilityError(
+            "portable command mounts are not the declared pair"
+        )
+    return "portable"
+
+
 def failure_receipt(error):
     """Portable diagnostic for a failed attempt: never raw path-bearing text."""
     message = str(error)
