@@ -62,6 +62,41 @@ overwrite `project_git` with an older value. Independent repeats use a fresh
 store/run; same-run `--resume` verifies existing content and must not render
 again. Do not point at a mutable tag or install another Torch stack.
 
+## Full 128-case corpus commands and storage
+
+The corpus-v0 manifest has 128 sounds: development 0-95 and holdout 96-127.
+A single invocation never mixes the partitions, so the full corpus is two runs
+into the same or separate stores. The 96-case development command has been
+executed: issue #19 rendered and verified the full development corpus (run
+`9c443eed363e4874a07328d8ddadd095`; see `spec/DEVELOPMENT-CORPUS.md` and
+`sim/reference/development-corpus-first.json`), and issue #20 byte-repeated it
+(`spec/DEVELOPMENT-CORPUS-REPEAT.md`,
+`sim/reference/development-corpus-repeat.json`). The holdout command has never
+been run; it is a one-shot, post-freeze action:
+
+```sh
+# 96 development cases (default selection)
+python3 tools/render_corpus.py --store /physical/path/corpus-store
+# 32 holdout cases, once, after the rubric is frozen
+python3 tools/render_corpus.py --store /physical/path/corpus-store \
+  --indices $(seq 96 127) --holdout-once \
+  --frozen-rubric /physical/path/frozen-rubric.json \
+  --holdout-audit-root /physical/path/holdout-ledger
+python3 -S tools/render_corpus.py --store /physical/path/corpus-store \
+  --verify RUN_ID --run-sha256 ENVELOPE_SHA256 [--holdout-once]
+```
+
+Storage lower bound: each artifact holds one 705,600-byte float32 audio file
+(176,400 samples x 4 bytes), so 96 cases need at least 67,737,600 bytes
+(about 64.6 MiB) and 128 cases at least 90,316,800 bytes (about 86.1 MiB), plus
+per-artifact metadata (a few KiB), manifests, indexes and run journals, and
+one extra private staging copy of the artifact being published. Requested
+traces add payload per case. For comparison, the recorded #19 development
+store measured 390 files and 71,820,533 bytes
+(`development-corpus-first.json` `storage`). The store must be a local POSIX filesystem; keep the
+holdout ledger and frozen rubric outside the artifact store and under operator
+control. Raw audio stays out of Git unless an explicit storage decision is made.
+
 ## Public adapter and capture seam
 
 ```python
