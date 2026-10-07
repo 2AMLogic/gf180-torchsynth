@@ -35,6 +35,21 @@ unchanged (producer `224eb15a...` still absent from the local object store,
 worker; #289 for G3 is still open). Details under "Re-verification run at
 `6d1bdff`".**
 
+**Re-verification (2026-10-07, revision `a4d7a3f0b9f9c76a6e2dd7959bc2c474ec399b84`):
+verdicts unchanged. Focused suites and the contract check passed again (68
+tests, 0 skips). `git diff --stat 6d1bdff HEAD -- src tools tests sim/reference spec`
+shows only documentation additions to `spec/ONESHOT-E2E.md`,
+`spec/TRACE-ARTIFACTS.md`, `spec/TRACE-CAPTURE.md`, and `spec/TRACE-REGISTRY.md`;
+nothing under the artifact, storage, runner, fixtures, smoke record, or the three
+audited specs changed. G1 (producer `224eb15a...` still absent locally,
+`git cat-file -t` exit 128), G2 (no `corpus-smoke-15` directory found with
+`find / -xdev`), and G4 are unchanged; #289 for G3 is still open. Executed on
+Linux 6.17.0-1019-aws, Python 3.12.3, serially, in the clean worktree
+`.loom/worktrees/issue-4`: `test_artifacts.py` 28 OK (0.364 s),
+`test_storage.py` 16 OK (1.618 s), `test_artifact_renderer.py` 8 OK (5.516 s),
+`test_corpus.py` 16 OK (42.396 s), `tools/check_contract.py` exit 0. No render,
+store verification, or reproduction was run (class C remains none).**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
