@@ -154,6 +154,8 @@ def require_portable_receipt(receipt):
             sources.append(argument.split("=", 1)[1].split(":", 1)[0])
         elif index and command[index - 1] in ("-v", "--volume"):
             sources.append(argument.split(":", 1)[0])
+        elif len(argument) > 2 and argument.startswith("-v") and argument[2] != "-":
+            sources.append(argument[2:].split(":", 1)[0])
         if any(source not in MOUNT_PLACEHOLDERS for source in sources):
             raise ReceiptPortabilityError(
                 f"receipt command mount source at receipt.command[{index}] is not a "

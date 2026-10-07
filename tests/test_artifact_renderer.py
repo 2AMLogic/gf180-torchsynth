@@ -296,6 +296,7 @@ class PortableReceiptPolicyTests(unittest.TestCase):
             ["--mount", "type=bind,source=checkout,dst=/repo"],
             ["-v", "checkout:/repo"],
             ["--volume=checkout:/repo"],
+            ["-vcheckout:/repo"],
             "docker run",
             ["docker", 1],
         ):
