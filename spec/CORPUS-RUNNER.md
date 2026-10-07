@@ -236,12 +236,119 @@ the explicit `--holdout-once` flag and remains read-only. All holdout tests in
 this implementation use synthetic payloads. No actual holdout data was rendered
 or inspected by issue #15.
 
+## Portable attempt receipts
+
+Decision (issue #289): every newly persisted attempt receipt, in a journal
+finish record or a run envelope, is portable. It contains no host filesystem
+path, as a key or value, standalone or embedded, at any nesting depth. This
+extends the [artifact contract](ARTIFACT-CONTRACT.md) rule against host paths
+in artifacts, indexes and plans to `attempts[*].receipt`. It covers only receipts.
+Outer publication records such as the retained `commands[*].command` and storage
+fields are outside this decision.
+
+**Command representation.** The Docker backends (`DockerBackend` and the traced
+`TracedDockerBackend` in `tools/qualify_trace_artifacts.py`) launch a real argv
+with real mount sources. They never publish it. The receipt `command` is a
+separately built public description with the same program, image identity,
+environment flags, options and argument order. Only the two host mount sources
+are replaced by named placeholders:
+
+| Placeholder | Host source it stands for | Container target |
+|---|---|---|
+| `<project-root>` | resolved frozen producer checkout | `/repo` (read-only) |
+| `<worker-output>` | per-invocation private temporary directory | `/output` |
+
+A receipt that carries `command` must also carry
+`command_representation: "portable-placeholders-v1"`. This marks the command as a
+described launch, not the literal executed argv. Placeholder commands are never
+executed. Every `src=`/`source=` mount option and `-v`/`--volume` argument must
+name a declared placeholder. The request, worker, runtime, stdout and stderr
+digests stay as before.
+
+**Host-path detection** is lexical and independent of the verifier's OS. Each
+receipt string, including dict keys, is scanned for path tokens. A token starts
+at the beginning of the string or after whitespace or one of
+`= , : ; " ' ( ) [ ] { } < > |`. The scan detects:
+
+- POSIX absolute (`/…`), including tokens embedded as `src=/host/path` and
+  the `//…` part of URL-like strings, which are rejected rather than parsed;
+- home-relative (`~/…`, `~\…`);
+- Windows drive (`C:\…`, `C:/…`), when the drive letter is not preceded by an
+  ASCII letter or digit;
+- Windows rooted and UNC (`\…`, `\\server\share`, `\\?\…`).
+
+A lone `/` token, as in prose such as `a / b`, also counts, so the scan fails
+closed. Windows, UNC and home forms are always rejected. A POSIX token is accepted only
+when the declared receipt field allows its container root. The token must equal
+that root or continue it with `/` and must contain no `..` component:
+
+| Receipt field | Permitted container roots |
+|---|---|
+| `command` | `/repo`, `/output`, `/opt/torchsynth` |
+| `runtime.torch_build` | `/opt/rh/devtoolset-9` (Torch wheel build toolchain recorded by the qualified image) |
+
+Every other field, including fields this table does not name, allows no
+absolute path. An unexpected field therefore cannot bypass the scan.
+
+**Failed attempts.** A failed render attempt records no raw exception text that
+could contain a host path. Its receipt has exactly four fields:
+
+```json
+{"error_type": "ValidationError", "message": "host outside DR-0006 measured scope",
+ "message_sha256": "<sha256 of the UTF-8 message>", "message_status": "portable"}
+```
+
+If the message contains a host path, `message` is `null` and
+`message_status` is `"withheld-host-path"`. `message_sha256` still binds the
+original diagnostic, so an operator holding the raw log can match it.
+`failure` remains the portable `render-<ExceptionType>` code.
+
+Interrupted attempts and resume events keep the empty receipt `{}`.
+
+**Enforcement points.** `render_artifact` checks the backend receipt before
+artifact publication. `run_corpus` checks each receipt again before writing its
+immutable finish record. If a successful render returns a non-portable receipt,
+the attempt is recorded as failed (`render-ReceiptPortabilityError`) with the
+portable diagnostic above. The finish record never contains the path-bearing
+receipt. A later explicit resume may retry that case. `validate_run` also
+applies the check before any summary is written, and `verify_run` applies it
+when it reads stored runs. Counts, timing, artifact identities, payload digests,
+and source/runtime admission are unchanged.
+
+**Historical v1 records.** The run schema remains `corpus-run-v1`. This policy is
+a stricter semantic validation of v1, not a new envelope version. Retained
+evidence produced before this decision, including `sim/reference/corpus-smoke.json`
+and the #19/#20 development stores, contains host mount sources and stays
+byte-identical. Verification never rewrites, repairs or sanitizes it. The
+current default policy (`receipt_policy="portable-v1"`) **rejects** those
+historical runs. There are two ways to verify them:
+
+1. Use the recorded producer commit, as this document already requires for
+   reproduction.
+2. Use the current verifier with the explicit compatibility mode
+   `receipt_policy="historical-v1"` (`tools/render_corpus.py --verify RUN_ID
+   --historical-receipts`). This mode runs every other check and skips only
+   receipt portability. It reports `"receipt_policy": "historical-v1"`, never
+   that receipts are portable. `tools/audit_development_corpus.py --store` uses
+   this mode because its subject is the retained #19/#20 stores.
+
+Resuming a historical run at the current commit is refused: its interim
+validation uses the portable policy. Republishing historical evidence is a
+separate decision.
+
 ## Validation evidence
 
 `tests/test_artifact_renderer.py` and `tests/test_corpus.py` exercise synthetic
 name/noise/source/runtime faults, immutable collisions, exact reuse, failed
 denominators/retries, coverage/count tampering, interrupted publication, explicit
 synthetic holdout admission, and verification with site packages disabled.
+They also cover portable receipts with synthetic, path-bearing negative
+controls. These include standalone, embedded and nested POSIX, Windows, UNC
+and home paths, path-bearing exceptions, and non-portable success receipts.
+Each is rejected before a finish record. Historical-policy verification is
+read-only. Both Docker backends run with mocked host and process facts: the
+traced backend is covered in `tests/test_trace_artifacts.py`, and no Docker
+process runs.
 Actual bounded rendering commands, producer identity, measured receipts and
 exact hashes are recorded separately in `sim/reference/corpus-smoke.json`.
 That record is bounded software evidence; it does not establish the full

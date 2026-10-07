@@ -17,10 +17,13 @@ from pathlib import Path
 
 from .artifact_renderer import (
     digest,
+    failure_receipt,
     fixture,
     json_bytes,
     require,
+    require_portable_receipt,
     validate_binding,
+    validate_failure_receipt,
     validate_request,
 )
 from .artifacts import (
@@ -33,6 +36,15 @@ from .artifacts import (
 )
 from .contract import repository_root
 from .storage import ArtifactStore, _directory, _read_regular
+
+#: Receipt policies (spec/CORPUS-RUNNER.md "Portable attempt receipts").
+#: ``portable-v1`` is the default for production and verification;
+#: ``historical-v1`` is an explicit compatibility mode for retained records
+#: produced before #289 that skips only receipt portability and never
+#: establishes it.
+PORTABLE_RECEIPTS = "portable-v1"
+HISTORICAL_RECEIPTS = "historical-v1"
+RECEIPT_POLICIES = (PORTABLE_RECEIPTS, HISTORICAL_RECEIPTS)
 
 
 class ReadOnlyStore(ArtifactStore):
@@ -356,7 +368,24 @@ def _index(plan, events):
     )
 
 
-def validate_run(envelope, plan, index, *, root=None):
+def validate_attempt_receipt(event):
+    """Declared portable receipt representation for one attempt (fail closed)."""
+    receipt = event["receipt"]
+    if event["kind"] == "resume" or event["failure"] == "interrupted-attempt":
+        require(receipt == {}, "resume or interrupted attempt carries a receipt")
+    elif event["status"] == "failed":
+        validate_failure_receipt(receipt)
+        require(
+            event["failure"] == "render-" + receipt["error_type"],
+            "failed attempt diagnostic disagrees with its failure code",
+        )
+    require_portable_receipt(receipt)
+
+
+def validate_run(
+    envelope, plan, index, *, root=None, receipt_policy=PORTABLE_RECEIPTS
+):
+    require(receipt_policy in RECEIPT_POLICIES, "unknown receipt policy")
     schema = loads(
         (repository_root() / "spec/schemas/corpus-run-v1.schema.json").read_bytes()
     )
@@ -425,6 +454,8 @@ def validate_run(envelope, plan, index, *, root=None):
             require(
                 event["case_id"] not in completed, "recomputation of completed case"
             )
+        if receipt_policy == PORTABLE_RECEIPTS:
+            validate_attempt_receipt(event)
         if complete:
             completed[event["case_id"]] = event["artifact"]
             if root is not None:
@@ -482,8 +513,19 @@ def validate_run(envelope, plan, index, *, root=None):
             )
 
 
-def verify_run(root, run_id, *, allow_holdout=False, expected_sha256=None):
-    """Rehash latest immutable run snapshot and all artifacts; never create paths."""
+def verify_run(
+    root,
+    run_id,
+    *,
+    allow_holdout=False,
+    expected_sha256=None,
+    receipt_policy=PORTABLE_RECEIPTS,
+):
+    """Rehash latest immutable run snapshot and all artifacts; never create paths.
+
+    ``receipt_policy=HISTORICAL_RECEIPTS`` verifies retained pre-#289 runs
+    without the receipt-portability check; it never repairs or sanitizes them.
+    """
     require(
         type(run_id) is str and re.fullmatch(r"[a-f0-9]{32}", run_id), "invalid run ID"
     )
@@ -506,7 +548,7 @@ def verify_run(root, run_id, *, allow_holdout=False, expected_sha256=None):
         "holdout verification requires explicit mode",
     )
     index = loads(read_reference(root, envelope["index"]))
-    validate_run(envelope, plan, index, root=root)
+    validate_run(envelope, plan, index, root=root, receipt_policy=receipt_policy)
     require(
         envelope["attempts"] == _journal(root / "runs" / run_id),
         "journal differs from published run",
@@ -607,22 +649,27 @@ def run_corpus(
                 product = None if reuse else render(request, store)
                 ref = previous["artifact"] if reuse else product.reference
                 _verify_artifact(root, ref, request)
+                receipt = {} if reuse else product.receipt
+                # Checked before the immutable finish record is written.
+                require_portable_receipt(receipt)
                 event = dict(
                     start,
                     status="complete",
                     artifact=ref,
                     failure=None,
-                    receipt={} if reuse else product.receipt,
+                    receipt=receipt,
                 )
             except Exception as error:
                 # Integrity failures on previously completed artifacts never reach here.
+                # Raw exception text may embed host paths; publish the portable
+                # diagnostic (spec/CORPUS-RUNNER.md "Portable attempt receipts").
                 code = re.sub(r"[^A-Za-z0-9._-]", "-", type(error).__name__)
                 event = dict(
                     start,
                     status="failed",
                     artifact=None,
                     failure="render-" + code,
-                    receipt={"error": str(error)},
+                    receipt=failure_receipt(error),
                 )
             event["elapsed_seconds"] = time.monotonic() - began
             write_once(Path(str(prefix) + "-finish.json"), json_bytes(event))

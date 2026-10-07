@@ -85,6 +85,9 @@ RECEIPT_VOLATILE = (
     "process_id",
     "started_utc",
     "command",
+    # #289 portable-receipt marker; absent in the retained pre-#289 runs and
+    # describes the run-local command vector it accompanies.
+    "command_representation",
     "host",
     "stdout_sha256",
     "stderr_sha256",

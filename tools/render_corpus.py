@@ -14,7 +14,13 @@ from torchsynth_voice.artifact_renderer import (  # noqa: E402
     render_artifact,
     request_template,
 )
-from torchsynth_voice.corpus import run_corpus, run_reference, verify_run  # noqa: E402
+from torchsynth_voice.corpus import (  # noqa: E402
+    HISTORICAL_RECEIPTS,
+    PORTABLE_RECEIPTS,
+    run_corpus,
+    run_reference,
+    verify_run,
+)
 
 
 def main():
@@ -38,15 +44,24 @@ def main():
         action="store_true",
         help="ONE-SHOT HOLDOUT EXPOSURE AFTER RUBRIC FREEZE",
     )
+    parser.add_argument(
+        "--historical-receipts",
+        action="store_true",
+        help="with --verify: retained pre-#289 run; skip only receipt portability",
+    )
     parser.add_argument("--frozen-rubric", type=Path)
     parser.add_argument("--holdout-audit-root", type=Path)
     args = parser.parse_args()
+    if args.historical_receipts and not args.verify:
+        parser.error("--historical-receipts applies only to --verify")
+    policy = HISTORICAL_RECEIPTS if args.historical_receipts else PORTABLE_RECEIPTS
     if args.verify:
         result = verify_run(
             args.store,
             args.verify,
             allow_holdout=args.holdout_once,
             expected_sha256=args.run_sha256,
+            receipt_policy=policy,
         )
     else:
         backend = DockerBackend()
@@ -66,6 +81,7 @@ def main():
             dict(
                 {k: result[k] for k in ("run_id", "status", "counts", "index")},
                 run=run_reference(result),
+                receipt_policy=policy,
             ),
             indent=2,
         )
