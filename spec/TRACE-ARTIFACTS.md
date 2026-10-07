@@ -207,7 +207,9 @@ It records the following evidence limits for this path:
   documents only. Its store-dependent payload rehash is not a pass when the
   raw store is absent.
 - **Storage cost.** The two-case figures here are measured. A traced
-  development-corpus cost is not yet measured (#287).
+  development-corpus cost is not yet measured (#287). The instrument is
+  specified in [DEVELOPMENT-TRACE-COST.md](DEVELOPMENT-TRACE-COST.md), and
+  its receipt is `UNRUN`.
 - **Host refusal.** On a non-macOS host the default run refuses at host
   admission through an uncaught `sysctl` `CalledProcessError`, before any
   store write. That is a refusal, not a clean diagnostic.

@@ -588,3 +588,39 @@ the measurement has **not been run**.
   verifier tests (`tests/test_directed_trace_paths.py`) are not runtime
   evidence. The criterion becomes measured only when a run on an admitted host
   replaces the `UNRUN` receipt with a verified `PASS` and retained raw bytes.
+
+## Development-corpus trace cost (#287): instrument and unrun receipt
+
+The development-corpus half of #7 criterion 8 stays **missing**. #287 adds
+the instrument for measuring it and records that the measurement has **not
+been run**.
+
+- **Instrument.** `tools/measure_development_trace_cost.py` is the runner.
+  `src/torchsynth_voice/development_trace_cost.py` is the stdlib accounting
+  and verifier. [DEVELOPMENT-TRACE-COST.md](DEVELOPMENT-TRACE-COST.md) is the
+  record.
+  - The plan is frozen before admission: identities 0–95, the 29-trace
+    production selection, the registry, manifest, producer and runtime. The
+    gate is the unchanged `host_admission()`.
+  - Rendering goes through the #24 traced path with a telemetry driver.
+    `ru_maxrss` is recorded in KiB, with monotonic boundaries.
+  - Storage is recomputed from the verified store. Every file is classified
+    once, and the shared companion is counted once.
+  - The three normalization seams are receipt-retained.
+- **Receipt.** `sim/reference/development-trace-cost-v1.json` is **`UNRUN`**.
+  - The run host was a shared Linux x86_64 dispatch worker.
+    `host_admission()` refused it with `CalledProcessError` from `sysctl`
+    before any store, Docker or render access.
+  - All 96 rows are `unrun`, and `--verify-receipt` exits 2.
+  - The sanctioned AWS box was not used. The gate would refuse it too,
+    because it is not the DR-0006 Apple M5 host.
+- **Unchanged.** DSP, the registry, runtime admission, the pinned TorchSynth
+  commit `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`, and the existing
+  publications (`trace-capture.json`, `trace-artifact-smoke.json`,
+  `development-corpus-first.json`). No holdout identity was accessed.
+- **Not evidence.** The synthetic tests (`tests/test_development_trace_cost.py`)
+  and the labelled projections are not measurements.
+- **What completes the criterion.** It becomes measured only when an
+  admitted-host campaign replaces the `UNRUN` receipt with a `complete`
+  receipt. That receipt must verify `VERIFIED` against the retained raw
+  store.
