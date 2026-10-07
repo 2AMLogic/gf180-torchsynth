@@ -163,3 +163,7 @@ fresh `--check-inputs` and `--check-publication` checks.
 A [re-verification at `a38ab0a`](TRACE-REGISTRY.md#re-verification-at-a38ab0a-2026-10-07)
 repeated those checks on unchanged inputs with the same outcomes. The
 qualified run was again refused there and remains unrun.
+
+A [further re-verification at `5400ec2`](TRACE-REGISTRY.md#re-verification-at-5400ec2-2026-10-07)
+(Python 3.12.3, Linux) gave the same outcomes. The qualified run was refused
+and remains unrun.

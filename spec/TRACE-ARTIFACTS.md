@@ -215,3 +215,7 @@ It records the following evidence limits for this path:
 The [re-verification at `a38ab0a`](TRACE-REGISTRY.md#re-verification-at-a38ab0a-2026-10-07)
 reproduced each of these limits on unchanged inputs. The payload rehash
 still did not run, and the host refusal recurred.
+
+A [further re-verification at `5400ec2`](TRACE-REGISTRY.md#re-verification-at-5400ec2-2026-10-07)
+(Python 3.12.3, Linux) gave the same outcomes. The payload rehash did not run, the
+host refusal recurred, and the traced run remains unrun.
