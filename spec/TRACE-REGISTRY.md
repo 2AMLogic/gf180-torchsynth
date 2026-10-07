@@ -465,3 +465,46 @@ The hardening observation under criterion 7 still holds:
 only `probe.py`, `qualify_repeatability.py`, `qualify_scalar.py` and
 `render_artifact.py`. It is not a criterion gap, and this pass did not file
 it.
+
+## Directed per-path capture (#286): plan, verifier and unrun receipt
+
+The #7 criterion "at least one directed fixture demonstrates each trace path"
+stays **missing**. #286 adds the instrument for measuring it and records that
+the measurement has **not been run**.
+
+- Plan: `src/torchsynth_voice/directed_trace_paths.py` derives a deterministic
+  trace-to-case plan from `spec/reference/directed-coverage-v1.json`
+  `traces[*].cases` (40 rows, 21 deduplicated cases, all 32 registry names).
+  Envelope outputs use the first of `cut-attack`, `cut-decay`, `long-release`,
+  `zero-stages` (a zero-stage patch deliberately deactivates its envelope); the
+  four normalization seams take all three listed `normalization:*` cases; every
+  other trace takes its first listed case. Each row carries the isolation
+  limitation declared in the coverage report.
+- Expectations are fixed by the plan before execution: time-series paths must be
+  finite, non-zero and non-constant; keyboard scalars must be finite, non-zero
+  and inside the registry range (not a non-constant assertion); the seams
+  `mixer.pre_normalization`, `mixer.peak`, `mixer.gain`, `mixer.output` must
+  satisfy the declared strict `peak > 1` relation, target peak, gain rule and
+  output rule of their case.
+- Worker: `env/release-era/capture_directed_trace_paths.py` (reuses the #23
+  worker's gates, Harness and production `TraceCapture`; no DSP, registry or
+  admission change) renders each planned case uncaptured and captured, requires
+  audio/parameter/noise/RNG byte identity, and retains raw payloads in a fresh
+  directory. Statistics are never taken from the worker.
+- Runner/verifier: `tools/qualify_directed_trace_paths.py`
+  (`--check-inputs`, `--check-receipt [--raw DIR]`). A measured receipt is only
+  verified by rehashing the retained payloads and recomputing every measurement
+  and activation check; a receipt alone cannot establish raw integrity.
+- Receipt: `sim/reference/directed-trace-paths-v1.json` is currently
+  **`UNRUN`**: the run host (Linux x86_64 shared dispatch worker, no Torch, no
+  Docker run) is outside DR-0006's measured scope, and the launcher's Apple-host
+  gate was not changed. The sanctioned AWS box was not used and is not presumed
+  admitted by that gate. All 40 rows are `unrun`; `complete_path_coverage` is
+  false; `--check-receipt` exits 2 for it.
+- Unchanged: the existing publications (`trace-capture.json`,
+  `trace-registry-prototype.json`, `trace-artifact-smoke.json`), the registry,
+  runtime admission, the pinned TorchSynth commit
+  `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`. No holdout was accessed. Synthetic
+  verifier tests (`tests/test_directed_trace_paths.py`) are not runtime
+  evidence. The criterion becomes measured only when a run on an admitted host
+  replaces the `UNRUN` receipt with a verified `PASS` and retained raw bytes.

@@ -1,0 +1,1219 @@
+{
+  "execution": {
+    "admitted": false,
+    "command": [
+      "/usr/bin/python3",
+      "tools/qualify_directed_trace_paths.py"
+    ],
+    "host": {
+      "machine": "x86_64",
+      "platform": "Linux-7.0.0-1010-aws-x86_64-with-glibc2.39",
+      "system": "Linux"
+    },
+    "outcome": "unrun",
+    "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64"
+  },
+  "input_sha256": {
+    "capture_module_sha256": "276c462ea09e46c61d14eb407a0c1629779a36ba8eee96133abc4e97427a5b54",
+    "coverage_sha256": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",
+    "directed_sha256": "f1c3e36eb464561faa32d190e6317e06a62f0f7b409d17b7f97f56120c569d6c",
+    "existing_publications_sha256": {
+      "sim/reference/trace-capture.json": "b803f015a63f723c95a20c287027a5168d0bf6df0f7bcf95f6fa817b88ccb56d",
+      "sim/reference/trace-registry-prototype.json": "b074579f66bcebb879621d59464cd4abd366fb61b1a368df265b7729f1af29ad"
+    },
+    "parameter_inventory_sha256": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+    "producer_sha256": "91a1e52cb83f6a8111e0d1ca18a5968a275613fb7b8b3d36fe692984ad9f2e7b",
+    "registry_sha256": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+    "shared_module_sha256": "802efea9460a423359a9d766dd1ef9f90e5ff01128f52a985752e69deebe9b07",
+    "upstream_sha256": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+    "worker_sha256": "0dbdd4f5bdbe85dc55f2949e3764a4329ae400419a8d3ff48d849fe77fdf9cd9"
+  },
+  "limitations": [
+    "No holdout, corpus-wide, fidelity, RTL, hardware or gf180 claim",
+    "A row's activation fact describes one directed case, not the trace's full range",
+    "Graph-limited paths keep the isolation limitation declared in directed-coverage-v1",
+    "Only a PASS receipt verified against rehashed raw payloads establishes complete path coverage; UNRUN, FAIL, missing or failed rows do not"
+  ],
+  "pinned_torchsynth_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "plan": {
+    "cases": [
+      {
+        "id": "boundary:keyboard.midi_f0:upper",
+        "traces": [
+          "keyboard.midi_f0"
+        ]
+      },
+      {
+        "id": "boundary:keyboard.duration:upper",
+        "traces": [
+          "keyboard.duration"
+        ]
+      },
+      {
+        "id": "envelope:lfo_1_rate_adsr:cut-attack",
+        "traces": [
+          "lfo_1_rate_adsr.output"
+        ]
+      },
+      {
+        "id": "envelope:lfo_2_rate_adsr:cut-attack",
+        "traces": [
+          "lfo_2_rate_adsr.output"
+        ]
+      },
+      {
+        "id": "envelope:lfo_1_amp_adsr:cut-attack",
+        "traces": [
+          "lfo_1_amp_adsr.output"
+        ]
+      },
+      {
+        "id": "envelope:lfo_2_amp_adsr:cut-attack",
+        "traces": [
+          "lfo_2_amp_adsr.output"
+        ]
+      },
+      {
+        "id": "waveform:lfo_1:sin",
+        "traces": [
+          "lfo_1.raw",
+          "lfo_1.post_control_vca"
+        ]
+      },
+      {
+        "id": "waveform:lfo_2:sin",
+        "traces": [
+          "lfo_2.raw",
+          "lfo_2.post_control_vca"
+        ]
+      },
+      {
+        "id": "envelope:adsr_1:cut-attack",
+        "traces": [
+          "adsr_1.output"
+        ]
+      },
+      {
+        "id": "envelope:adsr_2:cut-attack",
+        "traces": [
+          "adsr_2.output"
+        ]
+      },
+      {
+        "id": "route:mod_matrix.adsr_1->vco_1_pitch",
+        "traces": [
+          "mod_matrix.vco_1_pitch",
+          "control_upsample.vco_1_pitch"
+        ]
+      },
+      {
+        "id": "route:mod_matrix.adsr_1->vco_1_amp",
+        "traces": [
+          "mod_matrix.vco_1_amp",
+          "control_upsample.vco_1_amp"
+        ]
+      },
+      {
+        "id": "route:mod_matrix.adsr_1->vco_2_pitch",
+        "traces": [
+          "mod_matrix.vco_2_pitch",
+          "control_upsample.vco_2_pitch"
+        ]
+      },
+      {
+        "id": "route:mod_matrix.adsr_1->vco_2_amp",
+        "traces": [
+          "mod_matrix.vco_2_amp",
+          "control_upsample.vco_2_amp"
+        ]
+      },
+      {
+        "id": "route:mod_matrix.adsr_1->noise_amp",
+        "traces": [
+          "mod_matrix.noise_amp",
+          "control_upsample.noise_amp"
+        ]
+      },
+      {
+        "id": "source:vco_1",
+        "traces": [
+          "vco_1.raw",
+          "vco_1.post_vca"
+        ]
+      },
+      {
+        "id": "source:vco_2",
+        "traces": [
+          "vco_2.raw",
+          "vco_2.post_vca"
+        ]
+      },
+      {
+        "id": "source:noise",
+        "traces": [
+          "noise.raw",
+          "noise.post_vca"
+        ]
+      },
+      {
+        "id": "normalization:below",
+        "traces": [
+          "mixer.pre_normalization",
+          "mixer.peak",
+          "mixer.gain",
+          "mixer.output"
+        ]
+      },
+      {
+        "id": "normalization:tie",
+        "traces": [
+          "mixer.pre_normalization",
+          "mixer.peak",
+          "mixer.gain",
+          "mixer.output"
+        ]
+      },
+      {
+        "id": "normalization:above",
+        "traces": [
+          "mixer.pre_normalization",
+          "mixer.peak",
+          "mixer.gain",
+          "mixer.output"
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "case": "boundary:keyboard.midi_f0:upper",
+        "expectation": {
+          "kind": "scalar_in_range",
+          "maximum": 127,
+          "minimum": 0
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "boundary:keyboard.midi_f0:upper"
+        ],
+        "trace": "keyboard.midi_f0"
+      },
+      {
+        "case": "boundary:keyboard.duration:upper",
+        "expectation": {
+          "kind": "scalar_in_range",
+          "maximum": 4,
+          "minimum": 0.01
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "boundary:keyboard.duration:upper"
+        ],
+        "trace": "keyboard.duration"
+      },
+      {
+        "case": "envelope:lfo_1_rate_adsr:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:lfo_1_rate_adsr:zero-stages",
+          "envelope:lfo_1_rate_adsr:cut-attack",
+          "envelope:lfo_1_rate_adsr:cut-decay",
+          "envelope:lfo_1_rate_adsr:long-release"
+        ],
+        "trace": "lfo_1_rate_adsr.output"
+      },
+      {
+        "case": "envelope:lfo_2_rate_adsr:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:lfo_2_rate_adsr:zero-stages",
+          "envelope:lfo_2_rate_adsr:cut-attack",
+          "envelope:lfo_2_rate_adsr:cut-decay",
+          "envelope:lfo_2_rate_adsr:long-release"
+        ],
+        "trace": "lfo_2_rate_adsr.output"
+      },
+      {
+        "case": "envelope:lfo_1_amp_adsr:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:lfo_1_amp_adsr:zero-stages",
+          "envelope:lfo_1_amp_adsr:cut-attack",
+          "envelope:lfo_1_amp_adsr:cut-decay",
+          "envelope:lfo_1_amp_adsr:long-release"
+        ],
+        "trace": "lfo_1_amp_adsr.output"
+      },
+      {
+        "case": "envelope:lfo_2_amp_adsr:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:lfo_2_amp_adsr:zero-stages",
+          "envelope:lfo_2_amp_adsr:cut-attack",
+          "envelope:lfo_2_amp_adsr:cut-decay",
+          "envelope:lfo_2_amp_adsr:long-release"
+        ],
+        "trace": "lfo_2_amp_adsr.output"
+      },
+      {
+        "case": "waveform:lfo_1:sin",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+        "listed_cases": [
+          "waveform:lfo_1:sin",
+          "waveform:lfo_1:tri",
+          "waveform:lfo_1:saw",
+          "waveform:lfo_1:rsaw",
+          "waveform:lfo_1:sqr",
+          "waveform:lfo_1:blend"
+        ],
+        "trace": "lfo_1.raw"
+      },
+      {
+        "case": "waveform:lfo_1:sin",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+        "listed_cases": [
+          "waveform:lfo_1:sin",
+          "waveform:lfo_1:tri",
+          "waveform:lfo_1:saw",
+          "waveform:lfo_1:rsaw",
+          "waveform:lfo_1:sqr",
+          "waveform:lfo_1:blend"
+        ],
+        "trace": "lfo_1.post_control_vca"
+      },
+      {
+        "case": "waveform:lfo_2:sin",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+        "listed_cases": [
+          "waveform:lfo_2:sin",
+          "waveform:lfo_2:tri",
+          "waveform:lfo_2:saw",
+          "waveform:lfo_2:rsaw",
+          "waveform:lfo_2:sqr",
+          "waveform:lfo_2:blend"
+        ],
+        "trace": "lfo_2.raw"
+      },
+      {
+        "case": "waveform:lfo_2:sin",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+        "listed_cases": [
+          "waveform:lfo_2:sin",
+          "waveform:lfo_2:tri",
+          "waveform:lfo_2:saw",
+          "waveform:lfo_2:rsaw",
+          "waveform:lfo_2:sqr",
+          "waveform:lfo_2:blend"
+        ],
+        "trace": "lfo_2.post_control_vca"
+      },
+      {
+        "case": "envelope:adsr_1:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:adsr_1:zero-stages",
+          "envelope:adsr_1:cut-attack",
+          "envelope:adsr_1:cut-decay",
+          "envelope:adsr_1:long-release"
+        ],
+        "trace": "adsr_1.output"
+      },
+      {
+        "case": "envelope:adsr_2:cut-attack",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+        "listed_cases": [
+          "envelope:adsr_2:zero-stages",
+          "envelope:adsr_2:cut-attack",
+          "envelope:adsr_2:cut-decay",
+          "envelope:adsr_2:long-release"
+        ],
+        "trace": "adsr_2.output"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_1_pitch",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_1_pitch",
+          "route:mod_matrix.adsr_2->vco_1_pitch",
+          "route:mod_matrix.lfo_1->vco_1_pitch",
+          "route:mod_matrix.lfo_2->vco_1_pitch"
+        ],
+        "trace": "mod_matrix.vco_1_pitch"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_1_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_1_amp",
+          "route:mod_matrix.adsr_2->vco_1_amp",
+          "route:mod_matrix.lfo_1->vco_1_amp",
+          "route:mod_matrix.lfo_2->vco_1_amp"
+        ],
+        "trace": "mod_matrix.vco_1_amp"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_2_pitch",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_2_pitch",
+          "route:mod_matrix.adsr_2->vco_2_pitch",
+          "route:mod_matrix.lfo_1->vco_2_pitch",
+          "route:mod_matrix.lfo_2->vco_2_pitch"
+        ],
+        "trace": "mod_matrix.vco_2_pitch"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_2_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_2_amp",
+          "route:mod_matrix.adsr_2->vco_2_amp",
+          "route:mod_matrix.lfo_1->vco_2_amp",
+          "route:mod_matrix.lfo_2->vco_2_amp"
+        ],
+        "trace": "mod_matrix.vco_2_amp"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->noise_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->noise_amp",
+          "route:mod_matrix.adsr_2->noise_amp",
+          "route:mod_matrix.lfo_1->noise_amp",
+          "route:mod_matrix.lfo_2->noise_amp"
+        ],
+        "trace": "mod_matrix.noise_amp"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_1_pitch",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_1_pitch",
+          "route:mod_matrix.adsr_2->vco_1_pitch",
+          "route:mod_matrix.lfo_1->vco_1_pitch",
+          "route:mod_matrix.lfo_2->vco_1_pitch"
+        ],
+        "trace": "control_upsample.vco_1_pitch"
+      },
+      {
+        "case": "source:vco_1",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:vco_1"
+        ],
+        "trace": "vco_1.raw"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_1_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_1_amp",
+          "route:mod_matrix.adsr_2->vco_1_amp",
+          "route:mod_matrix.lfo_1->vco_1_amp",
+          "route:mod_matrix.lfo_2->vco_1_amp"
+        ],
+        "trace": "control_upsample.vco_1_amp"
+      },
+      {
+        "case": "source:vco_1",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:vco_1"
+        ],
+        "trace": "vco_1.post_vca"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_2_pitch",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_2_pitch",
+          "route:mod_matrix.adsr_2->vco_2_pitch",
+          "route:mod_matrix.lfo_1->vco_2_pitch",
+          "route:mod_matrix.lfo_2->vco_2_pitch"
+        ],
+        "trace": "control_upsample.vco_2_pitch"
+      },
+      {
+        "case": "source:vco_2",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:vco_2"
+        ],
+        "trace": "vco_2.raw"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->vco_2_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->vco_2_amp",
+          "route:mod_matrix.adsr_2->vco_2_amp",
+          "route:mod_matrix.lfo_1->vco_2_amp",
+          "route:mod_matrix.lfo_2->vco_2_amp"
+        ],
+        "trace": "control_upsample.vco_2_amp"
+      },
+      {
+        "case": "source:vco_2",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:vco_2"
+        ],
+        "trace": "vco_2.post_vca"
+      },
+      {
+        "case": "source:noise",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:noise"
+        ],
+        "trace": "noise.raw"
+      },
+      {
+        "case": "route:mod_matrix.adsr_1->noise_amp",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+        "listed_cases": [
+          "route:mod_matrix.adsr_1->noise_amp",
+          "route:mod_matrix.adsr_2->noise_amp",
+          "route:mod_matrix.lfo_1->noise_amp",
+          "route:mod_matrix.lfo_2->noise_amp"
+        ],
+        "trace": "control_upsample.noise_amp"
+      },
+      {
+        "case": "source:noise",
+        "expectation": {
+          "kind": "series_active"
+        },
+        "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+        "listed_cases": [
+          "source:noise"
+        ],
+        "trace": "noise.post_vca"
+      },
+      {
+        "case": "normalization:below",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "below",
+          "seam": "mixer.pre_normalization",
+          "target_peak": 0.9999999403953552
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.pre_normalization"
+      },
+      {
+        "case": "normalization:tie",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "tie",
+          "seam": "mixer.pre_normalization",
+          "target_peak": 1.0
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.pre_normalization"
+      },
+      {
+        "case": "normalization:above",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "above",
+          "seam": "mixer.pre_normalization",
+          "target_peak": 1.0000001192092896
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.pre_normalization"
+      },
+      {
+        "case": "normalization:below",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "below",
+          "seam": "mixer.peak",
+          "target_peak": 0.9999999403953552
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.peak"
+      },
+      {
+        "case": "normalization:tie",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "tie",
+          "seam": "mixer.peak",
+          "target_peak": 1.0
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.peak"
+      },
+      {
+        "case": "normalization:above",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "above",
+          "seam": "mixer.peak",
+          "target_peak": 1.0000001192092896
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.peak"
+      },
+      {
+        "case": "normalization:below",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "below",
+          "seam": "mixer.gain",
+          "target_peak": 0.9999999403953552
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.gain"
+      },
+      {
+        "case": "normalization:tie",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "tie",
+          "seam": "mixer.gain",
+          "target_peak": 1.0
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.gain"
+      },
+      {
+        "case": "normalization:above",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "above",
+          "seam": "mixer.gain",
+          "target_peak": 1.0000001192092896
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.gain"
+      },
+      {
+        "case": "normalization:below",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "below",
+          "seam": "mixer.output",
+          "target_peak": 0.9999999403953552
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.output"
+      },
+      {
+        "case": "normalization:tie",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "tie",
+          "seam": "mixer.output",
+          "target_peak": 1.0
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.output"
+      },
+      {
+        "case": "normalization:above",
+        "expectation": {
+          "kind": "normalization",
+          "relation": "above",
+          "seam": "mixer.output",
+          "target_peak": 1.0000001192092896
+        },
+        "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+        "listed_cases": [
+          "normalization:below",
+          "normalization:tie",
+          "normalization:above"
+        ],
+        "trace": "mixer.output"
+      }
+    ]
+  },
+  "receipt_version": "directed-trace-paths-v1",
+  "registry_token": "tr1-b89a589e184c08a9902925cd699adc593c1f6514973395e1724415a345f13259",
+  "rows": [
+    {
+      "case": "boundary:keyboard.midi_f0:upper",
+      "expectation": {
+        "kind": "scalar_in_range",
+        "maximum": 127,
+        "minimum": 0
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "keyboard.midi_f0"
+    },
+    {
+      "case": "boundary:keyboard.duration:upper",
+      "expectation": {
+        "kind": "scalar_in_range",
+        "maximum": 4,
+        "minimum": 0.01
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "keyboard.duration"
+    },
+    {
+      "case": "envelope:lfo_1_rate_adsr:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_1_rate_adsr.output"
+    },
+    {
+      "case": "envelope:lfo_2_rate_adsr:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_2_rate_adsr.output"
+    },
+    {
+      "case": "envelope:lfo_1_amp_adsr:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_1_amp_adsr.output"
+    },
+    {
+      "case": "envelope:lfo_2_amp_adsr:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_2_amp_adsr.output"
+    },
+    {
+      "case": "waveform:lfo_1:sin",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_1.raw"
+    },
+    {
+      "case": "waveform:lfo_1:sin",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_1.post_control_vca"
+    },
+    {
+      "case": "waveform:lfo_2:sin",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_2.raw"
+    },
+    {
+      "case": "waveform:lfo_2:sin",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this LFO feeds the pitch column. Rate/amplitude envelopes and an independent carrier amplitude route are required; capture raw and gated LFO separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "lfo_2.post_control_vca"
+    },
+    {
+      "case": "envelope:adsr_1:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "adsr_1.output"
+    },
+    {
+      "case": "envelope:adsr_2:cut-attack",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Voice evaluates the whole graph. Capture this boundary; upstream dependencies cannot be disabled independently. Other audio sources are gated at the mixer.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "adsr_2.output"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_1_pitch",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mod_matrix.vco_1_pitch"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_1_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mod_matrix.vco_1_amp"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_2_pitch",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mod_matrix.vco_2_pitch"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_2_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mod_matrix.vco_2_amp"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->noise_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mod_matrix.noise_amp"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_1_pitch",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "control_upsample.vco_1_pitch"
+    },
+    {
+      "case": "source:vco_1",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "vco_1.raw"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_1_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "control_upsample.vco_1_amp"
+    },
+    {
+      "case": "source:vco_1",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "vco_1.post_vca"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_2_pitch",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "control_upsample.vco_2_pitch"
+    },
+    {
+      "case": "source:vco_2",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "vco_2.raw"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->vco_2_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "control_upsample.vco_2_amp"
+    },
+    {
+      "case": "source:vco_2",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "vco_2.post_vca"
+    },
+    {
+      "case": "source:noise",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "noise.raw"
+    },
+    {
+      "case": "route:mod_matrix.adsr_1->noise_amp",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "One input at a time in this matrix column; other columns zero except carrier amplitude support for pitch cases. Capture matrix/control-upsample boundaries separately.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "control_upsample.noise_amp"
+    },
+    {
+      "case": "source:noise",
+      "expectation": {
+        "kind": "series_active"
+      },
+      "limitation": "Only this audio source has a nonzero mixer gain and amplitude route; raw sources still execute. Noise uses the pinned seed/stream policy at render time.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "noise.post_vca"
+    },
+    {
+      "case": "normalization:below",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "below",
+        "seam": "mixer.pre_normalization",
+        "target_peak": 0.9999999403953552
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.pre_normalization"
+    },
+    {
+      "case": "normalization:tie",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "tie",
+        "seam": "mixer.pre_normalization",
+        "target_peak": 1.0
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.pre_normalization"
+    },
+    {
+      "case": "normalization:above",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "above",
+        "seam": "mixer.pre_normalization",
+        "target_peak": 1.0000001192092896
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.pre_normalization"
+    },
+    {
+      "case": "normalization:below",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "below",
+        "seam": "mixer.peak",
+        "target_peak": 0.9999999403953552
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.peak"
+    },
+    {
+      "case": "normalization:tie",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "tie",
+        "seam": "mixer.peak",
+        "target_peak": 1.0
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.peak"
+    },
+    {
+      "case": "normalization:above",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "above",
+        "seam": "mixer.peak",
+        "target_peak": 1.0000001192092896
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.peak"
+    },
+    {
+      "case": "normalization:below",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "below",
+        "seam": "mixer.gain",
+        "target_peak": 0.9999999403953552
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.gain"
+    },
+    {
+      "case": "normalization:tie",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "tie",
+        "seam": "mixer.gain",
+        "target_peak": 1.0
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.gain"
+    },
+    {
+      "case": "normalization:above",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "above",
+        "seam": "mixer.gain",
+        "target_peak": 1.0000001192092896
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.gain"
+    },
+    {
+      "case": "normalization:below",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "below",
+        "seam": "mixer.output",
+        "target_peak": 0.9999999403953552
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.output"
+    },
+    {
+      "case": "normalization:tie",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "tie",
+        "seam": "mixer.output",
+        "target_peak": 1.0
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.output"
+    },
+    {
+      "case": "normalization:above",
+      "expectation": {
+        "kind": "normalization",
+        "relation": "above",
+        "seam": "mixer.output",
+        "target_peak": 1.0000001192092896
+      },
+      "limitation": "Serially coupled full-clip reduction and normalization cannot be activated independently. Candidate peaks require exact later measurement; no measured branch coverage yet.",
+      "reason": "host outside DR-0006 measured scope: requires Darwin arm64 (Apple M5 / macOS 26.5.1 / Docker linux/arm64 29.7.2); observed Linux x86_64",
+      "status": "unrun",
+      "trace": "mixer.output"
+    }
+  ],
+  "runtime_profile": "release-mkl-compatible-v1",
+  "scope": "Bounded directed trace-path capture on the preregistered directed-coverage-v1 cases, batch-32 selected sound, production passive TraceCapture only",
+  "status": "UNRUN",
+  "summary": {
+    "activation_passed": 0,
+    "captured": 0,
+    "complete_path_coverage": false,
+    "failed": 0,
+    "missing": 0,
+    "rows": 40,
+    "traces": 32,
+    "traces_with_passing_row": 0,
+    "unrun": 40
+  }
+}
