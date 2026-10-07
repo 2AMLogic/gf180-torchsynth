@@ -546,6 +546,66 @@ projection exist. The artifact driver selects 29 of the 32 registry traces;
 the three normalization seams are captured only by the #23 hash-level worker,
 so not all traces are captured through the artifact path. #7 stays open.
 
+### Re-verification at `4356def`, 2026-10-07
+
+A fifth #7 pass re-ran the checks after #307 (the #287 cost instrument) changed
+one audit input. It did not regenerate evidence, add measurements, change DSP or
+runtime admission, or access holdout data.
+
+- Base: `origin/main` at `4356def`, branch `feature/issue-7`, clean tree. Host
+  and interpreter: Linux x86_64 shared dispatch worker, `/usr/bin/python3`
+  (Python 3.12.3). `python3.11` is not installed (limitation); no Torch or
+  Docker run took place. This host is outside DR-0006's measured scope.
+- Inputs since `a4d7a3f`: `git diff --stat a4d7a3f HEAD -- sim/reference
+  spec/reference tools tests env src` is not empty (`git diff --quiet` exited
+  1), so the earlier "inputs unchanged" premise no longer holds. The delta is
+  five paths: new #287 files `sim/reference/development-trace-cost-v1.json`,
+  `src/torchsynth_voice/development_trace_cost.py`,
+  `tests/test_development_trace_cost.py` and
+  `tools/measure_development_trace_cost.py`, plus a modification of
+  `tools/qualify_trace_artifacts.py` (+20/-1). The registry
+  `spec/reference/trace-registry-v1.json` and the three trace publications are
+  byte-identical to `a4d7a3f` (`git diff --quiet` exited 0 on those paths) and
+  hash as in the "Audit identity" table (registry `6fd72ca9…d34c`; prototype
+  `b074579f…29ad`; capture `b803f015…b56d`; artifact smoke `0a17a7e5…022f`).
+- Assessment of the `tools/qualify_trace_artifacts.py` change, by code
+  inspection only (not a fresh numerical measurement): it adds a `time` import,
+  class attribute `driver_source = DRIVER_SOURCE`, a `collect_telemetry` hook
+  returning `None`, writes `self.driver_source` instead of `DRIVER_SOURCE`, times
+  the `docker run` call, and sets `receipt["worker_telemetry"]` only when the
+  hook returns non-`None`. With the defaults the driver bytes, docker command and
+  receipt fields are the same as before, so the published two-case smoke
+  evidence is not affected by default. It was not re-executed, because the
+  qualified runtime is unavailable here. The four #287 additions are new
+  evidence instruments whose receipt is `UNRUN`; their unit tests were not part
+  of this pass.
+
+| Command | Kind | Exit | Actual result |
+| --- | --- | --- | --- |
+| `python3 -m unittest discover -s tests -p test_trace_registry.py` | U | 0 | 12 tests OK |
+| `python3 -m unittest discover -s tests -p test_trace_capture.py` | U | 0 | 38 tests OK (fake Torch/Voice double; not runtime evidence) |
+| `python3 -m unittest discover -s tests -p test_trace_artifacts.py` | U | 0 | 27 tests OK (synthetic store/provider) |
+| `python3 -m compileall -q` on the `trace-artifacts.yml` CI targets | U | 0 | No syntax errors in the modified tool |
+| `python3 tools/qualify_trace_capture.py --check-inputs` | U | 0 | `PASS`: 5 cases, 11 negative controls, 5 endpoint pairs |
+| `python3 tools/qualify_trace_capture.py --check-publication` | U+R | 0 | `PASS`: token `tr1-b89a589e…3259`, 5 cases |
+| `python3 tools/qualify_trace_artifacts.py --check-inputs` | U | 0 | Registry/selection recorded, 2 cases, 5 negative controls |
+| `python3 tools/qualify_trace_artifacts.py --check-publication` | U+R | 0 | Document-level validation passed. **The store-dependent payload rehash did not run**: no `--store`, `out/` absent |
+| `python3 tools/qualify_trace_capture.py --output /tmp/i7-4356def/capture` | F gate | 1 | Refused `unqualified host`: **unrun** |
+| `python3 tools/qualify_trace_artifacts.py --store /tmp/i7-4356def/store --receipt /tmp/i7-4356def/r.json` | F gate | 1 | Uncaught `CalledProcessError` from `sysctl -n machdep.cpu.brand_string`; nothing written: **unrun** |
+
+No repository markdown or doc-consistency check exists in `.github/workflows`
+or `tools`, so none was run.
+
+Result: no status changes. Criteria 1, 2, 3, 4, 6 and 7 remain established
+within their stated bounded scope (retained publications plus fresh
+unit/schema checks; no fresh numerical measurement). Criterion 5 remains
+**missing** (#286 receipt `UNRUN`). Criterion 8 remains **missing** for the
+development corpus (#287 receipt `UNRUN`); only the two-case measurement and
+its derived projection exist. The artifact driver selects 29 of the 32 registry
+traces; the three normalization seams are captured only by the #23 hash-level
+worker, so not all traces are captured through the artifact path. #7 stays
+open.
+
 ## Directed per-path capture (#286): plan, verifier and unrun receipt
 
 The #7 criterion "at least one directed fixture demonstrates each trace path"
