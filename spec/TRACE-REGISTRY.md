@@ -419,3 +419,49 @@ No holdout identity was accessed. Every executed identity cited here is a
 development or directed case. This audit makes no corpus-wide, holdout,
 scalar, fixed-model, RTL, synthesis, layout, signoff, hardware-playback or
 sound-fidelity claim.
+
+### Re-verification at `a38ab0a`, 2026-10-07
+
+A second #7 pass re-ran the audit checks on a newer base. It did not
+regenerate evidence or add measurements, and it did not access holdout data.
+
+- Base: `origin/main` at `a38ab0a38fb218fbf35291ada614557b6af4ec1a`, branch
+  `feature/issue-7`. The tree was clean before the edit. Host and
+  interpreter: Linux x86_64 shared dispatch worker, `/usr/bin/python3`
+  (Python 3.12.3). `python3.11` is not installed, and no Torch or Docker
+  run took place. This host is outside DR-0006's measured scope.
+- Audit inputs are unchanged since the first pass.
+  `git diff --quiet e29a8a9 HEAD -- sim/reference spec/reference tools tests env src`
+  exited 0. The recomputed SHA-256 values of the three publications and of
+  `spec/reference/trace-registry-v1.json` equal the values in the "Audit
+  identity" table. Each publication still has exactly one commit on
+  `origin/main` (`c53f464`, `18c1e43` and `752f79d`).
+
+| Command | Kind | Exit | Actual result |
+| --- | --- | --- | --- |
+| `python3 -m unittest discover -s tests -p test_trace_registry.py` | U | 0 | 12 tests OK, 0 skipped |
+| `python3 -m unittest discover -s tests -p test_trace_capture.py` | U | 0 | 38 tests OK, 0 skipped (fake Torch/Voice double; not runtime evidence) |
+| `python3 -m unittest discover -s tests -p test_trace_artifacts.py` | U | 0 | 27 tests OK, 0 skipped (synthetic store/provider) |
+| `python3 -m unittest discover -s tests -p test_trace_capture_provider.py` | U | 0 | 10 tests OK |
+| `python3 -m unittest tests.test_artifact_renderer.RendererTests.test_worker_source_gate_precedes_numerical_import` | U | 0 | 1 test OK |
+| `python3 -m unittest discover -s tests -p test_reference_consolidation.py` / `python3 tools/check_reference_consolidation.py` / `python3 tools/check_contract.py` | U | 0 / 0 / 0 | 35 tests OK; 9 consolidation checks passed; contract manifests consistent |
+| `python3 tools/qualify_trace_capture.py --check-inputs` | U | 0 | `PASS`: token `tr1-b89a589e…3259`, 5 cases, 4-trace subset, 11 negative controls, 5 endpoint pairs |
+| `python3 tools/qualify_trace_capture.py --check-publication` | U+R | 0 | `PASS`: same token, 5 cases |
+| `python3 tools/qualify_trace_artifacts.py --check-inputs` | U | 0 | 29-trace selection, `selection_sha256` `6d6b822a…5e89`, 3 excluded normalization seams, cases 0/1, 5 negative controls |
+| `python3 tools/qualify_trace_artifacts.py --check-publication` | U+R | 0 | Document-level validation passed. **The store-dependent payload rehash did not run**: `out/` is absent and no `--store` was given |
+| `python3 tools/qualify_trace_capture.py --output /tmp/i7-fresh-a38ab0a/capture` | F gate | 1 | Refused `unqualified host`. Nothing was written to the output path: **unrun** |
+| `python3 tools/qualify_trace_artifacts.py --store /tmp/i7-fresh-a38ab0a/store --receipt /tmp/i7-fresh-a38ab0a/receipt.json` | F gate | 1 | Uncaught `CalledProcessError` from `sysctl -n machdep.cpu.brand_string`. No store or receipt was written: **unrun** |
+
+Result: this pass changes no status. Criteria 1, 2, 3, 4, 6 and 7 remain
+established within their stated bounded scope. Criterion 5 remains
+**missing** (follow-up #286). Criterion 8 remains **missing** for the
+development corpus (follow-up #287). Fresh qualified-runtime measurement
+remains **unrun**: no DR-0006 host was available. Rerunning the existing
+producers would not close #286 or #287 in any case. Both follow-ups were
+still open (`loom:triage`) when this pass ran, so #7 stays open.
+
+The hardening observation under criterion 7 still holds:
+`SOURCE_GATED_WORKERS` in `tools/check_reference_consolidation.py` lists
+only `probe.py`, `qualify_repeatability.py`, `qualify_scalar.py` and
+`render_artifact.py`. It is not a criterion gap, and this pass did not file
+it.
