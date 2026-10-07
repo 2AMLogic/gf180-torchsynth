@@ -24,6 +24,17 @@ G1 is narrowed: the producer commit is retrievable from GitHub, but no
 reproduction ran. G2 is unchanged. G3 now has a concrete source location and
 follow-up #289. G4 is unchanged.**
 
+**Re-verification (2026-10-07, revision `6d1bdffa678958bc80228e0dc0bebb913feba9fa`):
+verdicts unchanged. Focused suites and the contract check passed again (68
+tests, 0 skips). Changes since `1386c4d` under `src`, `tools`, `tests`,
+`sim/reference`, and `spec` are the unrelated directed-trace-paths addition
+(#286 lineage) and trace-spec wording; none touches the artifact, storage,
+runner, fixtures, smoke record, or the three audited specs. G1, G2, and G4 are
+unchanged (producer `224eb15a...` still absent from the local object store,
+`git cat-file -t` exit 128; no `corpus-smoke-15` or run directory found on this
+worker; #289 for G3 is still open). Details under "Re-verification run at
+`6d1bdff`".**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
@@ -33,6 +44,27 @@ follow-up #289. G4 is unchanged.**
 | C. Fresh runtime measurement | None. No Docker/amd64 render, store verification, or reproduction was run in either audit pass |
 
 ## Executed checks (class A)
+
+### Re-verification run at `6d1bdff` (2026-10-07)
+
+Environment: Linux 6.17.0-1019-aws (shared AWS dispatch worker), Python 3.12.3,
+`TORCHSYNTH_ROOT` unset, no Torch/Docker used. Clean worktree
+`.loom/worktrees/issue-4` at `HEAD` `6d1bdffa678958bc80228e0dc0bebb913feba9fa`
+(equal to `origin/main`). Run serially.
+
+| Command | Exit | Result | Wall time |
+| --- | --- | --- | --- |
+| `python3 -m unittest discover -s tests -p test_artifacts.py -v` | 0 | 28 tests OK, 0 skips | 0.455 s |
+| `python3 -m unittest discover -s tests -p test_storage.py -v` | 0 | 16 tests OK, 0 skips | 1.599 s |
+| `python3 -m unittest discover -s tests -p test_artifact_renderer.py -v` | 0 | 8 tests OK, 0 skips | 3.961 s |
+| `python3 -m unittest discover -s tests -p test_corpus.py -v` | 0 | 16 tests OK, 0 skips | 35.343 s |
+| `python3 tools/check_contract.py` | 0 | `contract manifests are internally consistent` | n/a |
+
+Not run: full suite, `python3 -S` standalone suite runs, concurrent-writer
+loop, ruff, compileall, any store verification or render (raw bytes absent).
+The historical smoke and development records were not re-read for changes
+because `git diff --name-status 1386c4d HEAD -- sim/reference` shows only the
+unrelated `directed-trace-paths-v1.json` addition.
 
 ### Re-verification run at `1386c4d` (2026-10-07)
 
