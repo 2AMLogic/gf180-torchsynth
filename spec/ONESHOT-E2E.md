@@ -1112,3 +1112,27 @@ execute is reported here as a pass. In particular:
 - `--require-reachable` is a check on a record's *citation*, not on the RTL. It
   establishes that a reader can resolve the commit a record names; it adds no
   bit-identity evidence of its own.
+
+---
+
+## 4. Closure re-verification (issue #79)
+
+All seven rows of the ledger in section 3 are met for the whole-voice lane at
+`full` and for the tail-chain lane at `full`, with committed records (see
+"What is still open"). This increment ran **no new simulation**; it re-checked,
+at tree `5400ec2`, that the committed records are still sound:
+
+```
+for r in sim/evidence/oneshot-*.json; do
+  python3 tools/verify_oneshot_evidence.py "$r" --require-reachable   # 5/5 exit 0
+done
+python3 -m pytest -q tests/test_committed_oneshot_evidence.py          # 16 passed
+```
+
+Each record's cited sources re-hash fresh against this tree and each cited
+commit is reachable on `origin/main`. This is a re-check of records, not a
+fresh conformance run; simulation results remain exactly those the records
+state. The follow-ups #263 (trace-level kill for `vco-pitch-wire-swap`) and
+#264 (aggregate-gate lint baseline, `NO VERDICT` until generated) stay open
+under their own issues and are not conformance gaps for #79. Nothing here is a
+gf180 synthesis, layout, signoff, hardware or sound-fidelity claim.
