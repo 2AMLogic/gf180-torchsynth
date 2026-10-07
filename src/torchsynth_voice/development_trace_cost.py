@@ -702,6 +702,8 @@ def measured_receipt(*, plan, plan_reference, envelope, run_reference, index,
     inventory = store_inventory(root)
     status = "complete" if summary["memory_complete"] else "partial"
     subtotal = summary["completed_cases_subtotal"]
+    companion_bytes = ta.companion_reference(companion)["size_bytes"]
+    held = inventory["categories"]["companion"]
     return dict(
         schema=SCHEMA,
         schema_version=SCHEMA_VERSION,
@@ -722,9 +724,14 @@ def measured_receipt(*, plan, plan_reference, envelope, run_reference, index,
             completed_cases_subtotal=subtotal,
             full_corpus=subtotal if summary["storage_complete"] else None,
             shared=dict(
-                companion_bytes=ta.companion_reference(companion)["size_bytes"],
-                accounting="the companion is one shared file; it is counted once"
-                " here and never apportioned to cases",
+                companion_bytes=companion_bytes,
+                superseded_companion_files=held["files"] - 1,
+                superseded_companion_bytes=held["logical_bytes"] - companion_bytes,
+                accounting="the current companion is one shared file; it is counted"
+                " once here and never apportioned to cases. Companions retained"
+                " from earlier partial publications of a resumed run are never"
+                " deleted; their files and bytes are reported separately as"
+                " superseded and still counted in the store inventory",
             ),
             store_inventory=logical_inventory(inventory),
             allocated=dict(
@@ -861,9 +868,17 @@ def verify_document(receipt, *, expected=None):
                           ("bundle", "bundle_bytes")):
         require(categories[category]["logical_bytes"] == subtotal[key],
                 "store inventory disagrees with case rows: " + category)
+    shared = storage["shared"]
+    require(shared["superseded_companion_files"] >= 0
+            and shared["superseded_companion_bytes"] >= 0
+            and (shared["superseded_companion_files"] == 0)
+            == (shared["superseded_companion_bytes"] == 0),
+            "superseded companion accounting is inconsistent")
     require(categories["companion"]
-            == dict(files=1, logical_bytes=storage["shared"]["companion_bytes"]),
-            "companion is not one shared file counted once")
+            == dict(files=1 + shared["superseded_companion_files"],
+                    logical_bytes=shared["companion_bytes"]
+                    + shared["superseded_companion_bytes"]),
+            "companions are not one current file plus accounted superseded files")
     require(storage["store_inventory"]["total_logical_bytes"]
             == sum(v["logical_bytes"] for v in categories.values()),
             "store logical total tampered")

@@ -517,7 +517,7 @@ class CampaignTests(unittest.TestCase):
             (lambda r: r["cases"][0]["storage"].update(audio_bytes=1),
              "row storage totals tampered"),
             (lambda r: r["storage"]["shared"].update(companion_bytes=1),
-             "companion is not one shared file"),
+             "companions are not one current file"),
             (lambda r: r["memory"]["peak_rss_kib"].update(maximum=1),
              "memory summary tampered"),
             (lambda r: r.update(status="partial"), "status disagrees"),
@@ -557,6 +557,40 @@ class ResumeTests(unittest.TestCase):
         # The original receipt now names a superseded run summary.
         with self.assertRaises(ValidationError):
             dtc.verify_store(original, campaign.store, expected=subset_expected())
+
+    def test_resume_after_failed_case_accounts_retained_companion(self):
+        campaign = Campaign(backend=TelemetryBackend(fail={1}))
+        self.addCleanup(campaign.cleanup)
+        code, partial = campaign.run()
+        self.assertEqual((code, partial["status"]), (1, "partial"))
+        self.assertEqual(partial["storage"]["shared"]["superseded_companion_files"], 0)
+        campaign.backend.fail.clear()
+        resumed_path = campaign.root / "resumed.json"
+        code, resumed = campaign.run(
+            resume=partial["run"]["run_id"], receipt_path=resumed_path
+        )
+        self.assertEqual((code, resumed["status"]), (0, "complete"))
+        shared = resumed["storage"]["shared"]
+        self.assertEqual(shared["superseded_companion_files"], 1)
+        self.assertEqual(
+            shared["superseded_companion_bytes"],
+            partial["storage"]["shared"]["companion_bytes"],
+        )
+        self.assertEqual(
+            resumed["storage"]["store_inventory"]["categories"]["companion"],
+            dict(
+                files=2,
+                logical_bytes=shared["companion_bytes"]
+                + shared["superseded_companion_bytes"],
+            ),
+        )
+        self.assertEqual(
+            dtc.verify_store(
+                loads(resumed_path.read_bytes()), campaign.store,
+                expected=subset_expected(),
+            ),
+            dtc.VERIFIED,
+        )
 
     def test_resume_under_a_different_plan_refused(self):
         campaign = Campaign()
