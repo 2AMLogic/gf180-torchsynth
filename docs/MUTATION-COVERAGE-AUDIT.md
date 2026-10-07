@@ -228,6 +228,62 @@ default (generating) mode of every runner, runtime runner default mode (pinned
 image), any fresh actual-Voice measurement, the AWS repo-remote box, the full
 repository test suite, Python 3.11.
 
+## Re-verification at `d38cfb21fc35979715400531ddb12c83a55db2f0` (2026-10-07, Linux)
+
+Run on `origin/main` tip in `.loom/worktrees/issue-9` on host `loom-worker-3`
+(Linux 6.17.0-1019-aws, x86_64 dispatch worker; not the AWS repo-remote box,
+not the pinned release image) with the worktree-local locked interpreter
+(`uv sync --locked --extra metrics --python 3.13`, Python 3.13.16, NumPy 2.5.3,
+`OMP/OPENBLAS/MKL/VECLIB` threads = 1). A `git diff --stat 6492f05..d38cfb2`
+over the mutation surfaces (`src/torchsynth_voice/mutat*`,
+`tools/qualify_mutations*`, `tests/test_mutations*`, `sim/reference/mutation-*`,
+`spec/reference/mutation-seams-v1.json`, `.github/workflows/mutations.yml`,
+`spec/MUTATIONS.md`) shows no change, so the earlier verdicts carry over. No
+publication was regenerated; `git status` was clean after all runs. Full logs
+were kept in a throwaway directory and are not committed.
+
+| Check | Exit | Retained output (summary) |
+|---|---|---|
+| unittest `test_mutations.py` | 0 | Ran 75 tests, OK |
+| unittest `test_mutations_matrix.py` | 0 | Ran 13 tests, OK |
+| unittest `test_mutations_identity.py` | 0 | Ran 21 tests, OK |
+| unittest `test_mutations_timing.py` | 0 | Ran 36 tests, OK |
+| unittest `test_mutations_signal.py` | 0 | Ran 34 tests, OK |
+| `tools/qualify_mutations.py --check` | 0 | PASS, faults 7, `mu1-cc7f4ed0...c5ed0` |
+| `tools/qualify_mutations_runtime.py --check-publication` | 0 | PASS, cases 6, faults 5, attempts 8 (class P only) |
+| `tools/qualify_mutations_identity.py --check` | 0 | PASS |
+| `tools/qualify_mutations_timing.py --check` | 0 | PASS, faults 13 |
+| `tools/qualify_mutations_signal.py --check` | 0 | PASS, operators 14, faults 17, tripped 17 |
+| `tools/qualify_mutations_matrix.py --check` | **1** | `FAIL: committed publication is stale or drifted: inputs` |
+
+F6 is confirmed still open. A digest comparison of the 13 `inputs` entries in
+`sim/reference/mutation-matrix-v1.json` against the working tree finds exactly
+one mismatch, `spec/MUTATIONS.md` (committed `e98682b2...`, current
+`06f32a96...`). `spec/MUTATIONS.md` already links this audit (section
+"Evidence audit") and states the evidence scope (only `bridge.*` has actual
+Voice runtime evidence; family and matrix publications are revalidated
+apparatus-domain evidence; schema-valid is not a fresh measurement), so this
+pass deliberately leaves it byte-unchanged: any further edit would only widen
+the drift until the matrix publication is regenerated under F6.
+
+Workflow ordering (`.github/workflows/mutations.yml`, inspected independently
+of test results; #257 still OPEN, not fixed here): the `stdlib` job step
+"Qualify controls and fault matrix, then check the committed publication"
+(lines 28-31) and the `matrix-numerical` step (lines 114-117) run the
+generating mode before `--check`, so committed drift is rewritten inside the
+runner before it is compared; that is why CI cannot see F6. The `timing-` and
+`signal-numerical` jobs run `--check` only. No job runs
+`tests/test_mutations_identity.py` or `qualify_mutations_identity.py --check`,
+and no step selects the 20-row `ci_subset`. The workflow itself was not
+executed (UNRUN).
+
+Verdict unchanged: criteria 2, 4, 5, 6 established at their stated scope;
+criteria 1, 3 (runtime scope), 7 and 8 NOT ESTABLISHED. **UNRUN (unchanged):**
+CI workflow execution, `compileall` step, default (generating) mode of every
+runner, runtime runner default mode (pinned image), any fresh actual-Voice
+measurement, the AWS repo-remote box, the full repository test suite,
+Python 3.11.
+
 ## Bounded follow-ups (not performed here)
 
 - **F1** Fresh actual-Voice runtime measurement of the family operators
