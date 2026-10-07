@@ -66,11 +66,13 @@ again. Do not point at a mutable tag or install another Torch stack.
 
 The corpus-v0 manifest has 128 sounds: development 0-95 and holdout 96-127.
 A single invocation never mixes the partitions, so the full corpus is two runs
-into the same or separate stores. These commands are documentation of the
-interface. The development command was executed at full scale by #19 (see
-`spec/DEVELOPMENT-CORPUS.md` and `sim/reference/development-corpus-first.json`);
-the holdout command has never been run, because holdout is a one-shot,
-post-freeze action:
+into the same or separate stores. The 96-case development command has been
+executed: issue #19 rendered and verified the full development corpus (run
+`9c443eed363e4874a07328d8ddadd095`; see `spec/DEVELOPMENT-CORPUS.md` and
+`sim/reference/development-corpus-first.json`), and issue #20 byte-repeated it
+(`spec/DEVELOPMENT-CORPUS-REPEAT.md`,
+`sim/reference/development-corpus-repeat.json`). The holdout command has never
+been run; it is a one-shot, post-freeze action:
 
 ```sh
 # 96 development cases (default selection)
@@ -89,7 +91,9 @@ Storage lower bound: each artifact holds one 705,600-byte float32 audio file
 (about 64.6 MiB) and 128 cases at least 90,316,800 bytes (about 86.1 MiB), plus
 per-artifact metadata (a few KiB), manifests, indexes and run journals, and
 one extra private staging copy of the artifact being published. Requested
-traces add payload per case. The store must be a local POSIX filesystem; keep the
+traces add payload per case. For comparison, the recorded #19 development
+store measured 390 files and 71,820,533 bytes
+(`development-corpus-first.json` `storage`). The store must be a local POSIX filesystem; keep the
 holdout ledger and frozen rubric outside the artifact store and under operator
 control. Raw audio stays out of Git unless an explicit storage decision is made.
 

@@ -13,15 +13,17 @@ the stated scope), **gap** (a requirement is not demonstrated), **not run**
 record is never counted as a check executed by this audit.
 
 **Overall result: the original criteria are established at synthetic-test
-scope, but real-render evidence is historical only and four bounded gaps
-remain (G1-G4 below). Issue #4 must stay open; this audit does not close it.**
+scope. Real-render evidence exists but is historical only (the two-case #15
+smoke record, the 96-case #19 development run, and its #20 byte-repeat, all
+inspected rather than re-executed here), and four bounded gaps remain (G1-G4
+below). Issue #4 must stay open; this audit does not close it.**
 
 ## Evidence classes
 
 | Class | Meaning in this audit |
 | --- | --- |
 | A. Fresh synthetic tests | Executed by this audit at revision `e29a8a946f564cbea4b0c318f0a86af1e3baa0e0` (see Executed checks) |
-| B. Historical publication inspection | `sim/reference/corpus-smoke.json` read and cross-checked, not re-executed |
+| B. Historical publication inspection | `sim/reference/corpus-smoke.json` (#15), `sim/reference/development-corpus-first.json` (#19), and `sim/reference/development-corpus-repeat.json` (#20) read and cross-checked, not re-executed |
 | C. Fresh runtime measurement | None. No Docker/amd64 render, store verification, or reproduction was run |
 
 ## Executed checks (class A)
@@ -112,24 +114,47 @@ audio-only traces; independent repeat must use the clean producer commit;
 raw audio remains in the ignored local store and the embedded documents
 authenticate metadata and recorded hashes, not absent raw bytes; the sibling
 `<operator-home>/dev/torchsynth` checkout at `304824db...` was refused; bounded
-software rendering and storage only.
+software rendering and storage only. (Host paths are replaced by placeholders
+in this audit; the raw string is in `corpus-smoke.json` at `limits[4]`.)
 
 Observed in the record: `raw_audio_committed=false`,
 `raw_store_relative="out/corpus-smoke-15"` (git-ignored by `.gitignore`
 `out/`). Real production payloads are therefore unavailable.
 
+## Historical development corpus inspection (class B)
+
+These records were read and their keys cross-checked; no command they record
+was re-executed by this audit, and their raw stores are operator-retained,
+not available here.
+
+| Item | Recorded key and value |
+| --- | --- |
+| First run (#19) | `sim/reference/development-corpus-first.json`, `status: PASS`, schema `torchsynth-development-corpus-evidence` v1, added by commit `b367032`; narrative in `spec/DEVELOPMENT-CORPUS.md`. Producer `producer_git.commit = bd8b35e4...f798` (`dirty=false`), runtime profile `release-mkl-compatible-v1`, `manifest_sha256 = 141c7f05...6181` (same manifest as the smoke record) |
+| First-run counts | `counts`: attempt 96, expected 96, failure 0, observed 96, resume 0, retry 0, success 96; `expectation.development_indices` = 0-95; `expectation.holdout_indices_rendered = []`; `plan.admission = null` |
+| First-run identity | `run.run_id = 9c443eed363e4874a07328d8ddadd095`, `run.envelope_sha256 = 82406940...93e0df`, `run.index_sha256 = 1b817013...80cd` |
+| First-run command receipts | `commands[]`: three commands, exit codes 0, 0, 0 (single-case scratch smoke `--indices 0`; default 96-case render; `python3 -S ... --verify 9c443eed... --run-sha256 82406940...93e0df`). `verification[0]`: `status: complete`, exit 0, counts 96/96 success, failure 0 |
+| First-run store | `storage`: `artifact_directories` 96, `files` 390, `bytes` 71,820,533, `audio_bytes_each` 705,600, `committed_to_repository=false` |
+| Repeat (#20) | `sim/reference/development-corpus-repeat.json`, `status: complete`, `evidence_kind: independent-byte-repeat`, added by commit `acc3746`; narrative in `spec/DEVELOPMENT-CORPUS-REPEAT.md`. Same producer commit `bd8b35e4...`, fresh store; run `1c3ca47b...a8ae`, counts 96/96 success, failure 0 |
+| Repeat comparison | `comparison.verdict = COMPLETE-REPEAT`; `index_bytes.verdict = EQUAL` (both `1b817013...80cd`); `per_class_counts`: audio_equal 96, metadata_equal 96, index_record_equal 96, mismatches 0, missing 0, refused 0 |
+| Repeat command receipts | `commands[]`: five commands; verify, audit, and compare exit 0; the 96-case render command has `exit_code: null` with `exit_code_note` stating the launcher wrapper lost the status and success rests on the captured run JSON and the later verify/audit/compare commands |
+
+Limits (from each record's `limits`): single execution on one admitted Apple
+M5 / Docker-emulated host; raw bytes not embedded; no holdout identity rendered,
+admitted, or inspected; no tolerance, quality, or sound-fidelity conclusion.
+Traces were not requested (audio-only).
+
 ## Original acceptance criteria
 
 | # | Original criterion | Verdict | Evidence and limits |
 | --- | --- | --- | --- |
-| AC1 | A two-case test corpus renders, validates, resumes without recomputation, and produces a stable index | **established** (synthetic, fresh) and corroborated by historical record | A: `tests/test_corpus.py::test_two_case_resume_zero_recomputation_and_stable_index` passed (backend call count unchanged on resume, byte-identical index). B: smoke record shows 2 cases, resume attempt count 2 unchanged, 0 additional render attempts, same index sha256 `964dbda2...308b` in both runs. Historical real-scale corroboration: the #19 96-case run (resume 0, verify exit 0). Limit: the real render and real exact-byte verification were not re-executed or re-verified (see G1, G2); recorded PASS is not a test run here |
+| AC1 | A two-case test corpus renders, validates, resumes without recomputation, and produces a stable index | **established** (synthetic, fresh) and corroborated by historical record | A: `tests/test_corpus.py::test_two_case_resume_zero_recomputation_and_stable_index` passed (backend call count unchanged on resume, byte-identical index). B: smoke record shows 2 cases, resume attempt count 2 unchanged, 0 additional render attempts, same index sha256 `964dbda2...308b` in both runs. B (real scale): the #19 record shows 96/96 success with `resume` 0 and a `python3 -S --verify` exit 0, and #20 reproduced a byte-identical index. Limit: the real render and real exact-byte verification were not re-executed or re-verified (see G1, G2); recorded PASS is not a test run here |
 | AC2 | Interrupted/staging artifacts cannot be mistaken for complete artifacts | **established** (synthetic, fresh) | A: storage `test_process_exit_during_copy_leaves_only_incomplete_private_stage`, `test_process_exit_before_rename_is_not_discoverable_and_retry_succeeds`, `test_failure_after_atomic_rename_can_resume_complete_bytes`, `test_exception_cleanup_only_removes_own_staging`; corpus `test_interrupted_attempt_retained_on_resume`, `test_interrupted_index_publication_resumes_without_rendering`, `test_interrupted_reuse_retains_completed_artifact_without_rendering`. Limit: process interruption only; power-loss durability and network filesystems unqualified (`spec/ARTIFACT-STORAGE.md`) |
 | AC3 | A changed source hash, runtime identity, lock, sample count, or audio hash produces a hard failure | **established** (synthetic, fresh) | A: renderer `test_request_mismatch_before_backend_access` (source commit, torch version, duration, batch size refuse before backend access) and `test_worker_source_gate_precedes_numerical_import`; artifacts `test_stale_content_id_is_rejected` (changed `runtime.lock_sha256`), `test_cross_artifact_checks` (index lock/fixture mismatch), `test_every_input_leaf_affects_identity`; renderer `test_invalid_observations_never_publish` (short audio, wrong noise hash); storage `test_missing_extra_truncated_corrupt_files_and_empty_directories`; corpus `test_corrupt_extra_missing_metadata_and_payload_refused` and `test_stale_resume_refused_before_renderer` (changed `project_git.commit`). Limit: coverage is by representative mutations and the leaf-identity test; no test mutates every source file hash individually against the real worker |
 | AC4 | Reordered parameter arrays do not change name-keyed patch meaning | **established** (synthetic, fresh) | A: artifacts `test_key_order_is_irrelevant` (reversed `physical_by_name` and top-level key order give identical `content_id`), `test_diagnostic_orders_are_permutations_only` (orders are diagnostic only), `test_rejects_positional_missing_extra_and_mismatched_parameters`, `test_all_canonical_parameter_names_maps_locks_and_orders`. B: both smoke artifacts carry 78 name-keyed normalized and physical values. Limit: no real TorchSynth reordering was exercised |
 | AC5 | Duplicate identities with conflicting bytes are rejected | **established** (synthetic, fresh) | A: storage `test_collision_reports_both_metadata_and_changed_output_hashes`, `test_metadata_whitespace_only_change_is_a_collision`, `test_two_process_writers_converge_or_report_collision`; renderer `test_same_id_different_bytes_collision_preserves_original`; artifacts `test_duplicate_case_or_sound_or_artifact_is_rejected`. Limit: cooperating local POSIX writers only |
 | AC6 | Holdout artifacts have an access boundary documented and tested | **established** (synthetic, fresh; documentation inspected) | Documented in `spec/CORPUS-RUNNER.md` "One-shot holdout gate". A: corpus `test_default_has_only_development`, `test_mixed_holdout_refused`, `test_mixed_range_refused_before_any_renderer_or_store_access`, `test_holdout_admission_one_shot_and_same_run_resume_synthetic_only`, `test_interrupted_holdout_reuse_retains_one_shot_admission`. B: `actual_holdout_access=false`, `plan.admission=null`. Limit: synthetic payloads only; operator-attested freeze and operator-held ledger, no remote admission service; no real holdout rendered or accessed, and none was authorized |
 | AC7 | Unit tests cover resume, collision, partial-write, corrupt-hash, missing-sample, and dirty-tree metadata | **established** (fresh) | Resume: AC1 tests. Collision: AC5. Partial write: AC2. Corrupt hash: storage corrupt/truncated test, corpus corrupt payload test, `test_corrupt_existing_artifact_never_resumes_or_gets_replaced`. Missing sample: storage missing/truncated files, renderer short audio, schema sample count of 176,400. Dirty tree: `test_artifacts.py::test_clean_and_dirty_git_digests`, `test_missing_provenance_never_defaults`. Limit: "missing-sample" is covered as missing/short audio payload and sample-count validation, not as a distinct sample-gap test |
-| AC8 | The public metadata schema contains no absolute user path | **established** for artifact, index, and plan documents; **see G3** for run receipts | A: `tests/fixtures/artifacts/rejections.json` unsafe-reference mutations (POSIX/Windows/UNC/parent-traversal) all rejected by `test_negative_fixture_mutations`; `test_path_traversal_aliases_and_reserved_metadata_are_rejected`. A (script): no `/Users`, `/home`, `/private` in embedded smoke `artifacts`, `plan`, `index`. Limit: the strings in `rejections.json` are intentional negative inputs. The retained run `attempts[].receipt.command` strings and `local_checks`/`limits` text do contain host paths (G3) |
+| AC8 | The public metadata schema contains no absolute user path | **established** for artifact, index, and plan documents; **see G3** for run receipts | A: `tests/fixtures/artifacts/rejections.json` unsafe-reference mutations (POSIX/Windows/UNC/parent-traversal) all rejected by `test_negative_fixture_mutations`; `test_path_traversal_aliases_and_reserved_metadata_are_rejected`. A (script): no `/Users`, `/home`, `/private` in embedded smoke `artifacts`, `plan`, `index`. The same scan over the embedded `plan` and `index` of both `development-corpus-*.json` records found none. Limit: the strings in `rejections.json` are intentional negative inputs. The retained run `attempts[].receipt.command` strings and `local_checks`/`limits` text do contain host paths (G3) |
 
 ## Evidence requirement (original "Evidence" section)
 
@@ -137,8 +162,8 @@ Observed in the record: `raw_audio_committed=false`,
 | --- | --- | --- |
 | Commit a tiny synthetic fixture/index suitable for CI | **established** | `tests/fixtures/artifacts/complete.json` (8,587 B), `index.json` (1,044 B), `rejections.json` (6,406 B), consumed by `tests/test_artifacts.py`, which passed here. Synthetic only; no sound-fidelity meaning |
 | Keep full float audio out of Git unless explicitly decided | **established** | No audio files are committed; smoke record has `raw_audio_committed=false`; the smoke store path is under git-ignored `out/`. Storage tests generate zero-filled audio in temporary directories |
-| Document exact commands for the 128-case corpus | **established after this change; development command executed by #19 (historical, class B); holdout command not run** | Before this change `spec/CORPUS-RUNNER.md` gave only 0/1 development commands and a 96-case default, with no holdout invocation. This PR adds the "Full 128-case corpus commands and storage" section (96 development run, separate 32-case one-shot holdout run with `--holdout-once --frozen-rubric --holdout-audit-root`, and `--verify`). The commands were written from `tools/render_corpus.py` argument parsing and corpus-v0 split rules; the development command was later executed at full scale by #19 (three commands, all exit 0, recorded in `sim/reference/development-corpus-first.json`, `spec/DEVELOPMENT-CORPUS.md`), and #20 recorded an independent byte-repeat (`sim/reference/development-corpus-repeat.json`); the holdout command has never been run |
-| Document storage requirements for the 128-case corpus | **established after this change** | Same new section: audio lower bounds 67,737,600 B (96) and 90,316,800 B (128) from 176,400 float32 samples per case, plus metadata, indexes, journals, staging, and filesystem requirements. The 96/128 audio figures are derived lower bounds. Separately, the #19 record measured the 96-case development store at 390 files and 71,820,533 B (historical class B, not re-measured here; `spec/DEVELOPMENT-CORPUS.md` states about 69 MiB of raw audio) |
+| Document exact commands for the 128-case corpus | **established after this change**; development command historically executed, holdout command **never run** | Before this change `spec/CORPUS-RUNNER.md` gave only 0/1 development commands and a 96-case default, with no holdout invocation. This PR adds the "Full 128-case corpus commands and storage" section (96 development run, separate 32-case one-shot holdout run with `--holdout-once --frozen-rubric --holdout-audit-root`, and `--verify`). The commands were written from `tools/render_corpus.py` argument parsing and corpus-v0 split rules. B: the 96-case development command and its `-S --verify` were executed by #19 (`development-corpus-first.json` `commands[]`, three commands, all exit 0) and repeated by #20; neither was re-run by this audit. The holdout command has never been run and was not authorized |
+| Document storage requirements for the 128-case corpus | **established after this change** | Same new section: audio lower bounds 67,737,600 B (96) and 90,316,800 B (128) from 176,400 float32 samples per case, plus metadata, indexes, journals, staging, and filesystem requirements. These lower bounds are derived arithmetic. B: the #19 store was measured at 390 files and 71,820,533 B (`development-corpus-first.json` `storage`), consistent with the 96-case lower bound plus metadata, indexes, and journals; the #20 repeat store measured 71,818,190 B. Historical measurements, not re-measured here. No measured 128-case (holdout-inclusive) store exists |
 
 ## Integration checks (metadata, store, runner)
 
@@ -150,18 +175,20 @@ Observed in the record: `raw_audio_committed=false`,
 - Identity/provenance/collision boundaries: AC3, AC5, AC8 above.
 - Verification without site packages: fresh synthetic tests passed in
   `test_corpus.py` and `test_storage.py`. The recorded `python3 -S --verify`
-  command on the smoke store (exit 0 in `command_exit_codes[2]`) is historical.
+  command on the smoke store (exit 0 in `command_exit_codes[2]`) is historical,
+  as is the real-scale `python3 -S --verify` of the #19 96-case run (exit 0 in
+  `development-corpus-first.json` `commands[2]` and `verification[0]`).
 
 ## Bounded gaps and follow-ups
 
 | ID | Gap | Why it remains | Bounded next step |
 | --- | --- | --- | --- |
-| G1 | Producer commit `224eb15a599171b3a8b65ca72457f7e452b83c8e` is not reachable in this clone: `git cat-file -t 224eb15a...` fails with `bad object` after `git fetch origin` (the evidence commit `25495a3` and later main are present) | The record says independent repeat must use the clean producer commit, and that checkout is unavailable here; no admitted runtime (Apple host with Docker amd64 emulation) was used either | Locate or restore the producer commit in a reachable ref, then note that #20 already independently repeated the 96-case development run; for the two-case smoke producer commit, run an equivalent independent reproduction on an admitted runtime into an isolated store. Fresh runtime measurement: **not run** |
+| G1 | Producer commit `224eb15a599171b3a8b65ca72457f7e452b83c8e` is not reachable in this clone: `git cat-file -t 224eb15a...` fails with `bad object` after `git fetch origin` (the evidence commit `25495a3` and later main are present) | The record says independent repeat must use the clean producer commit, and that checkout is unavailable here; no admitted runtime (Apple host with Docker amd64 emulation) was used either | Locate or restore the producer commit in a reachable ref, then run an independent reproduction of the two-case smoke on an admitted runtime into an isolated store. This gap is specific to the two-case smoke producer: the 96-case development run (producer `bd8b35e4...`) already has an independent byte-repeat recorded by #20 (`development-corpus-repeat.json`, `COMPLETE-REPEAT`). Fresh runtime measurement: **not run** |
 | G2 | Raw store bytes for run `6e198bc9a03f4a929ac0a59a93c775cf` are absent (`out/corpus-smoke-15` is ignored and not retained), so read-only `--verify` with envelope digest `122cd1cf...7818` could not be executed | Embedded metadata cannot substitute for payload hashing; exact-byte digests are not reproducible from embedded canonical JSON | If the bytes are recovered, run `python3 -S tools/render_corpus.py --store <recovered> --verify 6e198bc9a03f4a929ac0a59a93c775cf --run-sha256 122cd1cf...7818` and record the result. Store verification: **not run** |
-| G3 | Retained run receipts embed absolute host paths (for example the Docker bind mounts `src=<host-worktree>/.loom/worktrees/issue-15` and `src=<tmp>/...` at `render_run.attempts[].receipt.command[26]`/`[28]` in `sim/reference/corpus-smoke.json`, and likewise under `resumed_run.attempts[]`; the `limits[4]` and `local_checks[0].command` strings carry host paths too; the `development-corpus-*.json` receipts also contain host paths, e.g. `storage.root` and `commands[].command`), contradicting the intent of "no absolute user path" for any retained public record, although artifact/index/plan metadata are clean | AC8 is scoped to the metadata schema; run-envelope receipts were not covered by a path-rejection test, and no committed test asserts receipts are path-free | Decide whether `corpus-run-v1` receipts should be path-normalized (or scrubbed in published evidence) and add a test; the smoke JSON is read-only for this scope |
-| G4 | Real holdout behavior and named-trace capture are not evidenced (the full 96-case development corpus is recorded by #19/#20 as historical class B: `sim/reference/development-corpus-first.json` and `-repeat.json`, 390 files / 71,820,533 B, verify exit 0; not re-run here) | Explicit non-goals here: #7/#24 (traces); holdout access is not authorized | Tracked by those issues; synthetic admission/refusal tests are the only holdout evidence |
+| G3 | Retained run receipts embed absolute host paths, contradicting the intent of "no absolute user path" for any retained public record, although artifact/index/plan metadata are clean. In `corpus-smoke.json`: Docker `--mount src=<host-worktree>/.loom/worktrees/issue-15` and `src=<tmp>/...` at `render_run.attempts[*].receipt.command[26]` and `[28]` (same in `resumed_run.attempts[*]`), plus `local_checks[0].command` and `limits[4]`. The `development-corpus-*.json` receipts also contain operator-home store paths: in `-first.json` at `commands[*].command`, `smoke.store_root`, `storage.root`, `verification[0].command`; in `-repeat.json` at `commands[*].command`, `pre_run_store_inventory.smoke_store`, `storage.root`. This audit quotes them only as placeholders; the raw strings live at those JSON locations | AC8 is scoped to the metadata schema; run-envelope receipts were not covered by a path-rejection test, and no committed test asserts receipts are path-free | Decide whether `corpus-run-v1` receipts should be path-normalized (or scrubbed in published evidence) and add a test; the retained evidence JSONs are read-only for this scope |
+| G4 | Real holdout behavior (the 32-case one-shot holdout command has never been run) and named-trace capture are not evidenced. The 96-case development corpus is not part of this gap: it is evidenced historically (class B) by #19 and #20 above | Holdout access is not authorized; traces are #7/#24 work. The real development runs requested no traces | Tracked by those issues; synthetic admission/refusal tests are the only holdout evidence |
 
-No claim is made about full-corpus results, sound fidelity, scalar promotion,
+No claim is made about holdout or full 128-case results, sound fidelity, scalar promotion,
 gf180mcu synthesis, layout, signoff, or hardware playback.
 
 ## Re-running this audit
