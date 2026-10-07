@@ -3,7 +3,9 @@
 
 Issue #284.  ``ci.yml`` and ``tb-sim.yml`` no longer run on every push to
 main.  ``.github/workflows/ci-main-schedule.yml`` calls this helper on a
-schedule; for each suite it decides, for the *current* tip of main, one of:
+schedule; for each suite it decides, for the *current* tip of main, one of
+(the tip is re-read immediately before each suite is acted on and before each
+dispatch; if main advanced, every suite not yet acted on is re-selected):
 
 ``reuse``     a completed, successful execution of that exact workflow on that
               exact SHA already exists (every required job, every matrix leg,
@@ -25,8 +27,9 @@ Evidence rules (all must hold; anything else is *not* evidence):
   every matrix leg) with conclusion ``success`` -- a skipped required job or a
   missing producer is not a pass, and no other job may be non-successful.
 
-API, authentication and parse failures raise ``SelectorError``; they are never
-inferred to be a cache hit.  The dispatcher itself is never evidence: it is a
+API, authentication and parse failures (including malformed run-list
+responses while observing a dispatch) raise ``SelectorError``; they are never
+inferred to be a cache hit or a "not yet visible" run.  The dispatcher itself is never evidence: it is a
 different workflow.  After dispatching, the resulting run's own ``head_sha`` is
 reported as authoritative for what executed; it is never relabelled as the
 selected SHA.
@@ -229,49 +232,116 @@ def dispatch(api: Any, repo: str, branch: str, workflow: str) -> None:
     api.post(f"/repos/{repo}/actions/workflows/{workflow}/dispatches", {"ref": branch})
 
 
+def _run_list(data: Any, path: str) -> list[dict]:
+    """Validate a workflow-runs list response; malformed shapes are errors.
+
+    A well-formed empty list is legitimate (the run is not visible yet); a
+    non-dict, a missing/non-list ``workflow_runs`` or an entry without an
+    integer ``id`` is a parse failure and must never read as "nothing there".
+    """
+    if not isinstance(data, dict) or not isinstance(data.get("workflow_runs"), list):
+        raise SelectorError(f"{path}: response lacks list 'workflow_runs'")
+    runs = data["workflow_runs"]
+    for run in runs:
+        if not isinstance(run, dict) or not isinstance(run.get("id"), int) \
+                or isinstance(run.get("id"), bool):
+            raise SelectorError(f"{path}: malformed workflow run entry {run!r:.80}")
+    return runs
+
+
+def _dispatch_runs_path(repo: str, branch: str, workflow: str) -> str:
+    return (f"/repos/{repo}/actions/workflows/{workflow}/runs"
+            f"?branch={branch}&event=workflow_dispatch&per_page=10")
+
+
 def observe_run(api: Any, repo: str, branch: str, workflow: str, known_ids: set,
                 sleep: Callable[[float], None] = time.sleep, tries: int = 6) -> dict | None:
-    """Best effort: find the run our dispatch created; its head_sha is authoritative."""
+    """Find the run our dispatch created; its head_sha is authoritative.
+
+    ``None`` only means a well-formed response did not list a new run yet;
+    malformed responses raise ``SelectorError``.
+    """
+    path = _dispatch_runs_path(repo, branch, workflow)
     for _ in range(tries):
         sleep(5)
-        data = api.get(
-            f"/repos/{repo}/actions/workflows/{workflow}/runs"
-            f"?branch={branch}&event=workflow_dispatch&per_page=10"
-        )
-        for run in data.get("workflow_runs", []) if isinstance(data, dict) else []:
-            if run.get("id") not in known_ids:
+        for run in _run_list(api.get(path), path):
+            if run["id"] not in known_ids:
+                sha = run.get("head_sha")
+                if not isinstance(sha, str) or len(sha) != 40:
+                    raise SelectorError(f"{path}: run {run['id']} lacks a valid head_sha")
                 return run
     return None
 
 
 def known_run_ids(api: Any, repo: str, branch: str, workflow: str) -> set:
-    data = api.get(
-        f"/repos/{repo}/actions/workflows/{workflow}/runs"
-        f"?branch={branch}&event=workflow_dispatch&per_page=10"
-    )
-    return {r.get("id") for r in data.get("workflow_runs", [])} if isinstance(data, dict) else set()
+    path = _dispatch_runs_path(repo, branch, workflow)
+    return {r["id"] for r in _run_list(api.get(path), path)}
+
+
+def _describe(d: dict) -> str:
+    line = f"{d['workflow']}: {d['action']} @ {d['sha']} ({d['reason']})"
+    if d.get("run_url"):
+        line += f" evidence/run: {d['run_url']}"
+    if d["action"] == "reuse":
+        line += f" sha {d['evidence_sha']}"
+    return line
 
 
 def run_once(api: Any, repo: str, branch: str, dry_run: bool,
              sleep: Callable[[float], None] = time.sleep) -> tuple[str, list[str]]:
-    sha, decisions = select_all(api, repo, branch, list(SUITES))
-    lines = [f"selected {branch} @ {sha}"]
-    for d in decisions:
-        line = f"{d['workflow']}: {d['action']} ({d['reason']})"
-        if d.get("run_url"):
-            line += f" evidence/run: {d['run_url']}"
-        if d["action"] == "reuse":
-            line += f" sha {d['evidence_sha']}"
-        if d["action"] == "dispatch" and not dry_run:
-            before = known_run_ids(api, repo, branch, d["workflow"])
-            dispatch(api, repo, branch, d["workflow"])
-            run = observe_run(api, repo, branch, d["workflow"], before, sleep)
-            if run is None:
-                line += " -> dispatched; resulting run not yet visible"
-            else:
-                note = "" if run.get("head_sha") == sha else f" (differs from selected {sha})"
-                line += f" -> dispatched run {run.get('html_url')} executed sha {run.get('head_sha')}{note}"
-        lines.append(line)
+    """Act on each suite, re-checking the tip before every decision.
+
+    Main can advance between selection and action (notably while a dispatch is
+    being observed).  Immediately before each suite's decision is acted on --
+    and again immediately before a dispatch POST -- the tip is re-read; if it
+    moved, every suite not yet acted on is re-selected at the new tip.  The
+    number of re-selections is bounded by ``MAX_SELECTION_ROUNDS``.
+    """
+    pending = list(SUITES)
+    lines: list[str] = []
+    reselections = 0
+    sha = ""
+
+    def advanced(current: str) -> bool:
+        nonlocal reselections
+        tip = main_sha(api, repo, branch)
+        if tip == current:
+            return False
+        reselections += 1
+        lines.append(f"{branch} advanced {current} -> {tip}; re-selecting {', '.join(pending)}")
+        if reselections > MAX_SELECTION_ROUNDS:
+            raise SelectorError(
+                f"{branch} kept advancing before dispatch; retry next window. "
+                f"Done so far: {' | '.join(lines)}"
+            )
+        return True
+
+    while pending:
+        sha, decisions = select_all(api, repo, branch, pending)
+        lines.append(f"selected {branch} @ {sha}")
+        stale = False
+        for d in decisions:
+            if advanced(sha):
+                stale = True
+                break
+            line = _describe(d)
+            if d["action"] == "dispatch" and not dry_run:
+                before = known_run_ids(api, repo, branch, d["workflow"])
+                if advanced(sha):
+                    stale = True
+                    break
+                dispatch(api, repo, branch, d["workflow"])
+                run = observe_run(api, repo, branch, d["workflow"], before, sleep)
+                if run is None:
+                    line += " -> dispatched; resulting run not yet visible"
+                else:
+                    note = "" if run["head_sha"] == sha else f" (differs from selected {sha})"
+                    line += (f" -> dispatched run {run.get('html_url')}"
+                             f" executed sha {run['head_sha']}{note}")
+            lines.append(line)
+            pending.remove(d["workflow"])
+        if not stale:
+            break
     return sha, lines
 
 

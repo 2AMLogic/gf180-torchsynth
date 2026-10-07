@@ -183,6 +183,117 @@ class SelectorTests(unittest.TestCase):
         d.run_once(api, REPO, "main", True, sleep=lambda s: None)
         self.assertEqual(api.posts, [])
 
+    # Judge finding 1: the tip is re-read before each suite / dispatch.
+    def test_main_advancing_during_first_observation_reselects_second_suite(self):
+        # CI needs dispatch at A; TB sim has full green evidence at A only.
+        # Main advances to B while CI's dispatch is being observed.  The stale
+        # decision ("tb-sim reuse A") must not be acted on: TB sim is
+        # re-selected at B, where it has no evidence, and is dispatched.
+        tb_a = run("tb-sim.yml", rid=5, number=5, sha=SHA)
+        api = FakeApi(runs={"ci.yml": [], "tb-sim.yml": [tb_a]},
+                      jobs={5: good_jobs("tb-sim.yml")})
+        ci_run = run("ci.yml", rid=7, number=7, sha=SHA, status="queued", conclusion=None,
+                     event="workflow_dispatch")
+        tb_run = run("tb-sim.yml", rid=8, number=8, sha=OTHER, status="queued",
+                     conclusion=None, event="workflow_dispatch")
+        orig = api.get
+
+        def get(path):
+            if "event=workflow_dispatch" in path:
+                posted = [p for p, _ in api.posts]
+                if "tb-sim.yml" in path:
+                    return {"workflow_runs": [tb_run] if len(posted) > 1 else []}
+                if posted:
+                    api.tip = OTHER  # main advances while CI's run is observed
+                    return {"workflow_runs": [ci_run]}
+                return {"workflow_runs": []}
+            return orig(path)
+        api.get = get
+        sha, lines = d.run_once(api, REPO, "main", False, sleep=lambda s: None)
+        self.assertEqual(sha, OTHER)
+        self.assertEqual([p for p, _ in api.posts], [
+            f"/repos/{REPO}/actions/workflows/ci.yml/dispatches",
+            f"/repos/{REPO}/actions/workflows/tb-sim.yml/dispatches",
+        ])
+        text = "\n".join(lines)
+        self.assertNotIn("tb-sim.yml: reuse", text)  # the stale decision is the defect
+        self.assertIn(f"tb-sim.yml: dispatch @ {OTHER}", text)
+        self.assertIn(f"advanced {SHA} -> {OTHER}", text)
+
+    def test_main_advancing_before_first_post_reselects_first_suite(self):
+        # Selection at A says dispatch CI; main reaches B (which already has
+        # green CI and TB sim evidence) before the POST.  No dispatch happens.
+        tips = [SHA, SHA, OTHER]  # select_all reads A twice; pre-action re-read sees B
+        api = FakeApi(advance=tips,
+                      runs={"ci.yml": [run(rid=1, sha=OTHER)],
+                            "tb-sim.yml": [run("tb-sim.yml", rid=2, sha=OTHER)]},
+                      jobs={1: good_jobs("ci.yml"), 2: good_jobs("tb-sim.yml")})
+        sha, lines = d.run_once(api, REPO, "main", False, sleep=lambda s: None)
+        self.assertEqual((sha, api.posts), (OTHER, []))
+        text = "\n".join(lines)
+        self.assertIn(f"ci.yml: reuse @ {OTHER}", text)
+        self.assertIn(f"tb-sim.yml: reuse @ {OTHER}", text)
+
+    def test_main_advancing_between_snapshot_and_post_blocks_post(self):
+        # Re-check sits *after* the known-run snapshot, immediately before POST.
+        api = FakeApi(advance=[SHA, SHA, SHA, OTHER],
+                      runs={"ci.yml": [run(rid=1, sha=OTHER)],
+                            "tb-sim.yml": [run("tb-sim.yml", rid=2, sha=OTHER)]},
+                      jobs={1: good_jobs("ci.yml"), 2: good_jobs("tb-sim.yml")})
+        orig = api.get
+        api.get = lambda p: {"workflow_runs": []} if "event=workflow_dispatch" in p else orig(p)
+        sha, _ = d.run_once(api, REPO, "main", False, sleep=lambda s: None)
+        self.assertEqual((sha, api.posts), (OTHER, []))
+
+    def test_main_advancing_forever_during_run_is_bounded_error(self):
+        tips = [chr(97 + i) * 40 for i in range(12)]
+        seq = [tips[0], tips[0]] + [t for t in tips[1:] for _ in range(3)]
+        api = FakeApi(advance=seq, runs={"ci.yml": [], "tb-sim.yml": []})
+        with self.assertRaises(d.SelectorError):
+            d.run_once(api, REPO, "main", True, sleep=lambda s: None)
+        self.assertLessEqual(api.tip_calls, 3 * (d.MAX_SELECTION_ROUNDS + 1) + 1)
+
+    # Judge finding 2: malformed run-list responses fail visibly.
+    MALFORMED = ({"unexpected": 1}, [], None, "x", {"workflow_runs": None},
+                 {"workflow_runs": {"id": 1}}, {"workflow_runs": ["x"]},
+                 {"workflow_runs": [{"no_id": 1}]}, {"workflow_runs": [{"id": "1"}]},
+                 {"workflow_runs": [{"id": True}]})
+
+    def fixed(self, response):
+        class Fixed(FakeApi):
+            def get(self, path):
+                return response
+        return Fixed()
+
+    def test_known_run_ids_rejects_malformed_response(self):
+        for bad in self.MALFORMED:
+            with self.assertRaises(d.SelectorError, msg=repr(bad)):
+                d.known_run_ids(self.fixed(bad), REPO, "main", "ci.yml")
+        self.assertEqual(d.known_run_ids(self.fixed({"workflow_runs": []}), REPO, "main",
+                                         "ci.yml"), set())
+
+    def test_observe_run_rejects_malformed_response(self):
+        for bad in self.MALFORMED + ({"workflow_runs": [{"id": 9}]},
+                                     {"workflow_runs": [{"id": 9, "head_sha": "short"}]}):
+            with self.assertRaises(d.SelectorError, msg=repr(bad)):
+                d.observe_run(self.fixed(bad), REPO, "main", "ci.yml", set(),
+                              sleep=lambda s: None)
+        # A well-formed empty list remains a visibility delay, not an error.
+        self.assertIsNone(d.observe_run(self.fixed({"workflow_runs": []}), REPO, "main",
+                                        "ci.yml", set(), sleep=lambda s: None))
+
+    def test_run_once_fails_visibly_on_malformed_observation(self):
+        api = FakeApi(runs={"ci.yml": [run()], "tb-sim.yml": []}, jobs={1: good_jobs("ci.yml")})
+        orig = api.get
+
+        def get(path):
+            if "event=workflow_dispatch" in path:
+                return {"workflow_runs": []} if not api.posts else {"unexpected": 1}
+            return orig(path)
+        api.get = get
+        with self.assertRaises(d.SelectorError):
+            d.run_once(api, REPO, "main", False, sleep=lambda s: None)
+
 
 def read(name):
     return (WF / name).read_text()

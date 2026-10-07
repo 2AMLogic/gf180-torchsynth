@@ -54,9 +54,13 @@ suite, it chooses:
   cancelled, skipped or timed out (an older green attempt never hides it).
 
 PR runs, other workflows, other SHAs and dispatcher runs are never evidence.
-API, authentication or parse failures fail the dispatcher step; they are never
-treated as a cache hit.  The tip is re-read after selection and selection is
-repeated (up to three rounds) if main advanced.  After dispatch the selector
+API, authentication or parse failures (including a malformed run list while
+looking for a dispatched run) fail the dispatcher step; they are never treated
+as a cache hit or as "run not yet visible".  The tip is re-read after selection,
+again immediately before each suite's decision is acted on, and again
+immediately before each dispatch; if main advanced, every suite not yet acted on
+is re-selected at the new tip (bounded to three re-selections, then the step
+fails).  After dispatch the selector
 polls for the resulting run and reports that run's own `head_sha` as what
 actually executed; a dispatch executes whatever main is when it starts.
 
@@ -74,7 +78,8 @@ later, and Loom's per-commit main-health gate reads commits between batches as
 - `python3 -m unittest discover -s tests -p 'test_ci_scheduling.py' -v`:
   selector fixtures (no history, exact-SHA success, mismatched SHA / workflow /
   branch / PR / repo, every non-success conclusion, skipped required job,
-  active run, later failed attempt, pagination, API failure, advancing main) and
+  active run, later failed attempt, pagination, API failure, advancing main
+  during selection and before/while dispatching, malformed run-list responses) and
   workflow-inventory checks with negative fixtures.
 - `python3 -m unittest discover -s tests -p 'test_ci_lane_wiring.py' -v`
   continues to guard the RTL lanes, budgets and failure propagation of
