@@ -27,13 +27,38 @@ COVERAGE = json.loads(paths.COVERAGE_PATH.read_bytes())
 DIRECTED = json.loads(paths.DIRECTED_PATH.read_bytes())
 BY_NAME = {t["name"]: t for t in REGISTRY["traces"]}
 PLAN = paths.build_plan(REGISTRY, COVERAGE, DIRECTED)
+def _file_hash(name):
+    return paths.sha256((ROOT / name).read_bytes())
+
+
 HASHES = {
     "registry_sha256": paths.sha256(trace_registry.REGISTRY_PATH.read_bytes()),
     "coverage_sha256": paths.sha256(paths.COVERAGE_PATH.read_bytes()),
     "directed_sha256": paths.sha256(paths.DIRECTED_PATH.read_bytes()),
 }
+HASHES.update({key: _file_hash(name) for key, name in paths.INPUT_FILES.items()})
+HASHES["existing_publications_sha256"] = {
+    name: _file_hash(name) for name in paths.EXISTING_PUBLICATIONS
+}
 IDENTITY = {key: True for key in paths.IDENTITY_KEYS}
-EXECUTION = {"admitted": True, "outcome": "executed", "command": ["synthetic"]}
+# Clearly synthetic but structurally valid records: they reuse the qualified
+# identity fields so the provenance policy can be exercised, and are never
+# runtime evidence.
+EXECUTION = {
+    "admitted": True,
+    "outcome": "executed",
+    "host": {"system": "SYNTHETIC", "machine": "synthetic"},
+    "command": ["synthetic-fixture-not-a-run"],
+    "exit_code": 0,
+    "execution_id": "synthetic-fixture-execution",
+}
+QUALIFIED_RUNTIME, QUALIFIED_SOURCE = paths.qualified_worker_identity()
+PROVENANCE_EXTRA = {
+    "runtime": QUALIFIED_RUNTIME,
+    "runtime_sha256": paths.sha256(paths.canonical_json_bytes(QUALIFIED_RUNTIME)),
+    "source_sha256": QUALIFIED_SOURCE,
+    "worker_producer_sha256": {n: _file_hash(n) for n in paths.PRODUCER_FILES},
+}
 
 
 def f32bytes(values):
@@ -116,10 +141,150 @@ class Fixture:
         rows, checks = paths.rows_from_worker(
             PLAN, REGISTRY, report or self.report(), self.raw
         )
-        return paths.measured_receipt(PLAN, rows, checks, HASHES, EXECUTION, {})
+        return paths.measured_receipt(
+            PLAN,
+            rows,
+            checks,
+            copy.deepcopy(HASHES),
+            copy.deepcopy(EXECUTION),
+            copy.deepcopy(PROVENANCE_EXTRA),
+        )
 
     def verify(self, receipt):
         return paths.verify_receipt(receipt, REGISTRY, COVERAGE, DIRECTED, self.raw)
+
+
+class ProvenanceTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.fixture = Fixture(self.tmp.name)
+
+    def reject(self, mutate, fragment):
+        receipt = self.fixture.receipt()
+        mutate(receipt)
+        with self.assertRaises(ValueError) as caught:
+            self.fixture.verify(receipt)
+        self.assertIn(fragment, str(caught.exception))
+
+    def test_synthetic_fixture_with_valid_provenance_passes(self):
+        self.assertEqual(self.fixture.verify(self.fixture.receipt()), "PASS")
+
+    def test_judge_reproduction_is_rejected(self):
+        def mutate(r):
+            r["execution"] = {
+                "admitted": True,
+                "outcome": "unrun",
+                "host": {"system": "Linux", "machine": "aarch64"},
+            }
+            r["runtime"] = {"packages": {"torch": "wrong-version"}}
+            for key in ("runtime_sha256", "source_sha256"):
+                r[key] = "0" * 64
+            r["worker_producer_sha256"] = {n: "0" * 64 for n in paths.PRODUCER_FILES}
+
+        self.reject(mutate, "execution outcome")
+
+    def test_contradictory_outcome_rejected(self):
+        self.reject(
+            lambda r: r["execution"].update(outcome="unrun"), "execution outcome"
+        )
+
+    def test_missing_execution_fields_rejected(self):
+        for key in ("host", "command", "exit_code", "execution_id"):
+            with self.subTest(key=key):
+                self.reject(lambda r, k=key: r["execution"].pop(k), "execution")
+
+    def test_nonzero_exit_rejected(self):
+        self.reject(lambda r: r["execution"].update(exit_code=1), "exit code")
+
+    def test_missing_provenance_records_rejected(self):
+        for key in (
+            "runtime",
+            "runtime_sha256",
+            "source_sha256",
+            "worker_producer_sha256",
+        ):
+            with self.subTest(key=key):
+                self.reject(lambda r, k=key: r.pop(k), "")
+
+    def test_altered_runtime_rejected(self):
+        self.reject(
+            lambda r: r["runtime"].update(torch="9.9.9"), "qualified runtime: torch"
+        )
+
+    def test_runtime_digest_mismatch_rejected(self):
+        self.reject(
+            lambda r: r.update(runtime_sha256="0" * 64), "runtime digest"
+        )
+
+    def test_altered_source_rejected(self):
+        def mutate(r):
+            r["source_sha256"] = dict(r["source_sha256"])
+            r["source_sha256"]["torchsynth/synth.py"] = "0" * 64
+
+        self.reject(mutate, "source digests")
+
+    def test_altered_or_missing_producer_hash_rejected(self):
+        name = paths.PRODUCER_FILES[0]
+        self.reject(
+            lambda r: r["worker_producer_sha256"].update({name: "0" * 64}),
+            "producer digest differs",
+        )
+        self.reject(lambda r: r["worker_producer_sha256"].pop(name), "producer digests")
+        self.reject(
+            lambda r: r["worker_producer_sha256"].update({name: "xyz"}),
+            "malformed producer digest",
+        )
+
+    def test_altered_or_missing_input_hash_rejected(self):
+        self.reject(
+            lambda r: r["input_sha256"].update(worker_sha256="0" * 64),
+            "input hash differs",
+        )
+        self.reject(lambda r: r["input_sha256"].pop("producer_sha256"), "input hash")
+        self.reject(
+            lambda r: r["input_sha256"].pop("existing_publications_sha256"),
+            "existing-publication",
+        )
+
+
+class MissingWholeCaseTests(unittest.TestCase):
+    def test_missing_whole_case_is_verifiable_fail_not_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture(tmp)
+            report = fixture.report()
+            dropped = report["cases"].pop(0)["case"]["id"]
+            receipt = fixture.receipt(report)
+            self.assertEqual(receipt["status"], "FAIL")
+            self.assertEqual(fixture.verify(receipt), "FAIL")
+            entry = receipt["case_checks"][dropped]
+            self.assertIs(entry["worker_result_present"], False)
+            self.assertFalse(any(entry[k] for k in paths.IDENTITY_KEYS))
+            self.assertFalse(receipt["summary"]["complete_path_coverage"])
+            rows = [r for r in receipt["rows"] if r["case"] == dropped]
+            self.assertTrue(rows and all(r["status"] == "missing" for r in rows))
+
+    def test_forged_pass_for_missing_case_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture(tmp)
+            report = fixture.report()
+            report["cases"].pop(0)
+            receipt = fixture.receipt(report)
+            receipt["status"] = "PASS"
+            with self.assertRaises(ValueError):
+                fixture.verify(receipt)
+
+    def test_absent_case_cannot_claim_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = Fixture(tmp)
+            report = fixture.report()
+            dropped = report["cases"].pop(0)["case"]["id"]
+            receipt = fixture.receipt(report)
+            receipt["case_checks"][dropped] = dict(
+                IDENTITY, worker_result_present=False
+            )
+            with self.assertRaises(ValueError):
+                fixture.verify(receipt)
 
 
 class PlanTests(unittest.TestCase):

@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import math
 import re
 import struct
@@ -407,9 +408,154 @@ def derived_status(rows, case_checks, execution_admitted):
         return "UNRUN"
     summary = summarize(rows)
     identity_ok = bool(case_checks) and all(
-        all(c[key] is True for key in IDENTITY_KEYS) for c in case_checks.values()
+        c.get("worker_result_present") is True
+        and all(c[key] is True for key in IDENTITY_KEYS)
+        for c in case_checks.values()
     )
     return "PASS" if summary["complete_path_coverage"] and identity_ok else "FAIL"
+
+
+PROVENANCE_POLICY = "directed-trace-paths-provenance-v1"
+QUALIFIED_RUNTIME_BASELINE = ROOT / "sim/reference/repeatability-runtime.json"
+QUALIFIED_RUNTIME_DIRECTORY = "release-32-1"
+HEX64 = re.compile(r"^[0-9a-f]{64}$")
+# Repo-relative files whose digests the worker records (producer provenance).
+PRODUCER_FILES = (
+    "env/release-era/capture_directed_trace_paths.py",
+    "env/release-era/capture_traces.py",
+    "src/torchsynth_voice/directed_trace_paths.py",
+    "src/torchsynth_voice/trace_capture.py",
+    "src/torchsynth_voice/trace_registry.py",
+    "env/release-era/probe.py",
+    "env/release-era/qualify_repeatability.py",
+    "env/release-era/qualify_scalar.py",
+)
+# Input hash keys required on a measured receipt, mapped to repo files.
+INPUT_FILES = {
+    "upstream_sha256": "spec/reference/upstream.json",
+    "parameter_inventory_sha256": "spec/reference/parameter-inventory-v1.json",
+    "worker_sha256": "env/release-era/capture_directed_trace_paths.py",
+    "producer_sha256": "tools/qualify_directed_trace_paths.py",
+    "shared_module_sha256": "src/torchsynth_voice/directed_trace_paths.py",
+    "capture_module_sha256": "src/torchsynth_voice/trace_capture.py",
+}
+EXISTING_PUBLICATIONS = (
+    "sim/reference/trace-capture.json",
+    "sim/reference/trace-registry-prototype.json",
+)
+
+
+def canonical_json_bytes(value):
+    """Mirrors ``artifact_renderer.json_bytes`` (the worker's runtime digest)."""
+    return (
+        json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    ).encode()
+
+
+def strip_clock(text):
+    return re.sub(r"^(cpu MHz|bogomips)\s*:.*\n", "", text, flags=re.MULTILINE)
+
+
+def qualified_worker_identity():
+    baseline = json.loads(QUALIFIED_RUNTIME_BASELINE.read_bytes())
+    record = next(
+        r for r in baseline["records"] if r["directory"] == QUALIFIED_RUNTIME_DIRECTORY
+    )
+    return record["worker"]["runtime"], record["worker"]["source_sha256"]
+
+
+def validate_provenance(receipt):
+    """Explicit measured-receipt provenance policy; raises ``ValueError``.
+
+    A measured receipt must carry a contradiction-free execution record, the
+    qualified runtime identity (with a verified digest), the qualified source
+    digests and the producer/input digests of this repository's files.
+    """
+    execution = receipt.get("execution")
+    require(type(execution) is dict, "measured receipt lacks an execution record")
+    require(
+        execution.get("admitted") is True and execution.get("outcome") == "executed",
+        "contradictory or non-executed execution outcome",
+    )
+    host = execution.get("host")
+    require(
+        type(host) is dict
+        and all(type(host.get(k)) is str and host[k] for k in ("system", "machine")),
+        "execution record lacks a host identity",
+    )
+    command = execution.get("command")
+    require(
+        type(command) is list and command and all(type(c) is str for c in command),
+        "execution record lacks the executed command",
+    )
+    require(
+        execution.get("exit_code") == 0 and type(execution.get("exit_code")) is int,
+        "execution record lacks a zero exit code",
+    )
+    require(
+        type(execution.get("execution_id")) is str and execution["execution_id"],
+        "execution record lacks an execution id",
+    )
+
+    expected_runtime, expected_source = qualified_worker_identity()
+    runtime = receipt.get("runtime")
+    require(type(runtime) is dict, "measured receipt lacks a runtime record")
+    for key, value in expected_runtime.items():
+        if key == "cpu":
+            require(
+                type(runtime.get(key)) is str
+                and strip_clock(runtime[key]) == strip_clock(value),
+                "runtime CPU identity differs from the qualified runtime",
+            )
+        else:
+            require(
+                runtime.get(key) == value,
+                "runtime identity differs from the qualified runtime: " + key,
+            )
+    require(
+        receipt.get("runtime_sha256") == sha256(canonical_json_bytes(runtime)),
+        "recorded runtime digest does not match the runtime record",
+    )
+    require(
+        receipt.get("source_sha256") == expected_source,
+        "source digests differ from the qualified TorchSynth source",
+    )
+
+    producer = receipt.get("worker_producer_sha256")
+    require(
+        type(producer) is dict and set(producer) == set(PRODUCER_FILES),
+        "worker producer digests missing or not the required file set",
+    )
+    for name in PRODUCER_FILES:
+        require(
+            type(producer[name]) is str and HEX64.match(producer[name]) is not None,
+            "malformed producer digest: " + name,
+        )
+        require(
+            producer[name] == sha256((ROOT / name).read_bytes()),
+            "producer digest differs from the repository file: " + name,
+        )
+
+    hashes = receipt.get("input_sha256", {})
+    for key, name in INPUT_FILES.items():
+        require(
+            type(hashes.get(key)) is str and HEX64.match(hashes[key]) is not None,
+            "malformed or missing input hash: " + key,
+        )
+        require(
+            hashes[key] == sha256((ROOT / name).read_bytes()),
+            "input hash differs from the repository file: " + key,
+        )
+    existing = hashes.get("existing_publications_sha256")
+    require(
+        type(existing) is dict and set(existing) == set(EXISTING_PUBLICATIONS),
+        "existing-publication hashes missing",
+    )
+    for name in EXISTING_PUBLICATIONS:
+        require(
+            existing[name] == sha256((ROOT / name).read_bytes()),
+            "existing publication changed: " + name,
+        )
 
 
 def verify_receipt(receipt, registry, coverage, directed, raw_dir=None):
@@ -504,6 +650,7 @@ def verify_receipt(receipt, registry, coverage, directed, raw_dir=None):
         return "UNRUN"
 
     require(admitted, "non-UNRUN receipt lacks an admitted execution record")
+    validate_provenance(receipt)
     require(raw_dir is not None, "raw payload directory required to verify a measured receipt")
     payloads = {}
     for row in rows:
@@ -551,9 +698,20 @@ def verify_receipt(receipt, registry, coverage, directed, raw_dir=None):
         entry = case_checks.get(case["id"])
         require(entry is not None, "missing byte-identity record: " + case["id"])
         require(
-            all(type(entry.get(key)) is bool for key in IDENTITY_KEYS),
+            all(type(entry.get(key)) is bool for key in IDENTITY_KEYS)
+            and type(entry.get("worker_result_present")) is bool,
             "malformed byte-identity record: " + case["id"],
         )
+        if entry["worker_result_present"] is False:
+            require(
+                not any(entry[key] for key in IDENTITY_KEYS)
+                and all(
+                    r["status"] == "missing"
+                    for r in rows
+                    if r["case"] == case["id"]
+                ),
+                "absent-case record contradicts identity claims or rows: " + case["id"],
+            )
     require(set(case_checks) == {c["id"] for c in plan["cases"]}, "extra case check")
     require(summary == summarize(rows), "receipt summary differs from its rows")
     require(
@@ -583,10 +741,15 @@ def rows_from_worker(plan, registry, worker_report, raw_dir):
                 unaccounted_row(r, "missing", "worker reported no result for the case")
                 for r in plan_rows
             )
+            # Explicit absent-case evidence: an honest FAIL record, never a pass.
+            case_checks[case["id"]] = dict(
+                {key: False for key in IDENTITY_KEYS}, worker_result_present=False
+            )
             continue
-        case_checks[case["id"]] = {
-            key: result["identity"].get(key) is True for key in IDENTITY_KEYS
-        }
+        case_checks[case["id"]] = dict(
+            {key: result["identity"].get(key) is True for key in IDENTITY_KEYS},
+            worker_result_present=True,
+        )
         inventory = {item["name"]: item for item in result["capture_inventory"]}
         payloads = {}
         problems = {}
