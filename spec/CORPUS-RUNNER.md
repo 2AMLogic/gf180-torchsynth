@@ -67,8 +67,10 @@ again. Do not point at a mutable tag or install another Torch stack.
 The corpus-v0 manifest has 128 sounds: development 0-95 and holdout 96-127.
 A single invocation never mixes the partitions, so the full corpus is two runs
 into the same or separate stores. These commands are documentation of the
-interface; neither has been executed at full scale (the development run is
-#19 work and holdout is a one-shot, post-freeze action):
+interface. The development command was executed at full scale by #19 (see
+`spec/DEVELOPMENT-CORPUS.md` and `sim/reference/development-corpus-first.json`);
+the holdout command has never been run, because holdout is a one-shot,
+post-freeze action:
 
 ```sh
 # 96 development cases (default selection)
