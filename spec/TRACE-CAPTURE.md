@@ -145,3 +145,18 @@ substitution, mutation, corpus/holdout render, independent-model DSP, RTL,
 synthesis, layout, signoff, playback or sound-fidelity claim. Analytic range
 metadata is not measured activation coverage. Registry evolution publishes a
 new explicit version; consumers must not invent a parallel name registry.
+
+## Integrated audit (#7)
+
+The #7 criterion-to-evidence audit is in
+[TRACE-REGISTRY.md, "Integrated evidence audit"](TRACE-REGISTRY.md#integrated-evidence-audit-7-2026-10-07).
+It sets two limits on this publication:
+
+- The capture of all 32 traces on the three directed normalization fixtures
+  demonstrates the capture path, not per-path signal activation (#286).
+- `measured_costs.projection_96_cases_selected_bytes` is derived arithmetic,
+  not a measured development-corpus cost (#287).
+
+The fresh qualified-runtime run was **unrun** on the audit host, which is
+outside DR-0006. The audit relies on retained-publication inspection plus
+fresh `--check-inputs` and `--check-publication` checks.
