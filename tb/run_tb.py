@@ -679,22 +679,37 @@ def build_vector(values, registry, inventory) -> dict:
 def _run(command: list, cwd: Path) -> None:
     print("+ %s" % " ".join(command))
     subprocess.run(command, cwd=cwd, check=True)
-def simulate(workdir: Path, simulator: str) -> list:
-    stim = workdir / "stimulus.txt"
-    captured = workdir / "captured.txt"
-    stim.write_text("".join("%d\n" % v for v in STIMULUS), encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "synth_selftest.vvp"
-        _run(
-            ["iverilog", "-g2012", "-o", str(vvp), str(DUT_SV), str(TB_SV)],
-            cwd=workdir,
-        )
-        _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    else:
+
+
+def _compile_iverilog(workdir: Path, simulator: str, executable: str,
+                      sources: list, flags: list = ()) -> Path:
+    """Validate the simulator, compile ``sources`` in order, return the vvp.
+
+    The one place the Icarus compile command is built. vvp execution,
+    capture parsing and verdicts stay with each lane.
+    """
+    if simulator != "iverilog":
         raise SystemExit(
             "simulator %r is not wired up; this runner is PDK-free and "
             "currently supports iverilog" % simulator
         )
+    vvp = workdir / executable
+    _run(
+        ["iverilog", "-g2012", *flags, "-o", str(vvp),
+         *[str(source) for source in sources]],
+        cwd=workdir,
+    )
+    return vvp
+
+
+def simulate(workdir: Path, simulator: str) -> list:
+    stim = workdir / "stimulus.txt"
+    captured = workdir / "captured.txt"
+    stim.write_text("".join("%d\n" % v for v in STIMULUS), encoding="utf-8")
+    vvp = _compile_iverilog(
+        workdir, simulator, "synth_selftest.vvp", [DUT_SV, TB_SV]
+    )
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
     values = [
         int(line)
         for line in captured.read_text(encoding="utf-8").splitlines()
@@ -881,26 +896,16 @@ def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
         "%d\n%d\n%d\n" % (phase_step, level_word, sample_count),
         encoding="utf-8",
     )
-    if simulator == "iverilog":
-        vvp = workdir / "lut_sine.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(ANCHOR_DUT_SV), str(ANCHOR_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(
-            # Bare name + cwd=workdir: the DUT's lut_file buffer holds
-            # 128 characters, so an absolute path can truncate (#278).
-            ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh.name],
-            cwd=workdir,
-        )
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "lut_sine.vvp",
+        [CONSTANTS_PKG_SV, ANCHOR_DUT_SV, ANCHOR_TB_SV],
+    )
+    _run(
+        # Bare name + cwd=workdir: the DUT's lut_file buffer holds
+        # 128 characters, so an absolute path can truncate (#278).
+        ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh.name],
+        cwd=workdir,
+    )
     vco_words = []
     mix_words = []
     for line in captured.read_text(encoding="utf-8").splitlines():
@@ -1163,21 +1168,11 @@ def adsr_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> lis
     """Compile and run the six-instance tb; return per-run captured streams."""
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "adsr_engine.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(ADSR_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "adsr_engine.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, ADSR_TB_SV],
+    )
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
     captures = []
     for run in range(runs):
         streams = []
@@ -1621,23 +1616,13 @@ def lfo_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> list
     """Compile and run the two-instance tb; return per-run captures."""
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "lfo_vca_engine.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(LFO_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        # Bare name + cwd=workdir: the DUT's lut_file buffer holds 128
-        # characters, so an absolute path can truncate (#278).
-        _run(["vvp", "-n", str(vvp), "+lut=lut.memh"], cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "lfo_vca_engine.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, LFO_TB_SV],
+    )
+    # Bare name + cwd=workdir: the DUT's lut_file buffer holds 128
+    # characters, so an absolute path can truncate (#278).
+    _run(["vvp", "-n", str(vvp), "+lut=lut.memh"], cwd=workdir)
     captures = []
     for run in range(runs):
         streams = []
@@ -2151,25 +2136,14 @@ def mm_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
     """
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "mod_matrix_upsample.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv),
-                str(up_sv or MM_UP_DUT_SV), str(MM_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        vvp_cmd = ["vvp", "-n", str(vvp)]
-        if max_j is not None:
-            vvp_cmd.append("+max_j=%d" % max_j)
-        _run(vvp_cmd, cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "mod_matrix_upsample.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, up_sv or MM_UP_DUT_SV, MM_TB_SV],
+    )
+    vvp_cmd = ["vvp", "-n", str(vvp)]
+    if max_j is not None:
+        vvp_cmd.append("+max_j=%d" % max_j)
+    _run(vvp_cmd, cwd=workdir)
     captures = []
     for run in range(runs):
         matrix = []
@@ -2874,25 +2848,14 @@ def vco2_simulate(workdir: Path, simulator: str, runs: int, formats,
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
     lut_memh = workdir / "lut_quarter_cos.memh"
     write_lut_memh(formats.table, lut_memh)
-    if simulator == "iverilog":
-        vvp = workdir / "square_saw_vco.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(VCO_LUT_SV),
-                str(dut_sv or VCO2_DUT_SV), str(VCO2_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(
-            ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh.name],
-            cwd=workdir,
-        )
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "square_saw_vco.vvp",
+        [CONSTANTS_PKG_SV, VCO_LUT_SV, dut_sv or VCO2_DUT_SV, VCO2_TB_SV],
+    )
+    _run(
+        ["vvp", "-n", str(vvp), "+lut=%s" % lut_memh.name],
+        cwd=workdir,
+    )
     captures = []
     for run in range(runs):
         rows = []
@@ -4013,38 +3976,28 @@ def vco_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
     # cwd=workdir, so a relative workdir would be resolved twice.
     workdir = Path(workdir).resolve()
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "sine_vco.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(VCO_TB_SV),
-            ],
-            cwd=workdir,
+    vvp = _compile_iverilog(
+        workdir, simulator, "sine_vco.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, VCO_TB_SV],
+    )
+    # The bare name, resolved by the simulator against cwd=workdir: an
+    # absolute path can overflow the DUT's 128-char plusarg buffer
+    # (issue #277).
+    lut_name = "lut.memh"
+    if len(lut_name) > VCO_LUT_PLUSARG_CHARS:
+        raise VcoCaptureIntegrityError(
+            "lut plusarg %r exceeds the DUT's %d-char buffer"
+            % (lut_name, VCO_LUT_PLUSARG_CHARS)
         )
-        # The bare name, resolved by the simulator against cwd=workdir: an
-        # absolute path can overflow the DUT's 128-char plusarg buffer
-        # (issue #277).
-        lut_name = "lut.memh"
-        if len(lut_name) > VCO_LUT_PLUSARG_CHARS:
-            raise VcoCaptureIntegrityError(
-                "lut plusarg %r exceeds the DUT's %d-char buffer"
-                % (lut_name, VCO_LUT_PLUSARG_CHARS)
-            )
-        if not (workdir / lut_name).is_file():
-            raise VcoCaptureIntegrityError(
-                "%s is missing: the DUT ROM would load nothing, so no run "
-                "here could be a verdict." % (workdir / lut_name)
-            )
-        command = ["vvp", "-n", str(vvp), "+lut=%s" % lut_name]
-        if max_n is not None:
-            command.append("+max_n=%d" % max_n)
-        log_text = _run_logged(command, workdir, workdir / "vvp.log")
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
+    if not (workdir / lut_name).is_file():
+        raise VcoCaptureIntegrityError(
+            "%s is missing: the DUT ROM would load nothing, so no run "
+            "here could be a verdict." % (workdir / lut_name)
         )
+    command = ["vvp", "-n", str(vvp), "+lut=%s" % lut_name]
+    if max_n is not None:
+        command.append("+max_n=%d" % max_n)
+    log_text = _run_logged(command, workdir, workdir / "vvp.log")
     vco_check_sim_log(log_text, runs, workdir)
     expected_walk = gv.CANONICAL_SAMPLE_COUNT if max_n is None else max_n
     return vco_read_captures(workdir, runs, expected_walk)
@@ -4764,31 +4717,23 @@ def patch_simulate(workdir: Path, simulator: str, stim: Path,
     """
     captured = workdir / "captured.txt"
     final = workdir / "final.txt"
-    if simulator == "iverilog":
-        vvp = workdir / "patch_control.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-I", str(TB_ROOT / "sv"),
-                "-Ptb_patch_control.NOISE_CLIP_BYTES=%d" % clip_bytes,
-                "-o", str(vvp), str(CONSTANTS_PKG_SV), str(dut_sv),
-                str(PATCH_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(
-            [
-                "vvp", "-n", str(vvp),
-                "+stim=%s" % stim,
-                "+capture=%s" % captured,
-                "+final=%s" % final,
-            ],
-            cwd=workdir,
-        )
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "patch_control.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, PATCH_TB_SV],
+        flags=[
+            "-I", str(TB_ROOT / "sv"),
+            "-Ptb_patch_control.NOISE_CLIP_BYTES=%d" % clip_bytes,
+        ],
+    )
+    _run(
+        [
+            "vvp", "-n", str(vvp),
+            "+stim=%s" % stim,
+            "+capture=%s" % captured,
+            "+final=%s" % final,
+        ],
+        cwd=workdir,
+    )
     rsp = [
         int(line)
         for line in captured.read_text(encoding="utf-8").splitlines()
@@ -5735,21 +5680,11 @@ def noise_simulate(workdir: Path, simulator: str, runs: int,
     """Compile + run the noise TB; return (captures, statuses) per run."""
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "noise_stream.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(NOISE_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "noise_stream.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, NOISE_TB_SV],
+    )
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
     captures = []
     statuses = []
     for r in range(runs):
@@ -6396,24 +6331,14 @@ def mix_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path,
     """Compile and run the file-driven tb; return per-run captures."""
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "audio_mix.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(MIX_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        command = ["vvp", "-n", str(vvp)]
-        if max_n is not None:
-            command.append("+max_n=%d" % max_n)
-        _run(command, cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "audio_mix.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, MIX_TB_SV],
+    )
+    command = ["vvp", "-n", str(vvp)]
+    if max_n is not None:
+        command.append("+max_n=%d" % max_n)
+    _run(command, cwd=workdir)
     captures = []
     for run in range(runs):
         rows = {
@@ -7059,21 +6984,11 @@ def normreplay_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path):
     """Compile + run the normreplay TB; return (captures, statuses) per run."""
 
     (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    if simulator == "iverilog":
-        vvp = workdir / "normreplay.vvp"
-        _run(
-            [
-                "iverilog", "-g2012", "-o", str(vvp),
-                str(CONSTANTS_PKG_SV), str(dut_sv), str(NORMREPLAY_TB_SV),
-            ],
-            cwd=workdir,
-        )
-        _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    else:
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
+    vvp = _compile_iverilog(
+        workdir, simulator, "normreplay.vvp",
+        [CONSTANTS_PKG_SV, dut_sv, NORMREPLAY_TB_SV],
+    )
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
     captures = []
     statuses = []
     for r in range(runs):
@@ -7333,21 +7248,15 @@ def render_binding_integration(workdir: Path, simulator: str, formats,
             mix_hex, encoding="utf-8"
         )
 
-    if simulator != "iverilog":
-        raise SystemExit(
-            "simulator %r is not wired up; this runner is PDK-free and "
-            "currently supports iverilog" % simulator
-        )
-    vvp = workdir / "render_binding.vvp"
-    _run(
-        [
-            "iverilog", "-g2012", "-I", str(TB_ROOT / "sv"),
+    vvp = _compile_iverilog(
+        workdir, simulator, "render_binding.vvp",
+        [CONSTANTS_PKG_SV, PATCH_DUT_SV, NORMREPLAY_DUT_SV, top_sv,
+         RENDER_BINDING_TB_SV],
+        flags=[
+            "-I", str(TB_ROOT / "sv"),
             "-Ptb_render_binding.NOISE_CLIP_BYTES=%d"
             % RENDER_BINDING_CLIP_BYTES,
-            "-o", str(vvp), str(CONSTANTS_PKG_SV), str(PATCH_DUT_SV),
-            str(NORMREPLAY_DUT_SV), str(top_sv), str(RENDER_BINDING_TB_SV),
         ],
-        cwd=workdir,
     )
     _run(["vvp", "-n", str(vvp)], cwd=workdir)
 
