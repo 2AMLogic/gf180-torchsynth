@@ -333,6 +333,43 @@ runner, runtime runner default mode (pinned image), any fresh actual-Voice
 measurement, the AWS repo-remote box, the full repository test suite,
 Python 3.11.
 
+## Re-verification at `a4ede9fb8d7cd37293b21ba7c9967158a0abb296` (2026-10-07, Linux)
+
+Run on `main` tip in `.loom/worktrees/issue-9` on host `loom-worker-2` (Linux
+7.0.0-1013-aws, x86_64 dispatch worker; not the AWS repo-remote box, not the
+pinned release image) with the worktree-local locked interpreter
+(`uv sync --locked --extra metrics --python 3.13`, Python 3.13.14, NumPy 2.5.3,
+`OMP/OPENBLAS/MKL/VECLIB` threads = 1, no parallelism). `git diff --stat
+e5aa4c5 HEAD` over the mutation surfaces (`src/torchsynth_voice/mutat*`,
+`tools/qualify_mutations*`, `tests/test_mutations*`, `sim/reference/mutation-*`,
+`spec/reference/mutation-seams-v1.json`, `.github/workflows/mutations.yml`,
+`spec/MUTATIONS.md`) is empty, so earlier verdicts carry over. No publication
+was regenerated. Logs were kept in a throwaway directory, not committed.
+
+| Check | Exit | Retained output (summary) |
+|---|---|---|
+| unittest `test_mutations.py` | 0 | Ran 75 tests, OK |
+| unittest `test_mutations_matrix.py` | 0 | Ran 13 tests, OK |
+| unittest `test_mutations_identity.py` | 0 | Ran 21 tests, OK |
+| unittest `test_mutations_timing.py` | 0 | Ran 36 tests, OK |
+| unittest `test_mutations_signal.py` | 0 | Ran 34 tests, OK |
+| `tools/qualify_mutations.py --check` | 0 | PASS, faults 7, `mu1-cc7f4ed0...c5ed0` |
+| `tools/qualify_mutations_runtime.py --check-publication` | 0 | PASS, cases 6, faults 5, attempts 8 (class P only) |
+| `tools/qualify_mutations_identity.py --check` | 0 | PASS |
+| `tools/qualify_mutations_timing.py --check` | 0 | PASS |
+| `tools/qualify_mutations_signal.py --check` | 0 | PASS, operators 14, faults 17, tripped 17 |
+| `tools/qualify_mutations_matrix.py --check` | **1** | `FAIL: committed publication is stale or drifted: inputs` |
+
+F6 (#314), F4 (#299, #257), F1 (#300), F2 (#297), F5 (#298) are all still
+OPEN. `spec/MUTATIONS.md` already links this audit and states the evidence
+scope, and is left byte-unchanged to avoid widening the matrix drift.
+Verdict unchanged: criteria 2, 4, 5, 6 established at their stated scope;
+criteria 1, 3 (runtime scope), 7 and 8 NOT ESTABLISHED. **UNRUN (unchanged):**
+CI workflow execution, `compileall` step, default (generating) mode of every
+runner, runtime runner default mode (pinned image), any fresh actual-Voice
+measurement, the AWS repo-remote box, the full repository test suite,
+Python 3.11.
+
 ## Bounded follow-ups (not performed here)
 
 - **F1** Fresh actual-Voice runtime measurement of the family operators
