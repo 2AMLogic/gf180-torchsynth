@@ -216,11 +216,14 @@ all runs for that corpus:
 ```
 
 The `rubric` object contains the actual frozen rubric/threshold declaration;
-the exact complete file hash is the freeze identity. The operator attests that
-freeze occurred before exposure. Do not create this record as a shortcut to
-inspect holdout while choosing a rubric.
+the exact complete file hash is the freeze identity. The gate described in
+[HOLDOUT-UNSEAL.md](HOLDOUT-UNSEAL.md) verifies, rather than trusts, that freeze:
+`rubric` must equal the committed rubric-v0 content and the pinned files, model
+and commits must match `spec/reference/holdout-seal-v0.json` (issue #55). Do not
+create this record as a shortcut to inspect holdout while choosing a rubric.
 
-`--holdout-once --frozen-rubric FILE --holdout-audit-root LEDGER` reserves one
+`--holdout-once --frozen-rubric FILE --holdout-audit-root LEDGER` first runs the seal
+gate (`tools/check_holdout_seal.py`; `run_corpus` refuses holdout without a `seal_gate`), then reserves one
 admission for the entire corpus manifest, storing its hash, selected identities,
 request-template hash, freeze hash and run ID before case resolution/rendering.
 Any new run under that ledger is refused, even for another subset. An explicit

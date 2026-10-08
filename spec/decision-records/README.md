@@ -16,3 +16,4 @@ questions and must not be represented as finished hardware decisions.
 | [0008](0008-fixed-point-numeric-contract.md) | Accepted | Fixed-point numeric contract (C1–C10) and error metrics M0–M7 |
 | [0009](0009-ci-runner-reproducibility-envelope.md) | Proposed | CI runner-pool reproducibility envelope for committed reference bytes |
 | [0010](0010-one-shot-rtl-microarchitecture.md) | Accepted | One-shot RTL microarchitecture and schedule (issue #63) |
+| [0011](0011-holdout-unseal-policy.md) | Accepted | Mechanical holdout seal gate and single-exposure re-use policy (issue #55) |

@@ -1,0 +1,37 @@
+{
+  "schema": "torchsynth-holdout-seal",
+  "schema_version": 1,
+  "semantic_version": "holdout-seal-v0",
+  "issue": 55,
+  "pinned_commit": "eb9207c4606bc867a9f85458b39853fe0eef12a0",
+  "upstream_pin": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "files": {
+    "spec/reference/rubric-v0.json": "525024f07ee834681695c05cfd17b61486710d6f3cf22c068d0385c22d5fbe3a",
+    "spec/reference/corpus-v0.json": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+    "spec/reference/case-registry-v1.json": "bbc1dc5028f213f23ffe7835b1335ff0e0279deb8672b33d39f5a0c5e54486bd",
+    "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07"
+  },
+  "model": {
+    "files": {
+      "src/torchsynth_voice/fixed_voice.py": "e3ce00fd93a61939e8d2741a2a8be311c774b95cce45ddbba2e62a81bfb79052",
+      "src/torchsynth_voice/fixedpoint/README.md": "b217e373acbf80deea44af5f72539a5e9a7e7a96250f9a11031ba12f3c1ed54e",
+      "src/torchsynth_voice/fixedpoint/__init__.py": "7cc1c1a74cd88626e74e2757288e29f80bfa44ed493d87e0df571b26223a8d0b",
+      "src/torchsynth_voice/fixedpoint/choices.py": "f485d88042a19df4b7600b7d890cc057039a365f9e6d617807397d9b29dcf268",
+      "src/torchsynth_voice/fixedpoint/codegen.py": "7138543c22180f20a6637d757ecf1a9192a5d57c3229f58690b83e797953b312",
+      "src/torchsynth_voice/fixedpoint/counters.py": "fc49d51b2b9370762fec37c7a4028cd49442452dadc994c279ccc5b23f8ca336",
+      "src/torchsynth_voice/fixedpoint/formats.py": "5e77a3cde4ab84a5b59a21bd5d1182dc5f3619673cf801a63959e22dfa869caa",
+      "src/torchsynth_voice/fixedpoint/lut.py": "b40d8d1df1f74f020477824c186f96f7c0cdb30e431a0c7640b8d03692a2296d",
+      "src/torchsynth_voice/fixedpoint/ops.py": "8c400e8db0caeb961b1615ac2b3fa55a9f0caa995e06215d8a43ba63c76a6e3e",
+      "src/torchsynth_voice/fixedpoint/phase.py": "9c326d1c117004838a0684e563b3530d571b59923d8133ec353713103cb92489",
+      "src/torchsynth_voice/fixedpoint/rounding.py": "da529e10df95cb00a33e342e1869125cce9ad204049fe045b64556d72bd9d927",
+      "src/torchsynth_voice/fixedpoint/schedule.py": "89fbfa895eb0ceab44a6c907a8d30a92a198a48d41f8013fded86e203701ed1d"
+    },
+    "tree_sha256": "4efa94ba6da00bff4d34961b40ff522c0ba979117eb0c3e12ee16822514f9516"
+  },
+  "holdout": {
+    "first_index": 96,
+    "last_index": 127,
+    "count": 32,
+    "holdout_identities_read": 0
+  }
+}
