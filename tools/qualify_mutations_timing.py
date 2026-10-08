@@ -72,6 +72,7 @@ COMPARABLE_FIELDS = (
     "controls",
     "fault_matrix",
     "floor_probes",
+    "magnitude_applicability",
     "coverage",
     "envelopes",
     "counts",
@@ -165,6 +166,26 @@ def build_publication():
     detected_probes = [probe for probe in floor_probes if probe["detected"]]
     if not detected_probes:
         raise SystemExit("FAIL: no small mutation demonstrated measured sensitivity")
+    one_sided = []
+    for operator_id in mutations_timing.NUMERIC_BOUNDARY_OPERATORS:
+        for properties in sorted({
+            probe["property"] for probe in floor_probes
+            if probe["operator"] == operator_id and "side" in probe
+        }):
+            sides = {
+                probe["side"]: probe["detected"] for probe in floor_probes
+                if probe["operator"] == operator_id and probe.get("property") == properties
+            }
+            if sides != {"below": False, "above": True}:
+                one_sided.append(operator_id + ":" + properties)
+        if not any(probe["operator"] == operator_id and "side" in probe
+                   for probe in floor_probes):
+            one_sided.append(operator_id)
+    if one_sided:
+        raise SystemExit(
+            "FAIL: floor evidence is not two-sided for: " + ", ".join(one_sided)
+        )
+    applicability = mutations_timing.magnitude_applicability(floor_probes)
 
     coverage = mutations_timing.coverage_cases(ROOT)
     degenerate = [
@@ -212,6 +233,7 @@ def build_publication():
         "controls": controls,
         "fault_matrix": matrix,
         "floor_probes": floor_probes,
+        "magnitude_applicability": applicability,
         "coverage": coverage,
         "envelopes": envelopes,
         "counts": {
