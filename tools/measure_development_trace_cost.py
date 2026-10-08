@@ -150,6 +150,13 @@ class MeasuredTracedDockerBackend(qta.TracedDockerBackend):
         return dtc.normalize_telemetry(raw, launcher_elapsed_seconds)
 
 
+def production_expected():
+    """The pins a production receipt must satisfy (qualified runtime, driver)."""
+    return dtc.expected_pins(
+        telemetry_driver_sha256=digest(MEASURE_DRIVER_SOURCE.encode())
+    )
+
+
 def utc_now():
     return datetime.datetime.now(datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
@@ -164,7 +171,7 @@ def check_inputs():
         "selection formula drifted from the #24 smoke selection",
     )
     require(len(selection["requested_traces"]) == 29, "selection is not 29 traces")
-    pins = dtc.expected_pins()
+    pins = production_expected()
     manifest = loads(MANIFEST_PATH.read_bytes())
     cases = select_cases(manifest, indices=pins["indices"])
     require(
@@ -202,6 +209,21 @@ def _replaceable(path):
         return False
 
 
+def _preflight_receipt(path, store_root):
+    """Refuse an unpublishable destination before any store mutation."""
+    path = Path(path)
+    require(not path.is_dir(), "receipt destination is a directory: " + str(path))
+    require(
+        _replaceable(path),
+        "refusing to overwrite a retained measured receipt: " + str(path),
+    )
+    resolved, store = path.resolve(), Path(store_root).resolve()
+    require(
+        resolved != store and store not in resolved.parents,
+        "receipt destination must be outside the measurement store",
+    )
+
+
 def _publish_receipt(path, receipt):
     path = Path(path)
     require(
@@ -234,6 +256,8 @@ def run_campaign(
     a receipt produced with them cannot satisfy the production pins.
     """
     command = list(command or [sys.executable, *sys.argv])
+    expected = production_expected() if expected is None else expected
+    _preflight_receipt(receipt_path, store_root)
     identity = project_identity(repository_root())
     require(not identity["dirty"], "measurement requires a clean committed checkout")
     publication, _ = qualification()
@@ -369,6 +393,7 @@ def verify_receipt(receipt_path, store_root=None, *, expected=None):
         print("receipt: ABSENT - the campaign has not been published; not a pass")
         return 2
     receipt = loads(receipt_path.read_bytes())
+    expected = production_expected() if expected is None else expected
     if store_root is None:
         state = dtc.verify_document(receipt, expected=expected)
     else:
@@ -398,7 +423,9 @@ def main(argv=None):
     parser.add_argument("--store", type=Path,
                         help="fresh measurement store (run) or retained store (verify)")
     parser.add_argument("--receipt", type=Path, default=RECEIPT_PATH,
-                        help="receipt path (default: %(default)s)")
+                        help="receipt path (default: %(default)s); a measured receipt is"
+                        " never overwritten, so give each partial or resumed"
+                        " publication a new path outside the producer checkout")
     parser.add_argument("--resume", metavar="RUN_ID",
                         help="continue an interrupted run in the same store")
     args = parser.parse_args(argv)

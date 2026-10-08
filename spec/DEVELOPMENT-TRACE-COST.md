@@ -64,6 +64,13 @@ development corpus. No figure in this record is a measured corpus cost.
    re-verifies that receipt against the store before writing it.
    - A retained measured receipt is never overwritten. Only an `UNRUN`
      receipt may be replaced.
+   - The runner checks the receipt destination before it creates or touches
+     the store, writes the plan or calls the renderer. An occupied measured
+     receipt destination is refused with no store or journal mutation.
+   - A partial receipt is a retained measured receipt. Each resumed
+     publication therefore needs its own new receipt path, with the same
+     store and `RUN_ID`. Put these paths outside the producer checkout so
+     the clean-producer precondition still holds on resume.
 
 ### Telemetry
 
@@ -159,6 +166,14 @@ The document check verifies:
 
 - the plan pins against the live registry, selection, manifest and the exact
   identities 0–95;
+- the frozen runtime provenance against the ratified publication: profile,
+  qualification reference and digest, image, request-runtime descriptor and
+  the telemetry driver digest;
+- producer self-consistency: a clean, 40-hex `producer.commit` equal to
+  `project_git.commit`;
+- execution consistency: an `unrun` receipt records refused admission and no
+  executed image, while a `partial` or `complete` receipt records admitted
+  execution whose image equals the plan's runtime image;
 - the 96-row inventory;
 - the state consistency of every row;
 - the telemetry units and boundaries;
@@ -169,6 +184,8 @@ The document check verifies:
 The store check adds the following:
 
 - the frozen plan in the store;
+- the retained corpus template, which must carry the plan's project git
+  identity, request runtime, selection and registry token;
 - `verify_run()` against the pinned run-summary digest, which rehashes every
   artifact;
 - the corpus plan's identity and template binding;
@@ -220,13 +237,24 @@ Run the campaign from a clean checkout of the producer commit, with a fresh
 store under `/home/ubuntu`, because `/tmp` is wiped when the box restarts:
 
 ```sh
-python3.11 tools/measure_development_trace_cost.py \
-  --store /home/ubuntu/gf180-287-store-$(date -u +%Y%m%dT%H%M%SZ)
-# after an interruption, the same store and run:
-python3.11 tools/measure_development_trace_cost.py --store <same> --resume <RUN_ID>
-# verify with the retained raw store:
-python3.11 tools/measure_development_trace_cost.py --verify-receipt --store <same>
+STORE=/home/ubuntu/gf180-287-store-$(date -u +%Y%m%dT%H%M%SZ)
+python3.11 tools/measure_development_trace_cost.py --store "$STORE" \
+  --receipt /home/ubuntu/gf180-287-receipts/receipt-1.json
+# after an interruption, the same store and run, but a NEW receipt path:
+python3.11 tools/measure_development_trace_cost.py --store "$STORE" \
+  --resume <RUN_ID> --receipt /home/ubuntu/gf180-287-receipts/receipt-2.json
+# verify with the retained raw store (only the latest receipt matches the
+# current run summary):
+python3.11 tools/measure_development_trace_cost.py --verify-receipt \
+  --store "$STORE" --receipt /home/ubuntu/gf180-287-receipts/receipt-2.json
 ```
+
+Keep every `--receipt` path outside the producer checkout, and use a new path
+for the initial partial publication and for each resumed one. Earlier partial
+receipts stay immutable. They name a superseded run summary, so they no longer
+verify against the resumed store. Only the latest receipt does. These
+instructions describe how to run the pending campaign. This record does not
+claim it has run.
 
 ### Expected admission on the AWS box
 
