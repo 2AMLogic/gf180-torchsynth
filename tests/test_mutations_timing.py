@@ -411,6 +411,10 @@ class FloorAndCoverageTests(unittest.TestCase):
         self.assertFalse(blind["detected"])
         self.assertLess(blind["measured_error"], mt.ENVELOPE_COORD_BOUND)
         for probe in probes:
+            if "unavailable_reason" in probe:
+                # unrun is never a PASS: the periodic detector is unavailable
+                self.assertFalse(probe["detected"])
+                continue
             self.assertEqual(probe["detected"], probe["expected_detected"])
 
     def test_degenerate_envelope_and_high_rate_coverage(self):

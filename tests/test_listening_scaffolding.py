@@ -875,7 +875,9 @@ class CorpusAudioApplicationTests(unittest.TestCase):
         quantized, _ = applications["clip.round_step"]([0.3, -0.3, 0.125, 0.0], 0.5)
         self.assertEqual(quantized, [0.5, -0.5, 0.0, 0.0])
         saturated, _ = applications["clip.saturation_ceiling"](samples, 0.2)
-        self.assertEqual(saturated, [0.2, -0.2, 0.125, 0.0])
+        # the lane is binary32: the replacement level is f32(ceiling)
+        level = struct.unpack("<f", struct.pack("<f", 0.2))[0]
+        self.assertEqual(saturated, [level, -level, 0.125, 0.0])
         offset, _ = applications["gain.dc_offset"](samples, 0.1)
         self.assertAlmostEqual(offset[3], 0.1, places=6)
 
