@@ -567,6 +567,7 @@ def run_corpus(
     resume=None,
     frozen_rubric=None,
     audit_root=None,
+    seal_gate=None,
 ):
     """Render each selected case once, or resume its verified exact reference.
 
@@ -592,6 +593,20 @@ def run_corpus(
             frozen_rubric is not None and audit_root is not None,
             "holdout requires frozen rubric and audit root",
         )
+        # Issue #55: the freeze is verified, not attested. The gate runs before
+        # admission, ledger reservation, store creation or any renderer call.
+        require(callable(seal_gate), "holdout requires the seal verification gate")
+        seal_gate(
+            dict(
+                indices=[c["sound_index"] for c in selection],
+                manifest_sha256=digest(manifest_data),
+                frozen_rubric=frozen_rubric,
+                audit_root=audit_root,
+                resume=bool(resume),
+            )
+        )
+    else:
+        require(seal_gate is None, "seal gate applies to holdout runs only")
     if resume:
         prior = loads(read_bytes(run / "plan.json"))
         require(

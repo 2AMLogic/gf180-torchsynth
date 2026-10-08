@@ -87,6 +87,9 @@ class CorpusTests(unittest.TestCase):
         return render_artifact(request, store, self.backend)
 
     def run_cases(self, **kwargs):
+        if kwargs.get("mode") == "holdout":
+            # Synthetic stand-in; the real gate is covered by test_holdout_seal.
+            kwargs.setdefault("seal_gate", lambda context: None)
         return run_corpus(
             self.root,
             self.manifest,
