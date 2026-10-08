@@ -20,13 +20,13 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`), excluding issues with open implementation PRs.
 
-_None._
+- **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#9**: [Epic #1] Phase plan: negative-control mutation coverage
+_None._
 
 ## PRs Awaiting Review
 
@@ -40,7 +40,7 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
-- **#321**: docs: re-verify mutation-coverage audit at ddadee1 (Part of #9)
+- **#323**: Holdout seal manifest, refusal gate and unseal policy (Part of #55)
 
 ## Proposed
 
@@ -49,6 +49,7 @@ Issues carrying `loom:curated`.
 - **#4**: [Epic #1] Phase plan: reproducible corpus artifacts *(curated)*
 - **#7**: [Epic #1] Phase plan: observable named Voice traces *(curated)*
 - **#9**: [Epic #1] Phase plan: negative-control mutation coverage *(curated)*
+- **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#257**: matrix-numerical CI job regenerates the mutation matrix publication before checking it, so committed-artifact drift can never fail CI *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
@@ -57,10 +58,7 @@ Issues carrying `loom:curated`.
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
-- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
-- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
 - **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml *(curated)*
-- **#300**: [Part of #9] Fresh actual-Voice runtime measurement of identity/timing/signal family operators on the pinned release image *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -90,11 +88,11 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 2 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
+| Ready (`loom:issue`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 3 |
-| Curated | 15 |
+| Curated | 13 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
 <!-- guide:plan-body:end -->
