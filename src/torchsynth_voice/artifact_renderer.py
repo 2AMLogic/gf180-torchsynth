@@ -227,6 +227,8 @@ def validate_published_command(owner, key="command"):
         tokens = _PLACEHOLDER_TOKEN.findall(argument)
         if any(token not in MOUNT_PLACEHOLDERS for token in tokens):
             raise ReceiptPortabilityError("portable command has undeclared placeholder")
+        if argument.startswith("--mount") and argument != "--mount":
+            raise ReceiptPortabilityError("portable command mount outside --mount")
         after_mount = index > 0 and command[index - 1] == "--mount"
         if _VOLUME_FLAG.match(argument) or (
             _MOUNT_SOURCE.search(argument) and not after_mount

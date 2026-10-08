@@ -131,6 +131,8 @@ class ValidatorTest(unittest.TestCase):
                 for a in described
             ],
             "extra mount": described + ["--mount", "type=bind,src=<project-root>,dst=/x"],
+            "equals-form tmpfs mount": described + ["--mount=type=tmpfs,destination=/repo"],
+            "equals-form bind mount": described + ["--mount=type=bind,src=<project-root>,dst=/x"],
             "volume": described + ["-v", "<project-root>:/x"],
             "volume equals": described + ["--volume=<project-root>:/x"],
             "stray source": described + ["src=<worker-output>"],
