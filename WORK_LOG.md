@@ -4,6 +4,7 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-08
 
+- **PR #321**: docs: re-verify mutation-coverage audit at ddadee1 (Part of #9)
 - **PR #318**: Portable command descriptions for non-corpus evidence producers (#309)
 - **PR #317**: docs: re-verify mutation-coverage audit at a4ede9f (Part of #9)
 - **PR #319**: Harden traced-cost provenance verification and partial-resume publication
