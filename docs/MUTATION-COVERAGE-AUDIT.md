@@ -439,3 +439,16 @@ AWS repo-remote box, the full repository test suite, Python 3.11.
 
 The tracker may close only when these leave criteria 1, 3, 7 and 8
 established in a re-run of this audit.
+
+## F4 implementation note (issue #299)
+
+Added to `.github/workflows/mutations.yml` (unexecuted in CI at authoring
+time; only the commands were run locally): `stdlib` job steps for
+`tests/test_mutations_identity.py` and `tools/qualify_mutations_identity.py
+--check`, and a `ci-subset-sentinel` job running
+`tools/qualify_mutations_matrix.py --ci-subset`. The sentinel is read-only,
+selects exactly 20 rows by the published rule, exits 1 on selection drift or
+an untripped row, exits 2 when the publication is absent, and does not
+re-execute detectors (full reruns stay in `matrix-numerical`). The added steps
+never generate; the generate-before-`--check` ordering defect remains #257 and
+is not fixed here, so criterion 7 stays NOT ESTABLISHED until it lands.

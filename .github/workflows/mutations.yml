@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Compile mutation surfaces
-        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py tools/qualify_mutations_matrix.py tests/test_mutations_matrix.py
+        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py tools/qualify_mutations_matrix.py tests/test_mutations_matrix.py tests/test_mutations_identity.py tools/qualify_mutations_identity.py
       - name: Test fault-injection seam contract on the apparatus harness
         run: python -m unittest discover -s tests -p test_mutations.py -v
       - name: Test the committed bidirectional matrix publication structure
@@ -31,6 +31,30 @@ jobs:
           python tools/qualify_mutations.py --check
       - name: Check the committed actual-Voice runtime publication
         run: python tools/qualify_mutations_runtime.py --check-publication
+      # Issue #299 (F4): added steps are read-only and never generate, so
+      # they are startable independently of the ordering defect in #257
+      # (the generate-then-check step above is deliberately left untouched).
+      - name: Test the identity/parameter/noise family contract
+        run: python -m unittest discover -s tests -p test_mutations_identity.py -v
+      - name: Check the committed identity publication against a fresh rerun
+        run: python tools/qualify_mutations_identity.py --check
+
+  ci-subset-sentinel:
+    # Owner of the small deterministic sentinel: the 20 published ci_subset
+    # rows (identity, delay, interpolation, gain, normalization). Read-only
+    # and stdlib-only, so it fails fast on selection drift (row count != 20,
+    # rule selection != committed ci_subset, or a row not tripped with an
+    # accepted control in its family publication; exit 1, absence exit 2).
+    # It does not re-execute detectors: the full reruns stay in
+    # matrix-numerical.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run the 20-row ci_subset sentinel
+        run: python tools/qualify_mutations_matrix.py --ci-subset
 
   timing-numerical:
     # The #32 family's periodic rows need NumPy. The stdlib contract surface

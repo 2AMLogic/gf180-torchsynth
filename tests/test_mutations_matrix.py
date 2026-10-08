@@ -14,8 +14,13 @@ executions the matrix composes) is re-established by
 publication is a failure here, never a pass.
 """
 
+import contextlib
+import importlib.util
+import io
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -252,6 +257,126 @@ class MatrixPublicationTests(unittest.TestCase):
         for name in ("framework", "runtime-bridge", "identity", "timing", "signal"):
             self.assertIn(name, reruns)
             self.assertEqual(reruns[name]["status"], "PASS")
+
+
+def load_runner():
+    spec = importlib.util.spec_from_file_location(
+        "qualify_mutations_matrix_under_test",
+        ROOT / "tools/qualify_mutations_matrix.py",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class CiSubsetSentinelTests(unittest.TestCase):
+    """The ``--ci-subset`` sentinel (issue #299): exactly 20 rows, fail-visible."""
+
+    def setUp(self):
+        self.runner = load_runner()
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.tmp_path = Path(self.tmp.name)
+
+    def run_quiet(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            try:
+                rows = self.runner.select_ci_subset()
+                code = 0
+            except SystemExit as exit_:
+                rows, code = None, exit_.code
+        return rows, code, out.getvalue()
+
+    def point_at(self, matrix, families=None):
+        path = self.tmp_path / "matrix.json"
+        path.write_text(json.dumps(matrix))
+        self.runner.PUBLICATION_PATH = path
+        if families is not None:
+            self.runner.FAMILY_PUBLICATIONS = families
+
+    def test_selects_exactly_the_published_20_rows(self):
+        rows, code, _ = self.run_quiet()
+        self.assertEqual(code, 0)
+        committed = load_matrix()["ci_subset"]["rows"]
+        self.assertEqual(len(rows), self.runner.EXPECTED_CI_SUBSET_ROWS)
+        self.assertEqual(self.runner.EXPECTED_CI_SUBSET_ROWS, 20)
+        self.assertEqual(rows, committed)
+
+    def test_cli_flag_prints_pass_and_rows(self):
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "tools/qualify_mutations_matrix.py"),
+             "--ci-subset"],
+            capture_output=True, text=True, cwd=str(ROOT),
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        report = json.loads(completed.stdout)
+        self.assertEqual(report["ci_subset_rows"], 20)
+        self.assertEqual(report["rows"], load_matrix()["ci_subset"]["rows"])
+
+    def test_committed_row_list_drift_fails_visibly(self):
+        matrix = load_matrix()
+        matrix["ci_subset"]["rows"] = matrix["ci_subset"]["rows"][:-1]
+        self.point_at(matrix)
+        _, code, out = self.run_quiet()
+        self.assertEqual(code, 1)
+        self.assertIn("ci_subset", out)
+
+    def test_row_count_other_than_20_fails_visibly(self):
+        matrix = load_matrix()
+        matrix["faults_to_tests"] = [
+            row for row in matrix["faults_to_tests"]
+            if row["fault"] != "gain.db"
+        ]
+        matrix["ci_subset"] = self.runner.build_ci_subset(
+            matrix["faults_to_tests"]
+        )
+        self.point_at(matrix)
+        _, code, out = self.run_quiet()
+        self.assertEqual(code, 1)
+        self.assertIn("expected 20", out)
+
+    def test_untripped_family_row_fails_visibly(self):
+        matrix = load_matrix()
+        families = {}
+        for family, path in self.runner.FAMILY_PUBLICATIONS.items():
+            publication = json.loads((ROOT / path).read_bytes())
+            if family == "signal":
+                for entry in publication["fault_matrix"]:
+                    if entry["fault"] == "gain.db":
+                        entry["tripped"] = False
+            target = self.tmp_path / (family + ".json")
+            target.write_text(json.dumps(publication))
+            families[family] = str(target)
+        self.point_at(matrix, families)
+        _, code, out = self.run_quiet()
+        self.assertEqual(code, 1)
+        self.assertIn("gain.db", out)
+
+    def test_absent_publication_is_exit_2_never_a_pass(self):
+        self.runner.PUBLICATION_PATH = self.tmp_path / "missing.json"
+        _, code, out = self.run_quiet()
+        self.assertEqual(code, 2)
+        self.assertIn("ABSENT", out)
+
+    def test_ci_subset_and_check_are_mutually_exclusive(self):
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "tools/qualify_mutations_matrix.py"),
+             "--ci-subset", "--check"],
+            capture_output=True, text=True, cwd=str(ROOT),
+        )
+        self.assertEqual(completed.returncode, 2)
+
+    def test_workflow_wires_identity_checks_and_sentinel(self):
+        text = (ROOT / ".github/workflows/mutations.yml").read_text()
+        for command in (
+            "python -m unittest discover -s tests -p test_mutations_identity.py",
+            "python tools/qualify_mutations_identity.py --check",
+            "python tools/qualify_mutations_matrix.py --ci-subset",
+        ):
+            with self.subTest(command=command):
+                self.assertEqual(text.count(command), 1)
+        sentinel = text.split("  ci-subset-sentinel:", 1)[1].split("\n  timing-numerical:", 1)[0]
+        self.assertIn("--ci-subset", sentinel)
 
 
 if __name__ == "__main__":
