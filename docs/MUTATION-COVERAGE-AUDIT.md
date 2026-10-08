@@ -370,6 +370,48 @@ runner, runtime runner default mode (pinned image), any fresh actual-Voice
 measurement, the AWS repo-remote box, the full repository test suite,
 Python 3.11.
 
+## Re-verification at `ddadee1d6e5472965ffed2dc7d0e6856dae606e4` (2026-10-08, Linux)
+
+Run on `main` tip in `.loom/worktrees/issue-9` on host `loom-worker-3` (Linux,
+x86_64 dispatch worker; not the AWS repo-remote box, not the pinned release
+image) with the worktree-local locked interpreter (`uv sync --locked --extra
+metrics --python 3.13`, Python 3.13.16, NumPy 2.5.3, thread env vars = 1, one
+process). `git diff --stat a4ede9f HEAD` over the mutation surfaces shows one
+changed file: `tools/qualify_mutations_runtime.py` (commit 3d4f73c, #309: the
+host-run docker command is now built through a `launch` closure with portable
+command descriptions from `artifact_renderer`). `src/torchsynth_voice/mutat*`,
+the other `tools/qualify_mutations*`, `tests/test_mutations*`,
+`sim/reference/mutation-*`, `spec/reference/mutation-seams-v1.json`,
+`.github/workflows/mutations.yml` and `spec/MUTATIONS.md` are unchanged. The
+runtime change rebuilds the pinned-image default-mode launch (UNRUN here) and
+adds a `validate_published_command` step to `--check-publication`; the
+committed publication carries no `command_representation` marker, so that step
+takes its legacy (accept-unchanged) branch. Detectors and tolerances are
+untouched and the publication was not regenerated, so verdicts carry over. Logs were
+kept outside the repo, not committed; the worktree stayed clean.
+
+| Check | Exit | Retained output (summary) |
+|---|---|---|
+| unittest `test_mutations.py` | 0 | Ran 75 tests, OK |
+| unittest `test_mutations_matrix.py` | 0 | Ran 13 tests, OK |
+| unittest `test_mutations_identity.py` | 0 | Ran 21 tests, OK |
+| unittest `test_mutations_timing.py` | 0 | Ran 36 tests, OK |
+| unittest `test_mutations_signal.py` | 0 | Ran 34 tests, OK |
+| `tools/qualify_mutations.py --check` | 0 | PASS, faults 7, `mu1-cc7f4ed0...c5ed0` |
+| `tools/qualify_mutations_runtime.py --check-publication` | 0 | PASS, cases 6, faults 5, attempts 8 (class P only) |
+| `tools/qualify_mutations_identity.py --check` | 0 | exit 0 (JSON envelope ids listed; tail only retained) |
+| `tools/qualify_mutations_timing.py --check` | 0 | exit 0 (JSON envelope ids listed; tail only retained) |
+| `tools/qualify_mutations_signal.py --check` | 0 | PASS, operators 14, faults 17, tripped 17 |
+| `tools/qualify_mutations_matrix.py --check` | **1** | `FAIL: committed publication is stale or drifted: inputs` |
+
+F1 (#300), F2 (#297), F4 (#299, #257), F5 (#298) and F6 (#314) were all
+OPEN when checked with `gh issue view`. Verdict unchanged: criteria 2, 4, 5, 6
+established at their stated scope; criteria 1, 3 (runtime scope), 7 and 8 NOT
+ESTABLISHED. **UNRUN (unchanged):** CI workflow execution, `compileall` step,
+default (generating) mode of every runner, runtime runner default mode (pinned
+image, including the #309 launch path), any fresh actual-Voice measurement, the
+AWS repo-remote box, the full repository test suite, Python 3.11.
+
 ## Bounded follow-ups (not performed here)
 
 - **F1** Fresh actual-Voice runtime measurement of the family operators
