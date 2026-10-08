@@ -383,9 +383,11 @@ command descriptions from `artifact_renderer`). `src/torchsynth_voice/mutat*`,
 the other `tools/qualify_mutations*`, `tests/test_mutations*`,
 `sim/reference/mutation-*`, `spec/reference/mutation-seams-v1.json`,
 `.github/workflows/mutations.yml` and `spec/MUTATIONS.md` are unchanged. The
-runtime change affects only the pinned-image default mode (UNRUN here); the
-`--check-publication` path, detectors and tolerances are untouched, and the
-committed publication was not regenerated, so verdicts carry over. Logs were
+runtime change rebuilds the pinned-image default-mode launch (UNRUN here) and
+adds a `validate_published_command` step to `--check-publication`; the
+committed publication carries no `command_representation` marker, so that step
+takes its legacy (accept-unchanged) branch. Detectors and tolerances are
+untouched and the publication was not regenerated, so verdicts carry over. Logs were
 kept outside the repo, not committed; the worktree stayed clean.
 
 | Check | Exit | Retained output (summary) |
