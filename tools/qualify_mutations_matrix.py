@@ -26,7 +26,7 @@ rows: counts are navigation aids only.
 composition (including the family reruns) and the current input digests.
 Absence is reported as absent, never as a pass; staleness fails.
 
-``--ci-subset`` is the small read-only sentinel: it selects exactly the 20
+``--ci-subset`` is the small read-only sentinel: it selects exactly the 21
 published ``ci_subset`` rows, fails (exit 1) on any drift between the rule
 selection and the committed block or on any row not tripped with an accepted
 control in its family publication, and exits 2 when absent. It does not
@@ -442,10 +442,18 @@ def build_sensitivity(publications: dict) -> dict:
         {
             "probe": probe["probe"],
             "operator": probe["operator"],
-            "magnitude_control_samples": probe["magnitude_control_samples"],
-            "qualified_resolution_control_samples": probe[
-                "qualified_resolution_control_samples"
-            ],
+            "magnitude": probe["magnitude"],
+            "magnitude_unit": probe["magnitude_unit"],
+            "boundary": probe["boundary"],
+            "boundary_unit": probe["boundary_unit"],
+            **{
+                key: probe[key]
+                for key in (
+                    "magnitude_control_samples",
+                    "qualified_resolution_control_samples",
+                )
+                if key in probe
+            },
             "detected": probe["detected"],
             "validity": (
                 "detected" if probe["detected"] else "sensitivity-NO VERDICT"
@@ -841,7 +849,7 @@ COMPARABLE_FIELDS = (
 )
 
 
-EXPECTED_CI_SUBSET_ROWS = 20
+EXPECTED_CI_SUBSET_ROWS = 21
 
 
 def select_ci_subset() -> list:
@@ -853,7 +861,7 @@ def select_ci_subset() -> list:
       (``CI_SUBSET_RULE`` / ``CI_SUBSET_CATEGORIES`` via ``build_ci_subset``)
       to the committed ``faults_to_tests`` rows; the selected rows are the
       sorted fault names, which must number exactly
-      ``EXPECTED_CI_SUBSET_ROWS`` (20).
+      ``EXPECTED_CI_SUBSET_ROWS`` (21).
     * Drift: the selection must equal the committed ``ci_subset`` block
       (rows, categories, rule). Any difference exits 1 naming the delta.
     * Membership evidence: every selected fault must be present in its
@@ -957,7 +965,7 @@ def main() -> None:
     parser.add_argument(
         "--ci-subset",
         action="store_true",
-        help="run only the 20-row deterministic ci_subset sentinel against "
+        help="run only the 21-row deterministic ci_subset sentinel against "
         "the committed publication; read-only, no family reruns",
     )
     args = parser.parse_args()

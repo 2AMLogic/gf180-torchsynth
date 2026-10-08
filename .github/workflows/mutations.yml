@@ -40,9 +40,9 @@ jobs:
         run: python tools/qualify_mutations_identity.py --check
 
   ci-subset-sentinel:
-    # Owner of the small deterministic sentinel: the 20 published ci_subset
+    # Owner of the small deterministic sentinel: the 21 published ci_subset
     # rows (identity, delay, interpolation, gain, normalization). Read-only
-    # and stdlib-only, so it fails fast on selection drift (row count != 20,
+    # and stdlib-only, so it fails fast on selection drift (row count != 21,
     # rule selection != committed ci_subset, or a row not tripped with an
     # accepted control in its family publication; exit 1, absence exit 2).
     # It does not re-execute detectors: the full reruns stay in

@@ -16,8 +16,8 @@
     },
     "timing": {
       "coverage_cases": 6,
-      "envelopes": 5,
-      "floor_probes": 2
+      "envelopes": 8,
+      "floor_probes": 14
     }
   },
   "ci_subset": {
@@ -30,6 +30,7 @@
       ],
       "gain": [
         "gain.db",
+        "gain.db (minus 1 dB)",
         "gain.dc_offset",
         "gain.polarity"
       ],
@@ -60,6 +61,7 @@
       "composed-zoh-then-audio-delay",
       "dropped-endpoint-coordinate",
       "gain.db",
+      "gain.db (minus 1 dB)",
       "gain.dc_offset",
       "gain.polarity",
       "identity-batch-shift-128",
@@ -298,28 +300,28 @@
     }
   },
   "counts": {
-    "ci_subset_rows": 20,
+    "ci_subset_rows": 21,
     "composition_declared_pairs": 22,
     "composition_executed_rows": 4,
-    "detected_rows": 44,
+    "detected_rows": 50,
     "family_faults": {
       "identity": {
         "detected": 14,
         "faults": 14
       },
       "signal": {
-        "detected": 17,
-        "faults": 17
+        "detected": 20,
+        "faults": 20
       },
       "timing": {
-        "detected": 13,
-        "faults": 13
+        "detected": 16,
+        "faults": 16
       }
     },
-    "fault_rows": 44,
-    "mandatory_detectors": 24,
+    "fault_rows": 50,
+    "mandatory_detectors": 28,
     "missed_faults": 0,
-    "sensitivity_no_verdict": 13
+    "sensitivity_no_verdict": 19
   },
   "family_reruns": {
     "framework": {
@@ -347,16 +349,16 @@
     },
     "signal": {
       "counts": {
-        "faults": 17,
-        "operators": 14,
-        "tripped": 17
+        "faults": 20,
+        "operators": 15,
+        "tripped": 20
       },
       "status": "PASS",
       "tool": "tools/qualify_mutations_signal.py --check"
     },
     "timing": {
       "counts": {
-        "faults": 13
+        "faults": 16
       },
       "status": "PASS",
       "tool": "tools/qualify_mutations_timing.py --check"
@@ -984,14 +986,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "attack-breakpoint-shift-plus2",
       "links": {
         "downstream": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
         "envelope_ids": [
-          "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3"
+          "mu1-52080903eb53b24672d3e9ee9e02027815f045a737e336a3f9ea5cd8e76ce2e1"
         ],
         "observed_refusal": "attack_end measured near 10.0 against declared truth 8.0 (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1017,13 +1019,133 @@
     },
     {
       "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:adsr-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on decay_end only",
+        "family_controls_passed": 12
+      },
+      "family": "timing",
+      "fault": "decay-breakpoint-shift-plus2",
+      "links": {
+        "downstream": "envelope_estimators.estimate_envelope + qualification_rows (decay_end)",
+        "envelope_ids": [
+          "mu1-be2241fe7db9ebd3af3d85fe3ecdf43c4c5d980dfb0cdadb77107e73a12eb3d5"
+        ],
+        "observed_refusal": "decay_end measured near 54.0 against declared truth 52.0 (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 8,
+            "minimum": -8,
+            "type": "number",
+            "unit": "control_sample"
+          },
+          "operator": "envelope.breakpoint_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:adsr-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on release_end only",
+        "family_controls_passed": 12
+      },
+      "family": "timing",
+      "fault": "release-breakpoint-shift-plus2",
+      "links": {
+        "downstream": "envelope_estimators.estimate_envelope + qualification_rows (release_end)",
+        "envelope_ids": [
+          "mu1-e4746afb7b395a853d876ca4dc6679f6762899342a9b323a28505dfb48439867"
+        ],
+        "observed_refusal": "release_end measured near 190.0 against declared truth 188.0 (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 8,
+            "minimum": -8,
+            "type": "number",
+            "unit": "control_sample"
+          },
+          "operator": "envelope.breakpoint_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:mutation-timing:adsr-control"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "sustain amplitude FAIL beyond the 0.00002 absolute amplitude bound",
+        "family_controls_passed": 12
+      },
+      "family": "timing",
+      "fault": "sustain-amplitude-shift-plus0.1",
+      "links": {
+        "downstream": "envelope_estimators.estimate_envelope + qualification_rows (sustain_amplitude)",
+        "envelope_ids": [
+          "mu1-63df4acde341d9b947df0110198d15756f14a191de3c269167e6c94193726a30"
+        ],
+        "observed_refusal": "sustain_amplitude measured near 0.85 against declared truth 0.75 (verdict FAIL)",
+        "publication": "sim/reference/mutation-timing-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": -1,
+            "type": "number",
+            "unit": "amplitude"
+          },
+          "operator": "envelope.sustain_shift"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "envelope.sustain_shift"
+      ],
+      "seam": "apparatus.producer_call",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
         "directed_cases": [],
         "note": "executed on the family's directed lanes without a dedicated per-case mu1- envelope; the family fault-matrix row and its paired detector rows are the raw evidence"
       },
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "one-control-sample-delay",
@@ -1060,7 +1182,7 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "missing-sample",
@@ -1097,7 +1219,7 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "duplicated-sample",
@@ -1135,14 +1257,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "lfo-rate-shift-plus-half-hz",
       "links": {
         "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
         "envelope_ids": [
-          "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5"
+          "mu1-e06d4fe921fb9ad7d93e8ce65cb67ecefde9b079b58583839c3c17b9f2e4ef88"
         ],
         "observed_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1175,14 +1297,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "lfo-depth-shift-plus-0.1",
       "links": {
         "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
         "envelope_ids": [
-          "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5"
+          "mu1-7152e6cafc6a483ca60be3bdd7de59459a6899e89e9723626a0f2aa66c57cc13"
         ],
         "observed_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1215,14 +1337,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "route-sign-flip",
       "links": {
         "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
         "envelope_ids": [
-          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+          "mu1-2705233bbee3e055859a622cb0d00797342d43647fd605fc7f1c81b912c8258f"
         ],
         "observed_refusal": "gain.vco_1_pitch sign flipped (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1253,14 +1375,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "route-depth-shift-plus25",
       "links": {
         "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
         "envelope_ids": [
-          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+          "mu1-2705233bbee3e055859a622cb0d00797342d43647fd605fc7f1c81b912c8258f"
         ],
         "observed_refusal": "gain.vco_1_amp depth scaled (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1293,14 +1415,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "route-destination-swap",
       "links": {
         "downstream": "envelope_estimators.estimate_routes + qualification_rows (gain.",
         "envelope_ids": [
-          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+          "mu1-2705233bbee3e055859a622cb0d00797342d43647fd605fc7f1c81b912c8258f"
         ],
         "observed_refusal": "each swapped destination carries the other's measured gain; expected route labels unchanged",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1331,14 +1453,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "zero-order-hold-control",
       "links": {
         "downstream": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "observed_refusal": "ZOH re-derivation diverges from the landed align_corners=False interpolation (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1369,14 +1491,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "dropped-endpoint-coordinate",
       "links": {
         "downstream": "trace_capture.check_endpoint_bytes + paired exactness row",
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "observed_refusal": "trace_capture.check_endpoint_bytes: endpoint loss: upsampled first/last sample bytes differ from control",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1407,14 +1529,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "one-audio-sample-delay",
       "links": {
         "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "observed_refusal": "one-sample audio delay stays visible in the unaligned row (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1447,14 +1569,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "declared-order applied events; composed fault FAIL on the unaligned row",
-        "family_controls_passed": 11
+        "family_controls_passed": 12
       },
       "family": "timing",
       "fault": "composed-zoh-then-audio-delay",
       "links": {
         "downstream": "in-band declared-order events + paired exactness row",
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "observed_refusal": "declared-order events applied then applied; the composed fault diverges from the expected trace",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1496,14 +1618,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "gain.db",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.10981661081314087, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1536,14 +1658,54 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
+      },
+      "family": "signal",
+      "fault": "gain.db (minus 1 dB)",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.09787416458129883, affected_samples=176399)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 60,
+            "minimum": -60,
+            "type": "number",
+            "unit": "dB"
+          },
+          "operator": "gain.db"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "gain.db"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "gain.polarity",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.7999995946884155, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1574,14 +1736,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "gain.dc_offset",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=0.050000011920928955, affected_samples=176400)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1614,14 +1776,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "clip.round_step",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.003903329372406006, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1654,14 +1816,54 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
+      },
+      "family": "signal",
+      "fault": "clip.truncate_step",
+      "links": {
+        "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+        "envelope_ids": [
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+        ],
+        "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.007808312773704529, affected_samples=176399)",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude_step"
+          },
+          "operator": "clip.truncate_step"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "clip.truncate_step"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "clip.saturation_ceiling",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.4576394557952881, affected_samples=75840)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1694,14 +1896,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.mode_substitute",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.045294627547264, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1732,14 +1934,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.shape_scale",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.3766823038458824, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1772,14 +1974,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.tuning_shift",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=1.7999609112739563, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1812,14 +2014,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on max_abs_error and exact_equal with PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.phase_offset",
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.6888300776481628, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1852,14 +2054,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.tuning_shift (property)",
       "links": {
         "downstream": "periodic.cents analytic property row (identity preparation, no normalization)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "property deviation cents observed=100.00000000000071 declared_offset_match=True",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1892,16 +2094,16 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "osc.phase_offset (property)",
       "links": {
         "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
-        "observed_refusal": "property deviation phase_rad observed=0.7853981633974669 declared_offset_match=True",
+        "observed_refusal": "property deviation phase_rad observed=0.7853981633974665 declared_offset_match=True",
         "publication": "sim/reference/mutation-signal-v1.json"
       },
       "magnitude": [
@@ -1937,14 +2139,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "norm.always_on",
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "below-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1980,14 +2182,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on decision_match,rule_error_max with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "norm.off",
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2023,14 +2225,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on rule_error_max with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "norm.wrong_peak",
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2066,14 +2268,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "FAIL on reciprocal_error with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "norm.wrong_reciprocal",
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows reciprocal_error",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2104,14 +2306,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "Producer handoff required",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "normalization-decision-replacement",
       "links": {
         "downstream": "mutations.validate_plan (fail-closed at plan time)",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "seam is not a writable injection seam (producer handoff required): voice.normalization_decision \u2014 The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2142,14 +2344,14 @@
       "false_positives": {
         "clean_control_accepted": true,
         "expected_refusal": "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control",
-        "family_controls_passed": 7
+        "family_controls_passed": 8
       },
       "family": "signal",
       "fault": "composed-round-then-saturate",
       "links": {
         "downstream": "paired exactness contract rows over the composed ordered application",
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "observed_refusal": "events=applied,applied failed rows exact_equal,max_abs_error",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2183,22 +2385,62 @@
       ],
       "seam": "voice.post_module",
       "validity": "detected"
+    },
+    {
+      "applicability": {
+        "directed_cases": [
+          "directed:signal-family-0"
+        ]
+      },
+      "false_positives": {
+        "clean_control_accepted": true,
+        "expected_refusal": "FAIL on max_abs_error and exact_equal between truncation and rounding with a PASSing clean control",
+        "family_controls_passed": 8
+      },
+      "family": "signal",
+      "fault": "clip.truncate_step vs clip.round_step (directed distinction)",
+      "links": {
+        "downstream": "paired exactness contract rows between the truncated and rounded lanes at the same step, plus directed exact-grid/sign/zero vectors",
+        "envelope_ids": [
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+        ],
+        "observed_refusal": "truncated lane differs from rounded lane: True; directed vectors distinguish: True; failed rows exact_equal,max_abs_error",
+        "publication": "sim/reference/mutation-signal-v1.json"
+      },
+      "magnitude": [
+        {
+          "binding": "executed value is bound into the mp1- plan identity; the plan identity changes if and only if the magnitude, operator or selection changes",
+          "magnitude": {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number",
+            "unit": "amplitude_step"
+          },
+          "operator": "clip.truncate_step"
+        }
+      ],
+      "missed_faults": [],
+      "operators": [
+        "clip.truncate_step"
+      ],
+      "seam": "voice.post_module",
+      "validity": "detected"
     }
   ],
   "inputs": {
     "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
-    "sim/reference/mutation-signal-v1.json": "a7b23cfa53a806a12ac01bc0f32abc27f379ef435a9b27b4b28b12ab6af58022",
-    "sim/reference/mutation-timing-v1.json": "3c29297da3f739c395f49d17986aee0f9f0296649f91c24ceb60728281d8291d",
-    "spec/MUTATIONS.md": "e98682b28da9fa33df34b161631a1c2b069d15b752c35194774f05d3273c7c8d",
+    "sim/reference/mutation-signal-v1.json": "045793c215274eb98a20b002fac29e54ccb94750a9c4bd99ddf2b75f4f86671a",
+    "sim/reference/mutation-timing-v1.json": "08a0d9a457046d7711be0d5036f05f071dcceeb02ea99b2ad9984a8a175d3699",
+    "spec/MUTATIONS.md": "06f32a9620ec5db0165d4595a25533dee48fdd06fd191988380e1f47fe178356",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
     "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
-    "src/torchsynth_voice/mutations_signal.py": "170691d10b75f3adacde54e1f5236f380bbe7c9a6999c6c273c00de444c8bed9",
-    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "src/torchsynth_voice/mutations_signal.py": "581682b103b8ce4a7fb7a84f82a707d4efffcf0fe6d053e46de024b14ca9a211",
+    "src/torchsynth_voice/mutations_timing.py": "4815e6d6a848025dd9b824c0301260925c5e58d019e9af91d4aabce5fce68ab4",
     "tools/qualify_mutations_identity.py": "0d814cd0852dede368c053f6f1395035cef9b59fb31f9e9b0df9023a916bcbf7",
-    "tools/qualify_mutations_signal.py": "b6e854b4dd275d00335de68529c7162e7b158b9276f050d322febd42c17ea3d6",
-    "tools/qualify_mutations_timing.py": "4a9524ae190b5eb95a5a6d6d1f285025b026e4046242e50c5e3d2a7f137bb919"
+    "tools/qualify_mutations_signal.py": "a7bd44cafbfa983ec53a237ae31747db3343aa4e1366d59775c91d9bc49c95f4",
+    "tools/qualify_mutations_timing.py": "3aa0660fe100b37bbe38a5672767f07fcac56e89ddaf5eea86516faa8b155e88"
   },
   "kind": "mutation-matrix-v1",
   "localization_topology": {
@@ -2290,6 +2532,7 @@
       "signal": [
         "clip.round_step",
         "clip.saturation_ceiling",
+        "clip.truncate_step",
         "gain.db",
         "gain.dc_offset",
         "gain.polarity",
@@ -2305,6 +2548,7 @@
       ],
       "timing": [
         "envelope.breakpoint_shift",
+        "envelope.sustain_shift",
         "interp.off_endpoint",
         "interp.zoh_control",
         "modulation.lfo_depth_shift",
@@ -2318,16 +2562,16 @@
         "timing.duplicate_sample"
       ]
     },
-    "family_operators": 32,
+    "family_operators": 34,
     "note": "framework operators are the #30 apparatus proofs and bridge.* are #30 test-only voice-runtime proofs; the matrix rows are the #31/#32/#33 family faults only",
-    "total_registered_operators": 44
+    "total_registered_operators": 46
   },
   "schema_version": 1,
   "score_policy": "no scalar mutation score replaces rows; the bidirectional rows above are the evidence and all counts are navigation aids",
   "sensitivity": {
     "counts": {
-      "detected_inside_applicability": 7,
-      "sensitivity_no_verdict": 13
+      "detected_inside_applicability": 13,
+      "sensitivity_no_verdict": 19
     },
     "policy": "below-floor mutations, degenerate coverage rows and out-of-applicability normalization cells are labeled sensitivity-NO VERDICT; they are never counted as passes and never as detected faults",
     "signal_normalization_cells": [
@@ -2462,20 +2706,148 @@
     ],
     "timing_floor_probes": [
       {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
         "detected": true,
+        "magnitude": 0.03,
         "magnitude_control_samples": 0.03,
+        "magnitude_unit": "control_sample",
         "operator": "envelope.breakpoint_shift",
         "probe": "attack-breakpoint-shift-0.03",
         "qualified_resolution_control_samples": 0.02,
         "validity": "detected"
       },
       {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
         "detected": false,
+        "magnitude": 0.005,
         "magnitude_control_samples": 0.005,
+        "magnitude_unit": "control_sample",
         "operator": "envelope.breakpoint_shift",
         "probe": "attack-breakpoint-shift-0.005",
         "qualified_resolution_control_samples": 0.02,
         "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
+        "detected": false,
+        "magnitude": 0.005,
+        "magnitude_unit": "control_sample",
+        "operator": "envelope.breakpoint_shift",
+        "probe": "envelope.breakpoint_shift-decay-below-0.005",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
+        "detected": true,
+        "magnitude": 0.03,
+        "magnitude_unit": "control_sample",
+        "operator": "envelope.breakpoint_shift",
+        "probe": "envelope.breakpoint_shift-decay-above-0.03",
+        "validity": "detected"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
+        "detected": false,
+        "magnitude": 0.005,
+        "magnitude_unit": "control_sample",
+        "operator": "envelope.breakpoint_shift",
+        "probe": "envelope.breakpoint_shift-release-below-0.005",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "control_sample",
+        "detected": true,
+        "magnitude": 0.03,
+        "magnitude_unit": "control_sample",
+        "operator": "envelope.breakpoint_shift",
+        "probe": "envelope.breakpoint_shift-release-above-0.03",
+        "validity": "detected"
+      },
+      {
+        "boundary": 2e-05,
+        "boundary_unit": "1",
+        "detected": false,
+        "magnitude": 5e-06,
+        "magnitude_unit": "amplitude",
+        "operator": "envelope.sustain_shift",
+        "probe": "envelope.sustain_shift-below-5e-06",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 2e-05,
+        "boundary_unit": "1",
+        "detected": true,
+        "magnitude": 5e-05,
+        "magnitude_unit": "amplitude",
+        "operator": "envelope.sustain_shift",
+        "probe": "envelope.sustain_shift-above-5e-05",
+        "validity": "detected"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "hz",
+        "detected": false,
+        "magnitude": 0.005,
+        "magnitude_unit": "hz",
+        "operator": "modulation.lfo_rate_shift",
+        "probe": "modulation.lfo_rate_shift-below-0.005",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 0.02,
+        "boundary_unit": "hz",
+        "detected": true,
+        "magnitude": 0.05,
+        "magnitude_unit": "hz",
+        "operator": "modulation.lfo_rate_shift",
+        "probe": "modulation.lfo_rate_shift-above-0.05",
+        "validity": "detected"
+      },
+      {
+        "boundary": 0.01,
+        "boundary_unit": "native",
+        "detected": false,
+        "magnitude": 0.002,
+        "magnitude_unit": "native",
+        "operator": "modulation.lfo_depth_shift",
+        "probe": "modulation.lfo_depth_shift-below-0.002",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 0.01,
+        "boundary_unit": "native",
+        "detected": true,
+        "magnitude": 0.03,
+        "magnitude_unit": "native",
+        "operator": "modulation.lfo_depth_shift",
+        "probe": "modulation.lfo_depth_shift-above-0.03",
+        "validity": "detected"
+      },
+      {
+        "boundary": 1e-08,
+        "boundary_unit": "1",
+        "detected": false,
+        "magnitude": 2e-09,
+        "magnitude_unit": "ratio",
+        "operator": "modulation.route_depth_shift",
+        "probe": "modulation.route_depth_shift-below-2e-09",
+        "validity": "sensitivity-NO VERDICT"
+      },
+      {
+        "boundary": 1e-08,
+        "boundary_unit": "1",
+        "detected": true,
+        "magnitude": 5e-08,
+        "magnitude_unit": "ratio",
+        "operator": "modulation.route_depth_shift",
+        "probe": "modulation.route_depth_shift-above-5e-08",
+        "validity": "detected"
       }
     ]
   },
@@ -2701,13 +3073,13 @@
         "Producer handoff required"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2725,7 +3097,9 @@
       "expected_faults": [
         "clip.round_step",
         "clip.saturation_ceiling",
+        "clip.truncate_step",
         "gain.db",
+        "gain.db (minus 1 dB)",
         "gain.dc_offset",
         "gain.polarity",
         "osc.mode_substitute",
@@ -2737,13 +3111,13 @@
         "FAIL on max_abs_error and exact_equal with PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2751,8 +3125,36 @@
       },
       "wrong_then_right": {
         "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
-        "right_observed": 9,
-        "wrong_observed": 9
+        "right_observed": 11,
+        "wrong_observed": 11
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "paired exactness contract rows between the truncated and rounded lanes at the same step, plus directed exact-grid/sign/zero vectors",
+      "expected_faults": [
+        "clip.truncate_step vs clip.round_step (directed distinction)"
+      ],
+      "expected_refusals": [
+        "FAIL on max_abs_error and exact_equal between truncation and rounding with a PASSing clean control"
+      ],
+      "false_positive_guards": {
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
+      },
+      "family": "signal",
+      "links": {
+        "envelope_ids": [
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+        ],
+        "publications": [
+          "sim/reference/mutation-signal-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
       }
     },
     {
@@ -2765,13 +3167,13 @@
         "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2793,13 +3195,13 @@
         "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2821,13 +3223,13 @@
         "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2849,13 +3251,13 @@
         "FAIL on reciprocal_error with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2877,13 +3279,13 @@
         "FAIL on decision_match,rule_error_max with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2905,13 +3307,13 @@
         "FAIL on decision_match,rule_error_max with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2933,13 +3335,13 @@
         "FAIL on rule_error_max with a PASSing clean control"
       ],
       "false_positive_guards": {
-        "controls_passed": 7,
-        "tolerant_optional_rows_clean": 9
+        "controls_passed": 8,
+        "tolerant_optional_rows_clean": 11
       },
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-72d7c1b492b0eeb0a6b8806ea42c5d212631f96f38c9476c6cad85e751a4dc05"
+          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -2961,13 +3363,97 @@
         "breakpoint coordinate FAIL beyond the 0.02 control-sample bound"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3"
+          "mu1-52080903eb53b24672d3e9ee9e02027815f045a737e336a3f9ea5cd8e76ce2e1"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "envelope_estimators.estimate_envelope + qualification_rows (decay_end)",
+      "expected_faults": [
+        "decay-breakpoint-shift-plus2"
+      ],
+      "expected_refusals": [
+        "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on decay_end only"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-be2241fe7db9ebd3af3d85fe3ecdf43c4c5d980dfb0cdadb77107e73a12eb3d5"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "envelope_estimators.estimate_envelope + qualification_rows (release_end)",
+      "expected_faults": [
+        "release-breakpoint-shift-plus2"
+      ],
+      "expected_refusals": [
+        "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on release_end only"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-e4746afb7b395a853d876ca4dc6679f6762899342a9b323a28505dfb48439867"
+        ],
+        "publications": [
+          "sim/reference/mutation-timing-v1.json"
+        ]
+      },
+      "wrong_then_right": {
+        "note": "expected failing control observed (fault tripped the detector) then clean case observed (paired control accepted) for every bound fault",
+        "right_observed": 1,
+        "wrong_observed": 1
+      }
+    },
+    {
+      "baseline": "no unexplained baseline failure: every bound fault row carries an accepted clean control and every family control passes",
+      "detector": "envelope_estimators.estimate_envelope + qualification_rows (sustain_amplitude)",
+      "expected_faults": [
+        "sustain-amplitude-shift-plus0.1"
+      ],
+      "expected_refusals": [
+        "sustain amplitude FAIL beyond the 0.00002 absolute amplitude bound"
+      ],
+      "false_positive_guards": {
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
+      },
+      "family": "timing",
+      "links": {
+        "envelope_ids": [
+          "mu1-63df4acde341d9b947df0110198d15756f14a191de3c269167e6c94193726a30"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -2993,13 +3479,13 @@
         "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540"
+          "mu1-2705233bbee3e055859a622cb0d00797342d43647fd605fc7f1c81b912c8258f"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3021,13 +3507,13 @@
         "declared-order applied events; composed fault FAIL on the unaligned row"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3050,8 +3536,8 @@
         "declared frame preflight refusal before scoring + landed frame_mismatch refusal"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
@@ -3078,13 +3564,13 @@
         "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3106,13 +3592,13 @@
         "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3136,14 +3622,14 @@
         "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5",
-          "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5"
+          "mu1-7152e6cafc6a483ca60be3bdd7de59459a6899e89e9723626a0f2aa66c57cc13",
+          "mu1-e06d4fe921fb9ad7d93e8ce65cb67ecefde9b079b58583839c3c17b9f2e4ef88"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3165,13 +3651,13 @@
         "endpoint loss refusal: upsampled first/last sample bytes differ from the control column"
       ],
       "false_positive_guards": {
-        "clean_control_paired_rows": 13,
-        "controls_passed": 11
+        "clean_control_paired_rows": 16,
+        "controls_passed": 12
       },
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3"
+          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
