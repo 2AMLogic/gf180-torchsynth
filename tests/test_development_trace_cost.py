@@ -77,6 +77,10 @@ def subset_expected():
         selection=subset_selection(),
         registry=ta.registry_binding(),
         manifest=dtc.manifest_binding(),
+        runtime=tool.production_expected()["runtime"],
+        project_git=dict(CLEAN_GIT),
+        template_sha256=digest(canonical_bytes(subset_template())),
+        telemetry_driver_sha256=digest(tool.MEASURE_DRIVER_SOURCE.encode()),
     )
 
 
@@ -177,7 +181,7 @@ def production_plan():
         project_git=template["project_git"],
         template=template,
         qualification_sha256=QUALIFICATION_SHA256,
-        image="sha256:" + "0" * 64,
+        image=tool.production_expected()["runtime"]["image"],
         profile=PROFILE,
         driver_sha256=digest(tool.MEASURE_DRIVER_SOURCE.encode()),
     )
@@ -201,12 +205,12 @@ class InventoryTests(unittest.TestCase):
             ["global-%d" % i for i in range(96)],
         )
         self.assertTrue(all(r["state"] == "unrun" for r in receipt["cases"]))
-        self.assertEqual(dtc.verify_document(receipt), dtc.UNRUN)
+        self.assertEqual(dtc.verify_document(receipt, expected=tool.production_expected()), dtc.UNRUN)
         self.assertEqual(len(receipt["completeness"]["states"]["unrun"]), 96)
 
     def assert_rejected(self, receipt, message):
         with self.assertRaisesRegex(ValidationError, message):
-            dtc.verify_document(receipt)
+            dtc.verify_document(receipt, expected=tool.production_expected())
 
     def test_duplicate_missing_unexpected_and_reordered_rows(self):
         base = production_unrun()
@@ -463,7 +467,7 @@ class CampaignTests(unittest.TestCase):
 
     def test_synthetic_receipt_cannot_satisfy_production_pins(self):
         with self.assertRaisesRegex(ValidationError, "frozen development set"):
-            dtc.verify_document(self.loaded)
+            dtc.verify_document(self.loaded, expected=tool.production_expected())
 
     def test_rows_storage_and_shared_companion_accounting(self):
         rows = self.loaded["cases"]
@@ -766,6 +770,222 @@ class PartialAndRefusalTests(unittest.TestCase):
             campaign.run()
 
 
+def tree_snapshot(*roots):
+    """Relative path -> bytes for every file under the given roots/files."""
+    snapshot = {}
+    for root in roots:
+        root = Path(root)
+        paths = [root] if root.is_file() else sorted(root.rglob("*"))
+        for path in paths:
+            if path.is_file():
+                snapshot[str(path)] = path.read_bytes()
+    return snapshot
+
+
+def _set(*path_and_value):
+    *path, value = path_and_value
+
+    def mutate(receipt):
+        target = receipt
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = value
+    return mutate
+
+
+def _both_commits(receipt):
+    receipt["plan"]["producer"]["commit"] = "c" * 40
+    receipt["plan"]["project_git"]["commit"] = "c" * 40
+
+
+FORGED = "sha256:" + "f" * 64
+PLAN_TAMPERS = (
+    ("producer commit alone", _set("plan", "producer", "commit", "c" * 40),
+     "producer commit disagrees"),
+    ("project commit alone", _set("plan", "project_git", "commit", "c" * 40),
+     "producer commit disagrees"),
+    ("substituted producer", _both_commits, "not the expected producer"),
+    ("producer dirty", _set("plan", "producer", "dirty", True), "dirty"),
+    ("project dirty", _set("plan", "project_git", "dirty", True), "dirty"),
+    ("runtime profile", _set("plan", "runtime", "profile", "other"),
+     "qualified runtime"),
+    ("qualification ref", _set("plan", "runtime", "qualification_ref", "x.json"),
+     "qualified runtime"),
+    ("qualification digest",
+     _set("plan", "runtime", "qualification_sha256", "e" * 64), "qualified runtime"),
+    ("plan image", _set("plan", "runtime", "image", FORGED), "qualified runtime"),
+    ("request runtime",
+     _set("plan", "runtime", "request_runtime", {"python": "9.9"}),
+     "qualified runtime"),
+    ("template digest", _set("plan", "template_sha256", "d" * 64),
+     "expected corpus template"),
+    ("telemetry driver", _set("plan", "telemetry", "driver_sha256", "a" * 64),
+     "expected measurement driver"),
+)
+
+
+class ProvenanceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.campaign = Campaign()
+        _, cls.receipt = cls.campaign.run()
+        cls.production = production_unrun()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.campaign.cleanup()
+
+    def mutated(self, base, mutate):
+        receipt = copy.deepcopy(base)
+        mutate(receipt)
+        return receipt
+
+    def test_each_measured_plan_binding_is_rejected_independently(self):
+        for name, mutate, message in PLAN_TAMPERS:
+            receipt = self.mutated(self.receipt, mutate)
+            with self.subTest(name, check="document"):
+                with self.assertRaisesRegex(ValidationError, message):
+                    dtc.verify_document(receipt, expected=subset_expected())
+            with self.subTest(name, check="store"):
+                with self.assertRaisesRegex(ValidationError, message):
+                    dtc.verify_store(receipt, self.campaign.store,
+                                     expected=subset_expected())
+
+    def test_production_shaped_unrun_plan_rejects_substitutions(self):
+        expected = tool.production_expected()
+        self.assertEqual(dtc.verify_document(self.production, expected=expected),
+                         dtc.UNRUN)
+        for name, mutate, message in PLAN_TAMPERS:
+            if name in ("template digest", "substituted producer"):
+                continue  # production binds these at verify_store()
+            receipt = self.mutated(self.production, mutate)
+            with self.subTest(name):
+                with self.assertRaisesRegex(ValidationError, message):
+                    dtc.verify_document(receipt, expected=expected)
+
+    def test_incomplete_or_absent_expected_pins_fail_closed(self):
+        with self.assertRaisesRegex(ValidationError, "expected pins"):
+            dtc.verify_document(self.production)
+        partial = tool.production_expected()
+        del partial["runtime"]
+        with self.assertRaisesRegex(ValidationError, "expected pins"):
+            dtc.verify_document(self.production, expected=partial)
+
+    def test_reproduced_forgery_admitted_false_with_forged_image(self):
+        receipt = self.mutated(self.receipt, lambda r: r["execution"].update(
+            admitted=False, image=FORGED))
+        for check in (
+            lambda: dtc.verify_document(receipt, expected=subset_expected()),
+            lambda: dtc.verify_store(receipt, self.campaign.store,
+                                     expected=subset_expected()),
+        ):
+            with self.assertRaisesRegex(ValidationError, "admitted execution"):
+                check()
+
+    def test_execution_contradictions_are_rejected(self):
+        cases = (
+            ("measured, image alone", self.receipt,
+             _set("execution", "image", FORGED), "disagrees with the frozen plan"),
+            ("measured, admitted alone", self.receipt,
+             _set("execution", "admitted", False), "admitted execution"),
+            ("measured, admitted dropped", self.receipt,
+             lambda r: r["execution"].pop("admitted"), "admitted execution"),
+            ("measured, unrun outcome", self.receipt,
+             _set("execution", "outcome", "unrun"), "executed outcome"),
+            ("unrun admitted", self.production,
+             _set("execution", "admitted", True), "claims admission"),
+            ("unrun with image", self.production,
+             _set("execution", "image", FORGED), "claims admission"),
+        )
+        for name, base, mutate, message in cases:
+            receipt = self.mutated(base, mutate)
+            expected = (subset_expected() if base is self.receipt
+                        else tool.production_expected())
+            with self.subTest(name, check="document"):
+                with self.assertRaisesRegex(ValidationError, message):
+                    dtc.verify_document(receipt, expected=expected)
+            if base is self.receipt:
+                with self.subTest(name, check="store"):
+                    with self.assertRaisesRegex(ValidationError, message):
+                        dtc.verify_store(receipt, self.campaign.store,
+                                         expected=expected)
+
+    def test_plan_image_and_execution_image_must_move_together(self):
+        def both(receipt):
+            receipt["plan"]["runtime"]["image"] = FORGED
+            receipt["execution"]["image"] = FORGED
+        receipt = self.mutated(self.receipt, both)
+        with self.assertRaisesRegex(ValidationError, "qualified runtime"):
+            dtc.verify_store(receipt, self.campaign.store, expected=subset_expected())
+
+    def test_corpus_template_must_match_plan_provenance_in_the_store(self):
+        # A plan whose declared request runtime differs from the retained
+        # template cannot pass even with matching expected pins.
+        expected = subset_expected()
+        expected["runtime"] = copy.deepcopy(expected["runtime"])
+        expected["runtime"]["request_runtime"] = {"python": "9.9"}
+        receipt = self.mutated(self.receipt, _set(
+            "plan", "runtime", "request_runtime", {"python": "9.9"}))
+        with self.assertRaises(ValidationError):
+            dtc.verify_store(receipt, self.campaign.store, expected=expected)
+
+
+class PublicationPreflightTests(unittest.TestCase):
+    def test_refused_resume_leaves_store_journal_and_receipt_untouched(self):
+        campaign = Campaign(backend=TelemetryBackend(fail={1}))
+        self.addCleanup(campaign.cleanup)
+        code, partial = campaign.run()
+        self.assertEqual((code, partial["status"]), (1, "partial"))
+        campaign.backend.fail.clear()
+        calls = len(campaign.backend.calls)
+        before = tree_snapshot(campaign.store, campaign.receipt_path)
+        with self.assertRaisesRegex(ValidationError, "refusing to overwrite"):
+            campaign.run(resume=partial["run"]["run_id"])
+        self.assertEqual(len(campaign.backend.calls), calls)
+        self.assertEqual(tree_snapshot(campaign.store, campaign.receipt_path), before)
+        kept = loads(campaign.receipt_path.read_bytes())
+        self.assertEqual(kept, json.loads(json_bytes(partial)))
+        self.assertEqual(
+            dtc.verify_store(kept, campaign.store, expected=subset_expected()),
+            dtc.VERIFIED,
+        )
+
+    def test_occupied_destination_does_not_create_a_fresh_store(self):
+        campaign = Campaign()
+        self.addCleanup(campaign.cleanup)
+        campaign.run()
+        other = campaign.root / "other-store"
+        with self.assertRaisesRegex(ValidationError, "refusing to overwrite"):
+            campaign.run(store=other)
+        self.assertFalse(other.exists())
+
+    def test_distinct_destination_resume_completes_and_keeps_earlier_receipt(self):
+        campaign = Campaign(backend=TelemetryBackend(fail={1}))
+        self.addCleanup(campaign.cleanup)
+        _, partial = campaign.run()
+        first_bytes = campaign.receipt_path.read_bytes()
+        campaign.backend.fail.clear()
+        second = campaign.root / "resumed.json"
+        code, resumed = campaign.run(
+            resume=partial["run"]["run_id"], receipt_path=second)
+        self.assertEqual((code, resumed["status"]), (0, "complete"))
+        self.assertEqual(campaign.receipt_path.read_bytes(), first_bytes)
+        self.assertEqual(
+            dtc.verify_store(loads(second.read_bytes()), campaign.store,
+                             expected=subset_expected()),
+            dtc.VERIFIED,
+        )
+
+    def test_receipt_inside_the_store_or_a_directory_is_refused(self):
+        campaign = Campaign()
+        self.addCleanup(campaign.cleanup)
+        for path in (campaign.store / "receipt.json", campaign.root):
+            with self.subTest(path=str(path)):
+                with self.assertRaises(ValidationError):
+                    campaign.run(receipt_path=path)
+        self.assertFalse(campaign.store.exists())
+
+
 class CommittedReceiptTests(unittest.TestCase):
     def test_committed_receipt_is_unrun_or_absent_never_a_pass(self):
         path = ROOT / dtc.RECEIPT_REF
@@ -773,7 +993,7 @@ class CommittedReceiptTests(unittest.TestCase):
             self.assertEqual(tool.verify_receipt(path), 2)
             return
         receipt = loads(path.read_bytes())
-        state = dtc.verify_document(receipt)
+        state = dtc.verify_document(receipt, expected=tool.production_expected())
         self.assertIn(state, (dtc.UNRUN, dtc.LIMITED))
         self.assertEqual(tool.verify_receipt(path), 2)
 

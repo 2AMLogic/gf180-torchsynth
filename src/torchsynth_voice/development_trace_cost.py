@@ -31,7 +31,15 @@ from pathlib import Path
 
 from . import trace_artifacts as ta
 from . import trace_registry
-from .artifact_renderer import digest, json_bytes, require
+from .artifact_renderer import (
+    PROFILE,
+    QUALIFICATION_SHA256,
+    digest,
+    json_bytes,
+    qualification,
+    require,
+    runtime_descriptor,
+)
 from .artifacts import ValidationError, canonical_bytes, loads
 from .contract import repository_root
 from .corpus import ReadOnlyStore, read_bytes, read_reference, verify_run
@@ -44,6 +52,7 @@ RECEIPT_REF = "sim/reference/development-trace-cost-v1.json"
 MANIFEST_REF = "spec/reference/corpus-v0.json"
 # Inside the measurement store; written once before the first render.
 PLAN_STORE_REF = "development-trace-cost/plan.json"
+QUALIFICATION_REF = "sim/reference/repeatability-runtime.json"
 DEVELOPMENT_INDICES = tuple(range(96))
 STATES = ("completed", "failed", "unrun")
 STATUSES = ("unrun", "partial", "complete")
@@ -168,13 +177,42 @@ def case_id(index):
     return "global-" + str(index)
 
 
-def expected_pins():
-    """Live pins a production receipt must carry: 96 identities, 29 traces."""
+PIN_KEYS = frozenset((
+    "indices", "selection", "registry", "manifest", "runtime", "project_git",
+    "template_sha256", "telemetry_driver_sha256",
+))
+_PLAN_GIT_KEYS = frozenset(("commit", "dirty", "diff_sha256", "untracked_sha256"))
+
+
+def expected_pins(*, telemetry_driver_sha256):
+    """Pins a production receipt must carry: 96 identities, 29 traces, and the
+    ratified runtime publication (profile, reference, digest, image and the
+    request-runtime descriptor).
+
+    The telemetry driver is composed in the runner tool, so the caller supplies
+    its digest (``tools/measure_development_trace_cost.production_expected``).
+    ``project_git`` and ``template_sha256`` are ``None`` for production: the
+    producer commit is whichever clean commit made the receipt, so the plan's
+    producer is checked for self-consistency and ``verify_store()`` binds the
+    retained corpus template to it. A caller (a synthetic test) may supply
+    explicit values, which are then compared exactly.
+    """
+    publication, runtime = qualification()
     return dict(
         indices=list(DEVELOPMENT_INDICES),
         selection=selection_binding(),
         registry=ta.registry_binding(),
         manifest=manifest_binding(),
+        runtime=dict(
+            profile=PROFILE,
+            qualification_ref=QUALIFICATION_REF,
+            qualification_sha256=QUALIFICATION_SHA256,
+            image=publication["provenance"]["image"]["Id"],
+            request_runtime=runtime_descriptor(runtime),
+        ),
+        project_git=None,
+        template_sha256=None,
+        telemetry_driver_sha256=telemetry_driver_sha256,
     )
 
 
@@ -215,7 +253,7 @@ def freeze_plan(
         registry=ta.registry_binding(),
         runtime=dict(
             profile=profile,
-            qualification_ref="sim/reference/repeatability-runtime.json",
+            qualification_ref=QUALIFICATION_REF,
             qualification_sha256=qualification_sha256,
             image=image,
             request_runtime=template["runtime"],
@@ -231,7 +269,11 @@ def check_plan(plan, expected=None):
     require(type(plan) is dict and plan.get("schema") == PLAN_SCHEMA,
             "not a development trace-cost plan")
     require(plan["schema_version"] == SCHEMA_VERSION, "plan version mismatch")
-    expected = expected_pins() if expected is None else expected
+    require(
+        type(expected) is dict and set(expected) == PIN_KEYS,
+        "expected pins are missing or incomplete; production verification"
+        " needs the runner's production_expected()",
+    )
     require(plan["indices"] == expected["indices"],
             "plan identities differ from the frozen development set")
     require(plan["case_ids"] == [case_id(i) for i in plan["indices"]],
@@ -243,8 +285,26 @@ def check_plan(plan, expected=None):
     require(plan["manifest"] == expected["manifest"],
             "plan manifest identity is stale")
     require(plan["holdout_access"] is False, "holdout access declared")
-    require(not plan["producer"]["dirty"] and not plan["project_git"]["dirty"],
+    producer, git = plan["producer"], plan["project_git"]
+    require(type(producer) is dict and set(producer) == {"commit", "dirty"}
+            and type(git) is dict and set(git) == _PLAN_GIT_KEYS,
+            "plan producer identity is malformed")
+    require(not producer["dirty"] and not git["dirty"],
             "plan producer checkout was dirty")
+    require(type(producer["commit"]) is str
+            and re.fullmatch(r"[a-f0-9]{40}", producer["commit"]) is not None
+            and producer["commit"] == git["commit"],
+            "plan producer commit disagrees with the project git commit")
+    if expected["project_git"] is not None:
+        require(git == expected["project_git"],
+                "plan project git identity is not the expected producer")
+    require(plan["runtime"] == expected["runtime"],
+            "plan runtime does not match the qualified runtime publication")
+    require(re.fullmatch(_HEX64, str(plan["template_sha256"])) is not None,
+            "plan template digest missing")
+    if expected["template_sha256"] is not None:
+        require(plan["template_sha256"] == expected["template_sha256"],
+                "plan template is not the expected corpus template")
     require(
         {k: v for k, v in plan["telemetry"].items() if k != "driver_sha256"}
         == TELEMETRY_DECLARATION,
@@ -252,6 +312,8 @@ def check_plan(plan, expected=None):
     )
     require(re.fullmatch(_HEX64, plan["telemetry"]["driver_sha256"]) is not None,
             "telemetry driver digest missing")
+    require(plan["telemetry"]["driver_sha256"] == expected["telemetry_driver_sha256"],
+            "telemetry driver is not the expected measurement driver")
     return True
 
 
@@ -829,9 +891,13 @@ def verify_document(receipt, *, expected=None):
     require(receipt["projections"] == projections(),
             "projections disagree with the retained publications")
     states = {s: [r["case_id"] for r in rows if r["state"] == s] for s in STATES}
+    execution = receipt["execution"]
+    require(type(execution) is dict, "execution record is malformed")
     if receipt["status"] == "unrun":
-        require(receipt["execution"]["outcome"] == "unrun",
+        require(execution["outcome"] == "unrun",
                 "unrun receipt claims an execution")
+        require(execution.get("admitted") is False and "image" not in execution,
+                "unrun receipt claims admission or an executed runtime")
         require(all(r["state"] == "unrun" and r["render_attempts"] == 0 for r in rows),
                 "unrun receipt carries case results")
         require(receipt["run"] is None and receipt["storage"] is None
@@ -841,8 +907,12 @@ def verify_document(receipt, *, expected=None):
             storage_complete=False, memory_complete=False, states=states),
             "unrun completeness tampered")
         return UNRUN
-    require(receipt["execution"]["outcome"] == "executed",
+    require(execution["outcome"] == "executed",
             "measured receipt lacks an executed outcome")
+    require(execution.get("admitted") is True,
+            "measured receipt does not claim admitted execution")
+    require(execution.get("image") == receipt["plan"]["runtime"]["image"],
+            "execution image disagrees with the frozen plan runtime")
     summary = summaries(rows)
     require(receipt["completeness"] == dict(
         storage_complete=summary["storage_complete"],
@@ -916,6 +986,15 @@ def verify_store(receipt, store_root, *, expected=None):
         == receipt["plan"]["template_sha256"]
         and corpus_plan["manifest"]["sha256"] == receipt["plan"]["manifest"]["sha256"],
         "corpus run is not the frozen plan",
+    )
+    template = corpus_plan["template"]
+    plan = receipt["plan"]
+    require(
+        template["project_git"] == plan["project_git"]
+        and template["runtime"] == plan["runtime"]["request_runtime"]
+        and template["requested_traces"] == plan["selection"]["requested_traces"]
+        and template["trace_registry_version"] == plan["registry"]["token"],
+        "retained corpus template disagrees with the frozen plan provenance",
     )
     index = loads(read_reference(root, envelope["index"]))
     companion = loads(read_reference(root, run["companion"]))
