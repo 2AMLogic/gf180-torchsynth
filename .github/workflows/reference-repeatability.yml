@@ -18,7 +18,7 @@ jobs:
       ONEDNN_MAX_CPU_ISA: AVX2
       MKL_ENABLE_INSTRUCTIONS: AVX2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fail fast if host-dispatch env is not pinned (issue #117)
         run: |
           fail() {
