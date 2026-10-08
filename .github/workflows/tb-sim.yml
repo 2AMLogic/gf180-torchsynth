@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: ${{ matrix.python }}
@@ -96,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -121,7 +121,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -246,7 +246,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -307,7 +307,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         timeout-minutes: 5
         with:
           python-version: "3.12"

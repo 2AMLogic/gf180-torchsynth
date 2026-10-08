@@ -29,7 +29,7 @@ jobs:
           # "cannot run" and FAILS rather than passing vacuously, so this
           # depth is what lets it be a check at all. The pack is ~27 MiB.
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - name: Compile source
