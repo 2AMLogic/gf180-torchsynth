@@ -228,6 +228,45 @@ class AdoptedProducersTest(unittest.TestCase):
         with self.assertRaises(Exception):
             tool._check_launch_command(forged, registry.require)
 
+    def test_float_sources_checker_enforces_marked_execution_command(self):
+        tool = load_tool("tools/capture_float_sources.py")
+        committed = json.loads(tool.RECORD_PATH.read_bytes())
+        _, described = ar.launch_and_described(sample_launch, "/p", "/o")
+
+        def run_check(execution):
+            record = copy.deepcopy(committed)
+            record["execution"] = execution
+            with tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "float-sources-v1.json"
+                path.write_text(json.dumps(record))
+                with mock.patch.object(tool, "RECORD_PATH", path):
+                    return tool.check()
+
+        base = {k: v for k, v in committed["execution"].items() if k != "command"}
+        self.assertEqual(run_check(committed["execution"]), [])
+        self.assertEqual(run_check(dict(base, command=[])), [])
+        self.assertEqual(run_check(dict(base, **marked())), [])
+        invalid = {
+            "unknown representation": dict(
+                marked(), command_representation="portable-placeholders-v2"
+            ),
+            "host mount source": marked(
+                [a.replace("<project-root>", "/Users/a/repo") for a in described]
+            ),
+            "forged target": marked(
+                [a.replace("dst=/output", "dst=/etc") for a in described]
+            ),
+            "missing readonly": marked(
+                [a.replace(",dst=/repo,readonly", ",dst=/repo") for a in described]
+            ),
+        }
+        for label, owner in invalid.items():
+            problems = run_check(dict(base, **owner))
+            self.assertEqual(len(problems), 1, label)
+            self.assertTrue(
+                problems[0].startswith("publication execution command: "), label
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

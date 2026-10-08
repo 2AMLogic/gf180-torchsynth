@@ -41,11 +41,13 @@ from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import paired_metrics as pm  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
     PORTABLE_COMMAND_REPRESENTATION,
+    ReceiptPortabilityError,
     dispatch_flags,
     dispatch_unset_flags,
     launch_and_described,
     mount_options,
     release_profile_environment,
+    validate_published_command,
 )
 from torchsynth_voice.digest import sha256_file  # noqa: E402
 
@@ -644,6 +646,12 @@ def assemble(staging, manifest, command, image, release_record):
 def check():
     record = json.loads(RECORD_PATH.read_bytes())
     problems = []
+    # Marked portable launch descriptions are validated; unmarked legacy ones
+    # are retained unchanged.
+    try:
+        validate_published_command(record.get("execution"))
+    except ReceiptPortabilityError as error:
+        problems.append("publication execution command: " + str(error))
     for case_id, entries in record["fixtures"].items():
         directory = FIXTURES / case_id
         if not directory.is_dir():
