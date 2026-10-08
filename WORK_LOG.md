@@ -2,6 +2,14 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-08
+
+- **PR #318**: Portable command descriptions for non-corpus evidence producers (#309)
+- **PR #317**: docs: re-verify mutation-coverage audit at a4ede9f (Part of #9)
+- **PR #319**: Harden traced-cost provenance verification and partial-resume publication
+- **Issue #309** (closed): Extend portable command representation to non-corpus evidence producers
+- **Issue #311** (closed): Harden traced-cost provenance verification and partial-resume publication
+
 ### 2026-10-07
 
 - **Issue #79** (closed): [Epic #2] Prove end-to-end one-shot RTL bit identity and mutation sensitivity
