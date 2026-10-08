@@ -20,10 +20,7 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`), excluding issues with open implementation PRs.
 
-- **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace
-- **#287**: [Epic #1] Measure traced development-corpus storage and memory cost
-- **#309**: Extend portable command representation to non-corpus evidence producers
-- **#311**: Harden traced-cost provenance verification and partial-resume publication
+_None._
 
 ## In Progress
 
@@ -43,6 +40,7 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
+- **#321**: docs: re-verify mutation-coverage audit at ddadee1 (Part of #9)
 
 ## Proposed
 
@@ -63,8 +61,6 @@ Issues carrying `loom:curated`.
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
 - **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml *(curated)*
 - **#300**: [Part of #9] Fresh actual-Voice runtime measurement of identity/timing/signal family operators on the pinned release image *(curated)*
-- **#309**: Extend portable command representation to non-corpus evidence producers *(curated)*
-- **#311**: Harden traced-cost provenance verification and partial-resume publication *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -94,11 +90,11 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 2 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 4 |
+| Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 2 |
-| Curated | 17 |
+| Approved PRs awaiting merge | 3 |
+| Curated | 15 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
 <!-- guide:plan-body:end -->
