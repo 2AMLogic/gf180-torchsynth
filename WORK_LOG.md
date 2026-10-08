@@ -4,12 +4,15 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-08
 
+- **PR #327**: ci: identity tests/--check and 20-row ci_subset sentinel (Part of #9)
+- **PR #323**: Holdout seal manifest, refusal gate and unseal policy (Part of #55)
 - **PR #321**: docs: re-verify mutation-coverage audit at ddadee1 (Part of #9)
 - **PR #318**: Portable command descriptions for non-corpus evidence producers (#309)
 - **PR #317**: docs: re-verify mutation-coverage audit at a4ede9f (Part of #9)
 - **PR #319**: Harden traced-cost provenance verification and partial-resume publication
 - **Issue #309** (closed): Extend portable command representation to non-corpus evidence producers
 - **Issue #311** (closed): Harden traced-cost provenance verification and partial-resume publication
+- **Issue #299** (closed): [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml
 
 ### 2026-10-07
 

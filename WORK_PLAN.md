@@ -18,9 +18,13 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 ## Ready
 
-Human-approved issues ready for implementation (`loom:issue`), excluding issues with open implementation PRs.
+Human-approved issues ready for implementation (`loom:issue`).
 
-- **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml
+- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
+- **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
+- **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
+- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
+- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
 
 ## In Progress
 
@@ -40,7 +44,6 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
-- **#323**: Holdout seal manifest, refusal gate and unseal policy (Part of #55)
 
 ## Proposed
 
@@ -58,7 +61,7 @@ Issues carrying `loom:curated`.
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
-- **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml *(curated)*
+- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -88,10 +91,10 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 2 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 1 |
+| Ready (`loom:issue`) | 5 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 3 |
+| Approved PRs awaiting merge | 2 |
 | Curated | 13 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
