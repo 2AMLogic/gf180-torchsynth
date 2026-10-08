@@ -13,6 +13,16 @@
   },
   "model": {
     "files": {
+      "spec/reference/fixedpoint-choices-v1.json": "f8ca537de81e62eae2e8504468d81e5000e7e55cdd889e34c352bcb2d6a4248d",
+      "spec/reference/float-checkpoints-v1.json": "fba19f52941cac0a1b11cc2be006a093f9a20e09f6de3c5b804a142ede6c1f22",
+      "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+      "spec/reference/rtl-schedule-v1.json": "638cb9a593fdb1b5d4b9440319c24f33debf03e01532f16a8477101bd671be40",
+      "spec/reference/trace-registry-v1.json": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+      "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+      "spec/schemas/float-interface-v1.schema.json": "e9d479d63aa677940beb4b0b37f8cd4c4ef11178dc95c1d49c4353671f556cba",
+      "spec/schemas/trace-registry-v1.schema.json": "ca95f8bd36f42cc619deb35775185946739aef9c6cfa4fa1ba00119fbb987525",
+      "src/torchsynth_voice/__init__.py": "73c38dd820a9e94e112346bb1e3024a70d42e0b56571e5d1008f9f3994704a94",
+      "src/torchsynth_voice/control_path.py": "6ae185f840655d5eb510d91d1823201be550a4d07c9eb1e6880af4c8345246fe",
       "src/torchsynth_voice/fixed_voice.py": "e3ce00fd93a61939e8d2741a2a8be311c774b95cce45ddbba2e62a81bfb79052",
       "src/torchsynth_voice/fixedpoint/README.md": "b217e373acbf80deea44af5f72539a5e9a7e7a96250f9a11031ba12f3c1ed54e",
       "src/torchsynth_voice/fixedpoint/__init__.py": "7cc1c1a74cd88626e74e2757288e29f80bfa44ed493d87e0df571b26223a8d0b",
@@ -24,9 +34,16 @@
       "src/torchsynth_voice/fixedpoint/ops.py": "8c400e8db0caeb961b1615ac2b3fa55a9f0caa995e06215d8a43ba63c76a6e3e",
       "src/torchsynth_voice/fixedpoint/phase.py": "9c326d1c117004838a0684e563b3530d571b59923d8133ec353713103cb92489",
       "src/torchsynth_voice/fixedpoint/rounding.py": "da529e10df95cb00a33e342e1869125cce9ad204049fe045b64556d72bd9d927",
-      "src/torchsynth_voice/fixedpoint/schedule.py": "89fbfa895eb0ceab44a6c907a8d30a92a198a48d41f8013fded86e203701ed1d"
+      "src/torchsynth_voice/fixedpoint/schedule.py": "89fbfa895eb0ceab44a6c907a8d30a92a198a48d41f8013fded86e203701ed1d",
+      "src/torchsynth_voice/float_interfaces.py": "eb391c1748742e3f368e1f843b6b9d77c454a5cfcf87e6732f8aabb36252a236",
+      "src/torchsynth_voice/float_mix.py": "0651ea0d94e47b35cffdf1f8701653ce805af1975f2ce2dbd9c77aba9f42b894",
+      "src/torchsynth_voice/float_sources.py": "dc40f8826043a3ccddbf60d6faf83e0c8e768a3313f2b49bf456184047edea4e",
+      "src/torchsynth_voice/float_voice.py": "f62de15b845c0e337db429991f64f150c7c39598652a7a2b963f7872a52a77a5",
+      "src/torchsynth_voice/format_sweep.py": "940134e4d66528edad2b546d921798f031c0a547a4af726bf74b4d5fef92609c",
+      "src/torchsynth_voice/identity.py": "dbf681534e85d363f0f75356b9c5182b2e8567425b867166615b1e56c8790aa0",
+      "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
     },
-    "tree_sha256": "4efa94ba6da00bff4d34961b40ff522c0ba979117eb0c3e12ee16822514f9516"
+    "tree_sha256": "61226d50c92e9ed9833e55c9998e0fd82fe80116baccf3e136f46522ac85e526"
   },
   "holdout": {
     "first_index": 96,

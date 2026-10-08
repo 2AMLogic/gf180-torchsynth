@@ -36,7 +36,7 @@ CORPUS = ROOT / "spec/reference/corpus-v0.json"
 # Any edit to the committed seal manifest changes this and fails review/CI.
 # Regenerate with tools/check_holdout_seal.py --generate COMMIT only through a
 # reviewed change that also explains why the freeze moved.
-COMMITTED_SEAL_SHA256 = "d36b6b1a5363e4c627da5f8bb9ecc387423a4a48fa1244de18e0a58d08d4b49d"
+COMMITTED_SEAL_SHA256 = "1084eff6fe7d599f2e27f903532d953830ebf7a59c968d9e3a374b1ae3caf516"
 INDICES = list(range(96, 128))
 
 
@@ -63,6 +63,14 @@ class CommittedSealTests(unittest.TestCase):
         seal, _ = self.load()
         self.assertEqual(hs.check_pinned_hashes(ROOT, seal), [])
         self.assertEqual(seal["holdout"]["holdout_identities_read"], 0)
+
+    def test_seal_covers_fixed_model_dependencies(self):
+        seal, _ = self.load()
+        for path in hs.MODEL_EXTRA_FILES:
+            self.assertIn(path, seal["model"]["files"])
+        self.assertIn(
+            "src/torchsynth_voice/float_sources.py", seal["model"]["files"]
+        )
 
     def test_pinned_files_tamper_is_detected(self):
         seal, _ = self.load()
@@ -106,8 +114,10 @@ class GateFixture(unittest.TestCase):
             hs.MODEL_FILE: "model = 1\n",
             hs.MODEL_PACKAGE + "/__init__.py": "",
             hs.MODEL_PACKAGE + "/ops.py": "ops = 1\n",
-            hs.UPSTREAM_PATH: json.dumps({"target_commit": "a" * 40}),
         }
+        for path in hs.MODEL_DEPENDENCIES:
+            files[path] = "dependency %s\n" % path
+        files[hs.UPSTREAM_PATH] = json.dumps({"target_commit": "a" * 40})
         for path, text in files.items():
             self.write(path, text)
         git(self.repo, "add", "-A")
@@ -178,6 +188,27 @@ class SealGateTests(GateFixture):
     def test_modified_model_hash_refused(self):
         self.write(hs.MODEL_PACKAGE + "/ops.py", "ops = 2\n")
         self.commit_all()
+        self.assertIn("pinned-hashes", self.failed())
+
+    def test_model_dependency_edit_refused_before_ledger_access(self):
+        for path in hs.MODEL_DEPENDENCIES:
+            with self.subTest(path=path):
+                original = (self.repo / path).read_text()
+                self.write(path, original + "# edited\n")
+                failed = self.failed()
+                self.assertIn("pinned-hashes", failed)
+                self.assertIn("pinned-paths-clean", failed)
+                self.assertFalse(self.ledger.exists())
+                self.write(path, original)
+                self.assertEqual(self.gate()["status"], "verified")
+
+    def test_committed_model_dependency_edit_refused(self):
+        self.write(hs.MODEL_DEPENDENCIES[0], "changed = 1\n")
+        self.commit_all()
+        self.assertIn("pinned-hashes", self.failed())
+
+    def test_missing_model_dependency_refused(self):
+        (self.repo / hs.MODEL_DEPENDENCIES[0]).unlink()
         self.assertIn("pinned-hashes", self.failed())
 
     def test_added_model_file_refused(self):

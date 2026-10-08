@@ -51,7 +51,10 @@ development-only surrogate, score with the frozen rubric (rubric v0
 - `spec/reference/rubric-v0.json`, `spec/reference/corpus-v0.json`,
   `spec/reference/case-registry-v1.json`, `sim/reference/fixed-voice-golden-v1.json`;
 - the model code, `src/torchsynth_voice/fixed_voice.py` plus every file of
-  `src/torchsynth_voice/fixedpoint/`, as per-file hashes and a deterministic
+  `src/torchsynth_voice/fixedpoint/` plus its transitive behavior-affecting
+  inputs (`holdout_seal.MODEL_DEPENDENCIES`: the imported `torchsynth_voice`
+  modules such as `float_sources` and `format_sweep`, and the JSON registers
+  and schemas they load), as per-file hashes and a deterministic
   tree hash (`sha256` of the sorted `"<sha256>  <path>"` lines);
 - the upstream pin `2b0964d4c6c3d472a2a0d54d91b408caaeffca6d`;
 - the holdout range 96-127 (32 identities) and `holdout_identities_read: 0`.

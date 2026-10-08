@@ -26,6 +26,31 @@ UPSTREAM_PATH = "spec/reference/upstream.json"
 PINNED_FILES = (RUBRIC_PATH, CORPUS_PATH, REGISTRY_PATH, GOLDEN_PATH)
 MODEL_FILE = "src/torchsynth_voice/fixed_voice.py"
 MODEL_PACKAGE = "src/torchsynth_voice/fixedpoint"
+# Transitive behavior-affecting inputs of ``fixed_voice`` outside the package:
+# the import closure (``torchsynth_voice/__init__`` through ``float_sources``,
+# ``format_sweep``, ``control_path`` ...) and the JSON registers those modules
+# and ``fixedpoint`` load at import or run time. Editing any of them changes
+# the evaluated model, so each is hashed and cleanliness-checked like the model.
+MODEL_DEPENDENCIES = (
+    "src/torchsynth_voice/__init__.py",
+    "src/torchsynth_voice/control_path.py",
+    "src/torchsynth_voice/float_interfaces.py",
+    "src/torchsynth_voice/float_mix.py",
+    "src/torchsynth_voice/float_sources.py",
+    "src/torchsynth_voice/float_voice.py",
+    "src/torchsynth_voice/format_sweep.py",
+    "src/torchsynth_voice/identity.py",
+    "src/torchsynth_voice/trace_registry.py",
+    "spec/reference/fixedpoint-choices-v1.json",
+    "spec/reference/rtl-schedule-v1.json",
+    "spec/reference/float-checkpoints-v1.json",
+    "spec/reference/parameter-inventory-v1.json",
+    "spec/reference/trace-registry-v1.json",
+    "spec/reference/upstream.json",
+    "spec/schemas/float-interface-v1.schema.json",
+    "spec/schemas/trace-registry-v1.schema.json",
+)
+MODEL_EXTRA_FILES = (MODEL_FILE,) + MODEL_DEPENDENCIES
 HOLDOUT_INDICES = tuple(range(96, 128))
 FROZEN_SCHEMA = "torchsynth-frozen-rubric"
 
@@ -66,7 +91,7 @@ def _commit_model_paths(root, commit):
     if code != 0:
         return None
     paths = [p for p in out.decode("utf-8").splitlines() if p]
-    return sorted(paths + [MODEL_FILE])
+    return sorted(set(paths) | set(MODEL_EXTRA_FILES))
 
 
 def _worktree_model_paths(root):
@@ -76,7 +101,7 @@ def _worktree_model_paths(root):
         for p in package.rglob("*")
         if p.is_file() and "__pycache__" not in p.parts
     ]
-    return sorted(found + [MODEL_FILE])
+    return sorted(set(found) | set(MODEL_EXTRA_FILES))
 
 
 def build_seal(root, commit):
