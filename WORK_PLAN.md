@@ -21,11 +21,11 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 Human-approved issues ready for implementation (`loom:issue`).
 
 - **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
-- **#257**: matrix-numerical CI job regenerates the mutation matrix publication before checking it, so committed-artifact drift can never fail CI
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
 - **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
+- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 
 ## In Progress
 
@@ -63,6 +63,7 @@ Issues carrying `loom:curated`.
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
 - **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
+- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -96,7 +97,7 @@ Issues carrying `loom:curated`.
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 2 |
-| Curated | 13 |
+| Curated | 14 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
 <!-- guide:plan-body:end -->
