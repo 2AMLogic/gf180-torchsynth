@@ -141,9 +141,14 @@ slot of a `control_upsample.<destination>` output at `voice.post_module`,
 computed as `torch.nn.functional.interpolate(<same invocation's input>,
 size=176400, mode="linear", align_corners=False)`; the passive observer
 snapshots the original first, the CallTracker association is preserved and the
-target semantics are not altered. Detector: time-locked exactness on the
-`control_upsample.*` trace against the plain attempt plus the registry endpoint
-contract must FAIL. It is recorded under `proposed_additions`, outside the
+target semantics are not altered. Detector: time-locked paired exactness
+against the plain attempt on the registry-named downstream traces
+(`compared_traces`: `vco_1.raw`, `vco_1.post_vca`, `vco_2.raw`,
+`vco_2.post_vca`, `noise.post_vca`) must FAIL (D7). The `control_upsample.*`
+seam capture keeps the original bytes, so its equality to plain and the registry
+endpoint contract (`i*1763/176399`) on it are invariants, not detector operands;
+checking endpoint conformance of the replacement bytes would need a separately
+named, retained replacement artifact, which this proposal does not register. It is recorded under `proposed_additions`, outside the
 frozen denominator, pending operator registration and family requalification
 (AQ-3, owner #335).
 

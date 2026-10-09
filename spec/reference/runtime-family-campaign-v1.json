@@ -3376,7 +3376,18 @@
     {
       "counts_in_frozen_denominator": false,
       "detector_ids": [],
-      "detector_requirement": "a paired time-locked exactness row on control_upsample.* (exact_equal and max_abs_error against the plain attempt) plus the registry endpoint contract (i*1763/176399) must FAIL; the adapter registers the detector binding in a manifest revision",
+      "detector_requirement": "a paired time-locked exactness row on the registry-named downstream traces listed in compared_traces (exact_equal and max_abs_error against the plain attempt of the same case and process) must FAIL; the control_upsample.* seam capture keeps the original bytes and is asserted equal to plain as an invariant, never used as a detector operand; the adapter registers the detector binding in a manifest revision",
+      "compared_traces": [
+        "vco_1.raw",
+        "vco_1.post_vca",
+        "vco_2.raw",
+        "vco_2.post_vca",
+        "noise.post_vca"
+      ],
+      "invariants": [
+        "the control_upsample.<destination> seam capture is byte-equal to the plain attempt (it preserves the original)",
+        "the registry endpoint contract (i*1763/176399) holds on the preserved original seam capture; endpoint conformance of the replacement bytes is checkable only if a separate replacement artifact is named and retained, which this proposal does not register"
+      ],
       "family": "timing",
       "id": "timing:interp.align_corners_false",
       "injection_site": "replacement of the declared batch slot of the control_upsample.<destination> output of the pinned torchsynth.module.ControlRateUpsample (torch.nn.Upsample(buffer_size, mode='linear', align_corners=True), module.py lines 1127-1129 at the pin); the replacement is torch.nn.functional.interpolate over the same invocation's own input argument with mode='linear', align_corners=False, size=176400; the original is snapshotted by the passive observer first",

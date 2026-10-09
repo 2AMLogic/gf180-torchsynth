@@ -538,6 +538,7 @@ def semantic_errors(manifest: Dict[str, Any], root: Path,
             errors.append("deferred normalization must remain an open completion obligation")
 
     # --- proposed additions stay outside the frozen denominator -------------
+    registry_traces = {t["name"] for t in load_json(root, TRACE_REGISTRY_PATH)["traces"]}
     for proposal in manifest["proposed_additions"]:
         if proposal["counts_in_frozen_denominator"]:
             errors.append("%s: proposal counted in the frozen denominator" % proposal["id"])
@@ -545,6 +546,18 @@ def semantic_errors(manifest: Dict[str, Any], root: Path,
             errors.append("%s: proposal already present in the frozen inventory" % proposal["id"])
         if proposal["runtime_seam"] not in catalog or not catalog[proposal["runtime_seam"]]["writable"]:
             errors.append("%s: proposal bound to an unknown or non-writable seam" % proposal["id"])
+        compared = proposal.get("compared_traces")
+        if not compared:
+            errors.append("%s: proposal must name compared_traces (registry traces downstream of "
+                          "the injection)" % proposal["id"])
+        for trace in compared or []:
+            if trace not in registry_traces:
+                errors.append("%s: compared trace %s is not a registered trace" % (
+                    proposal["id"], trace))
+            elif proposal["runtime_seam"] == "voice.post_module" and trace in proposal["runtime_targets"]:
+                errors.append(
+                    "%s: compared trace %s is the replaced seam trace, whose capture keeps the "
+                    "original bytes; bind a downstream trace" % (proposal["id"], trace))
 
     # --- controls ------------------------------------------------------------
     kinds = {c["kind"] for c in manifest["controls"]}

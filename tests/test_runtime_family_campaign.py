@@ -360,6 +360,21 @@ class RejectionTests(unittest.TestCase):
         for name in ("vco_2.shape", "vco_1.tuning", "vco_1.initial_phase"):
             self.assertTrue(any("%s is not a registered trace" % name in e for e in errors), name)
 
+    def test_proposed_addition_binds_downstream_traces_not_its_seam_capture(self):
+        m = load()
+        proposal = m["proposed_additions"][0]
+        self.assertTrue(proposal["compared_traces"])
+        self.assertFalse(set(proposal["compared_traces"]) & set(proposal["runtime_targets"]))
+        self.assertEqual(self.errors(m), [])
+        proposal["compared_traces"] = ["control_upsample.vco_1_amp"]
+        self.assertRejects(m, "replaced seam trace")
+        m = load()
+        m["proposed_additions"][0]["compared_traces"] = ["vco_1.not_a_trace"]
+        self.assertRejects(m, "not a registered trace")
+        m = load()
+        m["proposed_additions"][0]["compared_traces"] = []
+        self.assertRejects(m, "compared_traces")
+
     def test_paired_reference_requires_compared_traces(self):
         m = load()
         del entry(m, "signal:gain.db")["runtime_truth"]["compared_traces"]

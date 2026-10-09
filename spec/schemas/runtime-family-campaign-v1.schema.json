@@ -363,7 +363,7 @@
     "proposed_entry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "family", "operator", "status", "counts_in_frozen_denominator", "runtime_seam", "runtime_targets", "injection_site", "operand_ownership", "detector_ids", "detector_requirement", "reason"],
+      "required": ["id", "family", "operator", "status", "counts_in_frozen_denominator", "runtime_seam", "runtime_targets", "injection_site", "operand_ownership", "detector_ids", "detector_requirement", "compared_traces", "reason"],
       "properties": {
         "id": {"type": "string"},
         "family": {"enum": ["identity", "timing", "signal"]},
@@ -376,6 +376,8 @@
         "operand_ownership": {"type": "string", "minLength": 1},
         "detector_ids": {"type": "array", "items": {"type": "string"}},
         "detector_requirement": {"type": "string", "minLength": 1},
+        "compared_traces": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "invariants": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "reason": {"type": "string", "minLength": 1}
       }
     }
