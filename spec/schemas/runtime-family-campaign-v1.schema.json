@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/2AMLogic/gf180-torchsynth/spec/schemas/runtime-family-campaign-v1.schema.json",
+  "title": "Runtime family campaign manifest v1 (preregistration)",
+  "description": "Structural contract for spec/reference/runtime-family-campaign-v1.json. Cross-document rules (unique ids, source reconciliation, denominators, frozen digest, holdout refusal) are enforced by tools/validate_runtime_family_campaign.py, not by this schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_version", "identity", "revision", "decision_record", "status",
+    "measurement_status", "target", "holdout", "cases", "reliability", "controls",
+    "detectors", "operators", "inventory", "sensitivity_inventory", "supporting",
+    "proposed_additions", "expected", "frozen_inventory_digest", "revision_policy",
+    "sources", "unbound_sources", "pins", "host_admission", "worker_interface",
+    "artifacts", "verifier", "publication", "completion", "normalization_handoff",
+    "authority_questions"
+  ],
+  "properties": {
+    "schema": {"const": "torchsynth-runtime-family-campaign"},
+    "schema_version": {"const": 1},
+    "identity": {"const": "runtime-family-campaign-v1"},
+    "revision": {"type": "integer", "minimum": 1},
+    "decision_record": {"type": "string", "pattern": "^spec/decision-records/[0-9]{4}-.+\\.md$"},
+    "status": {"enum": ["preregistered-unmeasured"]},
+    "measurement_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_family_measurement_performed", "statement"],
+      "properties": {
+        "runtime_family_measurement_performed": {"const": false},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstream_commit", "profile", "nebula", "duration_seconds", "sample_rate_hz", "control_rate_hz", "noise_seed", "runtime_profile", "semantics_changed"],
+      "properties": {
+        "upstream_commit": {"const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"},
+        "profile": {"const": "torchsynth-1-voice-default"},
+        "nebula": {"const": "default"},
+        "duration_seconds": {"const": 4},
+        "sample_rate_hz": {"const": 44100},
+        "control_rate_hz": {"const": 441},
+        "noise_seed": {"const": 13},
+        "runtime_profile": {"const": "release-mkl-compatible-v1"},
+        "semantics_changed": {"const": false}
+      }
+    },
+    "holdout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sealed", "corpus_holdout_first_index", "corpus_holdout_last_index", "request_policy"],
+      "properties": {
+        "sealed": {"const": true},
+        "corpus_holdout_first_index": {"const": 96},
+        "corpus_holdout_last_index": {"const": 127},
+        "request_policy": {"type": "string", "minLength": 1}
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "global_sound_index", "partition", "batch_size", "batch_block", "batch_slot"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^global-[0-9]+$"},
+          "global_sound_index": {"type": "integer", "minimum": 0},
+          "partition": {"const": "development"},
+          "batch_size": {"type": "integer", "minimum": 32, "multipleOf": 32},
+          "batch_block": {"type": "integer", "minimum": 0},
+          "batch_slot": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "reliability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "min_independent_executions_per_cell", "execution_independence", "per_execution_pass", "repeat_bytes_equal", "retry_policy", "separate_from"],
+      "properties": {
+        "status": {"type": "string"},
+        "min_independent_executions_per_cell": {"type": "integer", "minimum": 2},
+        "execution_independence": {"type": "string", "minLength": 1},
+        "per_execution_pass": {"type": "string", "minLength": 1},
+        "repeat_bytes_equal": {"const": true},
+        "retry_policy": {"type": "string", "minLength": 1},
+        "separate_from": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "per", "expected_event", "must"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"enum": ["plain", "empty_plan", "sham_plan", "clean_rerun"]},
+          "per": {"const": "case_repeat"},
+          "expected_event": {"enum": ["none", "ineffective"]},
+          "must": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "detectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "family", "detector"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^det-(identity|timing|signal)-[0-9]{2}$"},
+          "family": {"enum": ["identity", "timing", "signal"]},
+          "detector": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "operators": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "family", "registered"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "family": {"enum": ["identity", "timing", "signal"]},
+          "registered": {"const": true}
+        }
+      }
+    },
+    "inventory": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/inventory_entry"}},
+    "sensitivity_inventory": {"type": "array", "items": {"$ref": "#/$defs/sensitivity_entry"}},
+    "supporting": {"type": "array", "items": {"$ref": "#/$defs/supporting_entry"}},
+    "proposed_additions": {"type": "array", "items": {"$ref": "#/$defs/proposed_entry"}},
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cases", "repeats_per_cell", "worker_processes", "inventory_entries", "inventory_source_rows",
+        "by_disposition", "sensitivity_entries", "runtime_fault_cells", "composition_cells",
+        "fault_attempts", "control_attempts", "worker_attempts", "expected_refusal_executions",
+        "deferred_unmeasured_entries"
+      ],
+      "properties": {
+        "cases": {"type": "integer", "minimum": 1},
+        "repeats_per_cell": {"type": "integer", "minimum": 2},
+        "worker_processes": {"type": "integer", "minimum": 1},
+        "inventory_entries": {"type": "integer", "minimum": 1},
+        "inventory_source_rows": {"type": "integer", "minimum": 1},
+        "by_disposition": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "sensitivity_entries": {"type": "integer", "minimum": 0},
+        "runtime_fault_cells": {"type": "integer", "minimum": 0},
+        "composition_cells": {"type": "integer", "minimum": 0},
+        "fault_attempts": {"type": "integer", "minimum": 0},
+        "control_attempts": {"type": "integer", "minimum": 0},
+        "worker_attempts": {"type": "integer", "minimum": 0},
+        "expected_refusal_executions": {"type": "integer", "minimum": 0},
+        "deferred_unmeasured_entries": {"type": "integer", "minimum": 0}
+      }
+    },
+    "frozen_inventory_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "sha256"],
+      "properties": {
+        "algorithm": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "revision_policy": {"type": "string", "minLength": 1},
+    "sources": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/sha256"}},
+    "unbound_sources": {"type": "object", "additionalProperties": {"type": "string"}},
+    "pins": {"type": "object"},
+    "host_admission": {
+      "type": "object",
+      "required": ["status", "qualification_predicate", "sanctioned_aws_host", "dr0006_measured_scope"],
+      "properties": {
+        "status": {"enum": ["not_admitted"]},
+        "qualification_predicate": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text"],
+            "properties": {"id": {"type": "string", "pattern": "^Q[0-9]+$"}, "text": {"type": "string", "minLength": 1}}
+          }
+        },
+        "sanctioned_aws_host": {"type": "object"},
+        "dr0006_measured_scope": {"type": "object"}
+      }
+    },
+    "worker_interface": {"type": "object", "required": ["status", "existing_producer", "required_extension"]},
+    "artifacts": {"type": "object", "required": ["retained_per_attempt", "retained_per_run", "storage_rule", "historical_evidence"]},
+    "verifier": {"type": "object", "required": ["status", "name", "mode", "checks"]},
+    "publication": {"type": "object", "required": ["proposed_path", "kind", "version_rule"]},
+    "completion": {
+      "type": "object",
+      "required": ["campaign_complete_requires", "never_counts_toward_runtime_kills", "status_values", "open_obligations_after_completion", "closure_rule"]
+    },
+    "normalization_handoff": {
+      "type": "object",
+      "required": ["disposition", "required_if_pursued", "authority_question"],
+      "properties": {"disposition": {"enum": ["deferred_unmeasured"]}}
+    },
+    "authority_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "question", "why_routed", "interim"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^AQ-[0-9]+$"},
+          "question": {"type": "string"},
+          "why_routed": {"type": "string"},
+          "interim": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "magnitude_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "value", "unit"],
+      "properties": {
+        "operator": {"type": "string"},
+        "value": {"type": ["number", "null"]},
+        "unit": {"type": "string"}
+      }
+    },
+    "inventory_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "family", "source", "operators", "magnitude", "configuration", "disposition",
+        "runtime_evidence_class", "development_cases", "runtime_seam", "runtime_target",
+        "detector_ids", "expected_event", "expected_failure", "applicability",
+        "expected_blast_radius", "invariance_assertions", "repeats_required",
+        "counts_toward_runtime_total", "obligation_open", "notes"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^(identity|timing|signal):.+$"},
+        "family": {"enum": ["identity", "timing", "signal"]},
+        "source": {
+          "type": "object",
+          "required": ["publication", "fault", "row_indices", "publication_operator", "publication_seam"],
+          "properties": {
+            "publication": {"type": "string"},
+            "fault": {"type": "string"},
+            "row_indices": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}},
+            "publication_operator": {"type": "string"},
+            "publication_seam": {"type": "string"}
+          }
+        },
+        "operators": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "magnitude": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/magnitude_item"}},
+        "configuration": {"type": ["object", "null"]},
+        "disposition": {"enum": ["runtime_cell", "composition", "refusal", "second_detector", "deferred_unmeasured"]},
+        "runtime_evidence_class": {"enum": ["graph_runtime", "boundary_runtime", "none"]},
+        "development_cases": {"type": "array", "items": {"type": "string"}},
+        "runtime_seam": {"type": "string", "minLength": 1},
+        "runtime_target": {"type": "string", "minLength": 1},
+        "detector_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "expected_event": {"enum": ["applied", "refused", "none"]},
+        "expected_failure": {"type": "string", "minLength": 1},
+        "applicability": {"type": "string", "minLength": 1},
+        "expected_blast_radius": {"type": "string", "minLength": 1},
+        "invariance_assertions": {"type": "array", "items": {"type": "string"}},
+        "repeats_required": {"type": "integer", "minimum": 0},
+        "counts_toward_runtime_total": {"type": "boolean"},
+        "obligation_open": {"type": "boolean"},
+        "notes": {"type": "string"},
+        "shares_cell_with": {"type": "string"}
+      }
+    },
+    "sensitivity_entry": {
+      "type": "object",
+      "required": ["id", "family", "kind", "disposition", "runtime_evidence_class", "development_cases", "executed_in_campaign", "reason"],
+      "properties": {
+        "id": {"type": "string"},
+        "family": {"enum": ["identity", "timing", "signal"]},
+        "kind": {"enum": ["floor_probe", "coverage_case", "normalization_cell"]},
+        "disposition": {"enum": ["sensitivity_not_counted", "deferred_unmeasured"]},
+        "runtime_evidence_class": {"const": "none"},
+        "development_cases": {"type": "array", "maxItems": 0},
+        "executed_in_campaign": {"const": false},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "supporting_entry": {
+      "type": "object",
+      "required": ["id", "family", "disposition", "executed_in_campaign", "reason"],
+      "properties": {
+        "id": {"type": "string"},
+        "family": {"enum": ["identity", "timing", "signal"]},
+        "disposition": {"const": "apparatus_support_only"},
+        "executed_in_campaign": {"const": false},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "proposed_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "family", "operator", "status", "counts_in_frozen_denominator", "runtime_seam", "runtime_targets", "injection_site", "operand_ownership", "detector_ids", "detector_requirement", "reason"],
+      "properties": {
+        "id": {"type": "string"},
+        "family": {"enum": ["identity", "timing", "signal"]},
+        "operator": {"type": "string"},
+        "status": {"const": "proposed_pending_operator_registration"},
+        "counts_in_frozen_denominator": {"const": false},
+        "runtime_seam": {"type": "string"},
+        "runtime_targets": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "injection_site": {"type": "string", "minLength": 1},
+        "operand_ownership": {"type": "string", "minLength": 1},
+        "detector_ids": {"type": "array", "items": {"type": "string"}},
+        "detector_requirement": {"type": "string", "minLength": 1},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}
