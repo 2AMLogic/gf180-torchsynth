@@ -40,16 +40,18 @@ The manifest freezes 37 inventory entries covering all 44 committed family
 fault-matrix rows (identity 7 faults x 2 apparatus cases, timing 13, signal 17;
 the identity cases and the two signal property rows are carried as source rows
 of their entry). Each entry records stable ID, operators, magnitude and
-configuration, the runtime seam and target, the mandatory detector and its
-bound statement (verbatim from the family publication), expected event,
-applicability, blast radius, invariance assertions and a disposition:
+configuration, the runtime seam and target, the mandatory runtime detector and
+its per-case truth rule (D7), any admissibility-gated detector, the family
+publication's apparatus expectation kept verbatim as `historical_apparatus`
+(history, never a runtime expectation), expected event, applicability, blast
+radius, invariance assertions and a disposition:
 
 | Disposition | Entries | Counts as a runtime kill |
 | --- | --- | --- |
 | `runtime_cell` | 25 | yes, only after the ratified reliability rule |
 | `composition` | 3 | no; executed and reported separately |
 | `refusal` | 3 | no; `timing:missing-sample`, `timing:duplicated-sample` (length-changing faults cannot be applied in place at `voice.post_module`; refused by the frame preflight on retained lane bytes) and `signal:normalization-decision-replacement` (plan-time) |
-| `second_detector` | 2 | no extra attempt; second mandatory detector of a shared cell |
+| `second_detector` | 2 | no extra attempt; admissibility-gated second detector of a shared cell (D7) |
 | `deferred_unmeasured` | 4 | no; the four `norm.*` faults (D3) |
 
 A separate `sensitivity_inventory` lists the 2 floor probes, 6 coverage rows and
@@ -80,7 +82,16 @@ empty-plan, sham and clean-rerun controls pass and are byte-identical as
 specified; exactly the declared events are observed with the expected status
 (`applied`, never `ineffective`); every mandatory detector bound to the cell
 FAILs on the faulted attempt and PASSes on the controls; invariance holds; and
-the two repeats' fault bytes are equal. There is no retry-to-pass. Repetition
+the two repeats' fault bytes are equal. There is no retry-to-pass. Two is the
+ratified minimum, not a cap: an entry's own `repeats_required` (never below
+the minimum) is binding. The attempt denominator is the sum over executable
+entries of cases x that entry's `repeats_required`; worker processes and
+control attempts follow the largest requirement (one fresh process per
+(case, repeat), each running every control). A cell counts only when every one
+of its required repeats is read and detected, so an absent or failing extra
+required repeat leaves it open; executions beyond the requirement are retained
+but do not change the verdict. Every entry currently requires exactly two, so
+the planned denominator in D1 is unchanged. Repetition
 reliability is separate from magnitude sensitivity: second-magnitude and
 below-floor probes are not part of this denominator and no statistical
 detection-rate claim is made. Two repeats establish determinism of detection
@@ -179,6 +190,62 @@ historical evidence is preserved unchanged. Completion statuses are
 COMPLETE / INCOMPLETE / NO_VERDICT / FAIL; refusals, sensitivity, ineffective
 events, deferred entries, compositions and boundary-class results never count
 toward graph runtime kills, and completing the manifest closes only its scope.
+
+### D7. Per-case detector truth and admissibility
+
+The family publications' detectors were qualified on synthetic apparatus
+fixtures. Their constants (for example the `lfo-control` fixture's LFO rate and
+depth, the `route-control` fixture's route gains, a fixture-measured
+`max_abs_error`, or the property rows' fixture tolerances) are truths of those
+fixtures, not of any actual-Voice case. The periodic and envelope/route bounds
+are analytic limits (`spec/PERIODIC-ESTIMATORS.md`,
+`spec/ENVELOPE-ESTIMATORS.md`): they qualify estimation of analytic signals
+only, and the periodic preregistration refuses varying rates, envelope-shaped
+LFO and FM.
+
+Decision:
+
+- Every detector carries a `qualification_scope`: `exact_recomputation`,
+  `paired_reference_exact`, `plan_or_preflight_refusal`,
+  `analytic_signals_only` or `apparatus_fixture_only`.
+- Every inventory entry carries a `runtime_truth` (rule, retained operands,
+  derivation, admissibility). Executable cells use only
+  `case_identity_recomputation` (identity: truth recomputed from the case record
+  and the pinned identity/conversion/noise code) or
+  `plain_attempt_paired_reference` (truth is the retained plain-attempt bytes,
+  or the same estimator's result on the plain attempt, of the same case and
+  batch slot from the same fresh worker process). Refusals carry a refusal rule;
+  deferred entries derive no truth.
+- The mandatory detector of a `runtime_cell` or `composition` must be
+  runtime-admissible (`exact_recomputation` or `paired_reference_exact`). The
+  six cells whose publication detector is analytic-only
+  (`timing:attack-breakpoint-shift-plus2`, both LFO cells, the three route
+  cells) therefore bind the new `det-timing-09` (time-locked paired exactness on
+  the declared observed traces against the same case's plain attempt) as their
+  mandatory detector, and carry the publication estimator as a
+  `gated_detectors` entry.
+- An analytic- or fixture-only estimator runs on actual-Voice traces only
+  behind a preregistered admissibility gate: the estimator's own preregistered
+  domain and refusals (periodic: constant rate, no envelope shaping, no FM,
+  single tone, cycles, in-band provenance; ADSR and isolated-route domains from
+  the envelope spec), evaluated on the plain and faulted attempts. Its truth is
+  the same estimator on the same case's plain attempt, never a fixture
+  constant, and its analytic bound is stated to apply only to admitted inputs.
+  An inadmissible input is recorded as `refused_inadmissible_not_counted`.
+  This applies to the gated detectors and to both periodic `second_detector`
+  entries.
+- Accounting: a gated detector or sharing `second_detector` must record
+  `detected` or `refused_inadmissible` in every required repeat. A refusal is
+  retained and neither creates nor blocks a kill; an admitted `not_detected`, or
+  a missing gate outcome, leaves the case open. A gated detector never counts as
+  a kill on its own.
+- Each fixture expectation is kept verbatim in `historical_apparatus`
+  (`normative_for_runtime: false`) with its `fixture_truths`. The validator
+  rejects any fixture truth that reappears in an entry's normative runtime
+  expectation, truth operands, gate or bound.
+
+Whether any particular case would be admitted or refused by a gate is **not
+measured** here. This record fixes the rule and does not predict the outcome.
 
 ## Authority questions (not approved here)
 

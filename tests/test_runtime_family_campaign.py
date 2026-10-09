@@ -268,6 +268,61 @@ class RejectionTests(unittest.TestCase):
         m["reliability"]["min_independent_executions_per_cell"] = 1
         self.assertTrue(self.errors(m))
 
+    def test_analytic_detector_cannot_be_mandatory_on_actual_voice_cells(self):
+        m = load()
+        entry(m, "timing:lfo-rate-shift-plus-half-hz")["detector_ids"] = ["det-timing-04"]
+        entry(m, "timing:lfo-rate-shift-plus-half-hz")["gated_detectors"] = []
+        self.assertRejects(refreeze(m), "is qualified only for analytic_signals_only")
+
+    def test_synthetic_fixture_truth_cannot_be_a_runtime_expectation(self):
+        m = load()
+        e = entry(m, "timing:lfo-rate-shift-plus-half-hz")
+        e["expected_failure"] = e["historical_apparatus"]["expected_failure"]
+        self.assertRejects(refreeze(m), "synthetic-fixture truth 4.37")
+        m = load()
+        e = entry(m, "timing:lfo-depth-shift-plus-0.1")
+        e["gated_detectors"][0]["operands"][0] = "depth truth 2.0 from the lfo-control fixture"
+        self.assertRejects(refreeze(m), "synthetic-fixture truth 2.0")
+        m = load()
+        e = entry(m, "timing:route-sign-flip")
+        e["runtime_truth"]["derivation"] = "declared truth 0.5 for vco_1_pitch"
+        self.assertRejects(refreeze(m), "synthetic-fixture truth 0.5")
+
+    def test_fixture_truth_match_is_token_exact(self):
+        pattern = campaign._fixture_truth_pattern("2.0")
+        self.assertIsNone(pattern.search("0.02 Hz and 12.05 and 2.01"))
+        self.assertIsNotNone(pattern.search("declared truth 2.0 beyond"))
+
+    def test_apparatus_provenance_must_be_kept_historical(self):
+        m = load()
+        entry(m, "timing:lfo-rate-shift-plus-half-hz")["historical_apparatus"] = None
+        self.assertRejects(refreeze(m), "historical_apparatus")
+        m = load()
+        entry(m, "timing:lfo-rate-shift-plus-half-hz")["historical_apparatus"]["normative_for_runtime"] = True
+        self.assertTrue(self.errors(refreeze(m)))
+
+    def test_executable_cell_requires_a_per_case_truth_rule(self):
+        m = load()
+        entry(m, "signal:gain.db")["runtime_truth"]["rule"] = "not_executed"
+        self.assertRejects(refreeze(m), "per-case truth rule")
+        m = load()
+        del entry(m, "signal:gain.db")["runtime_truth"]
+        self.assertTrue(any("missing required runtime_truth" in e for e in self.errors(m)))
+
+    def test_ungated_analytic_second_detector_is_rejected(self):
+        m = load()
+        truth = entry(m, "signal:osc.phase_offset (property)")["runtime_truth"]
+        truth["admissibility"] = {"required": False, "gate": None, "on_inadmissible": "not_applicable"}
+        self.assertRejects(refreeze(m), "requires an admissibility gate")
+
+    def test_gated_detector_cannot_count_as_a_kill(self):
+        m = load()
+        entry(m, "timing:route-sign-flip")["gated_detectors"][0]["counts_as_kill"] = True
+        self.assertTrue(self.errors(refreeze(m)))
+        m = load()
+        entry(m, "timing:route-sign-flip")["gated_detectors"][0]["detector_id"] = "det-signal-01"
+        self.assertRejects(refreeze(m), "runtime-admissible; bind it as mandatory")
+
     def test_changed_bound_source_demands_a_revision(self):
         m = load()
         first = sorted(m["sources"])[0]
@@ -287,6 +342,10 @@ class AccountingTests(unittest.TestCase):
             for case in cases:
                 for repeat in (1, 2):
                     outcomes[(e["id"], case, repeat)] = "detected"
+                    for gated in e["gated_detectors"]:
+                        # an admissibility refusal is recorded and does not block
+                        outcomes[("%s::%s" % (e["id"], gated["detector_id"]), case, repeat)] = (
+                            "refused_inadmissible")
         totals = campaign.runtime_kill_totals(m, outcomes)
         self.assertEqual(totals["kills"], m["expected"]["runtime_fault_cells"])
         self.assertEqual(totals["open"], 0)
@@ -300,6 +359,83 @@ class AccountingTests(unittest.TestCase):
         totals = campaign.runtime_kill_totals(m, outcomes)
         self.assertEqual(totals["kills"], 0)
         self.assertEqual(totals["open"], m["expected"]["runtime_fault_cells"])
+
+    def _three_repeat_manifest(self):
+        m = load()
+        entry(m, "signal:gain.db")["repeats_required"] = 3
+        return refreeze(m)
+
+    def test_extra_required_repeat_absent_or_failing_is_not_a_kill(self):
+        m = self._three_repeat_manifest()
+        self.assertEqual(campaign.validate_manifest(m, ROOT, False), [])
+        cases = [c["id"] for c in m["cases"]]
+        first_two = {("signal:gain.db", case, r): "detected" for case in cases for r in (1, 2)}
+        # third required repeat absent: never a kill
+        self.assertEqual(campaign.runtime_kill_totals(m, first_two)["kills"], 0)
+        # third required repeat present but not detected: never a kill
+        failing = dict(first_two)
+        failing.update({("signal:gain.db", case, 3): "not_detected" for case in cases})
+        self.assertEqual(campaign.runtime_kill_totals(m, failing)["kills"], 0)
+        # all three required repeats detected: one kill per case
+        passing = dict(first_two)
+        passing.update({("signal:gain.db", case, 3): "detected" for case in cases})
+        self.assertEqual(campaign.runtime_kill_totals(m, passing)["kills"], len(cases))
+
+    def test_per_entry_repeats_drive_the_attempt_denominator(self):
+        base = campaign._expected_counts(load())
+        m = self._three_repeat_manifest()
+        recomputed = m["expected"]
+        self.assertEqual(recomputed["fault_attempts"], base["fault_attempts"] + base["cases"])
+        self.assertEqual(recomputed["worker_processes"], base["cases"] * 3)
+        self.assertEqual(recomputed["control_attempts"],
+                         len(m["controls"]) * base["cases"] * 3)
+
+    def test_undeclared_extra_repeat_breaks_the_declared_denominator(self):
+        m = load()
+        entry(m, "signal:gain.db")["repeats_required"] = 3
+        m["frozen_inventory_digest"]["sha256"] = campaign.frozen_digest(m)
+        errors = campaign.validate_manifest(m, ROOT, False)
+        self.assertTrue(any("expected count mismatch: fault_attempts" in e for e in errors), errors)
+
+    def _all_mandatory_detected(self, m, identifier):
+        cases = [c["id"] for c in m["cases"]]
+        return cases, {(identifier, case, r): "detected" for case in cases for r in (1, 2)}
+
+    def test_gate_outcome_must_be_recorded_and_admitted_miss_blocks(self):
+        m = load()
+        lfo = "timing:lfo-rate-shift-plus-half-hz"
+        key = lfo + "::det-timing-04"
+        cases, outcomes = self._all_mandatory_detected(m, lfo)
+        # absent gate outcome: open
+        self.assertEqual(campaign.runtime_kill_totals(m, outcomes)["kills"], 0)
+        # refused as inadmissible: recorded, neither blocks nor creates a kill
+        refused = dict(outcomes)
+        refused.update({(key, case, r): "refused_inadmissible" for case in cases for r in (1, 2)})
+        self.assertEqual(campaign.runtime_kill_totals(m, refused)["kills"], len(cases))
+        refused_only = {k: v for k, v in refused.items() if k[0] == key}
+        self.assertEqual(campaign.runtime_kill_totals(m, refused_only)["kills"], 0)
+        # admitted and not detected: the case stays open
+        missed = dict(refused)
+        missed[(key, "global-0", 2)] = "not_detected"
+        self.assertEqual(campaign.runtime_kill_totals(m, missed)["kills"], len(cases) - 1)
+
+    def test_second_detector_refusal_does_not_count_or_block(self):
+        m = load()
+        shared = "signal:osc.tuning_shift"
+        second = "signal:osc.tuning_shift (property)"
+        cases, outcomes = self._all_mandatory_detected(m, shared)
+        self.assertEqual(campaign.runtime_kill_totals(m, outcomes)["kills"], 0)
+        outcomes.update({(second, case, r): "refused_inadmissible" for case in cases for r in (1, 2)})
+        self.assertEqual(campaign.runtime_kill_totals(m, outcomes)["kills"], len(cases))
+        outcomes[(second, "global-31", 1)] = "not_detected"
+        self.assertEqual(campaign.runtime_kill_totals(m, outcomes)["kills"], len(cases) - 1)
+
+    def test_inadmissible_mandatory_outcome_is_never_a_kill(self):
+        m = load()
+        cases = [c["id"] for c in m["cases"]]
+        outcomes = {("signal:gain.db", case, r): "detected" for case in cases for r in (1, 2)}
+        outcomes[("signal:gain.db", "global-0", 2)] = "refused_inadmissible"
+        self.assertEqual(campaign.runtime_kill_totals(m, outcomes)["kills"], len(cases) - 1)
 
 
 class SchemaTests(unittest.TestCase):

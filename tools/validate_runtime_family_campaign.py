@@ -27,7 +27,19 @@ PUBLICATIONS = {
     family: "sim/reference/mutation-%s-v1.json" % family for family in FAMILIES
 }
 SUCCESS_DISPOSITIONS = ("runtime_cell",)
+EXECUTABLE_DISPOSITIONS = ("runtime_cell", "composition")
 NON_EXECUTED_DISPOSITIONS = ("deferred_unmeasured",)
+# Detector qualification scopes. Only the runtime-admissible scopes may be a
+# mandatory detector of an executable (counted or composed) cell; estimators
+# qualified on analytic signals or apparatus fixtures only may run on actual
+# Voice traces solely behind a preregistered admissibility gate whose refusal
+# is recorded and never counts as a kill.
+RUNTIME_ADMISSIBLE_SCOPES = ("exact_recomputation", "paired_reference_exact")
+GATED_SCOPES = ("analytic_signals_only", "apparatus_fixture_only")
+REFUSAL_SCOPES = ("plan_or_preflight_refusal",)
+INADMISSIBLE = "refused_inadmissible_not_counted"
+GATED_ACCEPTABLE = ("detected", "refused_inadmissible")
+EXECUTABLE_TRUTH_RULES = ("case_identity_recomputation", "plain_attempt_paired_reference")
 
 
 def canonical(value: Any) -> bytes:
@@ -79,6 +91,12 @@ def schema_errors(value: Any, schema: Dict[str, Any], root_schema: Dict[str, Any
         for part in schema["$ref"].lstrip("#/").split("/"):
             target = target[part]
         return schema_errors(value, target, root_schema, path)
+    if "anyOf" in schema:
+        branches = [schema_errors(value, option, root_schema, path) for option in schema["anyOf"]]
+        if all(branches):
+            errors.append("%s: matches no anyOf branch (%s)" % (
+                path, "; ".join(branch[0] for branch in branches)))
+        return errors
     if "const" in schema and (
         value != schema["const"] or type(value) is not type(schema["const"])
     ):
@@ -148,19 +166,31 @@ def _duplicates(values: Iterable[str]) -> List[str]:
     return sorted(key for key, count in seen.items() if count > 1)
 
 
+def required_repeats(manifest: Dict[str, Any], entry: Dict[str, Any]) -> int:
+    """Repeats an executable entry must pass: its own requirement, never fewer
+    than the ratified minimum. Every one of them is read by the accounting."""
+    minimum = manifest["reliability"]["min_independent_executions_per_cell"]
+    return max(int(entry["repeats_required"]), minimum)
+
+
 def _expected_counts(manifest: Dict[str, Any]) -> Dict[str, Any]:
     inventory = manifest["inventory"]
     cases = len(manifest["cases"])
     repeats = manifest["reliability"]["min_independent_executions_per_cell"]
-    cells = sum(1 for e in inventory if e["disposition"] == "runtime_cell")
-    comps = sum(1 for e in inventory if e["disposition"] == "composition")
-    fault_attempts = (cells + comps) * cases * repeats
-    control_attempts = len(manifest["controls"]) * cases * repeats
+    executable = [e for e in inventory if e["disposition"] in EXECUTABLE_DISPOSITIONS]
+    cells = sum(1 for e in executable if e["disposition"] == "runtime_cell")
+    comps = sum(1 for e in executable if e["disposition"] == "composition")
+    # Each executable entry contributes cases x its own required repeats; one
+    # fresh worker process per (case, repeat) runs every control, so the
+    # process and control denominators follow the largest requirement.
+    fault_attempts = sum(required_repeats(manifest, e) for e in executable) * cases
+    processes_per_case = max([repeats] + [required_repeats(manifest, e) for e in executable])
+    control_attempts = len(manifest["controls"]) * cases * processes_per_case
     dispositions = sorted({e["disposition"] for e in inventory})
     return {
         "cases": cases,
         "repeats_per_cell": repeats,
-        "worker_processes": cases * repeats,
+        "worker_processes": cases * processes_per_case,
         "inventory_entries": len(inventory),
         "inventory_source_rows": sum(len(e["source"]["row_indices"]) for e in inventory),
         "by_disposition": {
@@ -182,6 +212,89 @@ def _expected_counts(manifest: Dict[str, Any]) -> Dict[str, Any]:
             if e["disposition"] == "deferred_unmeasured"
         ),
     }
+
+
+def _fixture_truth_pattern(truth: str) -> "re.Pattern[str]":
+    # Match a fixture constant as a whole token so that e.g. "2.0" does not
+    # match inside "12.05" or "0.02".
+    return re.compile(r"(?<![0-9A-Za-z.])%s(?![0-9])" % re.escape(truth))
+
+
+def _normative_texts(entry: Dict[str, Any]) -> List[str]:
+    truth = entry["runtime_truth"]
+    texts = [entry["expected_failure"], truth["derivation"]] + list(truth["operands"])
+    if truth["admissibility"]["gate"]:
+        texts.append(truth["admissibility"]["gate"])
+    for gated in entry["gated_detectors"]:
+        texts.extend(gated["operands"])
+        texts.extend([gated["admissibility_gate"], gated["bound"]])
+    return texts
+
+
+def _truth_errors(manifest: Dict[str, Any]) -> List[str]:
+    """Detector truth must be derived per actual-Voice case, never borrowed
+    from a synthetic fixture, and analytic/fixture-only estimators may run on
+    actual-Voice traces only behind an admissibility gate that cannot kill."""
+    errors: List[str] = []
+    scopes = {d["id"]: d["qualification_scope"] for d in manifest["detectors"]}
+    for entry in manifest["inventory"]:
+        label = entry["id"]
+        disposition = entry["disposition"]
+        truth = entry["runtime_truth"]
+        admissibility = truth["admissibility"]
+        executable = disposition in EXECUTABLE_DISPOSITIONS
+        if executable:
+            if truth["rule"] not in EXECUTABLE_TRUTH_RULES:
+                errors.append("%s: executable cell lacks a per-case truth rule" % label)
+            for detector in entry["detector_ids"]:
+                if scopes.get(detector) not in RUNTIME_ADMISSIBLE_SCOPES:
+                    errors.append(
+                        "%s: mandatory detector %s is qualified only for %s, not for actual-Voice "
+                        "cases; move it behind an admissibility gate" % (
+                            label, detector, scopes.get(detector)))
+        if disposition == "deferred_unmeasured" and truth["rule"] != "not_executed":
+            errors.append("%s: deferred entry must not derive runtime truth" % label)
+        if disposition == "refusal" and truth["rule"] not in (
+                "frame_preflight_refusal", "plan_time_refusal"):
+            errors.append("%s: refusal entry must carry a refusal truth rule" % label)
+        if disposition == "second_detector":
+            if truth["rule"] != "plain_attempt_paired_reference":
+                errors.append("%s: second_detector truth must be the same case's plain attempt" % label)
+            gated_scope = any(scopes.get(d) in GATED_SCOPES for d in entry["detector_ids"])
+            if gated_scope and not (admissibility["required"] and admissibility["gate"]
+                                    and admissibility["on_inadmissible"] == INADMISSIBLE):
+                errors.append("%s: analytic/fixture-only detector on actual-Voice cases requires "
+                              "an admissibility gate refusing as %s" % (label, INADMISSIBLE))
+        if admissibility["required"] and (not admissibility["gate"]
+                                          or admissibility["on_inadmissible"] != INADMISSIBLE):
+            errors.append("%s: required admissibility needs a gate and the %s disposition" % (
+                label, INADMISSIBLE))
+        for gated in entry["gated_detectors"]:
+            detector = gated["detector_id"]
+            if detector not in scopes:
+                errors.append("%s: unknown gated detector %s" % (label, detector))
+            elif scopes[detector] not in GATED_SCOPES:
+                errors.append("%s: gated detector %s is runtime-admissible; bind it as mandatory" % (
+                    label, detector))
+            if detector in entry["detector_ids"]:
+                errors.append("%s: detector %s is both mandatory and gated" % (label, detector))
+            if not executable:
+                errors.append("%s: gated detectors belong to executable cells only" % label)
+            if gated["counts_as_kill"] or gated["on_inadmissible"] != INADMISSIBLE:
+                errors.append("%s: gated detector %s cannot count as a kill" % (label, detector))
+        historical = entry["historical_apparatus"]
+        if ("apparatus_case" in entry["source"]) != (historical is not None):
+            errors.append("%s: apparatus provenance must be recorded as historical_apparatus" % label)
+        if historical is not None:
+            if historical["apparatus_case"] != entry["source"].get("apparatus_case"):
+                errors.append("%s: historical apparatus case differs from the source" % label)
+            texts = _normative_texts(entry)
+            for constant in historical["fixture_truths"]:
+                pattern = _fixture_truth_pattern(constant)
+                if any(pattern.search(text) for text in texts):
+                    errors.append("%s: synthetic-fixture truth %s is used as a runtime expectation" % (
+                        label, constant))
+    return errors
 
 
 def semantic_errors(manifest: Dict[str, Any], root: Path,
@@ -292,6 +405,9 @@ def semantic_errors(manifest: Dict[str, Any], root: Path,
                 errors.append("%s: second_detector operators differ from its shared cell" % label)
             if entry["repeats_required"] != 0 or entry["development_cases"]:
                 errors.append("%s: second_detector adds no attempts" % label)
+
+    # --- per-case detector truth and admissibility --------------------------
+    errors.extend(_truth_errors(manifest))
 
     # --- sensitivity entries never executed or counted ----------------------
     for entry in manifest["sensitivity_inventory"]:
@@ -429,22 +545,39 @@ def runtime_kill_totals(manifest: Dict[str, Any],
                         outcomes: Dict[Tuple[str, str, int], str]) -> Dict[str, int]:
     """Count successful runtime kills from hypothetical per-execution outcomes.
 
-    ``outcomes`` maps (entry id, case id, repeat) to a status. Only an entry
-    whose disposition is ``runtime_cell`` with the status ``detected`` in every
-    required repeat of a case counts. Refusals, compositions, deferred and
-    ineffective results never contribute. This is an accounting rule, not a
-    measurement.
+    ``outcomes`` maps (entry id, case id, repeat) to the status of the entry's
+    mandatory detectors. Only an entry whose disposition is ``runtime_cell``
+    with the status ``detected`` in every one of *its own* required repeats
+    (``repeats_required``, never fewer than the ratified minimum) of a case
+    counts; an absent or failing extra required repeat leaves the cell open.
+    Refusals, admissibility refusals (``refused_inadmissible``), compositions,
+    deferred and ineffective results never contribute. This is an accounting
+    rule, not a measurement.
+
+    Admissibility-gated detectors (``gated_detectors``, keyed
+    ``"<entry id>::<detector id>"``) and second_detector entries sharing the
+    cell (keyed by their own id) must record, in every required repeat,
+    either ``detected`` or ``refused_inadmissible``. A refusal is retained and
+    neither blocks nor creates a kill; an admitted ``not_detected`` or an
+    absent gate outcome leaves the case open.
     """
     cases = [c["id"] for c in manifest["cases"]]
-    repeats = manifest["reliability"]["min_independent_executions_per_cell"]
     totals = {"kills": 0, "open": 0, "excluded": 0}
     for entry in manifest["inventory"]:
         if entry["disposition"] != "runtime_cell":
             totals["excluded"] += len(entry["development_cases"])
             continue
+        repeats = required_repeats(manifest, entry)
+        gated_keys = ["%s::%s" % (entry["id"], g["detector_id"]) for g in entry["gated_detectors"]]
+        gated_keys += [e["id"] for e in manifest["inventory"]
+                       if e["disposition"] == "second_detector"
+                       and e.get("shares_cell_with") == entry["id"]]
         for case in cases:
             statuses = [outcomes.get((entry["id"], case, r)) for r in range(1, repeats + 1)]
-            if all(status == "detected" for status in statuses):
+            gate_statuses = [outcomes.get((key, case, r)) for key in gated_keys
+                             for r in range(1, repeats + 1)]
+            if all(status == "detected" for status in statuses) and all(
+                    status in GATED_ACCEPTABLE for status in gate_statuses):
                 totals["kills"] += 1
             else:
                 totals["open"] += 1
