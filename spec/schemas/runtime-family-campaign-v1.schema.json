@@ -68,7 +68,7 @@
           "id": {"type": "string", "pattern": "^global-[0-9]+$"},
           "global_sound_index": {"type": "integer", "minimum": 0},
           "partition": {"const": "development"},
-          "batch_size": {"type": "integer", "minimum": 32, "multipleOf": 32},
+          "batch_size": {"const": 32},
           "batch_block": {"type": "integer", "minimum": 0},
           "batch_slot": {"type": "integer", "minimum": 0}
         }

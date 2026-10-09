@@ -184,6 +184,25 @@ class RejectionTests(unittest.TestCase):
         entry(m, "signal:gain.db")["development_cases"] = ["global-0", "global-31", "global-100"]
         self.assertRejects(refreeze(m), "unknown or holdout case")
 
+    def test_larger_batch_covering_holdout_is_rejected(self):
+        m = load()
+        for case in m["cases"]:
+            index = case["global_sound_index"]
+            case["batch_size"] = 128
+            case["batch_block"] = index // 128
+            case["batch_slot"] = index % 128
+        m = refreeze(m)
+        self.assertRejects(m, "expected const 32")
+        semantic = campaign.semantic_errors(m, campaign.ROOT)
+        self.assertTrue(any("qualified width 32" in e for e in semantic), semantic[:5])
+        self.assertTrue(any("leaves the development partition" in e for e in semantic), semantic[:5])
+
+    def test_out_of_corpus_development_batch_is_rejected(self):
+        m = load()
+        m["cases"].append({"id": "global-200", "global_sound_index": 200, "partition": "development",
+                           "batch_size": 32, "batch_block": 6, "batch_slot": 8})
+        self.assertRejects(refreeze(m), "leaves the development partition")
+
     def test_inconsistent_batch_slot_is_rejected(self):
         m = load()
         m["cases"][1]["batch_slot"] = 3

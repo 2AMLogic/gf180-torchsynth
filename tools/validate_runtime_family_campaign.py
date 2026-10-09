@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = "spec/reference/runtime-family-campaign-v1.json"
 SCHEMA_PATH = "spec/schemas/runtime-family-campaign-v1.schema.json"
 SEAM_CATALOG_PATH = "spec/reference/mutation-seams-v1.json"
+QUALIFIED_BATCH_SIZE = 32
 FAMILIES = ("identity", "timing", "signal")
 PUBLICATIONS = {
     family: "sim/reference/mutation-%s-v1.json" % family for family in FAMILIES
@@ -335,10 +336,20 @@ def semantic_errors(manifest: Dict[str, Any], root: Path,
             errors.append("sealed-holdout request: %s (index %d)" % (case["id"], index))
         if case["id"] != "global-%d" % index:
             errors.append("case id does not match its index: %s" % case["id"])
+        if case["batch_size"] != QUALIFIED_BATCH_SIZE:
+            errors.append("case batch_size must be the qualified width %d: %s"
+                          % (QUALIFIED_BATCH_SIZE, case["id"]))
         if case["batch_block"] != index // case["batch_size"]:
             errors.append("case batch_block inconsistent with index: %s" % case["id"])
         if case["batch_slot"] != index % case["batch_size"]:
             errors.append("case batch_slot inconsistent with index: %s" % case["id"])
+        # The whole computed batch must stay in the development partition: a
+        # wider batch computes sealed identities incidentally.
+        first = case["batch_block"] * case["batch_size"]
+        last = first + case["batch_size"] - 1
+        if first < 0 or last >= holdout["corpus_holdout_first_index"]:
+            errors.append("batch range %d-%d leaves the development partition 0-%d: %s"
+                          % (first, last, holdout["corpus_holdout_first_index"] - 1, case["id"]))
 
     # --- inventory entry bindings ------------------------------------------
     repeats_min = manifest["reliability"]["min_independent_executions_per_cell"]
