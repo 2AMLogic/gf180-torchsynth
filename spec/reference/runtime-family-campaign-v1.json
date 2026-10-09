@@ -307,7 +307,7 @@
   },
   "frozen_inventory_digest": {
     "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
-    "sha256": "f788c2d19faed978761ddc048ecadddee1a388367fd50b05abac603c9f62e089"
+    "sha256": "1735e03ed40381895febf019da22a16a8af9f12c848c189b99726ddba55625c1"
   },
   "holdout": {
     "corpus_holdout_first_index": 96,
@@ -1325,7 +1325,7 @@
       "disposition": "runtime_cell",
       "expected_blast_radius": "declared slot of mod_matrix.vco_1_pitch and downstream",
       "expected_event": "applied",
-      "expected_failure": "mod_matrix.vco_1_pitch paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open",
+      "expected_failure": "control_upsample.vco_1_pitch downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
       "family": "timing",
       "gated_detectors": [
         {
@@ -1418,7 +1418,7 @@
       "disposition": "runtime_cell",
       "expected_blast_radius": "declared slot of mod_matrix.vco_1_amp and downstream",
       "expected_event": "applied",
-      "expected_failure": "mod_matrix.vco_1_amp paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open",
+      "expected_failure": "control_upsample.vco_1_amp downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
       "family": "timing",
       "gated_detectors": [
         {
@@ -1513,7 +1513,7 @@
       "disposition": "runtime_cell",
       "expected_blast_radius": "declared slot of the two exchanged mod_matrix traces and downstream",
       "expected_event": "applied",
-      "expected_failure": "mod_matrix.vco_2_pitch and mod_matrix.vco_2_amp paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open",
+      "expected_failure": "control_upsample.vco_2_pitch and control_upsample.vco_2_amp downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
       "family": "timing",
       "gated_detectors": [
         {
@@ -1675,7 +1675,7 @@
       },
       "counts_toward_runtime_total": true,
       "detector_ids": [
-        "det-timing-07"
+        "det-timing-09"
       ],
       "development_cases": [
         "global-0",
@@ -1685,7 +1685,7 @@
       "disposition": "runtime_cell",
       "expected_blast_radius": "declared slot of control_upsample.vco_1_amp and downstream",
       "expected_event": "applied",
-      "expected_failure": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
+      "expected_failure": "vco_1.post_vca downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged result is ineffective and leaves the cell open (original endpoint conformance is an invariant on the preserved seam capture; the apparatus endpoint refusal is historical only)",
       "family": "timing",
       "gated_detectors": [],
       "historical_apparatus": {
@@ -1700,6 +1700,7 @@
         "undeclared batch slots byte-identical",
         "invocation counts unchanged",
         "original bytes retained at the seam capture",
+        "original control_upsample.vco_1_amp first/last sample bytes match the control column (endpoint contract i*1763/176399) at the seam capture",
         "post-attempt clean rerun byte-identical to plain"
       ],
       "magnitude": [
@@ -1730,8 +1731,7 @@
         "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
           "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
-          "plain-attempt mod_matrix.vco_1_amp control-column first/last sample bytes"
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },

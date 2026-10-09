@@ -350,6 +350,18 @@ class RejectionTests(unittest.TestCase):
             "mod_matrix.vco_2_pitch"]
         self.assertRejects(refreeze(m), "replaced seam trace")
 
+    def test_expected_failure_must_name_downstream_comparison_not_seam(self):
+        for identifier, seam in (("timing:route-sign-flip", "mod_matrix.vco_1_pitch"),
+                                 ("timing:route-depth-shift-plus25", "mod_matrix.vco_1_amp"),
+                                 ("timing:route-destination-swap", "mod_matrix.vco_2_pitch"),
+                                 ("timing:dropped-endpoint-coordinate",
+                                  "control_upsample.vco_1_amp")):
+            m = load()
+            e = entry(m, identifier)
+            self.assertNotIn(seam, e["expected_failure"])
+            e["expected_failure"] = "%s paired exactness FAIL against the plain attempt" % seam
+            self.assertRejects(refreeze(m), "expected_failure names the replaced seam trace")
+
     def test_parameter_names_are_not_registered_detector_traces(self):
         m = load()
         for identifier, name in (("signal:osc.shape_scale", "vco_2.shape"),

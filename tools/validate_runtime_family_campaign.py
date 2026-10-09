@@ -229,6 +229,10 @@ def _fixture_truth_pattern(truth: str) -> "re.Pattern[str]":
     return re.compile(r"(?<![0-9A-Za-z.])%s(?![0-9])" % re.escape(truth))
 
 
+def _trace_pattern(trace: str) -> "re.Pattern[str]":
+    return re.compile(r"(?<![0-9A-Za-z_.])%s(?![0-9A-Za-z_])" % re.escape(trace))
+
+
 def _normative_texts(entry: Dict[str, Any]) -> List[str]:
     truth = entry["runtime_truth"]
     texts = [entry["expected_failure"], truth["derivation"]] + list(truth["operands"])
@@ -283,6 +287,14 @@ def _truth_errors(manifest: Dict[str, Any], root: Path = ROOT) -> List[str]:
                         errors.append(
                             "%s: compared trace %s is the replaced seam trace, whose capture "
                             "keeps the original bytes; bind a downstream trace" % (label, trace))
+                if entry["runtime_seam"] == "voice.post_module" and executable:
+                    failure = entry["expected_failure"]
+                    for trace in seam_targets:
+                        if _trace_pattern(trace).search(failure):
+                            errors.append(
+                                "%s: expected_failure names the replaced seam trace %s, whose "
+                                "capture keeps the original bytes; name the downstream "
+                                "comparison" % (label, trace))
         if disposition == "deferred_unmeasured" and truth["rule"] != "not_executed":
             errors.append("%s: deferred entry must not derive runtime truth" % label)
         if disposition == "refusal" and truth["rule"] not in (

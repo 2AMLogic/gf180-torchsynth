@@ -135,6 +135,13 @@ operator remains an executable `runtime_cell`; its summary should be corrected
 by the timing owner in a later change (editing the family module here would
 invalidate its bound publication).
 
+The runtime cell binds the same downstream rule as the proposal below: its
+detector is paired exactness on `vco_1.post_vca`, the `control_upsample.vco_1_amp`
+seam capture keeps the original bytes, and original endpoint conformance on it is
+an invariant. The apparatus endpoint refusal (`det-timing-07`) stays historical
+only. The same holds for the three `mod_matrix` route cells: their expected
+failure names the downstream `control_upsample.*` comparison, never the seam.
+
 Decision: a literal `interp.align_corners_false` operator is required for the
 campaign to claim `align_corners` coverage. Site: replacement of the declared
 slot of a `control_upsample.<destination>` output at `voice.post_module`,
