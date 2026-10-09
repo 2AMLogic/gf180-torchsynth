@@ -103,6 +103,7 @@ TUNING_SEMITONES = 1.0
 PHASE_RADIANS = math.pi / 4.0
 SHAPE_RATIO = 2.0
 GAIN_DB = 1.0
+SMALL_GAIN_DB = 0.01
 DC_OFFSET = 0.05
 ROUND_STEP = 2.0 ** -7
 SATURATION_CEILING = 0.75
@@ -136,6 +137,23 @@ NORM_DECLARED_CLASS = {
     "norm.wrong_peak": "above",
     "norm.wrong_reciprocal": "above",
 }
+
+PERCEPTUAL_STATUS = {
+    "status": "not_run",
+    "evidence_scope": "directed fixture",
+    "note": (
+        "no listening test, calibrated perceptual metric, actual-Voice run, "
+        "hardware playback or fidelity measurement was executed; the example "
+        "is labeled perceptually similar only as an unverified premise of "
+        "#9 criterion 8 and this record does not establish it"
+    ),
+}
+OPTIONAL_OBSERVATION_NOTE = (
+    "generous optional high-band (>20 kHz) error_rms observation at the "
+    "existing 0.01 fixture limit; it is not proof of audibility or of "
+    "perceptual similarity and it never converts a mandatory exactness "
+    "FAILURE into a contract PASS"
+)
 
 sha256 = mutation_runtime.sha256
 
@@ -642,6 +660,73 @@ def build_publication():
         composition_control_ok,
     )
 
+    small_instance = family.instance(
+        "ms-gain-small", "gain.db", "voice.post_module", SMALL_GAIN_DB,
+        {"trace": "vco_1.post_vca", "slot": 0},
+    )
+    small_trace = "vco_1.post_vca"
+    small_plan, small = run_plan([small_instance])
+    small_control_rows, _ = paired_rows(
+        plain["lanes"][small_trace], plain["lanes"][small_trace], small_trace,
+        "directed:signal-family-0/gain-db-small/control",
+    )
+    small_fault_rows, small_tolerant = paired_rows(
+        plain["lanes"][small_trace], small["lanes"][small_trace], small_trace,
+        "directed:signal-family-0/gain-db-small/fault",
+    )
+    small_event = small["events"][0]
+    small_required = ("exact_equal", "max_abs_error")
+    small_failed = sorted(
+        name for name, verdict in paired_verdicts(small_fault_rows).items() if verdict == "FAIL"
+    )
+    if (
+        small_event["status"] != "applied"
+        or small_event["detail"].get("db") != SMALL_GAIN_DB
+        or not all(small_fault_rows[name]["verdict"] == "FAIL" for name in small_required)
+        or small_fault_rows["framing_match"]["verdict"] != "PASS"
+        or not all(row["verdict"] == "PASS" for row in small_control_rows.values())
+        or not small_tolerant["tolerant"]
+    ):
+        raise SystemExit(
+            "FAIL: the fixed +0.01 dB fixture did not meet the stated "
+            "mandatory-FAIL/optional-tolerant outcome (failed rows: "
+            + ",".join(small_failed)
+            + "; optional tolerant: "
+            + str(small_tolerant["tolerant"])
+            + "); return for contract revision, do not change magnitudes or thresholds"
+        )
+    contract_wrong = [
+        {
+            "demonstration_id": "contract-wrong/gain.db+0.01dB",
+            "kind": "contract-wrong-demonstration",
+            "family": "signal",
+            "operator": "gain.db",
+            "owning_fault_row": "gain.db",
+            "magnitude": dict(small_plan["mutations"][0]["magnitude"]),
+            "seam": small_instance["seam"],
+            "target": {"trace": small_trace, "slot": 0},
+            "plan_id": small_plan["plan_id"],
+            "fixture_binding": identity,
+            "applied_event": small_event,
+            "comparison_preparation": "none (amplitude-exact; no windowing, gain fitting, trimming or level normalization)",
+            "detector_relationship": (
+                "amplitude exactness property rows (exact_equal, max_abs_error); "
+                "not an identity/provenance detector"
+            ),
+            "required_failures": list(small_required),
+            "mandatory_rows": {
+                "fault": small_fault_rows,
+                "clean_control": small_control_rows,
+            },
+            "mandatory_outcome": "FAIL",
+            "optional_observation": small_tolerant,
+            "optional_observation_note": OPTIONAL_OBSERVATION_NOTE,
+            "optional_counts_as_contract_pass": False,
+            "perceptual_similarity": dict(PERCEPTUAL_STATUS),
+            "evidence_scope": "directed fixture",
+        }
+    ]
+
     untripped = [entry["fault"] for entry in rows if not entry["tripped"] or not entry["control_accepted"]]
     if untripped:
         raise SystemExit("FAIL: family faults did not trip their rows: " + ", ".join(untripped))
@@ -698,6 +783,7 @@ def build_publication():
         "optional_observations": optional_records,
         "localization": localization,
         "normalization_coverage": normalization_coverage,
+        "contract_wrong_demonstrations": contract_wrong,
         "fault_matrix": rows,
         "envelope": envelope,
         "counts": {
@@ -723,6 +809,7 @@ COMPARABLE_FIELDS = (
     "optional_observations",
     "localization",
     "normalization_coverage",
+    "contract_wrong_demonstrations",
     "fault_matrix",
     "envelope",
     "counts",
@@ -796,6 +883,25 @@ def _optional_observations_declared(committed, fresh) -> bool:
     return True
 
 
+def _demonstrations_declared(committed, fresh) -> bool:
+    """Everything is byte-exact except the NumPy-FFT optional band value,
+    whose last-ulp rendering is platform dependent; its declared structure
+    (metric, tolerance, optional, tolerant) and finite-within-limit status are
+    asserted instead, as for the other optional observations."""
+    if len(committed) != len(fresh):
+        return False
+    for declared, record in zip(committed, fresh):
+        stripped_declared = dict(declared)
+        stripped_record = dict(record)
+        declared_optional = stripped_declared.pop("optional_observation")
+        optional = stripped_record.pop("optional_observation")
+        if stripped_declared != stripped_record:
+            return False
+        if not _optional_observations_declared({"x": declared_optional}, {"x": optional}):
+            return False
+    return True
+
+
 def _envelope_declared(committed, fresh) -> bool:
     committed_envelope = dict(committed)
     fresh_envelope = dict(fresh)
@@ -833,6 +939,9 @@ def check_publication():
             if not _optional_observations_declared(
                 committed.get(field, {}), fresh[field]
             ):
+                failures.append(field)
+        elif field == "contract_wrong_demonstrations":
+            if not _demonstrations_declared(committed.get(field, []), fresh[field]):
                 failures.append(field)
         elif field == "envelope":
             if not _envelope_declared(committed.get(field, {}), fresh[field]):
