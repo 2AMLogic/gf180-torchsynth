@@ -38,6 +38,13 @@ NON_EXECUTED_DISPOSITIONS = ("deferred_unmeasured",)
 RUNTIME_ADMISSIBLE_SCOPES = ("exact_recomputation", "paired_reference_exact")
 GATED_SCOPES = ("analytic_signals_only", "apparatus_fixture_only")
 REFUSAL_SCOPES = ("plan_or_preflight_refusal",)
+# Operators whose registered semantics an executable cell must not rebind to a
+# different quantity. LFO depth is peak-to-peak amplitude; lfo_1.mod_depth is a
+# rate-envelope scale in Hz (pinned LFO.make_control), so binding the depth
+# operator to it would inject a rate fault under an amplitude-depth ID.
+FORBIDDEN_EXECUTABLE_TARGETS = {
+    "modulation.lfo_depth_shift": ("lfo_1.mod_depth",),
+}
 INADMISSIBLE = "refused_inadmissible_not_counted"
 GATED_ACCEPTABLE = ("detected", "refused_inadmissible")
 EXECUTABLE_TRUTH_RULES = ("case_identity_recomputation", "plain_attempt_paired_reference")
@@ -253,6 +260,12 @@ def _truth_errors(manifest: Dict[str, Any]) -> List[str]:
                         "%s: mandatory detector %s is qualified only for %s, not for actual-Voice "
                         "cases; move it behind an admissibility gate" % (
                             label, detector, scopes.get(detector)))
+        if executable:
+            for operator in entry["operators"]:
+                if entry["runtime_target"] in FORBIDDEN_EXECUTABLE_TARGETS.get(operator, ()):
+                    errors.append(
+                        "%s: operator %s must not be bound to %s (different quantity than its "
+                        "registered semantics)" % (label, operator, entry["runtime_target"]))
         if disposition == "deferred_unmeasured" and truth["rule"] != "not_executed":
             errors.append("%s: deferred entry must not derive runtime truth" % label)
         if disposition == "refusal" and truth["rule"] not in (

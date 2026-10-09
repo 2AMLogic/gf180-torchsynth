@@ -48,11 +48,11 @@ radius, invariance assertions and a disposition:
 
 | Disposition | Entries | Counts as a runtime kill |
 | --- | --- | --- |
-| `runtime_cell` | 25 | yes, only after the ratified reliability rule |
+| `runtime_cell` | 24 | yes, only after the ratified reliability rule |
 | `composition` | 3 | no; executed and reported separately |
 | `refusal` | 3 | no; `timing:missing-sample`, `timing:duplicated-sample` (length-changing faults cannot be applied in place at `voice.post_module`; refused by the frame preflight on retained lane bytes) and `signal:normalization-decision-replacement` (plan-time) |
 | `second_detector` | 2 | no extra attempt; admissibility-gated second detector of a shared cell (D7) |
-| `deferred_unmeasured` | 4 | no; the four `norm.*` faults (D3) |
+| `deferred_unmeasured` | 5 | no; the four `norm.*` faults (D3) and `timing:lfo-depth-shift-plus-0.1` (D8) |
 
 A separate `sensitivity_inventory` lists the 2 floor probes, 6 coverage rows and
 12 normalization cells; none is executed and none counts. The 48 identity
@@ -70,8 +70,8 @@ never silently dropped. The #297/#298 additions enter only through a declared
 manifest revision. The frozen inventory digest makes any silent change a
 validator failure.
 
-Planned denominator (a plan, not a result): 75 fault cells, 9 composition
-cells, 24 control attempts, 192 worker attempts in 6 fresh worker processes,
+Planned denominator (a plan, not a result): 72 fault cells, 9 composition
+cells, 24 control attempts, 186 worker attempts in 6 fresh worker processes,
 7 host-side expected refusals.
 
 ### D2. Reliability (ratifies the proposal)
@@ -218,8 +218,8 @@ Decision:
   deferred entries derive no truth.
 - The mandatory detector of a `runtime_cell` or `composition` must be
   runtime-admissible (`exact_recomputation` or `paired_reference_exact`). The
-  six cells whose publication detector is analytic-only
-  (`timing:attack-breakpoint-shift-plus2`, both LFO cells, the three route
+  five cells whose publication detector is analytic-only
+  (`timing:attack-breakpoint-shift-plus2`, the LFO rate cell, the three route
   cells) therefore bind the new `det-timing-09` (time-locked paired exactness on
   the declared observed traces against the same case's plain attempt) as their
   mandatory detector, and carry the publication estimator as a
@@ -270,6 +270,27 @@ and regenerates it through the matrix tool. No publication hash is hand-edited
 here. The three family publications and the runtime publication do not bind
 `spec/MUTATIONS.md` and are not affected. The manifest deliberately does not
 bind `spec/MUTATIONS.md`.
+
+### D8. LFO amplitude-depth fault: deferred, unmeasured
+
+`timing:lfo-depth-shift-plus-0.1` registers `modulation.lfo_depth_shift`, a
+shift of the LFO **peak-to-peak amplitude** (`src/torchsynth_voice/mutations_timing.py`
+registry and `_applicator_lfo_depth`). The first draft bound it to
+`voice.parameter_value` on `lfo_1.mod_depth`. That parameter is a rate-envelope
+scale in Hz (`spec/reference/parameter-inventory-v1.json`); at the pin,
+`LFO.make_control` computes `max(frequency + mod_depth * mod_signal, 0)` and
+`LFO.output` integrates it into phase. The binding would have injected a rate
+perturbation under an amplitude-depth ID, so paired exactness could credit
+changed bytes without the registered fault being injected.
+
+Decision: no faithful realization is selected in this record, so the entry is
+`deferred_unmeasured` with its obligation open, no development cases and no
+attempts. A realization would need a writable output seam on the LFO, explicit
+same-invocation original operands, the native excursion transformation, and
+invariant rate, phase and other slots; it enters through a declared manifest
+revision. The validator refuses to let an executable cell bind
+`modulation.lfo_depth_shift` to `lfo_1.mod_depth`. The planned denominator drops
+by one entry (three fault cells, six attempts).
 
 ## What this record does not claim
 

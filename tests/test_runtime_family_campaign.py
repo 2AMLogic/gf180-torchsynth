@@ -84,7 +84,8 @@ class CommittedManifestTests(unittest.TestCase):
         by_disposition = {}
         for e in manifest["inventory"]:
             by_disposition.setdefault(e["disposition"], []).append(e["id"])
-        self.assertEqual(len(by_disposition["deferred_unmeasured"]), 4)
+        self.assertEqual(len(by_disposition["deferred_unmeasured"]), 5)
+        self.assertIn("timing:lfo-depth-shift-plus-0.1", by_disposition["deferred_unmeasured"])
         self.assertIn("signal:normalization-decision-replacement", by_disposition["refusal"])
         self.assertIn("timing:missing-sample", by_disposition["refusal"])
         self.assertIn("timing:dropped-endpoint-coordinate", by_disposition["runtime_cell"])
@@ -253,6 +254,17 @@ class RejectionTests(unittest.TestCase):
         self.assertTrue(any("non-writable seam" in x for x in errors), errors)
         self.assertTrue(any("normalization fault must be deferred" in x for x in errors), errors)
 
+    def test_lfo_depth_cannot_be_rebound_to_the_rate_envelope_scale(self):
+        m = load()
+        e = entry(m, "timing:lfo-depth-shift-plus-0.1")
+        self.assertEqual(e["disposition"], "deferred_unmeasured")
+        self.assertNotEqual(e["runtime_target"], "lfo_1.mod_depth")
+        e["disposition"] = "runtime_cell"
+        e["counts_toward_runtime_total"] = True
+        e["runtime_seam"] = "voice.parameter_value"
+        e["runtime_target"] = "lfo_1.mod_depth"
+        self.assertRejects(refreeze(m), "must not be bound to lfo_1.mod_depth")
+
     def test_refusal_cannot_count_as_a_kill(self):
         m = load()
         entry(m, "timing:missing-sample")["counts_toward_runtime_total"] = True
@@ -300,7 +312,7 @@ class RejectionTests(unittest.TestCase):
         self.assertRejects(refreeze(m), "synthetic-fixture truth 4.37")
         m = load()
         e = entry(m, "timing:lfo-depth-shift-plus-0.1")
-        e["gated_detectors"][0]["operands"][0] = "depth truth 2.0 from the lfo-control fixture"
+        e["expected_failure"] = "depth truth 2.0 from the lfo-control fixture"
         self.assertRejects(refreeze(m), "synthetic-fixture truth 2.0")
         m = load()
         e = entry(m, "timing:route-sign-flip")
@@ -369,7 +381,7 @@ class AccountingTests(unittest.TestCase):
         self.assertEqual(totals["kills"], m["expected"]["runtime_fault_cells"])
         self.assertEqual(totals["open"], 0)
         # refusals, compositions, deferred and second-detector entries never add to kills
-        self.assertEqual(totals["kills"], 25 * 3)
+        self.assertEqual(totals["kills"], 24 * 3)
 
     def test_ineffective_or_single_repeat_cells_stay_open(self):
         m = load()

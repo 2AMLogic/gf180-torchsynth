@@ -89,6 +89,7 @@
     ],
     "open_obligations_after_completion": [
       "normalization decision injection (deferred; #300/#9 criteria stay open)",
+      "LFO amplitude-depth fault (timing:lfo-depth-shift-plus-0.1) realization at a writable output seam (deferred; #300/#9 criteria stay open)",
       "literal align_corners operator registration and execution (proposed addition)",
       "#297/#298 additions (declared revision)"
     ],
@@ -285,28 +286,28 @@
   "expected": {
     "by_disposition": {
       "composition": 3,
-      "deferred_unmeasured": 4,
+      "deferred_unmeasured": 5,
       "refusal": 3,
-      "runtime_cell": 25,
+      "runtime_cell": 24,
       "second_detector": 2
     },
     "cases": 3,
     "composition_cells": 9,
     "control_attempts": 24,
-    "deferred_unmeasured_entries": 9,
+    "deferred_unmeasured_entries": 10,
     "expected_refusal_executions": 7,
-    "fault_attempts": 168,
+    "fault_attempts": 162,
     "inventory_entries": 37,
     "inventory_source_rows": 44,
     "repeats_per_cell": 2,
-    "runtime_fault_cells": 75,
+    "runtime_fault_cells": 72,
     "sensitivity_entries": 20,
-    "worker_attempts": 192,
+    "worker_attempts": 186,
     "worker_processes": 6
   },
   "frozen_inventory_digest": {
     "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
-    "sha256": "eac71767904c759a6a2f301e0eca030b9dac765c898f7394e4080616eed75310"
+    "sha256": "5c487515022b55938e2968ed80a5287ba9cf9368fdd4142a75e72c7f01673d48"
   },
   "holdout": {
     "corpus_holdout_first_index": 96,
@@ -1234,38 +1235,19 @@
       }
     },
     {
-      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "applicability": "not applicable to the actual-Voice graph: LFO peak-to-peak amplitude depth has no faithful realization at a writable seam (lfo_1.mod_depth scales the rate envelope in Hz, not amplitude); obligation stays open",
       "configuration": null,
-      "counts_toward_runtime_total": true,
+      "counts_toward_runtime_total": false,
       "detector_ids": [
         "det-timing-09"
       ],
-      "development_cases": [
-        "global-0",
-        "global-31",
-        "global-32"
-      ],
-      "disposition": "runtime_cell",
-      "expected_blast_radius": "lfo_1 traces and downstream of the declared slot",
-      "expected_event": "applied",
-      "expected_failure": "lfo_1 paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); an unchanged trace is ineffective and leaves the cell open",
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no amplitude-depth injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until an amplitude-depth replacement with explicit original operands is selected",
       "family": "timing",
-      "gated_detectors": [
-        {
-          "admissibility_gate": "spec/PERIODIC-ESTIMATORS.md preregistered analytic domain, evaluated by periodic_estimators.score_periodic's own refusals on the same case's plain attempt of lfo_1.raw: constant rate (varying rates refuse), no envelope shaping, no FM, a single tone, no clipping/added noise/transient, at least three cycles and 16 samples, and fundamental_in_band/preparation provenance present; any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
-          "bound": "deviation of depth_peak_to_peak from the plain-attempt estimate beyond the 0.01 native mandatory depth limit of the analytic periodic qualification; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
-          "counts_as_kill": false,
-          "detector_id": "det-timing-04",
-          "on_inadmissible": "refused_inadmissible_not_counted",
-          "operands": [
-            "depth_peak_to_peak estimated by score_periodic on the same case's plain-attempt lfo_1.raw (the per-case truth; never a fixture constant)",
-            "depth_peak_to_peak estimated on the faulted attempt",
-            "declared magnitude converted by the adapter (conversion recorded)"
-          ],
-          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
-          "truth_rule": "plain_attempt_paired_reference"
-        }
-      ],
+      "gated_detectors": [],
       "historical_apparatus": {
         "apparatus_case": "directed:mutation-timing:lfo-control",
         "expected_failure": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
@@ -1276,13 +1258,7 @@
         "normative_for_runtime": false
       },
       "id": "timing:lfo-depth-shift-plus-0.1",
-      "invariance_assertions": [
-        "sibling traces byte-identical to the plain attempt",
-        "undeclared batch slots byte-identical",
-        "invocation counts unchanged",
-        "original bytes retained at the seam capture",
-        "post-attempt clean rerun byte-identical to plain"
-      ],
+      "invariance_assertions": [],
       "magnitude": [
         {
           "operator": "modulation.lfo_depth_shift",
@@ -1290,27 +1266,26 @@
           "value": 0.1
         }
       ],
-      "notes": "native magnitude converted by the adapter; conversion recorded",
-      "obligation_open": false,
+      "notes": "rebinding to lfo_1.mod_depth was rejected: LFO.make_control computes max(frequency + mod_depth * mod_signal, 0) and integrates it into phase, so it perturbs rate, not peak-to-peak amplitude",
+      "obligation_open": true,
       "operators": [
         "modulation.lfo_depth_shift"
       ],
-      "repeats_required": 2,
-      "runtime_evidence_class": "graph_runtime",
-      "runtime_seam": "voice.parameter_value",
-      "runtime_target": "lfo_1.mod_depth",
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "lfo_1.raw peak-to-peak amplitude excursion (no faithful writable realization selected)",
       "runtime_truth": {
         "admissibility": {
           "gate": null,
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
         "operands": [
-          "plain-attempt lfo_1.raw and lfo_1.post_control_vca bytes of the same case and process",
-          "faulted-attempt lfo_1.raw and lfo_1.post_control_vca bytes"
+          "none: no actual-Voice truth is derived until an amplitude-depth realization is selected"
         ],
-        "rule": "plain_attempt_paired_reference"
+        "rule": "not_executed"
       },
       "source": {
         "apparatus_case": "directed:mutation-timing:lfo-control",
