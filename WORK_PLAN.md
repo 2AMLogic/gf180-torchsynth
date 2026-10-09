@@ -9,6 +9,7 @@ Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementat
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
+- **#340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
 
 ## Operator Priority
 
@@ -20,12 +21,12 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`).
 
+- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
 - **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#333**: [Part of #300] Freeze family campaign contract and unresolved seam decisions
 
 ## In Progress
 
@@ -37,7 +38,7 @@ _None._
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -45,6 +46,7 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
+- **#340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
 
 ## Proposed
 
@@ -94,12 +96,12 @@ Issues carrying `loom:curated`.
 
 | Tier | Count |
 |------|-------|
-| Operator merge-risk holds | 2 |
+| Operator merge-risk holds | 3 |
 | Operator priority | 1 |
 | Ready (`loom:issue`) | 6 |
 | In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 1 |
-| Approved PRs awaiting merge | 2 |
+| PRs awaiting review | 0 |
+| Approved PRs awaiting merge | 3 |
 | Curated | 17 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |

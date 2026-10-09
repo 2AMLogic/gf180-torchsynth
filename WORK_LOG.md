@@ -4,7 +4,9 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-09
 
+- **PR #344**: ci: cite 2am docs/ci.md Blacksmith section instead of retired (D5)
 - **PR #339**: chore(renovate): turn off Dependency Dashboard
+- **Issue #343** (closed): ci: replace retired "(D5)" Blacksmith citations in workflow comments (needs workflow scope; 2am#3914)
 - **Issue #171** (closed): Dependency Dashboard
 
 ### 2026-10-08
