@@ -216,6 +216,17 @@ Decision:
   or the same estimator's result on the plain attempt, of the same case and
   batch slot from the same fresh worker process). Refusals carry a refusal rule;
   deferred entries derive no truth.
+- Paired-reference operands are registry-named downstream traces
+  (`runtime_truth.compared_traces`), never the replaced seam trace: a
+  `voice.post_module` seam capture keeps the original pre-mutation bytes (the
+  worker asserts it), so comparing it would stay clean even when the fault
+  reaches the graph. Original-seam equality is an invariance assertion only.
+  Parameter swaps (`voice.parameter_value`) are detected on the consumed
+  oscillator, envelope or LFO output (e.g. `vco_2.post_vca` for shape); the
+  parameter value and swap event are retained separately as
+  `injection_evidence`, which proves the swap was requested, not consumed. An
+  unchanged downstream output stays ineffective/open. The validator rejects
+  unregistered or seam-equal compared traces.
 - The mandatory detector of a `runtime_cell` or `composition` must be
   runtime-admissible (`exact_recomputation` or `paired_reference_exact`). The
   five cells whose publication detector is analytic-only

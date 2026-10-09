@@ -307,7 +307,7 @@
   },
   "frozen_inventory_digest": {
     "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
-    "sha256": "5c487515022b55938e2968ed80a5287ba9cf9368fdd4142a75e72c7f01673d48"
+    "sha256": "f788c2d19faed978761ddc048ecadddee1a388367fd50b05abac603c9f62e089"
   },
   "holdout": {
     "corpus_holdout_first_index": 96,
@@ -932,6 +932,9 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
+        "compared_traces": [
+          "adsr_1.output"
+        ],
         "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
         "operands": [
           "plain-attempt adsr_1.output bytes of the same case and process",
@@ -1001,10 +1004,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt adsr_1.output bytes of the same case and process",
-          "faulted-attempt adsr_1.output bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -1216,6 +1222,10 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
+        "compared_traces": [
+          "lfo_1.raw",
+          "lfo_1.post_control_vca"
+        ],
         "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
         "operands": [
           "plain-attempt lfo_1.raw and lfo_1.post_control_vca bytes of the same case and process",
@@ -1370,10 +1380,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "control_upsample.vco_1_pitch"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt mod_matrix.vco_1_pitch bytes at the case batch slot, same case and process",
-          "faulted-attempt mod_matrix.vco_1_pitch bytes"
+          "plain-attempt control_upsample.vco_1_pitch bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_1_pitch bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -1461,10 +1474,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "control_upsample.vco_1_amp"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt mod_matrix.vco_1_amp bytes at the case batch slot, same case and process",
-          "faulted-attempt mod_matrix.vco_1_amp bytes"
+          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_1_amp bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -1550,10 +1566,14 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "control_upsample.vco_2_pitch",
+          "control_upsample.vco_2_amp"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt mod_matrix.vco_2_pitch and mod_matrix.vco_2_amp bytes at the case batch slot, same case and process",
-          "faulted-attempt mod_matrix.vco_2_pitch and mod_matrix.vco_2_amp bytes"
+          "plain-attempt control_upsample.vco_2_pitch and control_upsample.vco_2_amp bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_2_pitch and control_upsample.vco_2_amp bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -1625,10 +1645,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process",
-          "faulted-attempt control_upsample.vco_1_amp bytes",
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
           "plain-attempt mod_matrix.vco_1_amp control-lane bytes and parameter-map digest"
         ],
         "rule": "plain_attempt_paired_reference"
@@ -1701,10 +1724,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process",
-          "faulted-attempt control_upsample.vco_1_amp bytes",
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
           "plain-attempt mod_matrix.vco_1_amp control-column first/last sample bytes"
         ],
         "rule": "plain_attempt_paired_reference"
@@ -1778,10 +1804,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process",
-          "faulted-attempt control_upsample.vco_1_amp bytes"
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -1856,10 +1885,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process",
-          "faulted-attempt control_upsample.vco_1_amp bytes",
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
           "declared event order"
         ],
         "rule": "plain_attempt_paired_reference"
@@ -1932,10 +1964,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2007,10 +2042,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2082,10 +2120,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2157,10 +2198,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2232,10 +2276,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_2.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_2.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2307,10 +2354,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes"
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2382,10 +2432,16 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_2.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_2.shape swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
         "operands": [
-          "plain-attempt vco_2.shape bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_2.shape bytes"
+          "plain-attempt vco_2.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_2.post_vca bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2457,10 +2513,16 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_1.tuning swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
         "operands": [
-          "plain-attempt vco_1.tuning bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.tuning bytes"
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2532,10 +2594,16 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_1.initial_phase swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
         "operands": [
-          "plain-attempt vco_1.initial_phase bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.initial_phase bytes"
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
         ],
         "rule": "plain_attempt_paired_reference"
       },
@@ -2599,6 +2667,9 @@
           "on_inadmissible": "refused_inadmissible_not_counted",
           "required": true
         },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
         "derivation": "per case and per repeat: the reference is the same estimator on the same case's plain attempt from the same worker process; the faulted deviation is compared with the declared offset only if the admissibility gate admits both attempts",
         "operands": [
           "periodic cents estimated on the same case's plain-attempt vco_1.post_vca at the case batch slot (the per-case truth; never a fixture reference)",
@@ -2668,6 +2739,9 @@
           "on_inadmissible": "refused_inadmissible_not_counted",
           "required": true
         },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
         "derivation": "per case and per repeat: the reference is the same estimator on the same case's plain attempt from the same worker process; the faulted deviation is compared with the declared offset only if the admissibility gate admits both attempts",
         "operands": [
           "periodic phase_rad estimated on the same case's plain-attempt vco_1.post_vca at the case batch slot (the per-case truth; never a fixture reference)",
@@ -3073,10 +3147,13 @@
           "on_inadmissible": "not_applicable",
           "required": false
         },
-        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
         "operands": [
-          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
-          "faulted-attempt vco_1.post_vca bytes",
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)",
           "declared event order"
         ],
         "rule": "plain_attempt_paired_reference"

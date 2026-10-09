@@ -340,6 +340,40 @@ class RejectionTests(unittest.TestCase):
         del entry(m, "signal:gain.db")["runtime_truth"]
         self.assertTrue(any("missing required runtime_truth" in e for e in self.errors(m)))
 
+    def test_output_seam_cannot_compare_its_own_preserved_original_capture(self):
+        m = load()
+        truth = entry(m, "signal:gain.db")["runtime_truth"]
+        truth["compared_traces"] = ["vco_1.post_vca"]
+        self.assertRejects(refreeze(m), "replaced seam trace")
+        m = load()
+        entry(m, "timing:route-destination-swap")["runtime_truth"]["compared_traces"] = [
+            "mod_matrix.vco_2_pitch"]
+        self.assertRejects(refreeze(m), "replaced seam trace")
+
+    def test_parameter_names_are_not_registered_detector_traces(self):
+        m = load()
+        for identifier, name in (("signal:osc.shape_scale", "vco_2.shape"),
+                                 ("signal:osc.tuning_shift", "vco_1.tuning"),
+                                 ("signal:osc.phase_offset", "vco_1.initial_phase")):
+            entry(m, identifier)["runtime_truth"]["compared_traces"] = [name]
+        errors = self.errors(refreeze(m))
+        for name in ("vco_2.shape", "vco_1.tuning", "vco_1.initial_phase"):
+            self.assertTrue(any("%s is not a registered trace" % name in e for e in errors), name)
+
+    def test_paired_reference_requires_compared_traces(self):
+        m = load()
+        del entry(m, "signal:gain.db")["runtime_truth"]["compared_traces"]
+        self.assertRejects(refreeze(m), "must name compared_traces")
+
+    def test_parameter_cells_compare_consumed_oscillator_output(self):
+        m = load()
+        for identifier, lane in (("signal:osc.shape_scale", "vco_2.post_vca"),
+                                 ("signal:osc.tuning_shift", "vco_1.post_vca"),
+                                 ("signal:osc.phase_offset", "vco_1.post_vca")):
+            truth = entry(m, identifier)["runtime_truth"]
+            self.assertEqual(truth["compared_traces"], [lane])
+            self.assertTrue(truth["injection_evidence"])
+
     def test_ungated_analytic_second_detector_is_rejected(self):
         m = load()
         truth = entry(m, "signal:osc.phase_offset (property)")["runtime_truth"]

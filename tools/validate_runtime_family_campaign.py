@@ -21,6 +21,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = "spec/reference/runtime-family-campaign-v1.json"
 SCHEMA_PATH = "spec/schemas/runtime-family-campaign-v1.schema.json"
+TRACE_REGISTRY_PATH = "spec/reference/trace-registry-v1.json"
 SEAM_CATALOG_PATH = "spec/reference/mutation-seams-v1.json"
 QUALIFIED_BATCH_SIZE = 32
 FAMILIES = ("identity", "timing", "signal")
@@ -239,12 +240,13 @@ def _normative_texts(entry: Dict[str, Any]) -> List[str]:
     return texts
 
 
-def _truth_errors(manifest: Dict[str, Any]) -> List[str]:
+def _truth_errors(manifest: Dict[str, Any], root: Path = ROOT) -> List[str]:
     """Detector truth must be derived per actual-Voice case, never borrowed
     from a synthetic fixture, and analytic/fixture-only estimators may run on
     actual-Voice traces only behind an admissibility gate that cannot kill."""
     errors: List[str] = []
     scopes = {d["id"]: d["qualification_scope"] for d in manifest["detectors"]}
+    registry_traces = {t["name"] for t in load_json(root, TRACE_REGISTRY_PATH)["traces"]}
     for entry in manifest["inventory"]:
         label = entry["id"]
         disposition = entry["disposition"]
@@ -266,6 +268,21 @@ def _truth_errors(manifest: Dict[str, Any]) -> List[str]:
                     errors.append(
                         "%s: operator %s must not be bound to %s (different quantity than its "
                         "registered semantics)" % (label, operator, entry["runtime_target"]))
+        if truth["rule"] == "plain_attempt_paired_reference":
+            compared = truth.get("compared_traces")
+            if not compared:
+                errors.append("%s: paired-reference truth must name compared_traces (registry "
+                              "traces downstream of the injection)" % label)
+            else:
+                seam_targets = entry["runtime_target"].split("+")
+                for trace in compared:
+                    if trace not in registry_traces:
+                        errors.append("%s: compared trace %s is not a registered trace" % (
+                            label, trace))
+                    elif entry["runtime_seam"] == "voice.post_module" and trace in seam_targets:
+                        errors.append(
+                            "%s: compared trace %s is the replaced seam trace, whose capture "
+                            "keeps the original bytes; bind a downstream trace" % (label, trace))
         if disposition == "deferred_unmeasured" and truth["rule"] != "not_executed":
             errors.append("%s: deferred entry must not derive runtime truth" % label)
         if disposition == "refusal" and truth["rule"] not in (
@@ -431,7 +448,7 @@ def semantic_errors(manifest: Dict[str, Any], root: Path,
                 errors.append("%s: second_detector adds no attempts" % label)
 
     # --- per-case detector truth and admissibility --------------------------
-    errors.extend(_truth_errors(manifest))
+    errors.extend(_truth_errors(manifest, root))
 
     # --- sensitivity entries never executed or counted ----------------------
     for entry in manifest["sensitivity_inventory"]:
