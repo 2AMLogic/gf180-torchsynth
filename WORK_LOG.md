@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-09
+
+- **PR #339**: chore(renovate): turn off Dependency Dashboard
+- **Issue #171** (closed): Dependency Dashboard
+
 ### 2026-10-08
 
 - **PR #327**: ci: identity tests/--check and 20-row ci_subset sentinel (Part of #9)
