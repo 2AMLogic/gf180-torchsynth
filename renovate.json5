@@ -7,13 +7,15 @@
   // Extend recommended defaults, plus security-focused presets
   "extends": [
     "config:recommended",
-    "security:openssf-scorecard",
-    ":dependencyDashboard"
+    "security:openssf-scorecard"
   ],
 
+  // Renovate's Dependency Dashboard is a bot-owned issue that Loom's Curator
+  // would treat as a work item. config:recommended enables it, so override.
+  "dependencyDashboard": false,
+
   // Override Mend-hosted "silent" default (applied when app is installed on
-  // "All repositories").  "full" lets Renovate create branches, PRs, and the
-  // Dependency Dashboard issue.
+  // "All repositories").  "full" lets Renovate create branches and PRs.
   "mode": "full",
 
   // --- Supply chain security ---
