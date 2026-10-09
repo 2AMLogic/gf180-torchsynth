@@ -31,6 +31,7 @@
 .loom/exit-codes/
 .loom/sweep-checkpoint/
 .loom/sweep-run/
+.loom/targets/
 .loom/state/*
 !.loom/state/detect-unlabeled-epics-dismissed
 .loom/concierge/
