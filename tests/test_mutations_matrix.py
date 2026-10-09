@@ -424,9 +424,25 @@ class ContractWrongDemonstrationTests(unittest.TestCase):
         )
 
     def test_forward_and_reverse_associations_are_preserved(self):
+        from unittest import mock
+
         publications = self.fresh()
         catalog = mutations.load_seam_catalog(ROOT / mutations.SEAM_CATALOG_PATH)
-        families = self.runner.register_families()
+        # register_families() attributes operators to families by the
+        # registry delta each family's registration adds, which presumes the
+        # framework-only registry the runner always starts from (it runs in
+        # a fresh process). Earlier tests in this process may already have
+        # registered the families, so reproduce that precondition on a
+        # temporary copy of the shared registry and restore it afterwards.
+        family_operator_ids = (
+            set(mutations_identity.FAMILY_OPERATORS)
+            | set(mutations_timing.FAMILY_OPERATORS)
+            | set(mutations_signal.OPERATOR_DEFINITIONS)
+        )
+        with mock.patch.dict(mutations.OPERATORS):
+            for operator_id in family_operator_ids:
+                mutations.OPERATORS.pop(operator_id, None)
+            families = self.runner.register_families()
         faults = self.runner.build_faults_to_tests(families, publications, catalog)
         guards = self.runner.false_positive_guards(publications)
         tests = self.runner.build_tests_to_faults(faults, guards)

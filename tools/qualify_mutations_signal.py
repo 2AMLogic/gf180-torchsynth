@@ -283,6 +283,51 @@ def localization_record(clean, faulted):
     }
 
 
+SMALL_GAIN_REQUIRED_FAILURES = ("exact_equal", "max_abs_error")
+
+
+def small_gain_outcome_refusal(event, fault_rows, control_rows, tolerant):
+    """Return the fail-closed refusal for the +0.01 dB demonstration, or None.
+
+    Two outcomes are kept distinct and never conflated:
+
+    * the optional ``band.20000_up.error_rms`` observation could not run
+      (no measured value, e.g. NumPy absent): the demonstration is not
+      established in this environment. That is a cannot-run refusal, not a
+      fixture outcome, and it must not be reported as a contract result;
+    * the observation ran (or the mandatory/control/event evidence is
+      wrong) and the fixed fixture does not meet the stated
+      mandatory-FAIL/optional-tolerant outcome: per #298 that outcome is
+      reported and returned for contract revision; magnitudes and
+      thresholds are never changed to make it pass.
+    """
+    if tolerant["observed"] is None:
+        return (
+            "FAIL: the +0.01 dB optional band.20000_up.error_rms observation "
+            "could not run (no measured value; install the metrics extra); "
+            "the contract-wrong demonstration is NOT established in this "
+            "environment and this is not a fixture outcome"
+        )
+    failed = sorted(name for name, row in fault_rows.items() if row["verdict"] == "FAIL")
+    if (
+        event["status"] != "applied"
+        or event["detail"].get("db") != SMALL_GAIN_DB
+        or not all(fault_rows[name]["verdict"] == "FAIL" for name in SMALL_GAIN_REQUIRED_FAILURES)
+        or fault_rows["framing_match"]["verdict"] != "PASS"
+        or not all(row["verdict"] == "PASS" for row in control_rows.values())
+        or not tolerant["tolerant"]
+    ):
+        return (
+            "FAIL: the fixed +0.01 dB fixture did not meet the stated "
+            "mandatory-FAIL/optional-tolerant outcome (failed rows: "
+            + ",".join(failed)
+            + "; optional tolerant: "
+            + str(tolerant["tolerant"])
+            + "); return for contract revision, do not change magnitudes or thresholds"
+        )
+    return None
+
+
 def build_publication():
     require = trace_registry.require
     catalog = mutations.load_seam_catalog(ROOT / mutations.SEAM_CATALOG_PATH)
@@ -675,26 +720,10 @@ def build_publication():
         "directed:signal-family-0/gain-db-small/fault",
     )
     small_event = small["events"][0]
-    small_required = ("exact_equal", "max_abs_error")
-    small_failed = sorted(
-        name for name, verdict in paired_verdicts(small_fault_rows).items() if verdict == "FAIL"
+    small_required = SMALL_GAIN_REQUIRED_FAILURES
+    small_refusal = small_gain_outcome_refusal(
+        small_event, small_fault_rows, small_control_rows, small_tolerant
     )
-    if (
-        small_event["status"] != "applied"
-        or small_event["detail"].get("db") != SMALL_GAIN_DB
-        or not all(small_fault_rows[name]["verdict"] == "FAIL" for name in small_required)
-        or small_fault_rows["framing_match"]["verdict"] != "PASS"
-        or not all(row["verdict"] == "PASS" for row in small_control_rows.values())
-        or not small_tolerant["tolerant"]
-    ):
-        raise SystemExit(
-            "FAIL: the fixed +0.01 dB fixture did not meet the stated "
-            "mandatory-FAIL/optional-tolerant outcome (failed rows: "
-            + ",".join(small_failed)
-            + "; optional tolerant: "
-            + str(small_tolerant["tolerant"])
-            + "); return for contract revision, do not change magnitudes or thresholds"
-        )
     contract_wrong = [
         {
             "demonstration_id": "contract-wrong/gain.db+0.01dB",
@@ -730,6 +759,8 @@ def build_publication():
     untripped = [entry["fault"] for entry in rows if not entry["tripped"] or not entry["control_accepted"]]
     if untripped:
         raise SystemExit("FAIL: family faults did not trip their rows: " + ", ".join(untripped))
+    if small_refusal is not None:
+        raise SystemExit(small_refusal)
 
     operator_matrix = []
     for operator_id in sorted(mutations.OPERATORS):

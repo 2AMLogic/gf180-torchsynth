@@ -441,6 +441,64 @@ class PublicationTests(unittest.TestCase):
                 else:
                     self.assertEqual(committed_row, row)
 
+    def small_gain_refusal(self, mutate=None):
+        """Run the +0.01 dB outcome gate on (a mutated copy of) the committed
+        record's evidence; stdlib-only, so it runs without the metrics extra."""
+        import copy
+        import json
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import qualify_mutations_signal
+
+            committed = json.loads(qualify_mutations_signal.PUBLICATION_PATH.read_bytes())
+            record = copy.deepcopy(committed["contract_wrong_demonstrations"][0])
+            if mutate is not None:
+                mutate(record)
+            return qualify_mutations_signal.small_gain_outcome_refusal(
+                record["applied_event"],
+                record["mandatory_rows"]["fault"],
+                record["mandatory_rows"]["clean_control"],
+                record["optional_observation"],
+            )
+        finally:
+            sys.path.remove(str(ROOT / "tools"))
+            sys.modules.pop("qualify_mutations_signal", None)
+
+    def test_small_gain_gate_accepts_the_committed_outcome(self):
+        self.assertIsNone(self.small_gain_refusal())
+
+    def test_small_gain_gate_reports_unrun_optional_as_cannot_run(self):
+        def unrun(record):
+            record["optional_observation"]["observed"] = None
+            record["optional_observation"]["tolerant"] = False
+
+        message = self.small_gain_refusal(unrun)
+        self.assertIn("could not run", message)
+        self.assertIn("NOT established in this environment", message)
+        self.assertNotIn("return for contract revision", message)
+
+    def test_small_gain_gate_returns_measured_nontolerance_for_revision(self):
+        def nontolerant(record):
+            record["optional_observation"]["observed"] = 0.5
+            record["optional_observation"]["tolerant"] = False
+
+        message = self.small_gain_refusal(nontolerant)
+        self.assertIn("did not meet the stated", message)
+        self.assertIn("return for contract revision", message)
+
+    def test_small_gain_gate_rejects_passing_mandatory_row_or_failed_control(self):
+        def passing_mandatory(record):
+            record["mandatory_rows"]["fault"]["max_abs_error"]["verdict"] = "PASS"
+
+        def failing_control(record):
+            record["mandatory_rows"]["clean_control"]["exact_equal"]["verdict"] = "FAIL"
+
+        for mutate in (passing_mandatory, failing_control):
+            with self.subTest(mutation=mutate.__name__):
+                message = self.small_gain_refusal(mutate)
+                self.assertIn("return for contract revision", message)
+
     def test_committed_small_gain_demonstration_is_contract_wrong_and_unverified(self):
         import json
 
