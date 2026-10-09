@@ -20,12 +20,7 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
-- **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
-- **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
-- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
-- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
-- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
+- **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2)
 
 ## In Progress
 
@@ -64,6 +59,9 @@ Issues carrying `loom:curated`.
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
 - **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
+- **#324**: Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue *(curated)*
+- **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2) *(curated)*
+- **#333**: [Part of #300] Freeze family campaign contract and unresolved seam decisions *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -93,11 +91,11 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 2 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 6 |
+| Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 2 |
-| Curated | 14 |
+| Curated | 17 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
 <!-- guide:plan-body:end -->
