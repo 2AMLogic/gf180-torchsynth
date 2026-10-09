@@ -11,7 +11,8 @@ permissions:
 jobs:
   contract:
     # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
-    # outage and the operator's move of every public repo off Blacksmith (D5).
+    # outage and the operator's move of every public repo off Blacksmith
+    # (2am `docs/ci.md` §"Blacksmith: decided 2026-09-28, retire").
     runs-on: ubuntu-24.04
     strategy:
       matrix:
