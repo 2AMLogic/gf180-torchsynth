@@ -700,6 +700,188 @@ def build_ci_subset(faults_to_tests: list) -> dict:
     }
 
 
+CONTRACT_WRONG_REQUIRED_FAILURES = ("exact_equal", "max_abs_error")
+CONTRACT_WRONG_LIMITS = {
+    "framing_match": (1, 0),
+    "exact_equal": (1, 0),
+    "max_abs_error": (0, 1e-9),
+}
+CONTRACT_WRONG_KEYS = (
+    "demonstration_id",
+    "kind",
+    "family",
+    "operator",
+    "owning_fault_row",
+    "magnitude",
+    "applied_event",
+    "fixture_binding",
+    "comparison_preparation",
+    "detector_relationship",
+    "required_failures",
+    "mandatory_rows",
+    "mandatory_outcome",
+    "optional_observation",
+    "optional_counts_as_contract_pass",
+    "perceptual_similarity",
+    "evidence_scope",
+)
+PERCEPTUAL_UNVERIFIED = ("not_run", "unverified")
+
+
+def validate_contract_wrong_demonstration(record: dict, publication: dict) -> list:
+    """Fail-closed validation of one contract-wrong demonstration (#298).
+
+    Returns the list of violations (empty means valid). A demonstration is
+    valid only when every named mandatory row fails on the faulted trace,
+    the paired clean control passes every mandatory row and framing, the
+    declared limits are the unloosened exactness limits, any optional
+    observation is never counted as a contract PASS, and perceptual
+    similarity stays unverified at the directed-fixture scope.
+    """
+    problems = []
+    if not isinstance(record, dict):
+        return ["record is not an object"]
+    for key in CONTRACT_WRONG_KEYS:
+        if key not in record:
+            problems.append("missing key: " + key)
+    if problems:
+        return problems
+    if record["kind"] != "contract-wrong-demonstration":
+        problems.append("wrong kind")
+    if record["evidence_scope"] != "directed fixture":
+        problems.append("evidence scope is not 'directed fixture'")
+    perceptual = record["perceptual_similarity"]
+    if (
+        not isinstance(perceptual, dict)
+        or perceptual.get("status") not in PERCEPTUAL_UNVERIFIED
+        or perceptual.get("evidence_scope") != "directed fixture"
+    ):
+        problems.append(
+            "perceptual similarity must be not_run/unverified at directed "
+            "fixture scope; a perceptual PASS requires separately executed evidence"
+        )
+    if record["optional_counts_as_contract_pass"] is not False:
+        problems.append("optional acceptance counted as a contract PASS")
+    if record["mandatory_outcome"] != "FAIL":
+        problems.append("mandatory outcome is not FAIL")
+    if sorted(record["required_failures"]) != sorted(CONTRACT_WRONG_REQUIRED_FAILURES):
+        problems.append("required failures are not exact_equal and max_abs_error")
+    rows = record["mandatory_rows"]
+    if not isinstance(rows, dict) or set(rows) != {"fault", "clean_control"}:
+        return problems + ["mandatory rows need fault and clean_control sets"]
+    for side in ("fault", "clean_control"):
+        for name, (expected, tolerance) in CONTRACT_WRONG_LIMITS.items():
+            row = rows[side].get(name) if isinstance(rows[side], dict) else None
+            if not isinstance(row, dict):
+                problems.append(side + " row missing: " + name)
+                continue
+            if row.get("expected") != expected or row.get("tolerance") != tolerance:
+                problems.append(side + " row " + name + " limit was changed")
+    if problems:
+        return problems
+    for name in CONTRACT_WRONG_REQUIRED_FAILURES:
+        if rows["fault"][name]["verdict"] != "FAIL":
+            problems.append("mandatory failure missing on fault row: " + name)
+    if rows["fault"]["framing_match"]["verdict"] != "PASS":
+        problems.append("fault framing not preserved")
+    for name in CONTRACT_WRONG_LIMITS:
+        if rows["clean_control"][name]["verdict"] != "PASS":
+            problems.append("clean control not passing: " + name)
+    event = record["applied_event"]
+    if not isinstance(event, dict) or event.get("status") != "applied":
+        problems.append("applied event missing or not applied")
+    magnitude = record["magnitude"]
+    detail = event.get("detail", {}) if isinstance(event, dict) else {}
+    if record["family"] == "signal":
+        if magnitude != {"value": 0.01, "unit": "dB"} or detail.get("db") != 0.01:
+            problems.append("signal magnitude/event is not the native +0.01 dB")
+    elif record["family"] == "timing":
+        if magnitude != {"value": 1, "unit": "sample"} or detail.get("delayed_by_samples") != 1:
+            problems.append("timing magnitude/event is not exactly one audio sample")
+    else:
+        problems.append("unknown family")
+    optional = record["optional_observation"]
+    if optional is not None and (
+        not isinstance(optional, dict) or optional.get("optional") is not True
+    ):
+        problems.append("optional observation is not marked optional")
+    owning = [
+        entry
+        for entry in publication.get("fault_matrix", [])
+        if entry["fault"] == record["owning_fault_row"]
+    ]
+    if len(owning) != 1:
+        problems.append("owning family fault row not found: " + str(record["owning_fault_row"]))
+    elif not (owning[0]["tripped"] and owning[0]["control_accepted"]):
+        problems.append("owning family fault row is not tripped with an accepted control")
+    elif record["operator"] not in operator_parts(owning[0]["operator"]):
+        problems.append("owning family fault row does not use the demonstrated operator")
+    return problems
+
+
+def build_contract_wrong_demonstrations(publications: dict) -> list:
+    """Retain every family demonstration, validated; fail closed otherwise."""
+    records = []
+    for family in ("timing", "signal"):
+        publication = publications[family]
+        for record in publication.get("contract_wrong_demonstrations", []):
+            problems = validate_contract_wrong_demonstration(record, publication)
+            if problems:
+                raise SystemExit(
+                    "FAIL: contract-wrong demonstration "
+                    + str(record.get("demonstration_id") if isinstance(record, dict) else record)
+                    + " is invalid: "
+                    + "; ".join(problems)
+                )
+            if record["family"] != family:
+                raise SystemExit(
+                    "FAIL: demonstration family does not match its publication: "
+                    + record["demonstration_id"]
+                )
+            records.append(record)
+    expected = {
+        "contract-wrong/gain.db+0.01dB",
+        "contract-wrong/timing.delay_audio_sample+1sample",
+    }
+    if {record["demonstration_id"] for record in records} != expected:
+        raise SystemExit(
+            "FAIL: the two named contract-wrong demonstrations are not both present"
+        )
+    return records
+
+
+def attach_contract_wrong(faults_to_tests: list, tests_to_faults: list, demonstrations: list) -> None:
+    """Bidirectional association: owning fault rows and their detector rows."""
+    by_fault = {(row["family"], row["fault"]): row for row in faults_to_tests}
+    for record in demonstrations:
+        row = by_fault.get((record["family"], record["owning_fault_row"]))
+        if row is None:
+            raise SystemExit(
+                "FAIL: demonstration owning row missing from faults-to-tests: "
+                + record["demonstration_id"]
+            )
+        row["links"].setdefault("contract_wrong_demonstrations", []).append(
+            record["demonstration_id"]
+        )
+        detector = next(
+            (
+                entry
+                for entry in tests_to_faults
+                if entry["family"] == record["family"]
+                and entry["detector"] == row["links"]["downstream"]
+            ),
+            None,
+        )
+        if detector is None:
+            raise SystemExit(
+                "FAIL: demonstration detector row missing from tests-to-faults: "
+                + record["demonstration_id"]
+            )
+        detector.setdefault("contract_wrong_demonstrations", []).append(
+            record["demonstration_id"]
+        )
+
+
 def build_publication() -> dict:
     families = register_families()
     catalog = mutations.load_seam_catalog(ROOT / mutations.SEAM_CATALOG_PATH)
@@ -718,6 +900,8 @@ def build_publication() -> dict:
     guards = false_positive_guards(publications)
     surfaces = applicability_surfaces(publications)
     tests_to_faults = build_tests_to_faults(faults_to_tests, guards)
+    demonstrations = build_contract_wrong_demonstrations(publications)
+    attach_contract_wrong(faults_to_tests, tests_to_faults, demonstrations)
     sensitivity = build_sensitivity(publications)
     localization = build_localization(families, publications)
     composition = build_composition_coverage(families, publications, catalog)
@@ -776,6 +960,7 @@ def build_publication() -> dict:
         "applicability_surfaces": surfaces,
         "faults_to_tests": faults_to_tests,
         "tests_to_faults": tests_to_faults,
+        "contract_wrong_demonstrations": demonstrations,
         "sensitivity": sensitivity,
         "localization_topology": localization,
         "composition_coverage": composition,
@@ -830,6 +1015,7 @@ COMPARABLE_FIELDS = (
     "applicability_surfaces",
     "faults_to_tests",
     "tests_to_faults",
+    "contract_wrong_demonstrations",
     "sensitivity",
     "localization_topology",
     "composition_coverage",

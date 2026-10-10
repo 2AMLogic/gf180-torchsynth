@@ -270,6 +270,49 @@ class TimingFaultTests(unittest.TestCase):
                 self.assertEqual(comparison["metrics"]["framing_match"]["value"], 0)
 
 
+class ContractWrongDelayTests(unittest.TestCase):
+    def test_one_audio_sample_delay_fails_primary_rows_with_passing_controls(self):
+        record = mt.contract_wrong_demonstrations(ROOT)[0]
+        self.assertEqual(record["magnitude"], {"value": 1, "unit": "sample"})
+        self.assertEqual(record["magnitude_seconds"], "1/44100")
+        self.assertEqual(record["target"], {"lane": mt.LANE_CONTROL_UPSAMPLE})
+        self.assertEqual(record["applied_event"]["status"], "applied")
+        self.assertEqual(record["applied_event"]["detail"]["delayed_by_samples"], 1)
+        fault = record["mandatory_rows"]["fault"]
+        control = record["mandatory_rows"]["clean_control"]
+        self.assertEqual(fault["exact_equal"]["verdict"], "FAIL")
+        self.assertEqual(fault["max_abs_error"]["verdict"], "FAIL")
+        self.assertEqual(fault["framing_match"]["verdict"], "PASS")
+        self.assertEqual(fault["exact_equal"]["tolerance"], 0)
+        self.assertEqual(fault["max_abs_error"]["tolerance"], 1e-9)
+        for name, row in control.items():
+            self.assertEqual(row["verdict"], "PASS", name)
+        self.assertEqual(record["mandatory_outcome"], "FAIL")
+
+    def test_no_comparison_preparation_masks_the_delay(self):
+        record = mt.contract_wrong_demonstrations(ROOT)[0]
+        self.assertTrue(record["comparison_preparation"].startswith("none"))
+        harness = make_harness("upsample-audio")
+        pristine = mt.lane_samples(harness.document, mt.LANE_CONTROL_UPSAMPLE)
+        attempt = harness.attempt(
+            harness.fault("mti-d1", "timing.delay_audio_sample", 1,
+                          {"lane": mt.LANE_CONTROL_UPSAMPLE}))
+        delayed = mt.lane_samples(mt._attempt_document(attempt),
+                                  mt.LANE_CONTROL_UPSAMPLE)
+        self.assertEqual(delayed[1:], pristine[:-1])
+        self.assertNotEqual(delayed, pristine)
+
+    def test_perceptual_similarity_is_not_run_and_no_optional_verdict(self):
+        record = mt.contract_wrong_demonstrations(ROOT)[0]
+        self.assertEqual(record["perceptual_similarity"]["status"], "not_run")
+        self.assertEqual(record["perceptual_similarity"]["evidence_scope"],
+                         "directed fixture")
+        self.assertEqual(record["evidence_scope"], "directed fixture")
+        self.assertIsNone(record["optional_observation"])
+        self.assertFalse(record["optional_counts_as_contract_pass"])
+        self.assertEqual(record["owning_fault_row"], "one-audio-sample-delay")
+
+
 class InterpolationFaultTests(unittest.TestCase):
     def test_zoh_alters_control_derived_trace_and_not_source(self):
         harness = make_harness("upsample-audio")

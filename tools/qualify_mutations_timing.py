@@ -71,6 +71,7 @@ COMPARABLE_FIELDS = (
     "mutation_contract",
     "controls",
     "fault_matrix",
+    "contract_wrong_demonstrations",
     "floor_probes",
     "coverage",
     "envelopes",
@@ -155,6 +156,7 @@ def build_publication():
             "passing control: " + ", ".join(untripped)
         )
 
+    demonstrations = mutations_timing.contract_wrong_demonstrations(ROOT)
     floor_probes = mutations_timing.sensitivity_floor(ROOT)
     wrong_probes = [
         probe["probe"] for probe in floor_probes
@@ -211,6 +213,7 @@ def build_publication():
         ),
         "controls": controls,
         "fault_matrix": matrix,
+        "contract_wrong_demonstrations": demonstrations,
         "floor_probes": floor_probes,
         "coverage": coverage,
         "envelopes": envelopes,
