@@ -103,9 +103,11 @@ TUNING_SEMITONES = 1.0
 PHASE_RADIANS = math.pi / 4.0
 SHAPE_RATIO = 2.0
 GAIN_DB = 1.0
+GAIN_DB_MINUS = -1.0
 DC_OFFSET = 0.05
 ROUND_STEP = 2.0 ** -7
 SATURATION_CEILING = 0.75
+TRUNCATE_STEP = 2.0 ** -7
 
 NORM_CLASSES = (
     ("above", family.PEAK_ABOVE_ONE),
@@ -115,9 +117,11 @@ NORM_CLASSES = (
 
 FAULT_FIXTURES = {
     "gain.db": ("gain-db", family.instance("ms-gain", "gain.db", "voice.post_module", GAIN_DB, {"trace": "vco_1.post_vca", "slot": 0})),
+    "gain.db (minus 1 dB)": ("gain-db-minus", family.instance("ms-gain-minus", "gain.db", "voice.post_module", GAIN_DB_MINUS, {"trace": "vco_1.post_vca", "slot": 0})),
     "gain.polarity": ("gain-polarity", family.instance("ms-polarity", "gain.polarity", "voice.post_module", configuration={"trace": "vco_1.post_vca", "slot": 0})),
     "gain.dc_offset": ("gain-dc", family.instance("ms-dc", "gain.dc_offset", "voice.post_module", DC_OFFSET, {"trace": "vco_1.post_vca", "slot": 0})),
     "clip.round_step": ("clip-round", family.instance("ms-round", "clip.round_step", "voice.post_module", ROUND_STEP, {"trace": "vco_1.post_vca", "slot": 0})),
+    "clip.truncate_step": ("clip-truncate", family.instance("ms-truncate", "clip.truncate_step", "voice.post_module", TRUNCATE_STEP, {"trace": "vco_1.post_vca", "slot": 0})),
     "clip.saturation_ceiling": ("clip-saturation", family.instance("ms-saturation", "clip.saturation_ceiling", "voice.post_module", SATURATION_CEILING, {"trace": "vco_2.post_vca", "slot": 0})),
     "osc.mode_substitute": ("osc-mode", family.instance("ms-mode", "osc.mode_substitute", "voice.post_module", configuration={"trace": "vco_1.post_vca", "slot": 0})),
     "osc.shape_scale": ("osc-shape", family.instance("ms-shape", "osc.shape_scale", "voice.parameter_value", SHAPE_RATIO, {"parameter": "vco_2.shape", "slot": 0})),
@@ -249,6 +253,241 @@ def run_plan(mutations_list):
     return plan, outcome
 
 
+TRUNCATION_DIRECTED_STEP = 0.25
+TRUNCATION_DIRECTED_INPUTS = (
+    ("zero", 0.0),
+    ("positive-exact-grid", 0.25),
+    ("negative-exact-grid", -0.25),
+    ("positive-off-grid-below-half", 0.3),
+    ("positive-off-grid-above-half", 0.45),
+    ("negative-off-grid-below-half", -0.3),
+    ("negative-off-grid-above-half", -0.45),
+    ("positive-sub-step", 0.1),
+    ("negative-sub-step", -0.1),
+    ("positive-tie", 0.375),
+    ("negative-tie", -0.375),
+)
+TRUNCATION_RULE = (
+    "truncate toward zero onto the binary32-rounded grid f32(k*step), k>=0, "
+    "mirrored about zero: positive values round down, negative values round "
+    "up toward zero, exact grid points are unchanged, zero and sub-step "
+    "values become +0.0"
+)
+
+
+def truncation_directed():
+    """Directed truncation-versus-rounding vectors over binary-exact inputs.
+
+    Exact binary32 inputs against a power-of-two step, plus one inexact-step
+    exact-grid case (0.1 grid, f32(3*0.1)), so no quotient rounding is
+    involved in the stated expectations.
+    """
+    vectors = []
+    for label, value in TRUNCATION_DIRECTED_INPUTS:
+        truncated = family.truncate_to_step(value, TRUNCATION_DIRECTED_STEP)
+        rounded = family.f32(round(value / TRUNCATION_DIRECTED_STEP) * TRUNCATION_DIRECTED_STEP)
+        vectors.append(
+            {
+                "case": label,
+                "input": value,
+                "truncate": truncated,
+                "round": rounded,
+                "truncate_differs_from_round": truncated != rounded,
+                "truncate_changes_input": truncated != value,
+            }
+        )
+    inexact_value = family.f32(0.3)
+    inexact_grid = family.truncate_to_step(inexact_value, 0.1)
+    return {
+        "rule": TRUNCATION_RULE,
+        "step": TRUNCATION_DIRECTED_STEP,
+        "vectors": vectors,
+        "inexact_step_exact_grid_point": {
+            "step": 0.1,
+            "input": inexact_value,
+            "truncate": inexact_grid,
+            "unchanged": inexact_grid == inexact_value,
+        },
+        "distinguishes_from_round": any(
+            vector["truncate_differs_from_round"] for vector in vectors
+        ),
+        "exact_grid_points_unchanged": all(
+            not vector["truncate_changes_input"]
+            for vector in vectors
+            if vector["case"].endswith("exact-grid") or vector["case"] == "zero"
+        ),
+    }
+
+
+SECOND_MAGNITUDE_MANDATORY_ROW = "exact_equal"
+SECOND_MAGNITUDE_NOTE = (
+    "bounded ascending-perturbation search on the canonical binary32 fixture "
+    "lane; the boundary is the smallest tested magnitude whose lane bytes "
+    "differ from the clean fixture, the immediately smaller tested magnitude "
+    "leaves the bytes unchanged (honest NO VERDICT, never a PASS-as-"
+    "detection); a fixture byte-change boundary, not a perceptual floor"
+)
+
+
+def _decades(low, high):
+    return [10.0 ** exponent for exponent in range(low, high + 1)]
+
+
+def second_magnitude_ladders(plain):
+    """Declared bounded candidate ladders, ascending in perturbation size."""
+    vco_2 = plain["lanes"]["vco_2.post_vca"]
+    peak = max(abs(value) for value in vco_2)
+    return {
+        "osc.tuning_shift": [(value, "semitone") for value in _decades(-16, 0)],
+        "osc.phase_offset": [
+            (value, "radian") for value in (1e-50, 1e-46, 1e-45, 1e-30, 1e-20, 1e-16, 1e-12, 1e-8, 1e-4, 1.0)
+        ],
+        "osc.shape_scale": [(1.0 + 10.0 ** exponent, "ratio") for exponent in range(-16, 1)],
+        "gain.db": [(value, "dB") for value in _decades(-12, 0)],
+        "gain.dc_offset": [
+            (value, "amplitude") for value in (1e-50, 1e-46, 1e-45, 1e-30, 1e-15, 1e-9, 1e-6, 1e-3)
+        ],
+        "clip.round_step": [(value, "amplitude_step") for value in _decades(-24, 0)],
+        "clip.truncate_step": [(value, "amplitude_step") for value in _decades(-24, 0)],
+        "clip.saturation_ceiling": [
+            (peak - delta, "amplitude")
+            for delta in (0.0, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2)
+        ],
+    }
+
+
+def second_magnitude_records(plain):
+    """Second-magnitude applicability for every numeric signal operator."""
+    ladders = second_magnitude_ladders(plain)
+    records = []
+    for operator_id in sorted(ladders):
+        fault_key = operator_id
+        fixture_label, template = FAULT_FIXTURES[fault_key]
+        if "trace" in template["configuration"]:
+            trace = template["configuration"]["trace"]
+        else:
+            trace = family.PARAMETER_LANE[template["configuration"]["parameter"]]
+        clean_digest = sha256(family.lane_bytes(plain["lanes"][trace]))
+        before_cache = set(family._RENDER_CACHE)
+        candidates = []
+        boundary = None
+        for index, (magnitude, unit) in enumerate(ladders[operator_id]):
+            instance = family.instance(
+                "ms-sm-" + fixture_label + "-" + str(index),
+                operator_id,
+                template["seam"],
+                magnitude,
+                dict(template["configuration"]),
+            )
+            _, outcome = run_plan([instance])
+            lane = outcome["lanes"][trace]
+            changed = sha256(family.lane_bytes(lane)) != clean_digest
+            status = outcome["events"][0]["status"]
+            entry = {
+                "magnitude": magnitude,
+                "unit": unit,
+                "event_status": status,
+                "lane_bytes_changed": changed,
+            }
+            if changed:
+                recorded, _ = paired_rows(
+                    plain["lanes"][trace],
+                    lane,
+                    trace,
+                    "directed:signal-family-0/second-magnitude/" + fixture_label,
+                )
+                detected = recorded[SECOND_MAGNITUDE_MANDATORY_ROW]["verdict"] == "FAIL"
+                entry["mandatory_row_verdict"] = recorded[SECOND_MAGNITUDE_MANDATORY_ROW]["verdict"]
+                entry["detected"] = detected
+                entry["verdict"] = "FAIL" if detected else "NO VERDICT"
+            else:
+                entry["detected"] = False
+                entry["verdict"] = "NO VERDICT"
+            candidates.append(entry)
+            if changed:
+                boundary = index
+                break
+        # Variant lanes rendered for the search are not retained.
+        for key in set(family._RENDER_CACHE) - before_cache:
+            del family._RENDER_CACHE[key]
+        if boundary is None or boundary == 0:
+            raise SystemExit(
+                "FAIL: second-magnitude ladder did not bracket the byte-change "
+                "boundary for " + operator_id
+            )
+        below = candidates[boundary - 1]
+        at = candidates[boundary]
+        if below["lane_bytes_changed"]:
+            raise SystemExit("FAIL: immediately smaller magnitude was not a no-change: " + operator_id)
+        if not (at["detected"] and at["event_status"] == "applied"):
+            raise SystemExit("FAIL: boundary magnitude did not trip the mandatory row: " + operator_id)
+        records.append(
+            {
+                "operator": operator_id,
+                "target_trace": trace,
+                "mandatory_row": SECOND_MAGNITUDE_MANDATORY_ROW,
+                "search": "ascending perturbation size over the declared candidate ladder",
+                "candidates": candidates,
+                "boundary_magnitude": at["magnitude"],
+                "boundary_unit": at["unit"],
+                "immediately_smaller_magnitude": below["magnitude"],
+                "immediately_smaller_verdict": below["verdict"],
+                "boundary_verdict": at["verdict"],
+                "note": SECOND_MAGNITUDE_NOTE,
+            }
+        )
+    not_applicable = []
+    for operator_id in sorted(mutations.OPERATORS):
+        if not operator_id.startswith(("osc.", "gain.", "clip.", "norm.", "signal.sham")):
+            continue
+        if operator_id in ladders:
+            continue
+        magnitude = mutations.OPERATORS[operator_id]["magnitude"]
+        if magnitude["type"] != "null":
+            raise SystemExit("FAIL: numeric operator lacks a second-magnitude record: " + operator_id)
+        not_applicable.append(
+            {
+                "operator": operator_id,
+                "second_magnitude": "not applicable",
+                "reason": "fixed/discrete operator without a numeric magnitude",
+            }
+        )
+    return {"records": records, "not_applicable": not_applicable}
+
+
+def wrong_then_right_control():
+    """A refused or failing new fault must not contaminate the next attempt."""
+    valid = lambda label: family.instance(
+        label, "clip.truncate_step", "voice.post_module", TRUNCATE_STEP,
+        {"trace": "vco_1.post_vca", "slot": 0},
+    )
+    _, fresh = run_plan([valid("ms-wtr-valid")])
+    refusals = []
+    try:
+        family.make_plan(
+            binding(),
+            [family.instance("ms-wtr-domain", "clip.truncate_step", "voice.post_module", 2.0,
+                             {"trace": "vco_1.post_vca", "slot": 0})],
+        )
+    except mutations.MutationError as error:
+        refusals.append(str(error))
+    try:
+        run_plan([family.instance("ms-wtr-zero", "clip.truncate_step", "voice.post_module", 0.0,
+                                  {"trace": "vco_1.post_vca", "slot": 0})])
+    except mutations.MutationError as error:
+        refusals.append(str(error))
+    # a failing (detected) -1 dB fault between the wrong attempt and the right one
+    run_plan([FAULT_FIXTURES["gain.db (minus 1 dB)"][1]])
+    _, final = run_plan([valid("ms-wtr-valid")])
+    return (
+        len(refusals) == 2
+        and final["lanes"] == fresh["lanes"]
+        and final["rendered"] == fresh["rendered"]
+        and final["events"] == fresh["events"]
+        and final["events_summary"] == fresh["events_summary"]
+    )
+
+
 def localization_record(clean, faulted):
     source_traces = ("vco_1.post_vca", "vco_2.post_vca")
     source = [name for name in source_traces if faulted["lanes"][name] != clean["lanes"][name]]
@@ -298,6 +537,7 @@ def build_publication():
         and plain["events_summary"]["complete"] is True,
         "global_rng_untouched_by_attempts": rng_untouched,
         "no_errored_events_in_controls": True,
+        "wrong_then_right_no_contamination": wrong_then_right_control(),
     }
     failed_controls = [name for name, okay in controls.items() if not okay]
     if failed_controls:
@@ -360,7 +600,7 @@ def build_publication():
         tripped = bool(failed_rows) and "max_abs_error" in failed_rows
         record(
             fault,
-            fault,
+            fault_instance["operator"],
             fault_instance["seam"],
             "paired exactness contract rows (framing_match/exact_equal/"
             "max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
@@ -642,6 +882,49 @@ def build_publication():
         composition_control_ok,
     )
 
+    truncation = truncation_directed()
+    trunc_lane = run_plan([FAULT_FIXTURES["clip.truncate_step"][1]])[1]["lanes"]["vco_1.post_vca"]
+    round_lane = run_plan([FAULT_FIXTURES["clip.round_step"][1]])[1]["lanes"]["vco_1.post_vca"]
+    distinct_lanes = family.lane_bytes(trunc_lane) != family.lane_bytes(round_lane)
+    distinction_recorded, _ = paired_rows(
+        round_lane, trunc_lane, "vco_1.post_vca",
+        "directed:signal-family-0/clip-truncate-vs-round/fault",
+    )
+    distinction_control, _ = paired_rows(
+        round_lane, round_lane, "vco_1.post_vca",
+        "directed:signal-family-0/clip-truncate-vs-round/control",
+    )
+    distinction_failed = sorted(
+        name for name, verdict in paired_verdicts(distinction_recorded).items() if verdict == "FAIL"
+    )
+    distinction_control_ok = all(
+        verdict == "PASS" for verdict in paired_verdicts(distinction_control).values()
+    )
+    record(
+        "clip.truncate_step vs clip.round_step (directed distinction)",
+        "clip.truncate_step",
+        "voice.post_module",
+        "paired exactness contract rows between the truncated and rounded "
+        "lanes at the same step, plus directed exact-grid/sign/zero vectors",
+        "FAIL on max_abs_error and exact_equal between truncation and "
+        "rounding with a PASSing clean control",
+        "truncated lane differs from rounded lane: "
+        + str(distinct_lanes)
+        + "; directed vectors distinguish: "
+        + str(truncation["distinguishes_from_round"])
+        + "; failed rows "
+        + ",".join(distinction_failed),
+        distinct_lanes
+        and truncation["distinguishes_from_round"]
+        and truncation["exact_grid_points_unchanged"]
+        and truncation["inexact_step_exact_grid_point"]["unchanged"]
+        and "max_abs_error" in distinction_failed
+        and "exact_equal" in distinction_failed,
+        distinction_control_ok,
+    )
+
+    second_magnitude = second_magnitude_records(plain)
+
     untripped = [entry["fault"] for entry in rows if not entry["tripped"] or not entry["control_accepted"]]
     if untripped:
         raise SystemExit("FAIL: family faults did not trip their rows: " + ", ".join(untripped))
@@ -695,6 +978,8 @@ def build_publication():
         },
         "operator_matrix": operator_matrix,
         "controls": controls,
+        "truncation_directed": truncation,
+        "second_magnitude": second_magnitude,
         "optional_observations": optional_records,
         "localization": localization,
         "normalization_coverage": normalization_coverage,
@@ -720,6 +1005,8 @@ COMPARABLE_FIELDS = (
     "fixture",
     "operator_matrix",
     "controls",
+    "truncation_directed",
+    "second_magnitude",
     "optional_observations",
     "localization",
     "normalization_coverage",
