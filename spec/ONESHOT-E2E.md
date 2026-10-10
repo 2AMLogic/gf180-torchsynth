@@ -1037,9 +1037,10 @@ The remaining open items are **not** conformance gaps:
    artifacts bound to the same revision (`spec/RTL-MODULE-QUALIFICATION.md`,
    "Integrated one-shot lanes"). What remains is the **lint/runtime baseline
    for those lanes' units, which must be generated on CI's toolchain (Icarus
-   12.0 / Verilator 5.020)** via the manual
-   `.github/workflows/rtl-lint-baseline.yml`, reviewed and committed. It has
-   not been generated, so the gate reports those lanes' diagnostics without
+   12.0 / Verilator 5.020)** -- by the `rtl-module-qualification` job's
+   non-enforcing candidate step or the manual
+   `.github/workflows/rtl-lint-baseline.yml` -- reviewed and committed. Until
+   it is committed, the gate reports those lanes' diagnostics without
    enforcing them and withholds its whole-node verdict (`NO VERDICT`) rather
    than passing. This item is removed only once that baseline and a same-PR
    CI run of the producer jobs plus the aggregate job are committed as

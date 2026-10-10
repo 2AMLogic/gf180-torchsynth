@@ -64,6 +64,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -342,12 +343,36 @@ WAIVER_REASONS: dict[str, str] = {
         "leaves the untouched tail at its declared default. The lane's own "
         "bit-exact comparison only reads the vector's declared sample "
         "range, so the truncation report describes expected per-vector "
-        "framing, not a defect. Icarus's classifier bucket for a "
+        "framing, not a defect. The same pattern occurs in the integrated "
+        "whole-voice lane (issue #264): tb_one_shot_voice.sv sizes its "
+        "host-replayed stream buffers (fq1/fq2/sqq/lqq) at "
+        "SCHED_SAMPLES_PER_PASS = 176,400 words and its C8 noise-byte "
+        "buffer at 4x that, while the regression profile's prefix-capped "
+        "simulations (binding baseline, capped mutants, replay pair) load "
+        "shorter files; the bench refuses a walk longer than the buffer "
+        "(WALK > AUDIO_MAX fails) and only reads indices below the "
+        "declared walk / byte count. Icarus's classifier bucket for a "
         "'warning:'-prefixed line is this generic class rather than the "
         "dedicated READMEM class (see RUNTIME_PATTERNS's match order); "
         "waived at its committed per-lane count, so any new or increased "
         "occurrence -- including one that is NOT this readmemh pattern -- "
         "still gates."
+    ),
+    "SYNCASYNCNET": (
+        "issue #264's integrated one-shot benches (tb_one_shot_tail.sv, "
+        "tb_one_shot_voice.sv) drive a single bench reg 'rst' into engines "
+        "that were each landed and lane-qualified with their own reset "
+        "style: audio_mix_engine / mod_matrix_engine / upsample_engine / "
+        "sine_vco_engine / square_saw_vco_engine reset asynchronously "
+        "(posedge rst), adsr_engine / lfo_vca_engine / noise_stream_dut / "
+        "normalization_replay_engine synchronously. Composing them makes "
+        "Verilator report the shared net as flopped both ways. In "
+        "simulation the bench asserts rst from time zero and releases it "
+        "once, on a falling clock edge, so there is no reset-release race "
+        "for the bit-exact comparison to miss. Whether a taped-out top "
+        "needs one reset style (and reset synchronisers) is an "
+        "implementation/synthesis question this verification waiver does "
+        "not answer and does not claim to"
     ),
 }
 
@@ -1258,6 +1283,34 @@ def tool_versions() -> dict:
     return versions
 
 
+#: GitHub Actions' own run identifiers, recorded verbatim into the ledger's
+#: provenance when a baseline is generated on a hosted runner, so a reader can
+#: find the exact run (and runner image) that produced it. Absent locally.
+CI_RUN_ENV: dict[str, str] = {
+    "repository": "GITHUB_REPOSITORY",
+    "workflow": "GITHUB_WORKFLOW",
+    "job": "GITHUB_JOB",
+    "run_id": "GITHUB_RUN_ID",
+    "run_attempt": "GITHUB_RUN_ATTEMPT",
+    "event": "GITHUB_EVENT_NAME",
+    "sha": "GITHUB_SHA",
+    "ref": "GITHUB_REF",
+    "runner_image_os": "ImageOS",
+    "runner_image_version": "ImageVersion",
+}
+
+
+def ci_run_provenance(environ: Optional[dict] = None) -> dict:
+    """The GitHub Actions run this process is executing in ({} if none)."""
+
+    env = os.environ if environ is None else environ
+    if env.get("GITHUB_ACTIONS") != "true":
+        return {}
+    return {
+        key: env[name] for key, name in CI_RUN_ENV.items() if env.get(name)
+    }
+
+
 def toolchain_matches_ci(versions: dict) -> list[str]:
     """Reasons the local toolchain is not the ledger's CI toolchain."""
 
@@ -1456,6 +1509,14 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "required with --integrated-artifacts",
     )
     parser.add_argument(
+        "--baseline-output", type=Path, default=None,
+        help="with --update-baseline, write the regenerated ledger HERE "
+        "instead of over %s, and compare this run against it. The "
+        "committed ledger is left byte-identical, so a CI job can emit a "
+        "reviewable candidate without ever mutating what it enforced"
+        % BASELINE_PATH,
+    )
+    parser.add_argument(
         "--allow-foreign-toolchain", action="store_true",
         help="let --update-baseline run on a toolchain that is not CI's; the "
         "recorded provenance then keeps integrated lanes unbaselined",
@@ -1493,6 +1554,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
                 name, args.integrated_profile,
                 ", ".join(INTEGRATED_LANES[name].profiles)))
             return 2
+    if args.baseline_output is not None and not args.update_baseline:
+        print("ERROR: --baseline-output only applies with --update-baseline")
+        return 2
     producer_results: dict = {}
     for item in args.producer_result:
         lane_name, _, value = item.partition("=")
@@ -1679,6 +1743,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
             "generated_at": datetime.now(timezone.utc).strftime(
                 "%Y-%m-%dT%H:%M:%SZ"),
         }
+        ci_run = ci_run_provenance()
+        if ci_run:
+            provenance["ci_run"] = ci_run
         registry = {}
         for name in INTEGRATED_NAMES:
             entry: dict = {}
@@ -1696,12 +1763,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
             runtime_units=list(lanes) + [
                 n for n in integrated if integrated_runtime.get(n)],
         )
-        (root / BASELINE_PATH).write_text(
+        output = (
+            args.baseline_output if args.baseline_output is not None
+            else root / BASELINE_PATH
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
             json.dumps(baseline, indent=2) + "\n", encoding="utf-8"
         )
-        print("wrote %s (%d waiver(s))" % (BASELINE_PATH, len(baseline["waivers"])))
+        print("wrote %s (%d waiver(s))" % (output, len(baseline["waivers"])))
 
-    baseline = load_baseline(root)
+    if args.baseline_output is not None:
+        # Compare against the candidate just written: the committed ledger
+        # was neither read for enforcement nor modified by this run.
+        with args.baseline_output.open(encoding="utf-8") as handle:
+            baseline = json.load(handle)
+    else:
+        baseline = load_baseline(root)
     # An integrated lane's diagnostics are only GATED once the ledger records
     # that they were baselined on CI's own toolchain. Until then they are
     # reported and the verdict is withheld: neither silently waived nor

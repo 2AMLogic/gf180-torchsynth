@@ -298,13 +298,14 @@ jobs:
     needs: [oneshot-tail-chain, oneshot-whole-voice]
     if: always()
     # Step budgets: 20 setup + 5 evaluator + 1 mkdir + 2 x 5 artifact
-    # download + 25 aggregate gate + 5 upload = 66 (measured before #264:
-    # ~11 s install, ~2 s evaluator, ~2.5 min aggregate gate, run
-    # 37281310453). Cap 80: 14 minutes over the step sum, 280 minutes under
-    # the 360-minute hosted limit. The time spent waiting on the producers
+    # download + 25 aggregate gate + 10 candidate re-baseline + 5 upload = 76
+    # (measured before #264: ~11 s install, ~2 s evaluator, ~2.5 min
+    # aggregate gate, run 37281310453; the candidate step re-runs only the
+    # lint tier and the artifact validation, no lane). Cap 90: 14 minutes
+    # over the step sum, 270 minutes under the 360-minute hosted limit. The time spent waiting on the producers
     # above is not charged here: a job's timeout-minutes runs from when the
     # job starts on a runner, after its `needs` complete.
-    timeout-minutes: 80
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         timeout-minutes: 5
@@ -354,6 +355,30 @@ jobs:
             --producer-result oneshot-tail-chain=${{ needs.oneshot-tail-chain.result }} \
             --producer-result oneshot-whole-voice=${{ needs.oneshot-whole-voice.result }} \
             --log out/rtl-modules.log --record out/rtl-modules-evidence.json
+      # Issue 264: AFTER the gate above has compared this revision against the
+      # committed ledger, emit a candidate re-baseline generated on THIS job's
+      # toolchain (the ledger's own: apt iverilog 12.0 / verilator 5.020) from
+      # the same producer artifacts, for a human to review and commit. It is
+      # written under out/ (uploaded with the evidence below) via
+      # --baseline-output, so tb/rtl-lint-baseline.json is never modified and
+      # nothing in this job enforces against the candidate. Runs only if the
+      # gate passed (no if:), and refuses to generate from failed/stale lanes
+      # or on a non-CI toolchain.
+      - name: Candidate lint/runtime re-baseline for review (never enforced, never committed)
+        timeout-minutes: 10
+        # The producers' real results, forwarded through env (the gate step
+        # above stays the single place tests/test_ci_lane_wiring.py anchors
+        # the job-level always() admission on).
+        env:
+          TAIL_CHAIN_RESULT: ${{ needs.oneshot-tail-chain.result }}
+          WHOLE_VOICE_RESULT: ${{ needs.oneshot-whole-voice.result }}
+        run: |
+          python3 tools/qualify_rtl_modules.py --lint --update-baseline \
+            --baseline-output out/baseline-candidate/rtl-lint-baseline.json \
+            --integrated all --integrated-profile regression \
+            --integrated-artifacts out/integrated-artifacts \
+            --producer-result "oneshot-tail-chain=$TAIL_CHAIN_RESULT" \
+            --producer-result "oneshot-whole-voice=$WHOLE_VOICE_RESULT"
       - name: Upload qualification evidence
         if: always()
         timeout-minutes: 5
