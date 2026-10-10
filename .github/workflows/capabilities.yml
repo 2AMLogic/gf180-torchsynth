@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     if: github.event_name == 'pull_request'
@@ -40,9 +44,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
-    concurrency:
-      group: capability-refresh-main
-      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
