@@ -21,7 +21,6 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
@@ -32,7 +31,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
 
 ## PRs Awaiting Review
 
@@ -98,8 +97,8 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 3 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 6 |
-| In Progress (`loom:building`) | 0 |
+| Ready (`loom:issue`) | 5 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 17 |
