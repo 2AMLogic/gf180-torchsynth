@@ -79,6 +79,20 @@ path found by `find / -xdev`), G3 (historical part only; #289 reads `closed`), a
 G4 are unchanged. No render, store verification, reproduction, or holdout access
 was run (class C remains none).**
 
+**Re-verification (2026-10-10, revision `5f977ca18529d4ee06cda850c54c2829a8a718a4`):
+verdicts unchanged. `git diff --stat ad0f524 HEAD -- src tools tests sim/reference spec`
+is empty, so nothing audited changed. Executed serially on Linux 7.0.0-1014-aws,
+Python 3.12.3, in the clean worktree `.loom/worktrees/issue-4`: `test_artifacts.py`
+28 OK (0.397 s), `test_storage.py` 16 OK (4.475 s), `test_artifact_renderer.py` 17 OK
+(14.609 s), `test_corpus.py` 22 OK (70.478 s), 0 failures (83 tests),
+`tools/check_contract.py` exit 0. Observation for G1: in this checkout's object store
+`git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e` now exits 128 (object
+absent), which differs from the exit 0 recorded at `ad0f524`; the local presence of the
+producer commit is therefore not stable across checkouts, and no reproduction ran. G2
+(`find / -xdev -name 'corpus-smoke-15*'` found nothing), the historical part of G3, and
+G4 are unchanged. No render, store verification, reproduction, or holdout access was
+run (class C remains none).**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
