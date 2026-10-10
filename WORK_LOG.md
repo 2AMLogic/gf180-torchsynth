@@ -2,6 +2,10 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-10
+
+- **PR #346**: docs: re-verify corpus artifact audit at 74a74e7 (Part of #4)
+
 ### 2026-10-09
 
 - **PR #344**: ci: cite 2am docs/ci.md Blacksmith section instead of retired (D5)
