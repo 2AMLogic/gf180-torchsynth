@@ -16,7 +16,7 @@ record is never counted as a check executed by this audit.
 scope. Real-render evidence exists but is historical only (the two-case #15
 smoke record, the 96-case #19 development run, and its #20 byte-repeat, all
 inspected rather than re-executed here), and four bounded gaps remain (G1-G4
-below). Issue #4 must stay open; this audit does not close it.**
+below; G3 narrowed on 2026-10-10 to retained historical records). Issue #4 must stay open; this audit does not close it.**
 
 **Re-verification (2026-10-07, revision `1386c4d314c6308dcb5ac4e1db580b31cfa4ef0b`):
 verdicts unchanged. All 68 focused tests and the contract check passed again.
@@ -50,15 +50,116 @@ Linux 6.17.0-1019-aws, Python 3.12.3, serially, in the clean worktree
 `test_corpus.py` 16 OK (42.396 s), `tools/check_contract.py` exit 0. No render,
 store verification, or reproduction was run (class C remains none).**
 
+**Re-verification (2026-10-10, revision `74a74e740fa4abb63586358679b335eb97685a61`):
+audited inputs changed since `a4d7a3f` (#289 receipt portability, PR #308, commit
+`ed8c5fc`; renderer, corpus, runner spec, run schema description, and tests).
+**G3 is narrowed: for newly produced runs it is now established at synthetic-test
+scope** (portable-receipt policy, validator, and synthetic rejection tests, all
+passing here). The retained historical records still contain host paths and stay
+unmodified, so the historical part of G3 remains a recorded, deliberately
+deferred limit. G1 (`git cat-file -t` exit 128), G2 (no `corpus-smoke-15` store
+or run directory found), and G4 are unchanged. Focused suites passed: 83 tests,
+0 skips (28 + 16 + 17 + 22), `tools/check_contract.py` exit 0. No render, store
+verification, reproduction, or holdout access was run (class C remains none).
+Details under "Re-verification run at `74a74e7`".**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
 | --- | --- |
-| A. Fresh synthetic tests | Executed by this audit at revision `1386c4d314c6308dcb5ac4e1db580b31cfa4ef0b` (2026-10-07 re-verification) and earlier at `e29a8a946f564cbea4b0c318f0a86af1e3baa0e0` (PR #285) (see Executed checks) |
+| A. Fresh synthetic tests | Executed by this audit at revision `1386c4d314c6308dcb5ac4e1db580b31cfa4ef0b` (2026-10-07 re-verification), most recently at `74a74e740fa4abb63586358679b335eb97685a61` (2026-10-10), and earlier at `e29a8a946f564cbea4b0c318f0a86af1e3baa0e0` (PR #285) (see Executed checks) |
 | B. Historical publication inspection | `sim/reference/corpus-smoke.json` (#15), `sim/reference/development-corpus-first.json` (#19), and `sim/reference/development-corpus-repeat.json` (#20) read and cross-checked, not re-executed |
 | C. Fresh runtime measurement | None. No Docker/amd64 render, store verification, or reproduction was run in either audit pass |
 
 ## Executed checks (class A)
+
+### Re-verification run at `74a74e7` (2026-10-10)
+
+Environment: Linux 7.0.0-1014-aws (shared AWS dispatch worker), Python 3.12.3,
+`TORCHSYNTH_ROOT` unset, no Torch/Docker used. Clean worktree
+`.loom/worktrees/issue-4` at `HEAD` `74a74e740fa4abb63586358679b335eb97685a61`
+(equal to `origin/main`). Run serially. Wall time is from `time`; the suite
+time is the unittest-reported value.
+
+| Command | Exit | Result | Suite time | Wall time |
+| --- | --- | --- | --- | --- |
+| `python3 -m unittest discover -s tests -p test_artifacts.py -v` | 0 | 28 tests OK, 0 skips | 0.460 s | 0.55 s |
+| `python3 -m unittest discover -s tests -p test_storage.py -v` | 0 | 16 tests OK, 0 skips | 2.638 s | 2.75 s |
+| `python3 -m unittest discover -s tests -p test_artifact_renderer.py -v` | 0 | 17 tests OK, 0 skips | 11.248 s | 11.46 s |
+| `python3 -m unittest discover -s tests -p test_corpus.py -v` | 0 | 22 tests OK, 0 skips | 93.925 s | 94.12 s |
+| `python3 tools/check_contract.py` | 0 | `contract manifests are internally consistent` | n/a | n/a |
+
+Changes since `a4d7a3f` (`git diff --stat a4d7a3f..HEAD` over
+`spec/ARTIFACT-CONTRACT.md`, `spec/CORPUS-RUNNER.md`,
+`spec/schemas/corpus-run-v1.schema.json`, `src/torchsynth_voice/artifact_renderer.py`,
+`src/torchsynth_voice/corpus.py`, `tests/test_artifact_renderer.py`,
+`tests/test_corpus.py`, `tools/render_corpus.py`): 8 files, 1167 insertions, 57
+deletions. `test_artifact_renderer.py` grew from 8 to 17 tests and
+`test_corpus.py` from 16 to 22. The storage, artifact-contract tests, fixtures,
+and `sim/reference/corpus-smoke.json` were not part of that diff set.
+
+G3 reassessment (code and tests inspected and executed, not rendered):
+
+- Policy: `spec/CORPUS-RUNNER.md` "Portable attempt receipts" (and the
+  "Historical v1 records" paragraph); `spec/ARTIFACT-CONTRACT.md` now points
+  corpus run receipts at it.
+- Implementation: `src/torchsynth_voice/artifact_renderer.py`
+  `ReceiptPortabilityError` (line 79), `host_path_findings` (112),
+  `require_portable_receipt` (132), `failure_receipt` (246),
+  `validate_failure_receipt` (258). `src/torchsynth_voice/corpus.py` calls
+  `require_portable_receipt` before the immutable finish record is written
+  (`run_corpus`, around lines 655-690), and `validate_attempt_receipt` (371) runs
+  from `validate_run` (385; default `receipt_policy="portable-v1"`, call at line 457).
+- Schema: `spec/schemas/corpus-run-v1.schema.json` still constrains `receipt`
+  structurally as an object; only its description changed. The semantic rule is
+  enforced by `validate_run`, not by the JSON schema alone.
+- Synthetic rejection tests (all passed here): `test_artifact_renderer.py`
+  `test_every_host_path_form_rejected`, `test_diagnostics_never_echo_the_offending_text`,
+  `test_declared_container_paths_and_portable_values_accepted`,
+  `test_command_requires_marker_and_placeholder_mount_sources`,
+  `test_failure_diagnostic_withholds_path_bearing_messages`,
+  `test_render_artifact_refuses_path_bearing_receipt_before_publication`,
+  `test_audio_only_backend_publishes_placeholder_command`,
+  `test_worker_failure_diagnostic_is_withheld_when_path_bearing`; `test_corpus.py`
+  `test_path_bearing_exception_never_reaches_a_finish_record`,
+  `test_non_portable_success_receipt_recorded_as_failed_then_retried`,
+  `test_validator_rejects_path_bearing_receipts_in_any_attempt`,
+  `test_validator_requires_portable_failure_diagnostic`,
+  `test_portable_command_and_container_paths_accepted`.
+- Historical records: `test_retained_historical_receipts_classified_not_portable_read_only`
+  (renderer tests) shows the retained smoke render receipts are still classified
+  non-portable (exactly two `posix-absolute` findings per receipt, the host mount
+  sources) and that the file bytes are unchanged.
+  `test_historical_path_bearing_run_explicit_policy_read_only` (corpus tests)
+  shows the explicit `historical-v1` verify mode (`tools/render_corpus.py --verify
+  ... --historical-receipts`) runs read-only and never reports such receipts as
+  portable. The retained evidence JSONs were not modified.
+- Issue #289 reads `closed` via the GitHub REST API (2026-10-10).
+- The scan for G3 locations in the historical JSON records is unchanged from the
+  earlier passes; it was not repeated.
+
+AC6 (holdout boundary) tests relevant here: the corpus tests named under AC6
+all passed (`test_default_has_only_development`, `test_mixed_holdout_refused`,
+`test_mixed_range_refused_before_any_renderer_or_store_access`,
+`test_holdout_admission_one_shot_and_same_run_resume_synthetic_only`,
+`test_interrupted_holdout_reuse_retains_one_shot_admission`). Since `a4d7a3f`
+the repository also gained `tests/test_holdout_seal.py` (43 tests, from commit
+`e13c33b`, Part of #55, extended by `3513df8`) covering the seal manifest,
+tamper refusal, and refusal gates. That file is outside this audit's focused
+set and was **not run** here, so it is cited as an existing test file only. No
+holdout identity was rendered or accessed.
+
+Producer reachability (G1): `git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e`
+in the worktree failed with exit 128 (`could not get object info`). The pull
+request ref fetch from the earlier pass was not repeated.
+Raw store (G2): `find / -xdev` for names `corpus-smoke*` and `corpus-run*`
+returned only copies of `sim/reference/corpus-smoke.json` and
+`spec/schemas/corpus-run-v1.schema.json` inside repository worktrees; no
+`corpus-smoke-15` store or `runs/6e198bc9...` directory exists. Store
+verification: **not run**.
+
+Not run: full suite, `tests/test_holdout_seal.py`, `python3 -S` standalone suite
+runs, concurrent-writer loop, ruff, compileall, any store verification or render.
 
 ### Re-verification run at `6d1bdff` (2026-10-07)
 
@@ -250,7 +351,7 @@ Traces were not requested (audio-only).
 | AC5 | Duplicate identities with conflicting bytes are rejected | **established** (synthetic, fresh) | A: storage `test_collision_reports_both_metadata_and_changed_output_hashes`, `test_metadata_whitespace_only_change_is_a_collision`, `test_two_process_writers_converge_or_report_collision`; renderer `test_same_id_different_bytes_collision_preserves_original`; artifacts `test_duplicate_case_or_sound_or_artifact_is_rejected`. Limit: cooperating local POSIX writers only |
 | AC6 | Holdout artifacts have an access boundary documented and tested | **established** (synthetic, fresh; documentation inspected) | Documented in `spec/CORPUS-RUNNER.md` "One-shot holdout gate". A: corpus `test_default_has_only_development`, `test_mixed_holdout_refused`, `test_mixed_range_refused_before_any_renderer_or_store_access`, `test_holdout_admission_one_shot_and_same_run_resume_synthetic_only`, `test_interrupted_holdout_reuse_retains_one_shot_admission`. B: `actual_holdout_access=false`, `plan.admission=null`. Limit: synthetic payloads only; operator-attested freeze and operator-held ledger, no remote admission service; no real holdout rendered or accessed, and none was authorized |
 | AC7 | Unit tests cover resume, collision, partial-write, corrupt-hash, missing-sample, and dirty-tree metadata | **established** (fresh) | Resume: AC1 tests. Collision: AC5. Partial write: AC2. Corrupt hash: storage corrupt/truncated test, corpus corrupt payload test, `test_corrupt_existing_artifact_never_resumes_or_gets_replaced`. Missing sample: storage missing/truncated files, renderer short audio, schema sample count of 176,400. Dirty tree: `test_artifacts.py::test_clean_and_dirty_git_digests`, `test_missing_provenance_never_defaults`. Limit: "missing-sample" is covered as missing/short audio payload and sample-count validation, not as a distinct sample-gap test |
-| AC8 | The public metadata schema contains no absolute user path | **established** for artifact, index, and plan documents; **see G3** for run receipts | A: `tests/fixtures/artifacts/rejections.json` unsafe-reference mutations (POSIX/Windows/UNC/parent-traversal) all rejected by `test_negative_fixture_mutations`; `test_path_traversal_aliases_and_reserved_metadata_are_rejected`. A (script): no `/Users`, `/home`, `/private` in embedded smoke `artifacts`, `plan`, `index`. The same scan over the embedded `plan` and `index` of both `development-corpus-*.json` records found none. Limit: the strings in `rejections.json` are intentional negative inputs. The retained run `attempts[].receipt.command` strings and `local_checks`/`limits` text do contain host paths (G3) |
+| AC8 | The public metadata schema contains no absolute user path | **established** for artifact, index, and plan documents and (synthetic, fresh, since #289) for newly produced run receipts; **see G3** for retained historical receipts | A: `tests/fixtures/artifacts/rejections.json` unsafe-reference mutations (POSIX/Windows/UNC/parent-traversal) all rejected by `test_negative_fixture_mutations`; `test_path_traversal_aliases_and_reserved_metadata_are_rejected`. A (script): no `/Users`, `/home`, `/private` in embedded smoke `artifacts`, `plan`, `index`. The same scan over the embedded `plan` and `index` of both `development-corpus-*.json` records found none. A (since #289): the portable-receipt tests listed under the `74a74e7` run. Limit: the strings in `rejections.json` are intentional negative inputs. The retained run `attempts[].receipt.command` strings and `local_checks`/`limits` text do contain host paths (G3) |
 
 ## Evidence requirement (original "Evidence" section)
 
@@ -281,8 +382,8 @@ Traces were not requested (audio-only).
 | --- | --- | --- | --- |
 | G1 | Producer commit `224eb15a599171b3a8b65ca72457f7e452b83c8e` is not reachable from any branch: after `git fetch origin`, `git cat-file -t 224eb15a...` fails (exit 128) because `25495a3` squash-merged PR #110. **Narrowed 2026-10-07:** GitHub still serves it. `gh api repos/2AMLogic/gf180-torchsynth/commits/224eb15a...` returns the commit ("fix: bind every resume event to its original artifact reference", 2026-09-19), associated with PR #110 (`feature/issue-15`). `git fetch origin pull/110/head` (into `FETCH_HEAD` only, no ref created) made it a local `commit` object. It is an ancestor of the PR head `6c285a28ed2217c77fdfdc306ee6cb804841b768`, and `git diff --stat 224eb15 6c285a2` touches only `src/torchsynth_voice/corpus.py`, `tests/test_corpus.py`, and `sim/reference/corpus-smoke.json` | The source checkout is now obtainable, but this audit did not reproduce anything. No admitted runtime (Apple host with Docker amd64 emulation and the private exact upstream archive) is available on this dispatch worker, and the issue forbids a render made only to write this audit | On an admitted runtime, run `git fetch origin pull/110/head` and check out `224eb15a...` in an isolated worktree. Then run an independent reproduction of the two-case smoke into an isolated store. GitHub may eventually garbage-collect the PR ref. A durable ref (for example an annotated tag) would need an operator decision. This gap is specific to the two-case smoke producer: the 96-case development run (producer `bd8b35e4...`) already has an independent byte-repeat recorded by #20 (`development-corpus-repeat.json`, `COMPLETE-REPEAT`). Fresh runtime measurement: **not run** |
 | G2 | Raw store bytes for run `6e198bc9a03f4a929ac0a59a93c775cf` are absent (`out/corpus-smoke-15` is ignored and not retained), so read-only `--verify` with envelope digest `122cd1cf...7818` could not be executed. Re-checked 2026-10-07: neither `corpus-smoke-15` nor the run directory exists anywhere on this worker's root filesystem | Embedded metadata cannot substitute for payload hashing; exact-byte digests are not reproducible from embedded canonical JSON | If the bytes are recovered, run `python3 -S tools/render_corpus.py --store <recovered> --verify 6e198bc9a03f4a929ac0a59a93c775cf --run-sha256 122cd1cf...7818` and record the result. Store verification: **not run** |
-| G3 | Retained run receipts embed absolute host paths, contradicting the intent of "no absolute user path" for any retained public record, although artifact/index/plan metadata are clean. In `corpus-smoke.json`: Docker `--mount src=<host-worktree>/.loom/worktrees/issue-15` and `src=<tmp>/...` at `render_run.attempts[*].receipt.command[26]` and `[28]` (same in `resumed_run.attempts[*]`), plus `local_checks[0].command` and `limits[4]`. The `development-corpus-*.json` receipts also contain operator-home store paths: in `-first.json` at `commands[*].command`, `smoke.store_root`, `storage.root`, `verification[0].command`; in `-repeat.json` at `commands[*].command`, `pre_run_store_inventory.smoke_store`, `storage.root`. This audit quotes them only as placeholders; the raw strings live at those JSON locations | AC8 is scoped to the metadata schema; run-envelope receipts were not covered by a path-rejection test, and no committed test asserts receipts are path-free. Source located 2026-10-07: `spec/schemas/corpus-run-v1.schema.json` constrains `/properties/attempts/items/properties/receipt` only as `{"type": "object"}`. `DockerBackend` in `src/torchsynth_voice/artifact_renderer.py` builds `--mount type=bind,src=<project_root>,...` and `src=<resolved tempdir>,...` and stores the list as `receipt["command"]` | Tracked as #289: decide whether `corpus-run-v1` receipts must be portable, then normalize them at construction and add a validator check and a synthetic rejection test. The retained evidence JSONs stay read-only for this scope |
-| G4 | Real holdout behavior (the 32-case one-shot holdout command has never been run) and named-trace capture are not evidenced. The 96-case development corpus is not part of this gap: it is evidenced historically (class B) by #19 and #20 above | Holdout access is not authorized; traces are #7/#24 work. The real development runs requested no traces | Tracked by those issues; synthetic admission/refusal tests are the only holdout evidence |
+| G3 | **Narrowed 2026-10-10 (revision `74a74e7`).** Newly produced run receipts are now portable by construction and by validation, established at synthetic-test scope (see the `74a74e7` run section; #289 closed). **Remaining:** the retained historical records still embed absolute host paths and are unchanged. In `corpus-smoke.json`: Docker `--mount src=<host-worktree>/.loom/worktrees/issue-15` and `src=<tmp>/...` at `render_run.attempts[*].receipt.command[26]` and `[28]` (same in `resumed_run.attempts[*]`), plus `local_checks[0].command` and `limits[4]`. The `development-corpus-*.json` receipts also contain operator-home store paths: in `-first.json` at `commands[*].command`, `smoke.store_root`, `storage.root`, `verification[0].command`; in `-repeat.json` at `commands[*].command`, `pre_run_store_inventory.smoke_store`, `storage.root`. This audit quotes them only as placeholders | The #289 policy deliberately leaves retained evidence byte-identical and verifiable only via the explicit `historical-v1` mode; `spec/CORPUS-RUNNER.md` states that republishing historical evidence is a separate decision. The portable check covers attempt receipts only; the `local_checks`, `limits`, and `commands` text in the evidence JSONs is outside the run-envelope validator. The JSON schema itself still types `receipt` as a plain object. No production run under the new policy exists; the synthetic backend and tests used an injected renderer, not Docker | Decide whether to republish or annotate the retained evidence (separate decision, no change here), and confirm portable receipts in the first real render under the new policy. Fresh runtime measurement of that: **not run** |
+| G4 | Real holdout behavior (the 32-case one-shot holdout command has never been run) and named-trace capture are not evidenced. The 96-case development corpus is not part of this gap: it is evidenced historically (class B) by #19 and #20 above | Holdout access is not authorized; traces are #7/#24 work. The real development runs requested no traces | Tracked by those issues; synthetic admission/refusal tests are the only holdout evidence. Re-checked 2026-10-10: the holdout seal (`e13c33b`, Part of #55) adds `tests/test_holdout_seal.py`, which this audit did not run, so it adds no executed evidence here |
 
 No claim is made about holdout or full 128-case results, sound fidelity, scalar promotion,
 gf180mcu synthesis, layout, signoff, or hardware playback.
