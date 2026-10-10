@@ -4,6 +4,7 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-10
 
+- **PR #348**: docs: re-verify corpus artifact audit at ad0f524 (Part of #4)
 - **PR #346**: docs: re-verify corpus artifact audit at 74a74e7 (Part of #4)
 
 ### 2026-10-09
