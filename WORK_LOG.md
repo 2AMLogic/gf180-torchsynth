@@ -4,6 +4,8 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-10
 
+- **PR #351**: docs: re-verify corpus artifact audit at 5f977ca (Part of #4)
+- **PR #350**: renovate: move onto the 2AMLogic org preset
 - **PR #348**: docs: re-verify corpus artifact audit at ad0f524 (Part of #4)
 - **PR #346**: docs: re-verify corpus artifact audit at 74a74e7 (Part of #4)
 
