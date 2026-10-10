@@ -63,11 +63,27 @@ or run directory found), and G4 are unchanged. Focused suites passed: 83 tests,
 verification, reproduction, or holdout access was run (class C remains none).
 Details under "Re-verification run at `74a74e7`".**
 
+**Re-verification (2026-10-10, revision `ad0f524527848952d65ba81a527859a2a3c797aa`):
+verdicts unchanged. `git diff --stat 74a74e7 HEAD -- src tools tests sim/reference spec`
+is empty (only Loom resync and docs commits landed), so nothing audited changed.
+Executed serially on Linux 7.0.0-1014-aws, Python 3.12.3, in the clean worktree
+`.loom/worktrees/issue-4`: `test_artifacts.py` 28 OK (0.354 s), `test_storage.py`
+16 OK (1.647 s), `test_artifact_renderer.py` 17 OK (7.702 s), `test_corpus.py` 22 OK
+(61.424 s), 0 skips (83 tests), `tools/check_contract.py` exit 0. Observation for
+G1: `git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e` now prints `commit`
+(exit 0) in this checkout's object store, which differs from the exit 128 recorded
+earlier; the object is locally present (most likely from an earlier PR-ref fetch),
+but this audit did not check it out, and no reproduction ran. G1 remains a gap
+because the reproduction itself is the missing measurement. G2 (no `corpus-smoke-15`
+path found by `find / -xdev`), G3 (historical part only; #289 reads `closed`), and
+G4 are unchanged. No render, store verification, reproduction, or holdout access
+was run (class C remains none).**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
 | --- | --- |
-| A. Fresh synthetic tests | Executed by this audit at revision `1386c4d314c6308dcb5ac4e1db580b31cfa4ef0b` (2026-10-07 re-verification), most recently at `74a74e740fa4abb63586358679b335eb97685a61` (2026-10-10), and earlier at `e29a8a946f564cbea4b0c318f0a86af1e3baa0e0` (PR #285) (see Executed checks) |
+| A. Fresh synthetic tests | Executed by this audit at revision `1386c4d314c6308dcb5ac4e1db580b31cfa4ef0b` (2026-10-07 re-verification), most recently at `ad0f524527848952d65ba81a527859a2a3c797aa` (2026-10-10; previously `74a74e740fa4abb63586358679b335eb97685a61`), and earlier at `e29a8a946f564cbea4b0c318f0a86af1e3baa0e0` (PR #285) (see Executed checks) |
 | B. Historical publication inspection | `sim/reference/corpus-smoke.json` (#15), `sim/reference/development-corpus-first.json` (#19), and `sim/reference/development-corpus-repeat.json` (#20) read and cross-checked, not re-executed |
 | C. Fresh runtime measurement | None. No Docker/amd64 render, store verification, or reproduction was run in either audit pass |
 
