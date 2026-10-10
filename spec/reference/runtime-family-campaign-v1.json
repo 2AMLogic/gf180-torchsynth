@@ -1,0 +1,3768 @@
+{
+  "artifacts": {
+    "historical_evidence": "sim/reference/mutation-runtime-v1.json, the three family publications, the matrix publication and DR-0006 records are preserved unchanged; the campaign publishes under a new name",
+    "retained_per_attempt": [
+      "raw audio slot file and the full batch audio bytes",
+      "every captured trace file named by the registry",
+      "events (ordered, in-band) with original and replacement slot digests",
+      "capture inventory and invocation counts",
+      "plan, schedule and detector input/rows",
+      "worker stderr and exit status"
+    ],
+    "retained_per_run": [
+      "worker.json",
+      "build log and its sha256",
+      "docker image id and layers",
+      "host fingerprint (Q1 record fields)",
+      "project_git commit, dirty flag, diff and untracked digests",
+      "this manifest's revision and frozen digest",
+      "the attempt inventory with the expected denominator"
+    ],
+    "storage_rule": "fresh output directory only; existing experiments are preserved; raw files are never regenerated to clear a failure"
+  },
+  "authority_questions": [
+    {
+      "id": "AQ-1",
+      "interim": "deferred_unmeasured; obligation stays open",
+      "question": "May the pinned torchsynth AudioMixer.output be given a scoped observer/replacement hook (or the release image patched) so normalization decisions are injectable?",
+      "why_routed": "it contradicts the accepted framework rule that producer and render-path modules are read-only inputs (spec/MUTATIONS.md) and touches the pinned upstream source"
+    },
+    {
+      "id": "AQ-2",
+      "interim": "not_admitted; Q1-Q6 preregistered",
+      "question": "Is the AWS box i-018841ef4169207ba to be admitted as an additional DR-0006 host, and under what scope?",
+      "why_routed": "DR-0006 limits full-matrix qualification to its measured Apple host and requires a reviewed decision record for any host change"
+    },
+    {
+      "id": "AQ-3",
+      "interim": "proposed_additions entry; not in the denominator",
+      "question": "Do the decision owners accept registering the literal interp.align_corners_false operator in the timing family (requalification of that family)?",
+      "why_routed": "adding an operator changes the family registry and the frozen denominator"
+    }
+  ],
+  "cases": [
+    {
+      "batch_block": 0,
+      "batch_size": 32,
+      "batch_slot": 0,
+      "global_sound_index": 0,
+      "id": "global-0",
+      "partition": "development"
+    },
+    {
+      "batch_block": 0,
+      "batch_size": 32,
+      "batch_slot": 31,
+      "global_sound_index": 31,
+      "id": "global-31",
+      "partition": "development"
+    },
+    {
+      "batch_block": 1,
+      "batch_size": 32,
+      "batch_slot": 0,
+      "global_sound_index": 32,
+      "id": "global-32",
+      "partition": "development"
+    }
+  ],
+  "completion": {
+    "campaign_complete_requires": [
+      "host admitted under the Q1-Q6 predicate",
+      "every runtime_cell and composition cell executed in each of its own repeats_required (never fewer than the ratified minimum) with a passing per-execution result",
+      "all expected refusals observed as refused",
+      "all controls passed",
+      "offline verifier PASS",
+      "no extra, missing or duplicate attempt"
+    ],
+    "closure_rule": "completing this manifest closes only its stated scope; #300 and #9 stay open while any open obligation above is unresolved or not waived by the decision owners",
+    "never_counts_toward_runtime_kills": [
+      "refusal",
+      "sensitivity_not_counted",
+      "ineffective event",
+      "deferred_unmeasured",
+      "second_detector without its shared cell",
+      "composition (reported separately)",
+      "boundary_runtime in graph-perturbation totals (reported separately)",
+      "any synthetic fixture or bridge.* proof",
+      "admissibility refusal (refused_inadmissible_not_counted) of any gated detector or second_detector"
+    ],
+    "open_obligations_after_completion": [
+      "normalization decision injection (deferred; #300/#9 criteria stay open)",
+      "LFO amplitude-depth fault (timing:lfo-depth-shift-plus-0.1) realization at a writable output seam (deferred; #300/#9 criteria stay open)",
+      "literal align_corners operator registration and execution (proposed addition)",
+      "#297/#298 additions (declared revision)"
+    ],
+    "status_values": [
+      "COMPLETE",
+      "INCOMPLETE",
+      "NO_VERDICT",
+      "FAIL"
+    ]
+  },
+  "controls": [
+    {
+      "expected_event": "none",
+      "id": "plain",
+      "kind": "plain",
+      "must": "detectors PASS on the clean attempt; equals the committed sentinel for global-0 batch 32",
+      "per": "case_repeat"
+    },
+    {
+      "expected_event": "none",
+      "id": "empty",
+      "kind": "empty_plan",
+      "must": "byte-identical to plain; zero events",
+      "per": "case_repeat"
+    },
+    {
+      "expected_event": "ineffective",
+      "id": "sham",
+      "kind": "sham_plan",
+      "must": "byte-identical to plain; event marked sham and ineffective; never counted as a detected fault",
+      "per": "case_repeat"
+    },
+    {
+      "expected_event": "none",
+      "id": "clean_rerun",
+      "kind": "clean_rerun",
+      "must": "after all faulted attempts in the process, byte-identical to plain (cleanup)",
+      "per": "case_repeat"
+    }
+  ],
+  "decision_record": "spec/decision-records/0012-runtime-family-campaign-contract.md",
+  "detectors": [
+    {
+      "detector": "identity.SoundIdentity.to_dict recomputation at the declared render batch size",
+      "family": "identity",
+      "id": "det-identity-01",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "identity.SoundIdentity.is_train recomputation",
+      "family": "identity",
+      "id": "det-identity-02",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "directed.physical_value pinned-conversion recomputation (the name-keyed interface accepts the shuffle; the conversion recomputation is the refusal)",
+      "family": "identity",
+      "id": "det-identity-03",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "directed.physical_value pinned-conversion recomputation",
+      "family": "identity",
+      "id": "det-identity-04",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "spectral_estimators.noise_identity exact record comparison + float_interfaces.ResolvedRequest diagnostic-batch-1 slot-copy refusal",
+      "family": "identity",
+      "id": "det-identity-05",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "float_interfaces.ResolvedRequest declared-seed refusal + spectral_estimators.noise_identity exact record comparison",
+      "family": "identity",
+      "id": "det-identity-06",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "in-band declared-order events + spectral_estimators.noise_identity",
+      "family": "identity",
+      "id": "det-identity-07",
+      "qualification_scope": "exact_recomputation"
+    },
+    {
+      "detector": "envelope_estimators.estimate_envelope + qualification_rows (attack_end)",
+      "family": "timing",
+      "id": "det-timing-01",
+      "qualification_scope": "analytic_signals_only"
+    },
+    {
+      "detector": "paired_metrics time-locked primary row (analytic exactness rubric)",
+      "family": "timing",
+      "id": "det-timing-02",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "mutations_timing.frame_preflight + compare_paired frame gate",
+      "family": "timing",
+      "id": "det-timing-03",
+      "qualification_scope": "plan_or_preflight_refusal"
+    },
+    {
+      "detector": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
+      "family": "timing",
+      "id": "det-timing-04",
+      "qualification_scope": "analytic_signals_only"
+    },
+    {
+      "detector": "envelope_estimators.estimate_routes + qualification_rows (gain.",
+      "family": "timing",
+      "id": "det-timing-05",
+      "qualification_scope": "analytic_signals_only"
+    },
+    {
+      "detector": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
+      "family": "timing",
+      "id": "det-timing-06",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "trace_capture.check_endpoint_bytes + paired exactness row",
+      "family": "timing",
+      "id": "det-timing-07",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "in-band declared-order events + paired exactness row",
+      "family": "timing",
+      "id": "det-timing-08",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
+      "family": "signal",
+      "id": "det-signal-01",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "periodic.cents analytic property row (identity preparation, no normalization)",
+      "family": "signal",
+      "id": "det-signal-02",
+      "qualification_scope": "analytic_signals_only"
+    },
+    {
+      "detector": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
+      "family": "signal",
+      "id": "det-signal-03",
+      "qualification_scope": "analytic_signals_only"
+    },
+    {
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
+      "family": "signal",
+      "id": "det-signal-04",
+      "qualification_scope": "apparatus_fixture_only"
+    },
+    {
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
+      "family": "signal",
+      "id": "det-signal-05",
+      "qualification_scope": "apparatus_fixture_only"
+    },
+    {
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
+      "family": "signal",
+      "id": "det-signal-06",
+      "qualification_scope": "apparatus_fixture_only"
+    },
+    {
+      "detector": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
+      "family": "signal",
+      "id": "det-signal-07",
+      "qualification_scope": "apparatus_fixture_only"
+    },
+    {
+      "detector": "mutations.validate_plan (fail-closed at plan time)",
+      "family": "signal",
+      "id": "det-signal-08",
+      "qualification_scope": "plan_or_preflight_refusal"
+    },
+    {
+      "detector": "paired exactness contract rows over the composed ordered application",
+      "family": "signal",
+      "id": "det-signal-09",
+      "qualification_scope": "paired_reference_exact"
+    },
+    {
+      "detector": "paired_metrics time-locked exactness row on the entry's declared observed traces against the same case's retained plain-attempt bytes from the same worker process (framing_match; on the faulted attempt exact_equal must FAIL with nonzero max_abs_error; every control must PASS byte-identically)",
+      "family": "timing",
+      "id": "det-timing-09",
+      "qualification_scope": "paired_reference_exact"
+    }
+  ],
+  "expected": {
+    "by_disposition": {
+      "composition": 3,
+      "deferred_unmeasured": 5,
+      "refusal": 3,
+      "runtime_cell": 24,
+      "second_detector": 2
+    },
+    "cases": 3,
+    "composition_cells": 9,
+    "control_attempts": 24,
+    "deferred_unmeasured_entries": 10,
+    "expected_refusal_executions": 7,
+    "fault_attempts": 162,
+    "inventory_entries": 37,
+    "inventory_source_rows": 44,
+    "repeats_per_cell": 2,
+    "runtime_fault_cells": 72,
+    "sensitivity_entries": 20,
+    "worker_attempts": 186,
+    "worker_processes": 6
+  },
+  "frozen_inventory_digest": {
+    "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
+    "sha256": "1735e03ed40381895febf019da22a16a8af9f12c848c189b99726ddba55625c1"
+  },
+  "holdout": {
+    "corpus_holdout_first_index": 96,
+    "corpus_holdout_last_index": 127,
+    "request_policy": "any case whose partition is not development, or whose global sound index lies in 96..127, or any declared holdout access, is rejected by the validator and must never be rendered, read or tuned on by the campaign",
+    "sealed": true
+  },
+  "host_admission": {
+    "alternate_host": "#325 (alternate Apple host requalification) is a separate path, not an automatic prerequisite; whichever single host is admitted must satisfy Q1-Q6 and be named in the campaign publication",
+    "current_code_gate": "tools/qualify_mutations_runtime.py host_run hard-codes cpu == 'Apple M5', os_version == '26.5.1' (read via sw_vers) and docker server 'linux/arm64 29.7.2'; it cannot admit any other host, including the AWS box, without a reviewed change",
+    "dr0006_measured_scope": {
+      "authority": "spec/decision-records/0006-canonical-runtime.md",
+      "full_matrix_host": "Apple M5, macOS 26.5.1 arm64, Docker server 29.7.2 (linux/arm64) running the linux/amd64 image, one CPU, 6 GiB, threads one",
+      "native_sentinel_observation": "GitHub CI AMD EPYC 9V45, run 35417872896, global-0 batch-32 sentinel only; not full-host qualification",
+      "rule": "a changed host requires a new recorded experiment against the existing canonical bytes and a reviewed decision record with raw unaligned drift metrics"
+    },
+    "not_admitted_hosts": [
+      "loom dispatch workers (shared 8-vCPU boxes)",
+      "any host without a Q1-Q4 record"
+    ],
+    "qualification_predicate": [
+      {
+        "id": "Q1",
+        "text": "a committed host identity record for the specific host: instance id or hostname, kernel, CPU model and feature flags, container glibc, Docker server and buildx versions, image id and RootFS layers"
+      },
+      {
+        "id": "Q2",
+        "text": "a complete preregistered repeatability matrix run (env/release-era/repeatability-matrix.json, 128 cells) on that host with the unchanged Dockerfile, lock and release-mkl-compatible-v1 profile, each cell in a fresh process; every cell completes and is retained"
+      },
+      {
+        "id": "Q3",
+        "text": "all 64 repeat pairs and 48 batch pairs byte-exact on that host, and every release-profile artifact byte-identical to the committed canonical bytes; any byte difference is a FAIL that stops admission and is reported with raw unaligned drift metrics, never a tolerance"
+      },
+      {
+        "id": "Q4",
+        "text": "a reviewed decision record that extends DR-0006 host scope to that host (authority question AQ-2); a Builder cannot self-approve it"
+      },
+      {
+        "id": "Q5",
+        "text": "a data-driven host-fingerprint gate replacing the hard-coded Apple predicate, comparing each run's fingerprint to the qualified record; changing the gate is adapter or execution work after Q1-Q4 and is not done here"
+      },
+      {
+        "id": "Q6",
+        "text": "per campaign run: clean tree, the Q5 fingerprint equal to the qualified record, and a same-run baseline sentinel PASS"
+      }
+    ],
+    "sanctioned_aws_host": {
+      "authority": "AGENTS.md and CLAUDE.md remote-compute section",
+      "committed_qualification_evidence": null,
+      "evidence_search": "searched the repository at the manifest commit: the instance id appears only in AGENTS.md, CLAUDE.md and WORK_PLAN.md (provisioning note); no committed host fingerprint, repeatability run or sentinel receipt for it exists",
+      "instance_id": "i-018841ef4169207ba",
+      "operational_constraints": [
+        "/tmp is wiped on restart; keep state under /home/ubuntu",
+        "auto-stops after about 120 minutes idle",
+        "SSH only; no key material in the repository",
+        "invoke repository tools by direct file path from the worktree root"
+      ],
+      "region": "us-east-1",
+      "stated_hardware": "8 vCPU Intel Xeon 8175M (Skylake-SP, AVX512F), Docker 29 with buildx 0.30.1, python3.11 and uv",
+      "tag": "repo-remote"
+    },
+    "sentinel_policy": "a passing global-0 sentinel is necessary in every run and never sufficient for host admission (DR-0006)",
+    "status": "not_admitted",
+    "summary": "No host is admitted for this campaign by this record. The sanctioned AWS box and the DR-0006 measured host are separate facts and neither is inferred from the other."
+  },
+  "identity": "runtime-family-campaign-v1",
+  "inventory": [
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "identity metadata only; render_batch_index provenance mismatch; audio bytes of the render are unchanged",
+      "expected_event": "applied",
+      "expected_failure": "provenance mismatch at render_batch_index before perceptual rows",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:identity-batch-shift-128",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "identity.batch_shift",
+          "unit": "batch_size",
+          "value": 128
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "identity.batch_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case global_sound_index",
+          "case batch_size",
+          "SoundIdentity.to_dict recomputed at the declared batch size"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "identity-batch-shift-128",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "identity.batch_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          0,
+          7
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-02"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "is_train designation only; audio bytes unchanged",
+      "expected_event": "applied",
+      "expected_failure": "is_train designation mismatch at the provenance gate before perceptual rows",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:train-test-designation-flip",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "identity.train_test_flip",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "identity.train_test_flip"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case global_sound_index",
+          "case partition",
+          "SoundIdentity.is_train recomputed for the case"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "train-test-designation-flip",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "identity.train_test_flip",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          1,
+          8
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "first": "adsr_1.alpha",
+        "second": "adsr_1.attack"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-03"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "parameter payload order for two canonical names; name-keyed interface accepts it and physical-value recomputation refuses; audio unchanged",
+      "expected_event": "applied",
+      "expected_failure": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:positional-parameter-shuffle",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "param.positional_shuffle",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "param.positional_shuffle"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case normalized parameter vector in canonical order",
+          "directed.physical_value pinned conversion"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "positional-parameter-shuffle",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "param.positional_shuffle",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          2,
+          9
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "mode": "linear-where-curved"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-04"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "physical-value payload of curved parameters; audio unchanged",
+      "expected_event": "applied",
+      "expected_failure": "first wrong canonical parameter named at the provenance-ordered parameter gate",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:wrong-normalized-physical-conversion",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "param.conversion_substitute",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "param.conversion_substitute"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case normalized parameter vector in canonical order",
+          "directed.physical_value pinned conversion"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "wrong-normalized-physical-conversion",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "param.conversion_substitute",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          3,
+          10
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-05"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "selected noise stream identity in the payload; noise statistics remain plausible; audio unchanged",
+      "expected_event": "applied",
+      "expected_failure": "noise.identity FAIL for the wrong selected stream while the noise statistics stay inside the declared plausibility band",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:wrong-noise-slot",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "noise.slot_shift",
+          "unit": "slot",
+          "value": 5
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "noise.slot_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case batch_slot",
+          "declared noise seed 13",
+          "spectral_estimators.noise_identity record recomputed for the case"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "wrong-noise-slot",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "noise.slot_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          4,
+          11
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-identity-06"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared noise seed (13) in the resolved request; refused against declared seed",
+      "expected_event": "applied",
+      "expected_failure": "noise seed must be the declared seed 13; noise.identity FAIL while the statistics stay plausible",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:wrong-noise-seed",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "noise.seed_shift",
+          "unit": "seed_offset",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "noise.seed_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "declared noise seed 13",
+          "case batch_slot",
+          "spectral_estimators.noise_identity record recomputed for the case"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "wrong-noise-seed",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "noise.seed_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          5,
+          12
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-identity-07"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "composition",
+      "expected_blast_radius": "noise lanes only; declared-order applied events",
+      "expected_event": "applied",
+      "expected_failure": "declared-order applied events; composed stream fails noise.identity while statistics stay plausible",
+      "family": "identity",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "identity:composed-wrong-slot-then-wrong-seed",
+      "invariance_assertions": [
+        "Voice render bytes identical to the plain attempt"
+      ],
+      "magnitude": [
+        {
+          "operator": "noise.slot_shift",
+          "unit": "slot",
+          "value": 5
+        },
+        {
+          "operator": "noise.seed_shift",
+          "unit": "seed_offset",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "noise.slot_shift",
+        "noise.seed_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "resolved request and identity payload of the real-render attempt (Voice graph is not perturbed)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "per case: truth is recomputed from the case record (global index, batch size/block/slot) and the pinned identity, conversion and noise code at the target profile (seed 13); the faulted resolved request/payload is compared against that recomputation. No synthetic-fixture constant is used.",
+        "operands": [
+          "case batch_slot",
+          "declared noise seed 13",
+          "declared event order",
+          "spectral_estimators.noise_identity record recomputed for the case"
+        ],
+        "rule": "case_identity_recomputation"
+      },
+      "source": {
+        "apparatus_cases": [
+          "directed-train",
+          "directed-test"
+        ],
+        "fault": "composed-wrong-slot-then-wrong-seed",
+        "publication": "sim/reference/mutation-identity-v1.json",
+        "publication_operator": "noise.slot_shift + noise.seed_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          6,
+          13
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "breakpoint": "attack"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "adsr_1.output envelope and downstream traces/audio of the declared slot; sibling slots byte-identical",
+      "expected_event": "applied",
+      "expected_failure": "adsr_1.output paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); an unchanged trace is ineffective and leaves the cell open",
+      "family": "timing",
+      "gated_detectors": [
+        {
+          "admissibility_gate": "spec/ENVELOPE-ESTIMATORS.md Direct ADSR domain, evaluated by envelope_estimators.estimate_envelope's own refusals on the same case's plain-attempt adsr_1.output: nonnegative isolated control trace, known alpha and note duration, four interior samples each in rise, fall and positive sustain; any refusal (degenerate stage, floor-limited or unidentifiable boundary) on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "bound": "breakpoint deviation beyond the 0.02 control-sample analytic limit; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
+          "counts_as_kill": false,
+          "detector_id": "det-timing-01",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "operands": [
+            "attack_end estimated on the same case's plain-attempt adsr_1.output",
+            "attack_end estimated on the faulted attempt",
+            "declared magnitude converted by the adapter (conversion recorded)"
+          ],
+          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
+          "truth_rule": "plain_attempt_paired_reference"
+        }
+      ],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "expected_failure": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:attack-breakpoint-shift-plus2",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 2.0
+        }
+      ],
+      "notes": "control-sample magnitude must be converted by the adapter to the parameter's declared physical/normalized value; the conversion is recorded in the event detail",
+      "obligation_open": false,
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "adsr_1.attack",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "adsr_1.output"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "operands": [
+          "plain-attempt adsr_1.output bytes of the same case and process",
+          "faulted-attempt adsr_1.output bytes"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "fault": "attack-breakpoint-shift-plus2",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "envelope.breakpoint_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          0
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "lane": "adsr_1.output"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-02"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of adsr_1.output and everything downstream of it",
+      "expected_event": "applied",
+      "expected_failure": "unaligned primary row FAIL: exact_equal 0 with nonzero max_abs_error",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "timing:one-control-sample-delay",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "timing.delay_control_sample",
+          "unit": "sample",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "timing.delay_control_sample"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "adsr_1.output",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "fault": "one-control-sample-delay",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "timing.delay_control_sample",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          1
+        ]
+      }
+    },
+    {
+      "applicability": "executed host-side as an expected refusal; never counted as a kill",
+      "configuration": {
+        "index": 40,
+        "lane": "adsr_1.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-03"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "refusal",
+      "expected_blast_radius": "none in the Voice graph: a length-changing fault cannot be applied in place at voice.post_module without breaking the pinned graph; refused by the structural frame preflight on the retained lane",
+      "expected_event": "refused",
+      "expected_failure": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "timing:missing-sample",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "timing.drop_sample",
+          "unit": "sample",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "timing.drop_sample"
+      ],
+      "repeats_required": 1,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "retained raw adsr_1.output lane bytes of the case's plain attempt",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "the length-changing edit is refused by the frame preflight before any scoring; no signal truth is derived and the refusal never counts as a kill",
+        "operands": [
+          "retained raw adsr_1.output lane bytes of the case's plain attempt",
+          "declared lane frame length from the trace registry"
+        ],
+        "rule": "frame_preflight_refusal"
+      },
+      "source": {
+        "fault": "missing-sample",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "timing.drop_sample",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          2
+        ]
+      }
+    },
+    {
+      "applicability": "executed host-side as an expected refusal; never counted as a kill",
+      "configuration": {
+        "index": 40,
+        "lane": "adsr_1.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-03"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "refusal",
+      "expected_blast_radius": "none in the Voice graph: a length-changing fault cannot be applied in place at voice.post_module without breaking the pinned graph; refused by the structural frame preflight on the retained lane",
+      "expected_event": "refused",
+      "expected_failure": "declared frame preflight refusal before scoring + landed frame_mismatch refusal",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": null,
+      "id": "timing:duplicated-sample",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "timing.duplicate_sample",
+          "unit": "sample",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "timing.duplicate_sample"
+      ],
+      "repeats_required": 1,
+      "runtime_evidence_class": "boundary_runtime",
+      "runtime_seam": "apparatus.producer_call",
+      "runtime_target": "retained raw adsr_1.output lane bytes of the case's plain attempt",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "the length-changing edit is refused by the frame preflight before any scoring; no signal truth is derived and the refusal never counts as a kill",
+        "operands": [
+          "retained raw adsr_1.output lane bytes of the case's plain attempt",
+          "declared lane frame length from the trace registry"
+        ],
+        "rule": "frame_preflight_refusal"
+      },
+      "source": {
+        "fault": "duplicated-sample",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "timing.duplicate_sample",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          3
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "lfo_1 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "lfo_1 paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); an unchanged trace is ineffective and leaves the cell open",
+      "family": "timing",
+      "gated_detectors": [
+        {
+          "admissibility_gate": "spec/PERIODIC-ESTIMATORS.md preregistered analytic domain, evaluated by periodic_estimators.score_periodic's own refusals on the same case's plain attempt of lfo_1.raw: constant rate (varying rates refuse), no envelope shaping, no FM, a single tone, no clipping/added noise/transient, at least three cycles and 16 samples, and fundamental_in_band/preparation provenance present; any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "bound": "deviation of frequency_hz from the plain-attempt estimate beyond the 0.02 Hz mandatory rate limit of the analytic periodic qualification; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
+          "counts_as_kill": false,
+          "detector_id": "det-timing-04",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "operands": [
+            "frequency_hz estimated by score_periodic on the same case's plain-attempt lfo_1.raw (the per-case truth; never a fixture constant)",
+            "frequency_hz estimated on the faulted attempt",
+            "declared magnitude converted by the adapter (conversion recorded)"
+          ],
+          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
+          "truth_rule": "plain_attempt_paired_reference"
+        }
+      ],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:lfo-control",
+        "expected_failure": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit",
+        "fixture_truths": [
+          "4.37",
+          "4.87"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "timing:lfo-rate-shift-plus-half-hz",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_rate_shift",
+          "unit": "hz",
+          "value": 0.5
+        }
+      ],
+      "notes": "hz magnitude converted by the adapter; conversion recorded",
+      "obligation_open": false,
+      "operators": [
+        "modulation.lfo_rate_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "lfo_1.frequency",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "lfo_1.raw",
+          "lfo_1.post_control_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison.",
+        "operands": [
+          "plain-attempt lfo_1.raw and lfo_1.post_control_vca bytes of the same case and process",
+          "faulted-attempt lfo_1.raw and lfo_1.post_control_vca bytes"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:lfo-control",
+        "fault": "lfo-rate-shift-plus-half-hz",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "modulation.lfo_rate_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          4
+        ]
+      }
+    },
+    {
+      "applicability": "not applicable to the actual-Voice graph: LFO peak-to-peak amplitude depth has no faithful realization at a writable seam (lfo_1.mod_depth scales the rate envelope in Hz, not amplitude); obligation stays open",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no amplitude-depth injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until an amplitude-depth replacement with explicit original operands is selected",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:lfo-control",
+        "expected_failure": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit",
+        "fixture_truths": [
+          "2.0",
+          "2.1"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "timing:lfo-depth-shift-plus-0.1",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_depth_shift",
+          "unit": "native",
+          "value": 0.1
+        }
+      ],
+      "notes": "rebinding to lfo_1.mod_depth was rejected: LFO.make_control computes max(frequency + mod_depth * mod_signal, 0) and integrates it into phase, so it perturbs rate, not peak-to-peak amplitude",
+      "obligation_open": true,
+      "operators": [
+        "modulation.lfo_depth_shift"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "lfo_1.raw peak-to-peak amplitude excursion (no faithful writable realization selected)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until an amplitude-depth realization is selected"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:lfo-control",
+        "fault": "lfo-depth-shift-plus-0.1",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "modulation.lfo_depth_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          5
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "destination": "vco_1_pitch"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of mod_matrix.vco_1_pitch and downstream",
+      "expected_event": "applied",
+      "expected_failure": "control_upsample.vco_1_pitch downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
+      "family": "timing",
+      "gated_detectors": [
+        {
+          "admissibility_gate": "spec/ENVELOPE-ESTIMATORS.md isolated-route domain, evaluated by envelope_estimators.estimate_routes's own refusals on the same case's plain attempt: excited source above the declared excitation floor, all five named destinations observed, at least eight samples, linear response plus independent intercept (zero excitation refuses signed-route inference); any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "bound": "gain deviation from the plain-attempt estimate beyond the 1e-8 dimensionless-gain analytic limit; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
+          "counts_as_kill": false,
+          "detector_id": "det-timing-05",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "operands": [
+            "route gains estimated by estimate_routes on the same case's plain attempt (the per-case truth, following the case's resolved parameters; never a fixture constant)",
+            "route gains estimated on the faulted attempt"
+          ],
+          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
+          "truth_rule": "plain_attempt_paired_reference"
+        }
+      ],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "expected_failure": "gain.vco_1_pitch measured near -0.5 against declared truth 0.5 beyond the 1e-8 gain bound",
+        "fixture_truths": [
+          "0.5"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "timing:route-sign-flip",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "modulation.route_sign_flip",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "modulation.route_sign_flip"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "mod_matrix.vco_1_pitch",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "control_upsample.vco_1_pitch"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt control_upsample.vco_1_pitch bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_1_pitch bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "fault": "route-sign-flip",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "modulation.route_sign_flip",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          6
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "destination": "vco_1_amp"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of mod_matrix.vco_1_amp and downstream",
+      "expected_event": "applied",
+      "expected_failure": "control_upsample.vco_1_amp downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
+      "family": "timing",
+      "gated_detectors": [
+        {
+          "admissibility_gate": "spec/ENVELOPE-ESTIMATORS.md isolated-route domain, evaluated by envelope_estimators.estimate_routes's own refusals on the same case's plain attempt: excited source above the declared excitation floor, all five named destinations observed, at least eight samples, linear response plus independent intercept (zero excitation refuses signed-route inference); any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "bound": "gain deviation from the plain-attempt estimate beyond the 1e-8 dimensionless-gain analytic limit; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
+          "counts_as_kill": false,
+          "detector_id": "det-timing-05",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "operands": [
+            "route gains estimated by estimate_routes on the same case's plain attempt (the per-case truth, following the case's resolved parameters; never a fixture constant)",
+            "route gains estimated on the faulted attempt"
+          ],
+          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
+          "truth_rule": "plain_attempt_paired_reference"
+        }
+      ],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "expected_failure": "gain.vco_1_amp measured near 1.25 against declared truth 1.0 beyond the 1e-8 gain bound",
+        "fixture_truths": [
+          "1.0",
+          "1.25"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "timing:route-depth-shift-plus25",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "modulation.route_depth_shift",
+          "unit": "ratio",
+          "value": 0.25
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "modulation.route_depth_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "mod_matrix.vco_1_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "control_upsample.vco_1_amp"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt control_upsample.vco_1_amp bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_1_amp bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "fault": "route-depth-shift-plus25",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "modulation.route_depth_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          7
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "left": "vco_2_pitch",
+        "right": "vco_2_amp"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of the two exchanged mod_matrix traces and downstream",
+      "expected_event": "applied",
+      "expected_failure": "control_upsample.vco_2_pitch and control_upsample.vco_2_amp downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged route is ineffective and leaves the cell open (original seam capture equality is an invariant, not the detector)",
+      "family": "timing",
+      "gated_detectors": [
+        {
+          "admissibility_gate": "spec/ENVELOPE-ESTIMATORS.md isolated-route domain, evaluated by envelope_estimators.estimate_routes's own refusals on the same case's plain attempt: excited source above the declared excitation floor, all five named destinations observed, at least eight samples, linear response plus independent intercept (zero excitation refuses signed-route inference); any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "bound": "gain deviation from the plain-attempt estimate beyond the 1e-8 dimensionless-gain analytic limit; applies only to inputs admitted by the gate - no bound is claimed for actual-Voice signals outside the analytic domain",
+          "counts_as_kill": false,
+          "detector_id": "det-timing-05",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "operands": [
+            "route gains estimated by estimate_routes on the same case's plain attempt (the per-case truth, following the case's resolved parameters; never a fixture constant)",
+            "route gains estimated on the faulted attempt"
+          ],
+          "role": "reported per execution as detected, not_detected or refused_inadmissible; an admitted not_detected leaves the shared case open, a refusal is recorded and neither blocks nor creates a kill",
+          "truth_rule": "plain_attempt_paired_reference"
+        }
+      ],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "expected_failure": "gain.vco_2_pitch and gain.vco_2_amp both FAIL against their declared truths",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:route-destination-swap",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "modulation.route_swap",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "a two-trace exchange; the adapter must realise it as ordered replacements with both original snapshots retained (design is adapter-owned)",
+      "obligation_open": false,
+      "operators": [
+        "modulation.route_swap"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "mod_matrix.vco_2_pitch+mod_matrix.vco_2_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "control_upsample.vco_2_pitch",
+          "control_upsample.vco_2_amp"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt control_upsample.vco_2_pitch and control_upsample.vco_2_amp bytes of the same case and process at the case batch slot",
+          "faulted-attempt control_upsample.vco_2_pitch and control_upsample.vco_2_amp bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:route-control",
+        "fault": "route-destination-swap",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "modulation.route_swap",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          8
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "control_lane": "mod_matrix.vco_1_amp",
+        "upsampled_lane": "control_upsample.vco_1_amp"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-06"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of control_upsample.vco_1_amp and downstream",
+      "expected_event": "applied",
+      "expected_failure": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "expected_failure": "control-derived trace FAIL: exact_equal 0 while the source control lane and declared parameters stay byte-identical",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:zero-order-hold-control",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "interp.zoh_control",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "interp.zoh_control"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "control_upsample.vco_1_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
+          "plain-attempt mod_matrix.vco_1_amp control-lane bytes and parameter-map digest"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "fault": "zero-order-hold-control",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "interp.zoh_control",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          9
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "control_lane": "mod_matrix.vco_1_amp",
+        "upsampled_lane": "control_upsample.vco_1_amp"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of control_upsample.vco_1_amp and downstream",
+      "expected_event": "applied",
+      "expected_failure": "vco_1.post_vca downstream paired exactness FAIL against the same case's plain attempt (exact_equal 0, nonzero max_abs_error); a zero or unchanged result is ineffective and leaves the cell open (original endpoint conformance is an invariant on the preserved seam capture; the apparatus endpoint refusal is historical only)",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "expected_failure": "endpoint loss refusal: upsampled first/last sample bytes differ from the control column",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:dropped-endpoint-coordinate",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "original control_upsample.vco_1_amp first/last sample bytes match the control column (endpoint contract i*1763/176399) at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "interp.off_endpoint",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "dropped-endpoint coordinate j*(N-1)/M against the landed i*1763/176399; this is NOT a literal align_corners toggle (see DR-0012 D4)",
+      "obligation_open": false,
+      "operators": [
+        "interp.off_endpoint"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "control_upsample.vco_1_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "fault": "dropped-endpoint-coordinate",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "interp.off_endpoint",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          10
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "lane": "control_upsample.vco_1_amp"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-timing-02"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of control_upsample.vco_1_amp and downstream",
+      "expected_event": "applied",
+      "expected_failure": "unaligned high-rate primary row FAIL against the same case's plain attempt: exact_equal 0 with nonzero max_abs_error (no apparatus magnitude is expected)",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "expected_failure": "unaligned high-rate primary row FAIL: exact_equal 0 with measured max_abs_error 0.5738800516653348",
+        "fixture_truths": [
+          "0.5738800516653348"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "timing:one-audio-sample-delay",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "timing.delay_audio_sample",
+          "unit": "sample",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "timing.delay_audio_sample"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "control_upsample.vco_1_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "fault": "one-audio-sample-delay",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "timing.delay_audio_sample",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          11
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-08"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "composition",
+      "expected_blast_radius": "declared slot of control_upsample.vco_1_amp and downstream; declared-order events",
+      "expected_event": "applied",
+      "expected_failure": "declared-order applied events; composed fault FAIL on the unaligned row",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "expected_failure": "declared-order applied events; composed fault FAIL on the unaligned row",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:composed-zoh-then-audio-delay",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "interp.zoh_control",
+          "unit": "none",
+          "value": null
+        },
+        {
+          "operator": "timing.delay_audio_sample",
+          "unit": "sample",
+          "value": 1
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "interp.zoh_control",
+        "timing.delay_audio_sample"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "control_upsample.vco_1_amp",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)",
+          "declared event order"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:upsample-audio",
+        "fault": "composed-zoh-then-audio-delay",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "interp.zoh_control + timing.delay_audio_sample",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          12
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_1.post_vca, mixer.pre_normalization and returned audio",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:gain.db",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "gain.db",
+          "unit": "dB",
+          "value": 1.0
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "gain.db"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "gain.db",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "gain.db",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          0
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_1.post_vca and downstream",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:gain.polarity",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "gain.polarity",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "gain.polarity"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "gain.polarity",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "gain.polarity",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          1
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_1.post_vca and downstream",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:gain.dc_offset",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "gain.dc_offset",
+          "unit": "amplitude",
+          "value": 0.05
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "gain.dc_offset"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "gain.dc_offset",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "gain.dc_offset",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          2
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_1.post_vca and downstream",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:clip.round_step",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "clip.round_step",
+          "unit": "amplitude_step",
+          "value": 0.0078125
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "clip.round_step"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "clip.round_step",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "clip.round_step",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          3
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_2.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_2.post_vca and downstream",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:clip.saturation_ceiling",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "clip.saturation_ceiling",
+          "unit": "amplitude",
+          "value": 0.75
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "clip.saturation_ceiling"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_2.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "clip.saturation_ceiling",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "clip.saturation_ceiling",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          4
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "declared slot of vco_1.post_vca and downstream",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.mode_substitute",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "osc.mode_substitute",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "osc.mode_substitute"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.mode_substitute",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.mode_substitute",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          5
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "parameter": "vco_2.shape",
+        "slot": "$case.batch_slot"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "vco_2 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.shape_scale",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "osc.shape_scale",
+          "unit": "ratio",
+          "value": 2.0
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "osc.shape_scale"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "vco_2.shape",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_2.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_2.shape swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
+        "operands": [
+          "plain-attempt vco_2.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_2.post_vca bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.shape_scale",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.shape_scale",
+        "publication_seam": "voice.parameter_value",
+        "row_indices": [
+          6
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "parameter": "vco_1.tuning",
+        "slot": "$case.batch_slot"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "vco_1 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.tuning_shift",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "osc.tuning_shift",
+          "unit": "semitone",
+          "value": 1.0
+        }
+      ],
+      "notes": "semitone magnitude converted by the adapter; conversion recorded",
+      "obligation_open": false,
+      "operators": [
+        "osc.tuning_shift"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "vco_1.tuning",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_1.tuning swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.tuning_shift",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.tuning_shift",
+        "publication_seam": "voice.parameter_value",
+        "row_indices": [
+          7
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "parameter": "vco_1.initial_phase",
+        "slot": "$case.batch_slot"
+      },
+      "counts_toward_runtime_total": true,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "runtime_cell",
+      "expected_blast_radius": "vco_1 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "FAIL on max_abs_error and exact_equal against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on max_abs_error and exact_equal with PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.phase_offset",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "osc.phase_offset",
+          "unit": "radian",
+          "value": 0.7853981633974483
+        }
+      ],
+      "notes": "radian magnitude converted by the adapter; conversion recorded",
+      "obligation_open": false,
+      "operators": [
+        "osc.phase_offset"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "vco_1.initial_phase",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "injection_evidence": [
+          "requested vco_1.initial_phase swap event and parameter bytes (injection evidence only; proves the swap was requested, never oscillator consumption)"
+        ],
+        "operands": [
+          "plain-attempt vco_1.post_vca bytes of the same case and process at the case batch slot",
+          "faulted-attempt vco_1.post_vca bytes (downstream consumer of the replacement)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.phase_offset",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.phase_offset",
+        "publication_seam": "voice.parameter_value",
+        "row_indices": [
+          8
+        ]
+      }
+    },
+    {
+      "applicability": "additional mandatory detector bound to the shared cell; no extra attempt",
+      "configuration": {
+        "parameter": "vco_1.tuning",
+        "slot": "$case.batch_slot"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-02"
+      ],
+      "development_cases": [],
+      "disposition": "second_detector",
+      "expected_blast_radius": "vco_1 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "if admitted: periodic cents deviation from the plain-attempt estimate equals the declared offset beyond the periodic analytic qualification limit for the admitted band, with PASSing controls; if refused: recorded refused_inadmissible_not_counted, never a kill, and the shared cell's det-signal-01 verdict stands alone",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on the periodic cents deviation from the clean fixture reference (fixture tolerance +/-0.5 cent, declared offset +100 cent) with a PASSing clean control",
+        "fixture_truths": [
+          "0.5 cent"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.tuning_shift (property)",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "osc.tuning_shift",
+          "unit": "semitone",
+          "value": 1.0
+        }
+      ],
+      "notes": "semitone magnitude converted by the adapter; conversion recorded",
+      "obligation_open": false,
+      "operators": [
+        "osc.tuning_shift"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "vco_1.tuning",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": "spec/PERIODIC-ESTIMATORS.md preregistered analytic domain, evaluated by periodic_estimators.score_periodic's own refusals on the same case's plain attempt of vco_1.post_vca (SquareSawVCO shapes 0/0.5/1 unsupported): constant rate (varying rates refuse), no envelope shaping, no FM, a single tone, no clipping/added noise/transient, at least three cycles and 16 samples, and fundamental_in_band/preparation provenance present; any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "required": true
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: the reference is the same estimator on the same case's plain attempt from the same worker process; the faulted deviation is compared with the declared offset only if the admissibility gate admits both attempts",
+        "operands": [
+          "periodic cents estimated on the same case's plain-attempt vco_1.post_vca at the case batch slot (the per-case truth; never a fixture reference)",
+          "periodic cents estimated on the faulted attempt",
+          "declared offset +100 cent converted by the adapter (conversion recorded)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "shares_cell_with": "signal:osc.tuning_shift",
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.tuning_shift (property)",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.tuning_shift",
+        "publication_seam": "voice.parameter_value",
+        "row_indices": [
+          9
+        ]
+      }
+    },
+    {
+      "applicability": "additional mandatory detector bound to the shared cell; no extra attempt",
+      "configuration": {
+        "parameter": "vco_1.initial_phase",
+        "slot": "$case.batch_slot"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-03"
+      ],
+      "development_cases": [],
+      "disposition": "second_detector",
+      "expected_blast_radius": "vco_1 traces and downstream of the declared slot",
+      "expected_event": "applied",
+      "expected_failure": "if admitted: periodic phase_rad deviation from the plain-attempt estimate equals the declared offset beyond the periodic analytic qualification limit for the admitted band, with PASSing controls; if refused: recorded refused_inadmissible_not_counted, never a kill, and the shared cell's det-signal-01 verdict stands alone",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
+        "fixture_truths": [
+          "1e-6 rad"
+        ],
+        "normative_for_runtime": false
+      },
+      "id": "signal:osc.phase_offset (property)",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "osc.phase_offset",
+          "unit": "radian",
+          "value": 0.7853981633974483
+        }
+      ],
+      "notes": "radian magnitude converted by the adapter; conversion recorded",
+      "obligation_open": false,
+      "operators": [
+        "osc.phase_offset"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "vco_1.initial_phase",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": "spec/PERIODIC-ESTIMATORS.md preregistered analytic domain, evaluated by periodic_estimators.score_periodic's own refusals on the same case's plain attempt of vco_1.post_vca (SquareSawVCO shapes 0/0.5/1 unsupported): constant rate (varying rates refuse), no envelope shaping, no FM, a single tone, no clipping/added noise/transient, at least three cycles and 16 samples, and fundamental_in_band/preparation provenance present; any refusal on the plain or the faulted attempt is recorded as refused_inadmissible_not_counted",
+          "on_inadmissible": "refused_inadmissible_not_counted",
+          "required": true
+        },
+        "compared_traces": [
+          "vco_1.post_vca"
+        ],
+        "derivation": "per case and per repeat: the reference is the same estimator on the same case's plain attempt from the same worker process; the faulted deviation is compared with the declared offset only if the admissibility gate admits both attempts",
+        "operands": [
+          "periodic phase_rad estimated on the same case's plain-attempt vco_1.post_vca at the case batch slot (the per-case truth; never a fixture reference)",
+          "periodic phase_rad estimated on the faulted attempt",
+          "declared offset +pi/4 converted by the adapter (conversion recorded)"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "shares_cell_with": "signal:osc.phase_offset",
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "osc.phase_offset (property)",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "osc.phase_offset",
+        "publication_seam": "voice.parameter_value",
+        "row_indices": [
+          10
+        ]
+      }
+    },
+    {
+      "applicability": "not applicable to the actual-Voice graph without the AudioMixer.output producer handoff; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-04"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: the decision operand has no observer/replacement hook; mixer.output replacement after the fact cannot express a decision fault",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until the handoff exists",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:norm.always_on",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "norm.always_on",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": true,
+      "operators": [
+        "norm.always_on"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.normalization_decision",
+      "runtime_target": "AudioMixer.output normalize_if_clipping decision (non-writable)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until the AQ-1 handoff exists"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "norm.always_on",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "norm.always_on",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          11
+        ]
+      }
+    },
+    {
+      "applicability": "not applicable to the actual-Voice graph without the AudioMixer.output producer handoff; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-05"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: the decision operand has no observer/replacement hook; mixer.output replacement after the fact cannot express a decision fault",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until the handoff exists",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on decision_match,rule_error_max with a PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:norm.off",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "norm.off",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": true,
+      "operators": [
+        "norm.off"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.normalization_decision",
+      "runtime_target": "AudioMixer.output normalize_if_clipping decision (non-writable)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until the AQ-1 handoff exists"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "norm.off",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "norm.off",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          12
+        ]
+      }
+    },
+    {
+      "applicability": "not applicable to the actual-Voice graph without the AudioMixer.output producer handoff; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-06"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: the decision operand has no observer/replacement hook; mixer.output replacement after the fact cannot express a decision fault",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until the handoff exists",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on rule_error_max with a PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:norm.wrong_peak",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "norm.wrong_peak",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": true,
+      "operators": [
+        "norm.wrong_peak"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.normalization_decision",
+      "runtime_target": "AudioMixer.output normalize_if_clipping decision (non-writable)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until the AQ-1 handoff exists"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "norm.wrong_peak",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "norm.wrong_peak",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          13
+        ]
+      }
+    },
+    {
+      "applicability": "not applicable to the actual-Voice graph without the AudioMixer.output producer handoff; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-07"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: the decision operand has no observer/replacement hook; mixer.output replacement after the fact cannot express a decision fault",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until the handoff exists",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "FAIL on reciprocal_error with a PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:norm.wrong_reciprocal",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "norm.wrong_reciprocal",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": true,
+      "operators": [
+        "norm.wrong_reciprocal"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.normalization_decision",
+      "runtime_target": "AudioMixer.output normalize_if_clipping decision (non-writable)",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until the AQ-1 handoff exists"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "norm.wrong_reciprocal",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "norm.wrong_reciprocal",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          14
+        ]
+      }
+    },
+    {
+      "applicability": "executed host-side as an expected refusal; never counted as a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-08"
+      ],
+      "development_cases": [
+        "global-0"
+      ],
+      "disposition": "refusal",
+      "expected_blast_radius": "none: refused before any wrapping",
+      "expected_event": "refused",
+      "expected_failure": "Producer handoff required",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "Producer handoff required",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:normalization-decision-replacement",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "norm.always_on",
+          "unit": "none",
+          "value": null
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "norm.always_on"
+      ],
+      "repeats_required": 1,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.normalization_decision",
+      "runtime_target": "plan-time catalog refusal naming the AudioMixer.output producer handoff",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "mutations.validate_plan refuses at plan time; no signal truth is derived and the refusal never counts as a kill",
+        "operands": [
+          "the mutation plan naming the non-writable voice.normalization_decision seam"
+        ],
+        "rule": "plan_time_refusal"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "normalization-decision-replacement",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "norm.always_on",
+        "publication_seam": "voice.normalization_decision",
+        "row_indices": [
+          15
+        ]
+      }
+    },
+    {
+      "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "vco_1.post_vca"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-09"
+      ],
+      "development_cases": [
+        "global-0",
+        "global-31",
+        "global-32"
+      ],
+      "disposition": "composition",
+      "expected_blast_radius": "declared slot of vco_1.post_vca and downstream; declared-order events",
+      "expected_event": "applied",
+      "expected_failure": "declared-order events (applied, applied) and FAIL on max_abs_error against the same case's plain attempt, with PASSing controls",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "declared-order events (applied, applied) and FAIL on max_abs_error with a PASSing clean control",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:composed-round-then-saturate",
+      "invariance_assertions": [
+        "sibling traces byte-identical to the plain attempt",
+        "undeclared batch slots byte-identical",
+        "invocation counts unchanged",
+        "original bytes retained at the seam capture",
+        "post-attempt clean rerun byte-identical to plain"
+      ],
+      "magnitude": [
+        {
+          "operator": "clip.round_step",
+          "unit": "amplitude_step",
+          "value": 0.0078125
+        },
+        {
+          "operator": "clip.saturation_ceiling",
+          "unit": "amplitude",
+          "value": 0.75
+        }
+      ],
+      "notes": "",
+      "obligation_open": false,
+      "operators": [
+        "clip.round_step",
+        "clip.saturation_ceiling"
+      ],
+      "repeats_required": 2,
+      "runtime_evidence_class": "graph_runtime",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "compared_traces": [
+          "mixer.pre_normalization"
+        ],
+        "derivation": "per case and per repeat: truth is the retained plain-attempt bytes of the observed traces from the same fresh worker process (the same case, batch slot and profile); the faulted attempt is compared against them. No synthetic-fixture constant and no analytic truth enters the comparison. Compared traces are registry-named downstream consumers of the injected value; the seam capture of a replaced value keeps the original bytes and is asserted as an invariant, never used as a detector operand.",
+        "operands": [
+          "plain-attempt mixer.pre_normalization bytes of the same case and process at the case batch slot",
+          "faulted-attempt mixer.pre_normalization bytes (downstream consumer of the replacement)",
+          "declared event order"
+        ],
+        "rule": "plain_attempt_paired_reference"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "composed-round-then-saturate",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "clip.round_step + clip.saturation_ceiling",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          16
+        ]
+      }
+    }
+  ],
+  "measurement_status": {
+    "runtime_family_measurement_performed": false,
+    "statement": "Preregistration only. No actual-Voice family operator has been executed, no host has been qualified for this campaign, and no cell below has a runtime outcome. Every count here is a planned denominator, not a result."
+  },
+  "normalization_handoff": {
+    "authority_question": "AQ-1",
+    "disposition": "deferred_unmeasured",
+    "required_if_pursued": {
+      "cleanup": "hook removed after success, errors and partial setup; clean rerun byte-identical",
+      "decision_operands": [
+        "pre-normalization mixer output per batch slot",
+        "per-slot max(abs(.)) (the candidate peak)",
+        "the comparison peak > 1.0",
+        "the divisor and the where() selection"
+      ],
+      "passive_vs_replacement": "the passive observation of mixer.pre_normalization, mixer.peak and mixer.gain is captured first and retained; a scoped mutator may then supply a replacement decision that is consumed by the graph while the original computation still runs",
+      "producer_ownership": "an AudioMixer.output hook inside the pinned producer; the passive observers (#23) stay the sole owner of original observations",
+      "refusal_checks": "the existing plan-time refusal at voice.normalization_decision stays until the handoff lands and is requalified"
+    }
+  },
+  "operators": [
+    {
+      "family": "identity",
+      "id": "identity.batch_shift",
+      "registered": true
+    },
+    {
+      "family": "identity",
+      "id": "identity.train_test_flip",
+      "registered": true
+    },
+    {
+      "family": "identity",
+      "id": "noise.seed_shift",
+      "registered": true
+    },
+    {
+      "family": "identity",
+      "id": "noise.slot_shift",
+      "registered": true
+    },
+    {
+      "family": "identity",
+      "id": "param.conversion_substitute",
+      "registered": true
+    },
+    {
+      "family": "identity",
+      "id": "param.positional_shuffle",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "clip.round_step",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "clip.saturation_ceiling",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "gain.db",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "gain.dc_offset",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "gain.polarity",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "norm.always_on",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "norm.off",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "norm.wrong_peak",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "norm.wrong_reciprocal",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "osc.mode_substitute",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "osc.phase_offset",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "osc.shape_scale",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "osc.tuning_shift",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "envelope.breakpoint_shift",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "interp.off_endpoint",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "interp.zoh_control",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "modulation.lfo_depth_shift",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "modulation.lfo_rate_shift",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "modulation.route_depth_shift",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "modulation.route_sign_flip",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "modulation.route_swap",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "timing.delay_audio_sample",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "timing.delay_control_sample",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "timing.drop_sample",
+      "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "timing.duplicate_sample",
+      "registered": true
+    }
+  ],
+  "pins": {
+    "base_image": "python:3.9.13-slim-bullseye@sha256:b3bb514565b331c9a6f36c396af2a937f730b64f34004b750a3b3d5874abd990",
+    "clean_tree_gate": "git status --porcelain empty and HEAD recorded before launch; project_git.dirty must be false; diff_sha256 and untracked_state_sha256 retained; a dirty tree is NO_VERDICT, not a pass",
+    "dockerfile": {
+      "path": "env/release-era/Dockerfile",
+      "sha256": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73"
+    },
+    "image_id_and_layers": "recorded per run in the campaign publication (docker image id and RootFS layers); a mutable tag is never an identity",
+    "profile_environment": {
+      "ATEN_CPU_CAPABILITY": null,
+      "MKL_CBWR": "COMPATIBLE",
+      "MKL_ENABLE_INSTRUCTIONS": "AVX2",
+      "ONEDNN_MAX_CPU_ISA": "AVX2"
+    },
+    "requirements_lock": {
+      "path": "env/release-era/requirements.lock",
+      "sha256": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25"
+    },
+    "runtime_profile": "release-mkl-compatible-v1",
+    "torchsynth_source_archive_sha256": "df90d3c95298d02812dd518da43355b622e25091113a7a987ad999704b08aa7b",
+    "upstream_pin": {
+      "path": "spec/reference/upstream.json",
+      "sha256": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af"
+    }
+  },
+  "proposed_additions": [
+    {
+      "counts_in_frozen_denominator": false,
+      "detector_ids": [],
+      "detector_requirement": "a paired time-locked exactness row on the registry-named downstream traces listed in compared_traces (exact_equal and max_abs_error against the plain attempt of the same case and process) must FAIL; the control_upsample.* seam capture keeps the original bytes and is asserted equal to plain as an invariant, never used as a detector operand; the adapter registers the detector binding in a manifest revision",
+      "compared_traces": [
+        "vco_1.raw",
+        "vco_1.post_vca",
+        "vco_2.raw",
+        "vco_2.post_vca",
+        "noise.post_vca"
+      ],
+      "invariants": [
+        "the control_upsample.<destination> seam capture is byte-equal to the plain attempt (it preserves the original)",
+        "the registry endpoint contract (i*1763/176399) holds on the preserved original seam capture; endpoint conformance of the replacement bytes is checkable only if a separate replacement artifact is named and retained, which this proposal does not register"
+      ],
+      "family": "timing",
+      "id": "timing:interp.align_corners_false",
+      "injection_site": "replacement of the declared batch slot of the control_upsample.<destination> output of the pinned torchsynth.module.ControlRateUpsample (torch.nn.Upsample(buffer_size, mode='linear', align_corners=True), module.py lines 1127-1129 at the pin); the replacement is torch.nn.functional.interpolate over the same invocation's own input argument with mode='linear', align_corners=False, size=176400; the original is snapshotted by the passive observer first",
+      "operand_ownership": "the input argument of the same ControlRateUpsample invocation, associated by the #22 CallTracker producer-to-consumer binding; passive capture stays the sole owner of original bytes",
+      "operator": "interp.align_corners_false",
+      "reason": "DR-0012 D4: the literal flag toggle is required for the campaign to claim align_corners coverage; interp.off_endpoint is a different (dropped-endpoint) fault",
+      "runtime_seam": "voice.post_module",
+      "runtime_targets": [
+        "control_upsample.vco_1_pitch",
+        "control_upsample.vco_1_amp",
+        "control_upsample.vco_2_pitch",
+        "control_upsample.vco_2_amp",
+        "control_upsample.noise_amp"
+      ],
+      "status": "proposed_pending_operator_registration"
+    }
+  ],
+  "publication": {
+    "kind": "mutation-runtime-family-v1",
+    "proposed_path": "sim/reference/mutation-runtime-family-v1.json (proposed; does not exist)",
+    "version_rule": "any change to the denominator, a disposition or a pinned digest is a new campaign revision; publications bind the manifest revision and frozen digest"
+  },
+  "reliability": {
+    "execution_independence": "each repeat is a separate fresh worker process (fresh container) constructing a fresh Voice per attempt; no cached render may qualify a repeat",
+    "min_independent_executions_per_cell": 2,
+    "per_execution_pass": "controls plain/empty/sham/clean_rerun pass; exactly the declared events are observed with the expected status; every mandatory (runtime-admissible) detector bound to the cell FAILs on the fault attempt; every gated detector and sharing second_detector records detected or refused_inadmissible_not_counted (an admitted not_detected fails the execution); invariance assertions hold",
+    "repeat_bytes_equal": true,
+    "retry_policy": "no retry-to-pass; executions beyond an entry's repeats_required are retained but the denominator and verdict are fixed by the entry's first repeats_required executions (never fewer than the ratified minimum)",
+    "separate_from": [
+      "magnitude sensitivity",
+      "second-magnitude probes",
+      "statistical detection-rate claims"
+    ],
+    "status": "ratified_by_decision_record_on_merge"
+  },
+  "revision": 1,
+  "revision_policy": "Adding, removing or re-dispositioning any entry (including #297/#298 additions and the proposed align_corners operator) requires a new manifest revision with a new frozen digest and a decision-record note; the denominator never changes silently.",
+  "schema": "torchsynth-runtime-family-campaign",
+  "schema_version": 1,
+  "sensitivity_inventory": [
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:attack-breakpoint-shift-0.03",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.03
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; second-magnitude rows belong to #297 and a declared manifest revision",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:attack-breakpoint-shift-0.005",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.005
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; second-magnitude rows belong to #297 and a declared manifest revision",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:attack-one-sample",
+      "kind": "coverage_case",
+      "publication_verdict": "NO VERDICT",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:silent-sustain",
+      "kind": "coverage_case",
+      "publication_verdict": "NO VERDICT",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:flat-sustain",
+      "kind": "coverage_case",
+      "publication_verdict": "NO VERDICT",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:zero-release",
+      "kind": "coverage_case",
+      "publication_verdict": "NO VERDICT",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:high-rate-lfo-20hz",
+      "kind": "coverage_case",
+      "publication_verdict": "PASS",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "timing",
+      "id": "timing:coverage:one-audio-sample-delay-visibility",
+      "kind": "coverage_case",
+      "publication_verdict": "FAIL",
+      "reason": "degenerate or high-rate coverage row; never a pass or detected fault",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.always_on:above",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.off:above",
+      "kind": "normalization_cell",
+      "publication_status": "detected",
+      "reason": "normalization deferred; apparatus-domain cell only",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_peak:above",
+      "kind": "normalization_cell",
+      "publication_status": "detected",
+      "reason": "normalization deferred; apparatus-domain cell only",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_reciprocal:above",
+      "kind": "normalization_cell",
+      "publication_status": "detected",
+      "reason": "normalization deferred; apparatus-domain cell only",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.always_on:below",
+      "kind": "normalization_cell",
+      "publication_status": "detected",
+      "reason": "normalization deferred; apparatus-domain cell only",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.off:below",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_peak:below",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_reciprocal:below",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.always_on:at",
+      "kind": "normalization_cell",
+      "publication_status": "detected",
+      "reason": "normalization deferred; apparatus-domain cell only",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.off:at",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_peak:at",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "family": "signal",
+      "id": "signal:norm-cell:norm.wrong_reciprocal:at",
+      "kind": "normalization_cell",
+      "publication_status": "ineffective_not_detected",
+      "reason": "ineffective in the apparatus fixture; never a kill",
+      "runtime_evidence_class": "none"
+    }
+  ],
+  "sources": {
+    "env/release-era/Dockerfile": "e375979e5fa3152e7b99f84cb0159326c735b37bd944a3a93aaaf54c3f6f1e73",
+    "env/release-era/mutation_worker.py": "a5286f3584aa4a567a8d39573909a1e3cf97e61114cd62efb0e45628077a8e8f",
+    "env/release-era/repeatability-matrix.json": "04e43c72a3b61cf1945483b0876f10c74bb10f788797224c263381a25d63354c",
+    "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
+    "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
+    "sim/reference/mutation-signal-v1.json": "a7b23cfa53a806a12ac01bc0f32abc27f379ef435a9b27b4b28b12ab6af58022",
+    "sim/reference/mutation-timing-v1.json": "3c29297da3f739c395f49d17986aee0f9f0296649f91c24ceb60728281d8291d",
+    "spec/reference/corpus-v0.json": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
+    "spec/reference/holdout-seal-v0.json": "1084eff6fe7d599f2e27f903532d953830ebf7a59c968d9e3a374b1ae3caf516",
+    "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
+    "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
+    "spec/reference/trace-registry-v1.json": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
+    "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
+    "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
+    "src/torchsynth_voice/mutations_signal.py": "170691d10b75f3adacde54e1f5236f380bbe7c9a6999c6c273c00de444c8bed9",
+    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "tools/qualify_mutations_runtime.py": "a153004dd94cea0aa7988b7c4a280547340f5f2a6ce41db13f38515fbd5b5217"
+  },
+  "status": "preregistered-unmeasured",
+  "supporting": [
+    {
+      "count": 48,
+      "disposition": "apparatus_support_only",
+      "executed_in_campaign": false,
+      "family": "identity",
+      "id": "identity:representative-random-receipts",
+      "operators": [
+        "identity.batch_shift",
+        "identity.train_test_flip",
+        "noise.seed_shift",
+        "noise.slot_shift",
+        "param.conversion_substitute",
+        "param.positional_shuffle"
+      ],
+      "reason": "apparatus-domain supporting receipts over representative random cases; not campaign cells and not counted",
+      "representative_cases": 8
+    }
+  ],
+  "target": {
+    "control_rate_hz": 441,
+    "duration_seconds": 4,
+    "nebula": "default",
+    "noise_seed": 13,
+    "profile": "torchsynth-1-voice-default",
+    "runtime_profile": "release-mkl-compatible-v1",
+    "sample_rate_hz": 44100,
+    "semantics_changed": false,
+    "upstream_commit": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"
+  },
+  "unbound_sources": {
+    "spec/MUTATIONS.md": "not bound: it is edited by this change and is an INPUT_PATHS member of tools/qualify_mutations_matrix.py (see DR-0012 downstream staleness); the matrix rebinding belongs to #314/#257"
+  },
+  "verifier": {
+    "checks": [
+      "manifest validates and its frozen digest matches",
+      "every expected attempt is present exactly once and no extra attempt is silently absorbed",
+      "every raw file re-hashes to its receipt",
+      "events equal the plan order and status",
+      "controls byte-identical to each other and to plain",
+      "detectors recomputed from retained bytes: faulted FAIL, controls PASS",
+      "repeat bytes equal across the two fresh processes",
+      "sibling and undeclared-slot invariance recomputed from bytes",
+      "no holdout identity appears",
+      "project_git.dirty is false and host fingerprint equals the qualified record",
+      "every gated detector and second_detector has a recorded admissibility outcome per execution; refusals are retained and never counted as kills"
+    ],
+    "mode": "offline, stdlib-only, non-writing, no Docker and no Voice render",
+    "name": "tools/verify_runtime_family_campaign.py (proposed)",
+    "relation_to_existing": "extends the contract of tools/qualify_mutations_runtime.py --check-publication; it must not weaken it",
+    "status": "specified_not_implemented"
+  },
+  "worker_interface": {
+    "existing_producer": {
+      "host_tool": "tools/qualify_mutations_runtime.py (default mode host-gated; --check-publication stdlib verification)",
+      "report": "worker.json: status, mutation_runtime_version mutation-runtime-v1, runtime_profile, registry_sha256, registry_token, baseline_sentinel, producer_sha256 per module, attempts (per-attempt events, capture inventory, invocation counts, rng state, audio slot file, state_restored)",
+      "schedule": "mutation-voice-schedule-v1 JSON from mutation_runtime.resolve_voice_plan(plan, registry document, parameter names, batch size)",
+      "sentinel_case": "global-0, batch 32, slot 0 (bridge.* test-only operators only)",
+      "worker": "env/release-era/mutation_worker.py (--worker --output DIR --schedules FILE --source-root /opt/torchsynth; worker-only helper, launched only through the host tool)"
+    },
+    "required_extension": {
+      "applicator_rule": "runtime applicators are registered under the same operator ids as the fixture applicators or under explicitly versioned new ids; the mp1- plan identity binds the realisation; unit conversions from declared magnitudes to parameter values are recorded in event detail",
+      "campaign_input": "this manifest (revision and frozen digest recorded in every schedule and in the publication)",
+      "ordering": "plain, empty, sham, then faulted attempts in manifest order, then clean_rerun, inside one fresh process per (case, repeat); detectors are evaluated offline on retained raw bytes after the controls pass",
+      "owner": "#334 identity, #335 timing, #336 signal adapters; #337 execution",
+      "per_attempt_inputs": [
+        "plan with mp1- identity",
+        "resolved schedule",
+        "resolved development request (case id, global index, batch size, block, slot)",
+        "repeat id",
+        "cell id"
+      ],
+      "proposed_cli": "tools/qualify_mutations_runtime.py --campaign spec/reference/runtime-family-campaign-v1.json --output FRESH_DIR (proposed; not an existing option)"
+    },
+    "status": "specified_not_implemented"
+  }
+}
