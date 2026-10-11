@@ -105,7 +105,8 @@ failures (83 tests), `tools/check_contract.py` exit 0 (the per-suite exit status
 read from the unittest `OK` footers, because the shell loop's status capture was empty).
 Observation for G1: `git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e` exits
 128 (object absent) in this checkout. G2, the historical part of G3, and G4 are
-unchanged; no `corpus-smoke-15` store was located. No render, store verification,
+unchanged; a whole-disk `find` for `corpus-smoke-15*` was started but stopped before
+completing, so G2 rests on the earlier searches and no store was verified. No render, store verification,
 reproduction, or holdout access was run (class C remains none).**
 
 ## Evidence classes
