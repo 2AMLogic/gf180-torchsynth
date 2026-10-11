@@ -2,6 +2,15 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-11
+
+- **PR #359**: docs: re-verify corpus artifact audit at 841470b
+- **PR #357**: docs: re-verify corpus artifact audit at d64a80d (Part of #4)
+- **Issue #356** (closed): Trim tb/run_tb.py module docstring: remove duplicated lane narratives
+- **PR #358**: docs(tb): trim run_tb.py module docstring (#356)
+- **Issue #354** (closed): Consolidate eight emitted-constants checks in the RTL testbench runner
+- **PR #355**: Consolidate eight emitted-constants checks in tb/run_tb.py
+
 ### 2026-10-10
 
 - **PR #351**: docs: re-verify corpus artifact audit at 5f977ca (Part of #4)
