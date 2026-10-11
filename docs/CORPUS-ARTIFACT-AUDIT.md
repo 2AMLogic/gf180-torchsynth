@@ -93,6 +93,22 @@ producer commit is therefore not stable across checkouts, and no reproduction ra
 G4 are unchanged. No render, store verification, reproduction, or holdout access was
 run (class C remains none).**
 
+**Re-verification (2026-10-11, revision `d64a80de1b1ad008bade522c60d9983ccaa7aa31`):
+verdicts unchanged. `git diff --stat 5f977ca HEAD -- src tools tests sim/reference spec`
+shows only a new `tests/test_tb_emitted_constants.py` (82 lines, unrelated testbench
+constants check); nothing under the artifact, storage, runner, fixtures, smoke record,
+or the three audited specs changed. Executed serially on macOS (Darwin) with
+`/opt/homebrew/bin/python3.11`, in the clean worktree `.loom/worktrees/issue-4`:
+`test_artifacts.py` 28 OK (2.464 s), `test_storage.py` 16 OK (6.638 s),
+`test_artifact_renderer.py` 17 OK (76.415 s), `test_corpus.py` 22 OK (391.831 s), 0
+failures (83 tests), `tools/check_contract.py` exit 0 (the per-suite exit statuses were
+read from the unittest `OK` footers, because the shell loop's status capture was empty).
+Observation for G1: `git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e` exits
+128 (object absent) in this checkout. G2, the historical part of G3, and G4 are
+unchanged; a whole-disk `find` for `corpus-smoke-15*` was started but stopped before
+completing, so G2 rests on the earlier searches and no store was verified. No render, store verification,
+reproduction, or holdout access was run (class C remains none).**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
