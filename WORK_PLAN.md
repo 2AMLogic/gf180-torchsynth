@@ -37,7 +37,7 @@ Issues currently being built (`loom:building`).
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#232**: fix(deps): update dependency setuptools to v84
 
 ## Approved (Awaiting Merge)
 
@@ -99,7 +99,7 @@ Issues carrying `loom:curated`.
 | Operator priority | 1 |
 | Ready (`loom:issue`) | 5 |
 | In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 0 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 17 |
 | Architect / Hermit proposals | 14 |
