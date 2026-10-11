@@ -109,6 +109,17 @@ unchanged; a whole-disk `find` for `corpus-smoke-15*` was started but stopped be
 completing, so G2 rests on the earlier searches and no store was verified. No render, store verification,
 reproduction, or holdout access was run (class C remains none).**
 
+**Re-verification (2026-10-11, revision `841470b7a585e2a128e9d97308419158f00bb5c3`):
+verdicts unchanged. `git diff --stat d64a80d HEAD -- src tools tests sim/reference spec`
+is empty, so nothing audited changed. Executed serially on Linux 7.0.0-1014-aws,
+Python 3.12.3, in the clean worktree `.loom/worktrees/issue-4`: `test_artifacts.py` 28 OK
+(0.436 s), `test_storage.py` 16 OK (1.809 s), `test_artifact_renderer.py` 17 OK (9.238 s),
+`test_corpus.py` 22 OK (75.859 s), each exit 0, 0 skips (83 tests),
+`tools/check_contract.py` exit 0. G1: `git cat-file -t 224eb15a599171b3a8b65ca72457f7e452b83c8e`
+exits 128 (object absent) in this checkout; no reproduction ran. G2, the historical part of
+G3, and G4 are unchanged; no store was searched or verified in this pass. No render, store
+verification, reproduction, or holdout access was run (class C remains none).**
+
 ## Evidence classes
 
 | Class | Meaning in this audit |
