@@ -919,6 +919,28 @@ def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
     return vco_words, mix_words, measured_cycles
 
 
+def _emitted_constants_match(
+    schedule: dict, prefix: str = "budget constants"
+) -> bool:
+    """Emit the accepted registers and compare against the landed package.
+
+    Requires the complete package text to equal the landed constants package
+    and the schedule ID to be among the emitted IDs. Prints the diagnostic and
+    returns the predicate; exceptions propagate to the caller's handler.
+    """
+    emitted = codegen.emit(schedule_payload=schedule)
+    landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+    matches = emitted.package_text == landed and (
+        sched.SCHEDULE_ID in emitted.emitted_ids
+    )
+    print(
+        "  %s: landed %s matches the live emission of both accepted "
+        "registers -> %s"
+        % (prefix, CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+    )
+    return matches
+
+
 def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
     """Assert the ratified clip budget against the anchor run (issue #68).
 
@@ -980,15 +1002,8 @@ def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
         ok = ok and holds
 
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  emitted budget constants: landed %s matches the live emission "
-            "of both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        matches = _emitted_constants_match(
+            schedule, prefix="emitted budget constants"
         )
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
@@ -1232,16 +1247,7 @@ def check_adsr_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -1684,16 +1690,7 @@ def check_lfo_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -2350,16 +2347,7 @@ def check_mm_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -4082,16 +4070,7 @@ def check_vco_budget(schedule, walked: int, case: dict, ops_row: list) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of "
-            "both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -5902,16 +5881,7 @@ def noise(workdir: Path, simulator: str) -> int:
         % ("OK" if owner_ok else "FAIL")
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         owner_ok = owner_ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -6502,16 +6472,7 @@ def check_mix_budget(schedule, walked: int, truth: dict, ops_row: list) -> bool:
            truth["aux"]["acc_max"])
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of "
-            "both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -7540,16 +7501,7 @@ def normreplay(workdir: Path, simulator: str) -> int:
         "schedule-conformance or PPA/fit claim)" % pass2_folded_cycles_max
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         owner_ok = owner_ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
