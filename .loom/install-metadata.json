@@ -1,6 +1,6 @@
 {
-  "loom_version": "0.19.1032",
-  "loom_commit": "13ca937a7d6ba8768c296b0c126f2ce48f5f7ca4",
+  "loom_version": "0.19.1039",
+  "loom_commit": "e83d19dc0a9b217339ea2f14040c50ad6f46700d",
   "install_date": "2026-09-18",
   "installed_files": [
     ".loom/credentials.md.example",
@@ -96,9 +96,17 @@
     ".loom/docs/park-record.md",
     ".loom/roles/builder-pr.md",
     ".loom/scripts/check-main-clean.sh",
-    ".loom/scripts/tests/ci-excluded.txt"
+    ".loom/scripts/tests/ci-excluded.txt",
+    ".claude/commands/loom/sweep-execution-model.md",
+    ".claude/commands/loom/sweep-mode-c-lifecycle.md",
+    ".claude/commands/loom/sweep-summary-output.md",
+    ".claude/commands/loom/sweep-wave-lifecycle.md",
+    ".loom/docs/github-authentication.md",
+    ".loom/scripts/tests/test-champion-pr-merge-negation-guard.sh",
+    ".loom/scripts/tests/test-sweep-pr-mode.sh",
+    ".loom/scripts/tests/test-worktree-race-rescue.sh"
   ],
-  "last_resync": "2026-10-10",
+  "last_resync": "2026-10-11",
   "loom_source_remote": "git@github.com:rjwalters/loom.git",
   "requires_daemon": "0.19.772"
 }
