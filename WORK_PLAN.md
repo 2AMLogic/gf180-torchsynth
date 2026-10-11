@@ -40,6 +40,7 @@ _None._
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#232**: fix(deps): update dependency setuptools to v84
+- **#360**: docs: re-verify corpus artifact audit at edaa94d (Part of #4)
 
 ## Approved (Awaiting Merge)
 
@@ -101,7 +102,7 @@ Issues carrying `loom:curated`.
 | Operator priority | 1 |
 | Ready (`loom:issue`) | 7 |
 | In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 1 |
+| PRs awaiting review | 2 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 17 |
 | Architect / Hermit proposals | 14 |
