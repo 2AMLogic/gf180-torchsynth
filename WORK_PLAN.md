@@ -21,13 +21,7 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
 - **#9**: [Epic #1] Phase plan: negative-control mutation coverage
-- **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
-- **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
-- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
-- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
-- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 
 ## In Progress
 
@@ -40,7 +34,6 @@ _None._
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#232**: fix(deps): update dependency setuptools to v84
-- **#360**: docs: re-verify corpus artifact audit at edaa94d (Part of #4)
 
 ## Approved (Awaiting Merge)
 
@@ -100,9 +93,9 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 3 |
 | Operator priority | 1 |
-| Ready (`loom:issue`) | 7 |
+| Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 2 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 3 |
 | Curated | 17 |
 | Architect / Hermit proposals | 14 |

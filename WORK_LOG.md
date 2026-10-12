@@ -4,6 +4,7 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-10-11
 
+- **PR #360**: docs: re-verify corpus artifact audit at edaa94d (Part of #4)
 - **PR #359**: docs: re-verify corpus artifact audit at 841470b
 - **PR #357**: docs: re-verify corpus artifact audit at d64a80d (Part of #4)
 - **Issue #356** (closed): Trim tb/run_tb.py module docstring: remove duplicated lane narratives
