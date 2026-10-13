@@ -226,6 +226,35 @@ replaces the rows. #44 consumes selected mutations from this matrix and
 #48 consumes its coverage; both consumption contracts are declared in the
 publication, neither is executed by it, and holdout stays sealed.
 
+## Actual-Voice family campaign contract (#333, preregistration)
+
+The staged actual-Voice measurement of the identity, timing and signal family
+operators (#300) is preregistered, not measured. DR-0012
+(`spec/decision-records/0012-runtime-family-campaign-contract.md`, Proposed
+until reviewed merge) and the versioned manifest
+`spec/reference/runtime-family-campaign-v1.json` (schema
+`spec/schemas/runtime-family-campaign-v1.schema.json`, non-writing validator
+`tools/validate_runtime_family_campaign.py`) freeze the fault inventory by stable
+ID with an explicit disposition for every family fault row, the development
+cases and batch slots, the ratified reliability rule (two independent
+fresh-process executions per applicable cell, controls passing, repeat bytes
+equal; magnitude sensitivity separate), the planned attempt denominator, host
+admission predicate, worker/artifact/verifier/completion rules and the open
+authority questions.
+
+Completion semantics: refusals, compositions, sensitivity rows, ineffective
+events and deferred entries never count as successful runtime kills. The
+`AudioMixer.output` normalization handoff is deferred, so normalization stays
+unmeasured in the actual Voice and its #300/#9 obligation stays open; a literal
+`align_corners` operator is a proposed addition outside the frozen denominator.
+No host is admitted by the contract. Nothing in the manifest is a measurement,
+and the existing `bridge.*` scope of the runtime publication is unchanged.
+
+This section edits a bound input of `tools/qualify_mutations_matrix.py`
+(`INPUT_PATHS` includes this file); the matrix publication's digest binding is
+therefore stale, which is coordinated under #314 (rebinding) and #257 (check-first
+CI) and is not repaired by hand-editing a hash.
+
 ## Evidence audit
 
 `docs/MUTATION-COVERAGE-AUDIT.md` (#9) maps every original acceptance

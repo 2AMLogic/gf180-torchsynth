@@ -412,6 +412,22 @@ default (generating) mode of every runner, runtime runner default mode (pinned
 image, including the #309 launch path), any fresh actual-Voice measurement, the
 AWS repo-remote box, the full repository test suite, Python 3.11.
 
+## Campaign preregistration (#333)
+
+The F1/F3a/F3b decisions are recorded as a preregistration, not a measurement:
+[DR-0012](../spec/decision-records/0012-runtime-family-campaign-contract.md)
+and `spec/reference/runtime-family-campaign-v1.json` (validated by
+`tools/validate_runtime_family_campaign.py`). It inventories all 44 family
+fault rows against explicit dispositions, ratifies the two-fresh-process
+reliability rule, decides that a literal `align_corners` operator is required
+(`interp.off_endpoint` is a dropped-endpoint fault, not a flag toggle), defers
+the `AudioMixer.output` normalization handoff and routes it as an authority
+question, and preregisters the host qualification needed before any campaign
+admission (the AWS box is sanctioned but not qualified). The verdict above is
+unchanged: criteria 1, 3 (runtime scope), 7 and 8 remain NOT ESTABLISHED, no
+actual-Voice family result exists, and normalization remains unmeasured with its
+obligation open. This section was not part of the checks recorded above.
+
 ## Bounded follow-ups (not performed here)
 
 - **F1** Fresh actual-Voice runtime measurement of the family operators
