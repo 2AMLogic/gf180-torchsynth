@@ -23,7 +23,7 @@ jobs:
       ONEDNN_MAX_CPU_ISA: AVX2
       MKL_ENABLE_INSTRUCTIONS: AVX2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Fail fast if host-dispatch env is not pinned (issue #117)
         run: |
           fail() {
@@ -43,7 +43,7 @@ jobs:
         run: python3 -S env/release-era/qualify_scalar.py verify --output out/scalar-ci
       - name: Retain measured results and failures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: scalar-sentinel
           path: out/scalar-ci
