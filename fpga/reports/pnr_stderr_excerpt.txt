@@ -1,0 +1,47 @@
+
+
+Info: Logic utilisation before packing:
+Info:     Total LUT4s:     329198/83640   393%
+Info:         logic LUTs:  196764/83640   235%
+Info:         carry LUTs:  108458/83640   129%
+Info:           RAM LUTs:  15984/10455   152%
+Info:          RAMW LUTs:   7992/20910    38%
+
+Info:      Total DFFs:      4754/83640     5%
+
+Info: Packing IOs..
+Info: Packing constants..
+Info: Packing carries...
+Info: Packing LUTs...
+Info: Packing LUT5-7s...
+Info: Packing FFs...
+Info:     979 FFs paired with LUTs.
+Info: Generating derived timing constraints...
+Info: Promoting globals...
+Info:     promoting clock net clk$TRELLIS_IO_IN to global network
+Info: Checksum: 0x168bb8ee
+
+Info: Device utilisation:
+Info: 	          TRELLIS_IO:       8/    365     2%
+Info: 	                DCCA:       1/     56     1%
+Info: 	              DP16KD:       0/    208     0%
+Info: 	          MULT18X18D:     324/    156   207%
+Info: 	              ALU54B:       0/     78     0%
+Info: 	             EHXPLLL:       0/      4     0%
+Info: 	             EXTREFB:       0/      2     0%
+Info: 	                DCUA:       0/      2     0%
+Info: 	           PCSCLKDIV:       0/      2     0%
+Info: 	             IOLOGIC:       0/    224     0%
+Info: 	            SIOLOGIC:       0/    141     0%
+Info: 	                 GSR:       0/      1     0%
+Info: 	               JTAGG:       0/      1     0%
+Info: 	                OSCG:       0/      1     0%
+Info: 	               SEDGA:       0/      1     0%
+Info: 	                 DTR:       0/      1     0%
+[...]
+    1: 0x36a16e - <unknown>!<wasm function 3985>
+    2:   0x23b6 - <unknown>!<wasm function 21>
+
+Caused by:
+    thrown Wasm exception
+
