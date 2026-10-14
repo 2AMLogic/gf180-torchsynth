@@ -91,12 +91,25 @@ later, and Loom's per-commit main-health gate reads commits between batches as
 Merging the implementation does not satisfy the following; issue #284 stays
 open until they are recorded here with dates, commands and run URLs.
 
-### Live verification after merge: PENDING
+### Live verification after merge: PARTIAL
 
-- A real scheduled dispatch and both resulting suite runs (actual SHAs and
-  executed jobs).
-- A later unchanged-tip no-op linked to the prior successful evidence.
-- A main-advancement case showing a started main run was not cancelled.
+Observed 2026-10-14 with `gh run list` / `gh run view` (read-only). Two real
+`schedule` dispatcher runs, each followed by a `workflow_dispatch` of both
+suites whose own `headSha` equals the selected SHA:
+
+| Dispatcher run | Main SHA | CI run (jobs) | TB sim run (jobs) |
+|---|---|---|---|
+| [38479980393](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479980393) (2026-10-13 22:46Z) | `ea5c9b1` | [38479997870](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479997870): contract 3.11/3.12/3.13 success | [38480012255](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38480012255): oneshot-whole-voice, oneshot-tail-chain, rtl-module-qualification, sim-lanes-engines, sim-lanes-vco, sim-selftest 3.11/3.12/3.13 all success |
+| [38513918607](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513918607) (2026-10-14 04:55Z) | `bb1efd2` | [38513933083](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513933083): contract 3.11/3.12/3.13 success | [38513944067](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513944067): same 8 jobs, all success |
+
+Observation: cron slots 18:17Z and 00:17Z had no dispatcher run (GitHub does
+not guarantee schedule start times).
+
+Still PENDING (not observed):
+
+- A later unchanged-tip no-op linked to prior successful evidence.
+- A main-advancement case showing a started main run was not cancelled (main
+  did not advance during either run above).
 
 ### Seven-day measurement: PENDING
 
