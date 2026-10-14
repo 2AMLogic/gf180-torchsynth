@@ -1,6 +1,6 @@
 {
-  "loom_version": "0.19.1157",
-  "loom_commit": "4cd950caacfb78da57ecc967ce624ec9635f627e",
+  "loom_version": "0.19.1158",
+  "loom_commit": "f7db3179647083a4df8fe500b1d48a541958a315",
   "install_date": "2026-09-18",
   "installed_files": [
     ".loom/credentials.md.example",
