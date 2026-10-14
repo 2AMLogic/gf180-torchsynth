@@ -78,10 +78,17 @@ sources into `fpga/build/src` and applies exactly five asserted edits:
    plusarg's own default (full walk).
 4. `adsr_engine.sv`: the restoring-divide loop header
    `for (i = den_msb + 60; i >= 0; ...)` becomes a constant-bound loop
-   `for (i = 106; i >= 0; ...) if (i <= den_msb + 60)`. This executes the
-   identical iterations in the identical order (the guard reproduces the old
-   start index; 106 is the maximum of `den_msb + 60`), so the arithmetic is
-   unchanged. It is needed because the data-dependent start index could not
+   `for (i = 106; i >= 0; ...) if (i <= den_msb + 60)`. By construction it
+   is intended to execute the same iterations in the same order (the guard
+   reproduces the old start index; 106 is the maximum of `den_msb + 60`), so
+   the arithmetic should be unchanged. What is actually verified is a
+   bounded simulation check, not a formal proof:
+   `fpga/scripts/check_adsr_div_equiv.py` extracts `div_half_even` from
+   `tb/sv/adsr_engine.sv`, applies the same replacement, and compares the
+   original and rewritten functions under Icarus on directed edges plus
+   fixed-seed random vectors (100,290 vectors, 0 mismatches at the default
+   size; a deliberately wrong bound of 105 is caught). Equivalence of the
+   synthesized netlist is not established; that is #374. It is needed because the data-dependent start index could not
    be unrolled by the front end (it exhausted the 4 GiB WebAssembly memory
    before elaboration finished).
 

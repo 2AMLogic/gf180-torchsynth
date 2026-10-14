@@ -17,8 +17,9 @@ and rewrites ONE loop header in adsr_engine.sv (asserted: exactly one match).
 The restoring-divide loop starts at the data-dependent bit ``den_msb + 60``,
 which neither open front end (yosys-slang, Yosys read_verilog) can unroll.
 It becomes a constant-bound loop (106 = max den_msb 46 + 60) with the
-iteration guarded by the original start index, executing the identical set
-of iterations in the identical order -- the arithmetic is unchanged:
+iteration guarded by the original start index, intended to execute the same
+set of iterations in the same order. This is checked by bounded simulation
+only (fpga/scripts/check_adsr_div_equiv.py), not proven:
 
   for (i = den_msb + 60; i >= 0; i = i - 1) begin
   -> for (i = 106; i >= 0; i = i - 1) if (i <= den_msb + 60) begin

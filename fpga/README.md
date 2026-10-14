@@ -70,6 +70,10 @@ published negative result, not a pass.
 - **A1-A4, A6-A9** are untouched: no arithmetic, width, rounding or clip-timing
   change. One loop header in `adsr_engine.sv` is rewritten to a constant-bound
   guarded loop in the *staged copy* only (DR-0013 D3); `tb/sv` is unchanged.
+  Equivalence of that rewrite is checked by bounded simulation only
+  (`python3 fpga/scripts/check_adsr_div_equiv.py`: function-level, Icarus,
+  100,290 directed + fixed-seed random vectors, 0 mismatches); it is not a
+  formal proof and does not cover the synthesized netlist (#374).
 
 ## Not run / not established
 
@@ -77,6 +81,11 @@ published negative result, not a pass.
 - Post-synthesis / post-route simulation and clean-checkout rebuild
   reproducibility: #374. `build.sh` was run once in the working tree
   (dirty state recorded in the report); nondeterminism is **not** quantified.
+- The report's `git.head` (`4d650c1`) and `git.dirty: true` describe the tree
+  the build actually ran in. The PR branch was later rebased onto `ce1f577`,
+  which changed only `.loom/` tooling files (no `tb/sv`, `fpga/`, `spec/` or
+  `rtl/` input); the build was **not** re-run on the rebased head and the
+  report was not re-measured.
 - Any board work, pin assignment (DR-0013 D1: none), programming, audio.
 - Any ABC9 result: `abc9` did not finish in 590 s, so `abc -lut 4:7` was used.
 - Whole-design `-noflatten` hierarchy: killed (4 GiB wasm limit); replaced by
