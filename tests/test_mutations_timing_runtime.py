@@ -38,8 +38,22 @@ DOCUMENT = json.loads((ROOT / "spec/reference/trace-registry-v1.json").read_text
 INVENTORY = json.loads((ROOT / "spec/reference/parameter-inventory-v1.json").read_text())
 PARAMETER_NAMES = [parameter["name"] for parameter in INVENTORY["parameters"]]
 MANIFEST, MANIFEST_SHA256 = tr.load_manifest(ROOT)
-mutations_timing.register_family()
-tr.register_runtime_operators()
+
+_REGISTRY_SNAPSHOT = None
+
+
+def setUpModule():
+    # Scope the runtime operators to this module: the full suite shares one
+    # process, and test_mutations_matrix pins the global registry count.
+    global _REGISTRY_SNAPSHOT
+    _REGISTRY_SNAPSHOT = dict(mutations.OPERATORS)
+    mutations_timing.register_family()
+    tr.register_runtime_operators()
+
+
+def tearDownModule():
+    mutations.OPERATORS.clear()
+    mutations.OPERATORS.update(_REGISTRY_SNAPSHOT)
 
 
 def sha(data):
