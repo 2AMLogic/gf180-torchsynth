@@ -599,10 +599,14 @@ def _check_event_chain(events: List[Dict[str, Any]], original: str, presented: s
 
 
 def evaluate_report(report: Dict[str, Any], schedule: Dict[str, Any], output: Path,
-                    root: Path = ROOT) -> Dict[str, Any]:
+                    root: Path = ROOT,
+                    manifest: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Offline, non-writing evaluation of one worker report; fail closed.
 
-    ``status`` is PASS only when every structural, integrity, control,
+    The given schedule is first re-derived with ``resolve_identity_schedule``
+    from the ratified manifest (``manifest`` if given, else the committed one,
+    always validated) and refused unless canonically identical. ``status`` is
+    PASS only when that binding and every structural, integrity, control,
     restoration and invariance check holds. Cell results are reported per
     cell; an ineffective or undetected cell stays open, never a kill.
     """
@@ -629,6 +633,19 @@ def evaluate_report(report: Dict[str, Any], schedule: Dict[str, Any], output: Pa
         "refused_cells": copy.deepcopy(schedule["refused_cells"]),
         "expected_attempts": expected_attempt_inventory(schedule),
     }
+    # The schedule is untrusted input: a self-consistent schedule (plan ids
+    # re-hashed after a tamper) must still be the exact schedule the ratified
+    # manifest, inventory, registry and catalog resolve for (case, repeat).
+    try:
+        resolved = resolve_identity_schedule(request["case_id"], schedule["repeat"], root,
+                                             manifest)
+    except (MutationError, ValueError, KeyError, TypeError) as error:
+        errors.append("schedule refused: cannot re-resolve from the manifest: " + str(error))
+        return evaluation
+    if canonical(resolved) != canonical(schedule):
+        errors.append("schedule refused: not the schedule the ratified manifest resolves "
+                      "for this case and repeat")
+        return evaluation
     try:
         worker.validate_schedule(schedule)
     except (ValueError, KeyError, TypeError) as error:
@@ -802,8 +819,10 @@ def campaign_outcomes(manifest: Dict[str, Any],
                       evaluations: List[Dict[str, Any]]) -> Dict[Tuple[str, str, int], str]:
     """Map evaluations onto the manifest's (entry, case, repeat) outcome keys.
 
-    Only PASS evaluations of the actual-Voice producer bound to this manifest
-    contribute; synthetic adapter evidence is refused outright. A cell whose
+    Only evaluations of the actual-Voice producer bound to this manifest are
+    accepted; synthetic adapter evidence is refused outright. A PASS
+    evaluation contributes its per-cell statuses; every cell of a FAIL
+    evaluation is recorded as ``execution_failed`` (never a kill). A cell whose
     required repeats presented different fault bytes is downgraded in every
     repeat (no retry-to-pass).
     """

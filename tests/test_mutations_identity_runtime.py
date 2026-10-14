@@ -468,14 +468,14 @@ class TamperTests(unittest.TestCase):
         attempt = next(a for a in schedule["attempts"]
                        if a["cell_id"] == "identity:wrong-noise-slot")
         attempt["plan"]["mutations"][0]["magnitude"]["value"] = 6
-        self.assertRefused(self.evaluate(schedule=schedule), "plan refused")
+        self.assertRefused(self.evaluate(schedule=schedule), "schedule refused")
 
     def test_operator_tamper(self):
         schedule = copy.deepcopy(self.fixture.schedule)
         attempt = next(a for a in schedule["attempts"]
                        if a["cell_id"] == "identity:wrong-noise-seed")
         attempt["plan"]["mutations"][0]["operator"] = "noise.slot_shift"
-        self.assertRefused(self.evaluate(schedule=schedule), "plan refused")
+        self.assertRefused(self.evaluate(schedule=schedule), "schedule refused")
 
     def test_report_not_bound_to_schedule(self):
         report = copy.deepcopy(self.fixture.report)
@@ -540,6 +540,88 @@ class TamperTests(unittest.TestCase):
         report = copy.deepcopy(self.fixture.report)
         self.record(report, "clean_rerun")["state_restored"] = False
         self.assertRefused(self.evaluate(report), "state not restored")
+
+
+def rehash_plans(schedule):
+    """Rebuild every plan (and its plan_id) so the schedule is self-consistent.
+
+    A tamper applied this way cannot be caught by stale-plan_id checks alone;
+    only re-deriving the schedule from the ratified manifest refuses it.
+    """
+    for attempt in schedule["attempts"]:
+        if attempt["plan"] is None:
+            continue
+        plan = mutations.make_plan(
+            rt.source_binding(schedule["request"], schedule["repeat"], attempt["attempt"],
+                              schedule["bindings"]),
+            attempt["plan"]["mutations"], CATALOG)
+        attempt["plan"] = plan
+        attempt["plan_id"] = plan["plan_id"]
+        attempt["declared_order"] = [i["instance_id"] for i in plan["mutations"]]
+    return schedule
+
+
+class ManifestBindingTamperTests(unittest.TestCase):
+    """Self-consistent schedules that differ from the manifest fail closed."""
+
+    NEEDLE = "not the schedule the ratified manifest resolves"
+
+    def run_tampered(self, tamper):
+        schedule = copy.deepcopy(rt.resolve_identity_schedule("global-0", 1, ROOT, MANIFEST))
+        tamper(schedule)
+        rehash_plans(schedule)
+        # The tampered schedule passes the worker's own gate and every plan
+        # re-validates, so the tamper is not a stale-plan_id artefact.
+        WORKER.validate_schedule(schedule)
+        for attempt in schedule["attempts"]:
+            if attempt["plan"] is not None:
+                mutations.validate_plan(attempt["plan"], CATALOG)
+        directory = Path(tempfile.mkdtemp(prefix="rti-bind-"))
+        try:
+            report = run(schedule, directory)
+            evaluation = rt.evaluate_report(report, schedule, directory, ROOT)
+        finally:
+            shutil.rmtree(directory, ignore_errors=True)
+        self.assertEqual(evaluation["status"], "FAIL")
+        self.assertEqual(len(evaluation["errors"]), 1, evaluation["errors"])
+        self.assertIn(self.NEEDLE, evaluation["errors"][0])
+        self.assertEqual(evaluation["cells"], {})
+        return schedule
+
+    def test_parameter_inventory_digest_tamper(self):
+        def tamper(schedule):
+            schedule["bindings"]["parameter_inventory_sha256"] = "0" * 64
+        schedule = self.run_tampered(tamper)
+        self.assertEqual(schedule["attempts"][3]["plan"]["source_binding"]["fixture_identity"],
+                         rt.source_binding(schedule["request"], 1,
+                                           schedule["attempts"][3]["attempt"],
+                                           schedule["bindings"])["fixture_identity"])
+
+    def test_rehashed_magnitude_tamper(self):
+        def tamper(schedule):
+            attempt = next(a for a in schedule["attempts"]
+                           if a["cell_id"] == "identity:wrong-noise-slot")
+            attempt["plan"]["mutations"][0]["magnitude"]["value"] = 6
+        schedule = self.run_tampered(tamper)
+        attempt = next(a for a in schedule["attempts"]
+                       if a["cell_id"] == "identity:wrong-noise-slot")
+        self.assertTrue(attempt["plan_id"].startswith("mp1-"))
+
+    def test_dropped_attempt_tamper(self):
+        def tamper(schedule):
+            schedule["attempts"] = [a for a in schedule["attempts"]
+                                    if a["cell_id"] != "identity:wrong-noise-seed"]
+        schedule = self.run_tampered(tamper)
+        self.assertNotIn("identity:wrong-noise-seed",
+                         [a["cell_id"] for a in schedule["attempts"]])
+
+    def test_untampered_schedule_still_passes(self):
+        fixture = RunFixture("global-0")
+        try:
+            self.assertEqual(fixture.evaluation["status"], "PASS",
+                             fixture.evaluation["errors"])
+        finally:
+            fixture.cleanup()
 
 
 class ErrorPathTests(unittest.TestCase):
