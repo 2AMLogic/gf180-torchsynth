@@ -91,12 +91,35 @@ later, and Loom's per-commit main-health gate reads commits between batches as
 Merging the implementation does not satisfy the following; issue #284 stays
 open until they are recorded here with dates, commands and run URLs.
 
-### Live verification after merge: PENDING
+### Live verification after merge: PARTIAL
 
-- A real scheduled dispatch and both resulting suite runs (actual SHAs and
-  executed jobs).
-- A later unchanged-tip no-op linked to the prior successful evidence.
-- A main-advancement case showing a started main run was not cancelled.
+Recorded 2026-10-14 from `gh run list` / `gh run view` / `gh run view --log`
+on `2AMLogic/gf180-torchsynth`.
+
+**Recorded: real scheduled dispatch and both resulting suite runs.** Two
+`schedule`-event runs of `ci-main-schedule.yml` (`select-and-dispatch` job,
+success) each dispatched `ci.yml` and `tb-sim.yml` on the selected main SHA; the
+dispatched runs report the same executed SHA as the selection.
+
+| Dispatcher run | Selected / executed SHA | `ci.yml` run (jobs) | `tb-sim.yml` run (jobs) |
+|---|---|---|---|
+| [38479980393](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479980393), 2026-10-13T22:46Z | `ea5c9b1006080ee0183169bffdf1420d1292b75b` | [38479997870](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479997870): `contract` 3.11/3.12/3.13, all success | [38480012255](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38480012255): `oneshot-whole-voice`, `oneshot-tail-chain`, `rtl-module-qualification`, `sim-lanes-engines`, `sim-lanes-vco`, `sim-selftest` 3.11/3.12/3.13, 8 jobs, all success |
+| [38513918607](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513918607), 2026-10-14T04:55Z | `bb1efd2376c7864a5dd5259a3925aff943dc0b02` | [38513933083](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513933083): 3 jobs, all success | [38513944067](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513944067): 8 jobs, all success (`sim-lanes-engines`, `sim-lanes-vco`, `sim-selftest` x3 confirmed by name) |
+
+Both selections logged `no execution for this SHA`, so each dispatched both
+suites. The dispatched suites ran as `workflow_dispatch` events, not `push`.
+Observed cadence: the 18:17 and 00:17 UTC cron slots have no run in
+`gh run list` (GitHub may delay or drop scheduled runs), so the three-hour
+cadence is a target, not an observed guarantee.
+
+**Still PENDING (not observed):**
+
+- A later unchanged-tip no-op linked to prior successful evidence. Every
+  scheduled run so far found a new tip, so none has exercised the reuse path
+  against the real API.
+- A main-advancement case showing a started main run was not cancelled. In
+  both runs above, main did not advance while the suites were executing, so
+  this has not been demonstrated.
 
 ### Seven-day measurement: PENDING
 
