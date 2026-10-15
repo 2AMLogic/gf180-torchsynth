@@ -97,8 +97,9 @@ Numbers are from the committed record; re-derive them with the commands below.
   Yosys log counts in the record.
 * **Did not complete**: `adsr_engine`, `lfo_vca_engine`, `mod_matrix_engine`,
   `sine_vco_engine`, `square_saw_vco_engine`, `audio_mix_engine` and the whole
-  top. All but the top were inside Yosys' generic `abc` step (pass 4.22, before
-  the liberty mapping) when stopped (`mod_matrix_engine` after 2,700 s); the top
+  top. All but the top were inside Yosys' generic `abc` step (pass 4.22;
+  5.22 for `square_saw_vco_engine`; before the liberty mapping) when stopped
+  (`mod_matrix_engine` after 2,700 s); the top
   had not left `opt` of the derived per-instance modules. No area, count or
   timing number exists for any of them, and none is estimated here.
 * **Why (front-end audit, whole voice, pre-mapping)**: 93 `$mul` operators, 76
@@ -161,7 +162,7 @@ not claim the mapped design computes the same samples. Closing that gap
 
 ```sh
 python3 tools/synthesize_oneshot.py run                 # klt synthesize + klt sta, per target
-python3 tools/synthesize_oneshot.py run --targets upsample_engine --timeouts upsample_engine=2400 --force
+python3 tools/synthesize_oneshot.py run --targets upsample_engine --timeouts upsample_engine=2700 --force
 python3 tools/synthesize_oneshot.py record              # rewrites the evidence record
 python3 -m unittest tests.test_synth_feasibility_evidence -v
 ```
@@ -179,7 +180,7 @@ the worker's pinned tools.
   tool versions, constraints, exact commands, per-target results, audits).
 * `asic/evidence/scripts/` -- `klt`-generated Yosys scripts (commit-safe).
 * `asic/klt-friction.md` -- generic `klt` friction, separated for upstream
-  filing in `2AMLogic/klayout-tools` (F1-F9).
+  filing in `2AMLogic/klayout-tools` (F1-F12).
 * `tools/synth_view.py`, `tools/synthesize_oneshot.py`,
   `tests/test_synth_feasibility_evidence.py`.
 
