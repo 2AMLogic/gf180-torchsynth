@@ -1,7 +1,7 @@
 """Bidirectional mutation-coverage matrix contract tests; stdlib-only.
 
 These tests bind the committed #34 matrix publication
-(``sim/reference/mutation-matrix-v1.json``) to the landed operator registry:
+(``sim/reference/mutation-matrix-v2.json``) to the landed operator registry:
 every faults-to-tests row must name registered operators of exactly one
 family with a matching declared seam topology, every mandatory detector must
 name at least one expected fault with wrong-then-right counts, the
@@ -32,7 +32,7 @@ from torchsynth_voice import mutations_identity  # noqa: E402
 from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
 
-MATRIX_PATH = ROOT / "sim/reference/mutation-matrix-v1.json"
+MATRIX_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
 CI_CATEGORIES = ("identity", "delay", "interpolation", "gain", "normalization")
 
 
@@ -54,7 +54,7 @@ def register_families():
 class MatrixPublicationTests(unittest.TestCase):
     def test_committed_matrix_is_present_and_passing(self):
         matrix = load_matrix()
-        self.assertEqual(matrix["kind"], "mutation-matrix-v1")
+        self.assertEqual(matrix["kind"], "mutation-matrix-v2")
         self.assertEqual(matrix["schema_version"], 1)
         self.assertEqual(matrix["status"], "PASS")
         self.assertEqual(matrix["mutation_contract"], "mutation-v1")

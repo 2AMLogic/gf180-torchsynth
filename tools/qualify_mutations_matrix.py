@@ -11,7 +11,7 @@ publications. The runner itself injects no fault beyond plan-time
 composition-gate proofs; its evidence is receipts-only and bounded to the
 landed directed-fixture protocols.
 
-Published bidirectional evidence (``sim/reference/mutation-matrix-v1.json``):
+Published bidirectional evidence (``sim/reference/mutation-matrix-v2.json``):
 the faults-to-tests matrix (every fault row with magnitude, applicability,
 validity, false-positive evidence, missed faults and raw row links) and the
 tests-to-faults matrix (every mandatory detector with the faults it must
@@ -56,7 +56,7 @@ from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
 from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 
-PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v1.json"
+PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
 
 FAMILY_PUBLICATIONS = {
     "identity": "sim/reference/mutation-identity-v1.json",
@@ -761,7 +761,7 @@ def build_publication() -> dict:
     )
     return {
         "schema_version": 1,
-        "kind": "mutation-matrix-v1",
+        "kind": "mutation-matrix-v2",
         "status": "PASS",
         "mutation_contract": "mutation-v1",
         "inputs": {
