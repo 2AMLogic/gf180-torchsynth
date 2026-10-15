@@ -265,7 +265,7 @@ class TestRubricV1Ratification(unittest.TestCase):
 
 
 class TestRubricV2MutationMatrix(unittest.TestCase):
-    """rubric-v2 (issue #297, DR-0012): the grown mutation-matrix row set;
+    """rubric-v2 (issue #297, DR-0013): the grown mutation-matrix row set;
     v0/v1 and their pinned matrix artifact stay frozen."""
 
     def load(self, rel: str) -> dict:
