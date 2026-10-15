@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   sentinel:
     runs-on: ubuntu-22.04
@@ -18,7 +22,7 @@ jobs:
       ONEDNN_MAX_CPU_ISA: AVX2
       MKL_ENABLE_INSTRUCTIONS: AVX2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Fail fast if host-dispatch env is not pinned (issue #117)
         run: |
           fail() {
@@ -30,7 +34,7 @@ jobs:
           [ "${ONEDNN_MAX_CPU_ISA-}" = "AVX2" ] || fail "ONEDNN_MAX_CPU_ISA is '${ONEDNN_MAX_CPU_ISA-<unset>}', must be pinned to AVX2 (#124 oneDNN ISA layer; issue #117)"
           [ "${MKL_ENABLE_INSTRUCTIONS-}" = "AVX2" ] || fail "MKL_ENABLE_INSTRUCTIONS is '${MKL_ENABLE_INSTRUCTIONS-<unset>}', must be pinned to AVX2 (#124 MKL ISA layer; issue #117)"
           echo "Host-dispatch env pinned: ATEN_CPU_CAPABILITY=$ATEN_CPU_CAPABILITY MKL_CBWR=$MKL_CBWR ONEDNN_MAX_CPU_ISA=$ONEDNN_MAX_CPU_ISA MKL_ENABLE_INSTRUCTIONS=$MKL_ENABLE_INSTRUCTIONS"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.11'
       - name: Run probe integrity tests
@@ -39,7 +43,7 @@ jobs:
         run: bash env/release-era/qualify_repeatability.sh sentinel --output out/ci-sentinel
       - name: Retain actual results and build diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: reference-repeatability
           path: out/

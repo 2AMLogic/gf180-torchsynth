@@ -1,333 +1,31 @@
 #!/usr/bin/env python3
 """PDK-free RTL testbench runner (issue #68; the AGENTS.md tb convenience).
 
-Two commands:
+Commands (default: selftest). Each drives an open-source simulator (Icarus
+Verilog; no PDK, no vendor tooling) and compares the capture against a
+frozen reference:
 
-``selftest`` proves the golden-vector harness end to end against a tiny
-synthetic SystemVerilog DUT using an open-source simulator (Icarus
-Verilog; no PDK, no vendor tooling):
+  selftest    golden-vector harness against a synthetic DUT
+  anchor      real golden-vector anchor through the format-true LUT DUT
+  adsr        ADSR envelope engine (issue #70)
+  patch       patch-control core vs its Python mirror (issue #69)
+  lfo         LFO + control-rate VCA engine (issue #71)
+  modmatrix   modulation matrix + upsample engines (issue #72)
+  vco         sine VCO engine (issue #73)
+  vco2        square/saw VCO engine (issue #74)
+  noise       host-fed exact noise-stream lane (issue #75)
+  mix         audio VCAs + pre-normalization mixer (issue #76)
+  normreplay  normalization replay controller + one-shot top (issue #77)
 
-1. generate a synthetic stimulus and its matching golden vector,
-2. compile and run tb/sv/synth_dut.sv + tb/sv/tb_synth_dut.sv,
-3. load the captured stream and assert the pass path (reporter: no
-   mismatch), then
-4. compare against an intentionally corrupted vector and assert the
-   first-mismatch reporter names the exact cycle/sample/trace/expected/
-   actual row of the planted fault.
+Exit status: 0 every check passed; 1 a check failed (a real mismatch or an
+undetected mutation); 3 the simulator is not installed, so nothing ran (an
+unrun check is never a pass); 4 INCONCLUSIVE, the vco capture was
+untrustworthy so nothing was proven or disproven.
 
-``anchor`` graduates the harness to the REAL golden vector
-(``sim/reference/golden-vector-fixed-anchor.json``, frozen by #54):
-
-1. load the anchor vector through the landed schema/loader,
-2. verify the accepted-contract hash binding (constants package, choice
-   register, DR-0008 record; refusal on any mismatch — interface changes
-   fail the check instead of silently recompiling),
-3. build the accepted quarter-wave table through the DR-0008 refusal gate
-   and check it against the vector's bound table digest,
-4. derive the DUT control words (the phase-increment word via the declared
-   binary64 shadow-site policy and the S1-entry mixer-level word) from the
-   vector's own declared scalars and parameters,
-5. run the format-true DUT (tb/sv/lut_sine_dut.sv, imported constants
-   package) over the full 176,400-sample clip,
-6. replay the integer dataflow host-side with the model's own primitives
-   and require it to match the frozen vector trace exactly,
-7. require the RTL capture to match both streams sample-exactly,
-8. plant a fault into the captured stream and require the reporter to name
-   the exact cycle/sample/trace/expected/actual row on the real vector, and
-9. assert the ratified clip budget (DR-0010 Accepted schedule, machine-
-   readable in spec/reference/rtl-schedule-v1.json): the budget constants'
-   internal consistency, the landed constants package against its emission,
-   and a measured-vs-budget headroom report over the DUT's counted cycles —
-   honestly labeled a PARTIAL-DUT measurement (the LUT DUT is one sample
-   per cycle, not the serialized single-MAC schedule; no schedule-
-   conformance or PPA/fit claim is made).
-
-Exit 0 only if every step passes. The declared shadow sites are replayed
-host-side exactly as DR-0008 declares them open items — no RTL claim is
-made for them, and nothing here claims synthesis, layout, signoff, or
-hardware anything.
-
-``adsr`` (issue #70) runs the bit-exact ADSR envelope engine
-(tb/sv/adsr_engine.sv, six concurrent instances) against the frozen fixed
-model's committed golden vectors (sim/reference/adsr-golden-v1/):
-
-1. load every committed vector through the landed loader and verify the
-   accepted-contract hash binding,
-2. re-derive each case's stage formation + per-tick ``**alpha`` shadow
-   streams from the model's own control path (``adsr_golden`` asserts the
-   host shadow equals the model's ``_ramp`` rows, and the committed traces
-   equal the live model's ``_adsr`` outputs),
-3. run the engine six instances wide, one case per invocation, and require
-   every envelope trace sample-exact against its vector,
-4. run two cases back-to-back in one simulation with no reset and require
-   the second run to reproduce its solo golden capture byte-for-byte
-   (a trigger cannot retain prior envelope state),
-5. hard-assert the exported op counters against the DR-0010 #70 owner row
-   (multiply-class ops, declared ``**alpha`` shadow sites per tick) plus
-   the emitted schedule constants, and
-6. plant three breakpoint mutations — wrong sustain level (RTL),
-   linear-vs-exponential curve confusion (vector side), off-by-one timing
-   (RTL) — and require every one to be DETECTED.
-
-``lfo`` (issue #71) runs the bit-exact RTL LFO + control-rate VCA engine
-(tb/sv/lfo_vca_engine.sv, two concurrent instances) against the frozen
-fixed model's committed golden vectors (sim/reference/lfo-vca-golden-v1/):
-
-1. load every committed vector through the landed loader and verify the
-   accepted-contract hash binding,
-2. re-derive each case's envelope streams, shape-weight ``**2.718281828``
-   shadow words, and S3 initial-turn word from the model's own control
-   path (``lfo_golden`` asserts the integer mirror equals the model's
-   ``_lfo``/``_control_vca`` rows, and the committed traces equal the
-   live model's outputs),
-3. run the engine two instances wide, one case per invocation, and
-   require every ``lfo_<n>.raw`` and ``lfo_<n>.post_control_vca`` trace
-   sample-exact against its vector,
-4. run two cases back-to-back in one simulation with no reset and require
-   the second run to reproduce its solo golden capture byte-for-byte
-   (no cross-run or cross-instance phase/weight state may survive a
-   trigger),
-5. hard-assert the exported op counters (6 multiply-class ops, 10
-   declared narrowings, 1 phase step, and the measured rate-clamp count
-   per instance-tick) against the model mirror and the DR-0010 #71 owner
-   row (<= ~14 multiply-class ops + 2 C5-class LUT interps + 2 phase
-   steps per tick across both instances) plus the emitted schedule
-   constants, and
-6. plant five breakpoint mutations — selector-instead-of-blend, wrong
-   shape table, depth modulation dropped, phase first-increment skipped,
-   and rate-clamp removal (all RTL) — and require every one to be
-   DETECTED.
-
-``modmatrix`` (issue #72) runs the bit-exact RTL modulation-matrix +
-endpoint-aligned upsample engines
-(tb/sv/mod_matrix_engine.sv + tb/sv/upsample_engine.sv, one matrix
-instance + five upsample instances) against the frozen fixed model's
-committed golden vectors (sim/reference/mod-matrix-golden-v1/):
-
-1. load every committed vector through the landed loader and verify the
-   accepted-contract hash binding,
-2. re-derive each case's twenty S1 depth words, four source columns,
-   matrix words, and full-length audio streams from the model's own
-   control path (mod_matrix_golden's integer mirrors assert row-equality
-   against FixedControlPath's own _mod_matrix/_upsample rows, and the
-   committed traces, audio digests, endpoint/jitter words, and the
-   receipt-case sidecar bytes must all match the live model),
-3. run the engines one case per invocation and require every matrix
-   trace and every full-length audio stream sample-exact against the
-   vector and the model,
-4. run two cases back-to-back in one simulation with no reset and
-   require the second run to reproduce its solo golden capture
-   byte-for-byte (depth words, column memories, and walk counters are
-   per-trigger),
-5. hard-assert the exported op counters against the model mirror's
-   saturation counts and the DR-0010 #72 owner row (matrix: 20 MACs + 5
-   narrowings per control tick; upsample: blend mult/add/narrow at 1/1/1
-   within the 2/1/1 owner-row cap per column-sample; the exact
-   incremental coordinate walk reported as a declared extra), plus the
-   emitted schedule constants, and
-6. plant eight breakpoint mutations — the upstream +-1.0 matrix clamp,
-   ZOH, the align_corners=False off-endpoint scale, selector instead of
-   blend, and a dropped route (all RTL, under a +max_j walk cap for the
-   demonstration), plus route-swap, depth-sign-flip, and one-ULP-depth
-   stimulus mutations — and require every one to be DETECTED, with the
-   localization mutations confined to exactly the expected route's
-   traces.
-
-``vco`` (issue #73) runs the bit-exact RTL sine VCO engine
-(tb/sv/sine_vco_engine.sv) against the frozen whole-voice receipt's
-``vco_1.raw`` traces (sim/reference/fixed-voice-golden-v1.json, the #54
-receipt; the directed vco_1 cases additionally carry committed sidecar
-bytes):
-
-1. load the receipt, verify its accepted-contract bindings (DR-0008
-   status, hash-linked LUT digest, constants-package digest), and select
-   the param-committed cases (the 8 development-corpus cases stay
-   digest-custody only, per the receipt's custody policy),
-2. re-derive each case's stimulus through the frozen composition's own
-   control path (keyboard word, S1 entry words, initial-phase turn word,
-   the #72 endpoint-aligned upsample pitch column — all pinned to the
-   receipt's digests), and re-walk the sine lane host-side with the
-   model's own primitives (the declared binary64 exp2 shadow replayed
-   host-side), requiring the mirror to reproduce the receipt's frozen
-   ``vco_1.raw`` digest,
-3. run the engine one case per invocation over the full 176,400-sample
-   clip and require every ``vco_1.raw`` word AND post-step phase word
-   sample-exact against the mirror,
-4. run two cases back-to-back in one simulation with no reset and
-   require the second run to reproduce its solo golden capture
-   byte-for-byte (the initial phase word and counters are per-trigger),
-5. hard-assert the exported op counters against the DR-0010 #73 owner
-   row (pitch path 3 mults / 6 adds / 3 narrows / 1 exp2 + phase+LUT
-   1/2/1; the engine declares 3/7/4 RTL ops per sample and the host
-   shadow supplies the 4th mult) and the complete clip schedule (walked
-   samples == emitted samples_per_pass), plus the emitted schedule
-   constants, and
-6. plant five breakpoint mutations — wrong LUT address, dropped phase
-   increment, and phase-wrap saturation (RTL, caught on trace rows),
-   plus the un-clamped pitch (the model's MIDI clamp band dropped from
-   the pitch formation) and the selector-vs-blend mod input (the
-   blended pitch column replaced by the control-rate selector pick),
-   both planted stimulus-side through the declared shadow — the mirror
-   re-derives the Q16.15 words from the mutated pitch exactly as the
-   integrated lane would consume them — and require every one to be
-   DETECTED against the pristine frozen truth.
-
-The ``vco`` lane exits ``4`` (INCONCLUSIVE, never a pass and never an RTL
-verdict) when a simulation's captures cannot be trusted — a ``$readmemh`` /
-bench fault in the simulator log, a truncated or spliced capture row, a
-missing file, or a short bench walk (``VcoCaptureIntegrityError``, issue
-#277). An ``x``-state word on a run with a clean log stays a comparator
-mismatch (exit ``1``).
-
-``vco2`` (issue #74) runs the bit-exact square/saw VCO engine
-(tb/sv/square_saw_vco_engine.sv + tb/sv/quarter_wave_lut.sv) against the
-frozen fixed model's committed golden vectors
-(sim/reference/square-saw-vco-golden-v1/):
-
-1. load every committed vector through the landed loader and verify the
-   accepted-contract hash binding,
-2. re-derive each case's static words, per-sample pitch column, and the
-   declared shadow replay words (midi->Hz exp2, partials constant, tanh
-   fanout) from the frozen model's own lane
-   (``vco2_golden.mirror_square_saw_vco``, proved by digest against the
-   committed ``vco_2.raw`` evidence; frozen-binding vectors additionally
-   bind the retained fixed-voice-golden-v1 sidecar words so the RTL is
-   validated directly against the frozen word stream),
-3. run the engine one case per invocation and require the pitch word,
-   driven word, right word, and ``vco_2.raw`` output sample-exact against
-   the mirror (and, on frozen-binding cases, the frozen sidecar words),
-4. run two cases back-to-back in one simulation with no reset and require
-   the second run to reproduce its solo golden capture byte-for-byte
-   (static words, phase, and counters are per-trigger),
-5. hard-assert the exported op counters against the DR-0010 #74 owner row
-   (8 multiply-class ops, 8 add/sub-class ops, 7 declared narrowings per
-   sample; sats = the model mirror's sticky saturation total) plus the
-   emitted schedule constants with the PARTIAL-DUT headroom report, and
-6. plant three mutations — the wrong (1-shape) square/saw mix (RTL), a
-   one-ULP partials-constant error (stimulus, localized to the driven
-   stream), and a shadow-word corruption in the replayed tanh fanout
-   (stimulus, localized to vco_2.raw) — and require every one to be
-   DETECTED.
- 
-
-``noise`` (issue #75) runs the exact canonical noise-stream lane
-(tb/sv/noise_stream_dut.sv) against the landed fixed-voice golden receipt
-(sim/reference/fixed-voice-golden-v1.json) under the ACCEPTED noise policy
-(DR-0003 + DR-0008 C8, both Accepted 2026-09-21): host-fed exact stream,
-slot ``sound_index % 32``, seed 13 — exactness, NO error metric, NO
-on-chip generator (that would be a new noise policy needing its own DR):
-
-1. resolve every golden case's canonical noise bytes through the host
-   feed path (seed 13, slot rule) and bind each stream's SHA-256 against
-   the receipt's per-case ``noise`` block,
-2. mirror the frozen fixed model's noise lane bit-level
-   (torchsynth_voice.noise_stream_golden: exponent shift + half-even
-   round + C7 saturation, no multiplier) and require its ``noise.raw``
-   trace digest to equal every committed case's digest — the golden
-   bit-exactness the RTL is then held to,
-2b. run every stream through the pre-render gate (``check_fed_bytes``:
-   clip length, the receipt's declared digest, the slot framing, and the
-   canonical seed-13 identity) BEFORE a byte is fed,
-3. feed each case's full 705,600-byte stream through the DUT and require
-   the captured Q2.21 stream to equal the mirror word-for-word (sample-
-   exact against the golden receipt), with clean status, exactly 176,400
-   declared narrowings per clip, and the clip-length/framing checks
-   green,
-4. replay/reset: play sound_index 0 then 32 back-to-back through one
-   simulation (same slot 0, en gap between streams) and require the
-   second capture to equal the first byte-for-byte — no off-by-one state
-   survives a stream boundary (32-stream repetition),
-5. hard-assert the DR-0010 #75 owner row (one declared narrowing per
-   sample; the convert is exponent shift + half-even round, no
-   multiplier — declared-structural, reported) plus the emitted schedule
-   constants against the landed package, and
-6. plant nine breakpoint mutations — dropped final byte (stimulus),
-   duplicated trailing byte (stimulus), wrong declared slot (stimulus),
-   LSB truncation instead of half-even (RTL), wrong slot-selection rule
-   (RTL), a length-preserving drop/duplicate slip (stimulus; only the
-   pre-render hash gate can see it), a wrong-stream substitution
-   (stimulus; another slot's canonical bytes, correctly framed), a
-   mid-stream trigger-identity splice (stimulus; DR-0010 clip mixing),
-   and a wrong identity binding (RTL) — and require every one to be
-   DETECTED.
-
-``mix`` (issue #76) runs the bit-exact audio VCA + pre-normalization
-mixer engine (tb/sv/audio_mix_engine.sv) against the frozen whole-voice
-receipt (sim/reference/fixed-voice-golden-v1.json) and the declared
-directed fixture manifest (spec/reference/directed-voice-v1.json):
-
-1. load the receipt, verify its accepted-contract bindings (DR-0008
-   status, hash-linked LUT digest, constants-package digest) and select
-   the 26 param-committed cases, then load the declared silence /
-   near-silence / all-source-stress fixtures from the directed manifest
-   through its own validator,
-2. render each case through the frozen composed fixed model
-   (``FixedVoiceModel``), re-walk the VCA/mixer lane with the model's own
-   primitives (``torchsynth_voice.mix_golden.mirror_mix_lane``), and
-   REFUSE unless the mirror reproduces the model's own
-   ``vco_1.post_vca`` / ``vco_2.post_vca`` / ``noise.post_vca`` /
-   ``mixer.pre_normalization`` / ``mixer.peak`` rows and its per-site
-   sticky counter records — and, on every receipt case, unless the
-   model's rows reproduce the receipt's frozen per-trace digests,
-3. run the engine one case per invocation over the full 176,400-sample
-   clip and require all three post-VCA streams, the pre-normalization mix
-   word, its magnitude, and the running peak feed sample-exact against
-   the mirror,
-4. run two cases back-to-back in one simulation with no reset and require
-   the second run to reproduce its solo golden capture byte-for-byte (the
-   level words, the peak register, and the counters are per-trigger),
-5. hard-assert the exported op counters against the DR-0010 #76 owner row
-   (6 mults + 2 adds + 4 narrow sites per audio sample; the measured C7
-   saturation and C6 rounding events at the four declared sites; the
-   peak-feed compare reported against #77's row, never folded into this
-   lane's adds; zero Q6.42 accumulator-band faults) and the complete clip
-   schedule, plus the emitted schedule constants, and
-6. plant nine breakpoint mutations — mixer level route swap, vco_2 VCA
-   polarity flip, a mix-word DC offset, truncation instead of half-even
-   at the mixer narrowing, dropped mixer saturation, and a dropped noise
-   source term (all RTL), plus the noise input curve dropped, a one-ULP
-   noise gain error, and an amplitude-column route swap (stimulus) — and
-   require every one to be DETECTED, with each localized to exactly the
-   traces its fault can reach.
-
-``normreplay`` (issue #77) runs the bit-exact RTL normalization replay
-controller + one-shot top's two-pass sequencer
-(tb/sv/normalization_replay_engine.sv) against the frozen fixed model's own
-``normalize_words()`` (src/torchsynth_voice/fixed_voice.py:195-235; DR-0010's
-P4-decided two-pass re-render, no clip buffer):
-
-1. run the isolated directed Q2.21 case grid (issue #52's own boundary
-   fixtures: below/at/above-one, peak tie, silence, the Q2.21 extremum, a
-   late unique peak, tied maxima, and the two release anchors) plus the
-   frozen fixed-voice-golden-v1 receipt's four normalization-family
-   full-voice cases (regenerated through FixedVoiceModel.render() and
-   bound against the receipt's own mixer.pre_normalization/peak/gain/
-   output trace digests before use — no dependency on issue #76's RTL),
-2. feed every case's pre-normalization mix stream through the DUT twice
-   (pass 1 peak tracking, pass 2 replay) and require the captured pass-2
-   output plus every status register (peak word, U1.22 gain word, branch
-   decision) to equal the host mirror sample-exactly, with output release
-   only after the branch decision,
-3. render one case twice back-to-back with no reset between triggers and
-   require the second capture to reproduce the first byte-for-byte (AC2:
-   no per-sample intermediate is retained across passes or triggers),
-4. hard-assert the DR-0010 #77 owner row's declared per-sample op counts
-   (1 compare + 1 abs-select per pass-1 sample folded into the mixer
-   output; 1 gain multiply + 1 declared narrowing per pass-2 sample on
-   the normalized branch) plus the emitted schedule constants against the
-   landed package, and
-5. plant five breakpoint mutations — always-on, always-off, wrong-peak
-   (last-sample-wins instead of max), wrong-reciprocal (off-by-one-ULP at
-   S5), and off-by-one (the pass-1 framing boundary decided one sample
-   early, demonstrated on the late-peak case) — and require every one to
-   be DETECTED, and
-6. exercise the pass/digest binding hook (issue #188,
-   spec/protocol/RENDER-TRIGGER.md): a ``bind_reject`` pulse at the
-   pass-1/pass-2 boundary, mid pass 2 and mid pass 1 must raise the sticky
-   ERR_BINDING_REJECTED (3), release no further sample, never assert
-   ``done``, and refuse a following clean trigger while sticky; a sixth
-   mutant that ignores ``bind_reject`` must be DETECTED by those scenarios.
-
+Per-lane behavior, guarantees and mutation counts live in tb/README.md; the
+owning specs are under spec/ (e.g. spec/reference/rtl-schedule-v1.json,
+spec/protocol/RENDER-TRIGGER.md). No synthesis, layout, signoff, or hardware
+claim is made by this runner.
 """
 from __future__ import annotations
 
@@ -919,6 +617,28 @@ def simulate_anchor(workdir: Path, simulator: str, phase_step: int,
     return vco_words, mix_words, measured_cycles
 
 
+def _emitted_constants_match(
+    schedule: dict, prefix: str = "budget constants"
+) -> bool:
+    """Emit the accepted registers and compare against the landed package.
+
+    Requires the complete package text to equal the landed constants package
+    and the schedule ID to be among the emitted IDs. Prints the diagnostic and
+    returns the predicate; exceptions propagate to the caller's handler.
+    """
+    emitted = codegen.emit(schedule_payload=schedule)
+    landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
+    matches = emitted.package_text == landed and (
+        sched.SCHEDULE_ID in emitted.emitted_ids
+    )
+    print(
+        "  %s: landed %s matches the live emission of both accepted "
+        "registers -> %s"
+        % (prefix, CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+    )
+    return matches
+
+
 def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
     """Assert the ratified clip budget against the anchor run (issue #68).
 
@@ -980,15 +700,8 @@ def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
         ok = ok and holds
 
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  emitted budget constants: landed %s matches the live emission "
-            "of both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
+        matches = _emitted_constants_match(
+            schedule, prefix="emitted budget constants"
         )
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
@@ -1232,16 +945,7 @@ def check_adsr_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -1684,16 +1388,7 @@ def check_lfo_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -2350,16 +2045,7 @@ def check_mm_budget(schedule) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -4082,16 +3768,7 @@ def check_vco_budget(schedule, walked: int, case: dict, ops_row: list) -> bool:
             % (actual, name, limit, verdict)
         )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of "
-            "both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -5902,16 +5579,7 @@ def noise(workdir: Path, simulator: str) -> int:
         % ("OK" if owner_ok else "FAIL")
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         owner_ok = owner_ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -6502,16 +6170,7 @@ def check_mix_budget(schedule, walked: int, truth: dict, ops_row: list) -> bool:
            truth["aux"]["acc_max"])
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of "
-            "both accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         ok = ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -7540,16 +7199,7 @@ def normreplay(workdir: Path, simulator: str) -> int:
         "schedule-conformance or PPA/fit claim)" % pass2_folded_cycles_max
     )
     try:
-        emitted = codegen.emit(schedule_payload=schedule)
-        landed = CONSTANTS_PKG_SV.read_text(encoding="utf-8")
-        matches = emitted.package_text == landed and (
-            sched.SCHEDULE_ID in emitted.emitted_ids
-        )
-        print(
-            "  budget constants: landed %s matches the live emission of both "
-            "accepted registers -> %s"
-            % (CONSTANTS_PKG_SV.name, "OK" if matches else "FAIL")
-        )
+        matches = _emitted_constants_match(schedule)
         owner_ok = owner_ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
@@ -7716,7 +7366,10 @@ def normreplay(workdir: Path, simulator: str) -> int:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "command",
         nargs="?",

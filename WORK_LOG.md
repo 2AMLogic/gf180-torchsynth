@@ -2,14 +2,41 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-11
+
+- **PR #360**: docs: re-verify corpus artifact audit at edaa94d (Part of #4)
+- **PR #359**: docs: re-verify corpus artifact audit at 841470b
+- **PR #357**: docs: re-verify corpus artifact audit at d64a80d (Part of #4)
+- **Issue #356** (closed): Trim tb/run_tb.py module docstring: remove duplicated lane narratives
+- **PR #358**: docs(tb): trim run_tb.py module docstring (#356)
+- **Issue #354** (closed): Consolidate eight emitted-constants checks in the RTL testbench runner
+- **PR #355**: Consolidate eight emitted-constants checks in tb/run_tb.py
+
+### 2026-10-10
+
+- **PR #351**: docs: re-verify corpus artifact audit at 5f977ca (Part of #4)
+- **PR #350**: renovate: move onto the 2AMLogic org preset
+- **PR #348**: docs: re-verify corpus artifact audit at ad0f524 (Part of #4)
+- **PR #346**: docs: re-verify corpus artifact audit at 74a74e7 (Part of #4)
+
+### 2026-10-09
+
+- **PR #344**: ci: cite 2am docs/ci.md Blacksmith section instead of retired (D5)
+- **PR #339**: chore(renovate): turn off Dependency Dashboard
+- **Issue #343** (closed): ci: replace retired "(D5)" Blacksmith citations in workflow comments (needs workflow scope; 2am#3914)
+- **Issue #171** (closed): Dependency Dashboard
+
 ### 2026-10-08
 
+- **PR #327**: ci: identity tests/--check and 20-row ci_subset sentinel (Part of #9)
+- **PR #323**: Holdout seal manifest, refusal gate and unseal policy (Part of #55)
 - **PR #321**: docs: re-verify mutation-coverage audit at ddadee1 (Part of #9)
 - **PR #318**: Portable command descriptions for non-corpus evidence producers (#309)
 - **PR #317**: docs: re-verify mutation-coverage audit at a4ede9f (Part of #9)
 - **PR #319**: Harden traced-cost provenance verification and partial-resume publication
 - **Issue #309** (closed): Extend portable command representation to non-corpus evidence producers
 - **Issue #311** (closed): Harden traced-cost provenance verification and partial-resume publication
+- **Issue #299** (closed): [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml
 
 ### 2026-10-07
 

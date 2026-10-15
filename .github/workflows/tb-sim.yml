@@ -2,11 +2,14 @@ name: TB sim
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Job/step budget policy (issue #265). GitHub-hosted runners hard-stop
@@ -43,9 +46,9 @@ jobs:
       matrix:
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: ${{ matrix.python }}
@@ -83,7 +86,8 @@ jobs:
   # 3-version matrix would triple already-bounded RTL wall-clock for no
   # verification value (issue #187).
   # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
-  # outage and the operator's move of every public repo off Blacksmith (D5).
+  # outage and the operator's move of every public repo off Blacksmith
+  # (2am `docs/ci.md` §"Blacksmith: decided 2026-09-28, retire").
 
   sim-lanes-vco:
     # The two oscillator lanes: 210 minutes of lane budgets (measured
@@ -94,9 +98,9 @@ jobs:
     # step sum, 110 minutes under the 360-minute hosted limit.
     timeout-minutes: 250
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -119,9 +123,9 @@ jobs:
     # 360-minute hosted limit.
     timeout-minutes: 200
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -177,9 +181,9 @@ jobs:
     # 360-minute hosted limit.
     timeout-minutes: 190
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -201,7 +205,7 @@ jobs:
       - name: Upload tail-chain evidence record
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: oneshot-tail-chain-evidence
           path: |
@@ -244,9 +248,9 @@ jobs:
     # GitHub-hosted's 360-minute hard job limit.
     timeout-minutes: 160
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -265,7 +269,7 @@ jobs:
       - name: Upload whole-voice evidence record
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: oneshot-whole-voice-evidence
           path: |
@@ -305,9 +309,9 @@ jobs:
     # job starts on a runner, after its `needs` complete.
     timeout-minutes: 80
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         timeout-minutes: 5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         timeout-minutes: 5
         with:
           python-version: "3.12"
@@ -328,14 +332,14 @@ jobs:
       # always(): a failure before this point already fails the job.
       - name: Download tail-chain evidence (same revision)
         timeout-minutes: 5
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: oneshot-tail-chain-evidence
           merge-multiple: true
           path: out/integrated-artifacts/oneshot-tail-chain
       - name: Download whole-voice evidence (same revision)
         timeout-minutes: 5
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: oneshot-whole-voice-evidence
           merge-multiple: true
@@ -356,7 +360,7 @@ jobs:
       - name: Upload qualification evidence
         if: always()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: rtl-modules-evidence
           path: out/

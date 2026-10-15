@@ -9,6 +9,7 @@ Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementat
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
+- **#340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
 
 ## Operator Priority
 
@@ -18,9 +19,9 @@ Issues the operator starred (`loom:operator-priority`); land these first.
 
 ## Ready
 
-Human-approved issues ready for implementation (`loom:issue`), excluding issues with open implementation PRs.
+Human-approved issues ready for implementation (`loom:issue`).
 
-- **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml
+- **#9**: [Epic #1] Phase plan: negative-control mutation coverage
 
 ## In Progress
 
@@ -32,7 +33,7 @@ _None._
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#232**: fix(deps): update dependency setuptools to v84
 
 ## Approved (Awaiting Merge)
 
@@ -40,7 +41,7 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#258**: fix: check the committed mutation publications before regenerating them
 - **#293**: ci: schedule CI and TB sim on newest main (#284)
-- **#323**: Holdout seal manifest, refusal gate and unseal policy (Part of #55)
+- **#340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
 
 ## Proposed
 
@@ -58,7 +59,11 @@ Issues carrying `loom:curated`.
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
-- **#299**: [Part of #9] CI: run identity tests and runner --check, and a 20-row ci_subset sentinel step in mutations.yml *(curated)*
+- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
+- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
+- **#324**: Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue *(curated)*
+- **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2) *(curated)*
+- **#333**: [Part of #300] Freeze family campaign contract and unresolved seam decisions *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -86,13 +91,13 @@ Issues carrying `loom:curated`.
 
 | Tier | Count |
 |------|-------|
-| Operator merge-risk holds | 2 |
+| Operator merge-risk holds | 3 |
 | Operator priority | 1 |
 | Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 0 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 3 |
-| Curated | 13 |
+| Curated | 17 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 2 |
 <!-- guide:plan-body:end -->
