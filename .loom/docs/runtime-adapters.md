@@ -312,7 +312,12 @@ tiering is the seed for how a non-Claude runtime should choose which concrete
 model a tier maps to.
 
 **The Codex adapter deliberately does NOT do this yet (#4468).** It ships
-*model-mapping minimalism*: `LOOM_MODEL` is forwarded verbatim to `codex -m`, an
+*model-mapping minimalism*: `LOOM_MODEL` is forwarded to `codex -m` (split on the first
+`@`: a `model@effort` rung suffix, #8387, is never forwarded; the base becomes `-m` and
+the suffix becomes `-c model_reasoning_effort=<suffix>` at the lowest precedence:
+explicit `-c` > `--effort` > `LOOM_EFFORT` > suffix; an empty base falls through to
+`LOOM_CODEX_MODEL`/no `-m`, an empty suffix is ignored; the same split applies to
+`LOOM_CODEX_MODEL`, and an explicit `-m foo@high` arg is passed through unchanged), an
 explicit `-m`/`--model` wins, `LOOM_CODEX_MODEL` supplies an optional static
 adapter default, and with none of those set **no `-m` flag is emitted at all** so
 the Codex CLI/profile default is preserved (exactly `spawn-claude.sh`'s
@@ -1261,6 +1266,24 @@ it; `spawn-worker` scrubs the variables from every process it execs, and the
 sweep, role-runner and epic dispatch surfaces strip them from any child that
 cannot use them. Contract, per-runtime mapping and the red line:
 [`llm-gateway.md`](llm-gateway.md).
+
+### Weighted per-stage, per-attempt draw (`runtimes.roleDraw`, issue #11726)
+
+`runtimes.roleDraw.<role>` replaces the ordered `rolePreference` list for a
+stage with a seeded, weighted draw per attempt, for example
+`"judge": [{"attempt": 1, "draw": {"claude/opus": 80, "claude/fable": 10,
+"codex": 10}}, {"attempt": 2, "draw": {"claude/fable": 100}}]`, plus
+`runtimes.excludeProviders` to drop a runtime from every table on a host. The
+draw orders the candidates by weight and runs the walk below over that order,
+so admission, availability, the launch-failure hold and the ceiling apply
+unchanged, and an unavailable candidate is excluded with the rest
+renormalised. A failed or blocked role tick moves the role to the next
+attempt's table. A role with no table keeps `rolePreference`; an operator pin
+still wins. A candidate key is `<runtime>[:<profile>][/<model-or-profile>]`:
+`claude` ≡ the `"claude"` entry, `opencode:zai-flash` ≡
+`{"runtime":"opencode","modelProfile":"zai-flash"}`, and `claude/opus` adds a
+`--model` pin. The full contract, the per-tier merge, telemetry and `loom-daemon
+roles draw --explain` are in [role-draw.md](role-draw.md).
 
 ### Ordered runtime preference with fall-through (issue #8436)
 
