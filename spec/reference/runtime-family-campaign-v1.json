@@ -91,7 +91,8 @@
       "normalization decision injection (deferred; #300/#9 criteria stay open)",
       "LFO amplitude-depth fault (timing:lfo-depth-shift-plus-0.1) realization at a writable output seam (deferred; #300/#9 criteria stay open)",
       "literal align_corners operator registration and execution (proposed addition)",
-      "#297/#298 additions (declared revision)"
+      "#297/#298 additions (declared revision)",
+      "six #297 publication faults registered deferred_unmeasured by revision 2 (DR-0014): decay/release breakpoint, sustain, -1 dB gain, truncation and the truncation-vs-rounding directed distinction"
     ],
     "status_values": [
       "COMPLETE",
@@ -286,7 +287,7 @@
   "expected": {
     "by_disposition": {
       "composition": 3,
-      "deferred_unmeasured": 5,
+      "deferred_unmeasured": 11,
       "refusal": 3,
       "runtime_cell": 24,
       "second_detector": 2
@@ -294,20 +295,20 @@
     "cases": 3,
     "composition_cells": 9,
     "control_attempts": 24,
-    "deferred_unmeasured_entries": 10,
+    "deferred_unmeasured_entries": 16,
     "expected_refusal_executions": 7,
     "fault_attempts": 162,
-    "inventory_entries": 37,
-    "inventory_source_rows": 44,
+    "inventory_entries": 43,
+    "inventory_source_rows": 50,
     "repeats_per_cell": 2,
     "runtime_fault_cells": 72,
-    "sensitivity_entries": 20,
+    "sensitivity_entries": 32,
     "worker_attempts": 186,
     "worker_processes": 6
   },
   "frozen_inventory_digest": {
     "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
-    "sha256": "1735e03ed40381895febf019da22a16a8af9f12c848c189b99726ddba55625c1"
+    "sha256": "6c4fa0dcab6f2e2ed742ec646e8f59225d5a8914d4934dfd7734ce108fb25708"
   },
   "holdout": {
     "corpus_holdout_first_index": 96,
@@ -954,6 +955,189 @@
       }
     },
     {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:decay-breakpoint-shift-plus2",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 2.0
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "adsr_1.decay",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "fault": "decay-breakpoint-shift-plus2",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "envelope.breakpoint_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          1
+        ]
+      }
+    },
+    {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:release-breakpoint-shift-plus2",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 2.0
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "adsr_1.release",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "fault": "release-breakpoint-shift-plus2",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "envelope.breakpoint_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          2
+        ]
+      }
+    },
+    {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": null,
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-timing-09"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "timing",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "timing:sustain-amplitude-shift-plus0.1",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "envelope.sustain_shift",
+          "unit": "native",
+          "value": 0.1
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "envelope.sustain_shift"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.parameter_value",
+      "runtime_target": "adsr_1.sustain",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:mutation-timing:adsr-control",
+        "fault": "sustain-amplitude-shift-plus0.1",
+        "publication": "sim/reference/mutation-timing-v1.json",
+        "publication_operator": "envelope.sustain_shift",
+        "publication_seam": "apparatus.producer_call",
+        "row_indices": [
+          3
+        ]
+      }
+    },
+    {
       "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
       "configuration": {
         "lane": "adsr_1.output"
@@ -1020,7 +1204,7 @@
         "publication_operator": "timing.delay_control_sample",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          1
+          4
         ]
       }
     },
@@ -1083,7 +1267,7 @@
         "publication_operator": "timing.drop_sample",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          2
+          5
         ]
       }
     },
@@ -1146,7 +1330,7 @@
         "publication_operator": "timing.duplicate_sample",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          3
+          6
         ]
       }
     },
@@ -1240,7 +1424,7 @@
         "publication_operator": "modulation.lfo_rate_shift",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          4
+          7
         ]
       }
     },
@@ -1304,7 +1488,7 @@
         "publication_operator": "modulation.lfo_depth_shift",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          5
+          8
         ]
       }
     },
@@ -1397,7 +1581,7 @@
         "publication_operator": "modulation.route_sign_flip",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          6
+          9
         ]
       }
     },
@@ -1491,7 +1675,7 @@
         "publication_operator": "modulation.route_depth_shift",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          7
+          10
         ]
       }
     },
@@ -1584,7 +1768,7 @@
         "publication_operator": "modulation.route_swap",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          8
+          11
         ]
       }
     },
@@ -1663,7 +1847,7 @@
         "publication_operator": "interp.zoh_control",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          9
+          12
         ]
       }
     },
@@ -1742,7 +1926,7 @@
         "publication_operator": "interp.off_endpoint",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          10
+          13
         ]
       }
     },
@@ -1821,7 +2005,7 @@
         "publication_operator": "timing.delay_audio_sample",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          11
+          14
         ]
       }
     },
@@ -1903,7 +2087,7 @@
         "publication_operator": "interp.zoh_control + timing.delay_audio_sample",
         "publication_seam": "apparatus.producer_call",
         "row_indices": [
-          12
+          15
         ]
       }
     },
@@ -1986,6 +2170,70 @@
       }
     },
     {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:gain.db (minus 1 dB)",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "gain.db",
+          "unit": "dB",
+          "value": -1.0
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "gain.db"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "gain.db (minus 1 dB)",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "gain.db",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          1
+        ]
+      }
+    },
+    {
       "applicability": "declared applicable to every campaign development case; an ineffective result (no change at the seam) leaves the cell open and is never a kill",
       "configuration": {
         "slot": "$case.batch_slot",
@@ -2059,7 +2307,7 @@
         "publication_operator": "gain.polarity",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          1
+          2
         ]
       }
     },
@@ -2137,7 +2385,7 @@
         "publication_operator": "gain.dc_offset",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          2
+          3
         ]
       }
     },
@@ -2215,7 +2463,71 @@
         "publication_operator": "clip.round_step",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          3
+          4
+        ]
+      }
+    },
+    {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:clip.truncate_step",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "clip.truncate_step",
+          "unit": "amplitude_step",
+          "value": null
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "clip.truncate_step"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "clip.truncate_step",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "clip.truncate_step",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          5
         ]
       }
     },
@@ -2293,7 +2605,7 @@
         "publication_operator": "clip.saturation_ceiling",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          4
+          6
         ]
       }
     },
@@ -2371,7 +2683,7 @@
         "publication_operator": "osc.mode_substitute",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          5
+          7
         ]
       }
     },
@@ -2452,7 +2764,7 @@
         "publication_operator": "osc.shape_scale",
         "publication_seam": "voice.parameter_value",
         "row_indices": [
-          6
+          8
         ]
       }
     },
@@ -2533,7 +2845,7 @@
         "publication_operator": "osc.tuning_shift",
         "publication_seam": "voice.parameter_value",
         "row_indices": [
-          7
+          9
         ]
       }
     },
@@ -2614,7 +2926,7 @@
         "publication_operator": "osc.phase_offset",
         "publication_seam": "voice.parameter_value",
         "row_indices": [
-          8
+          10
         ]
       }
     },
@@ -2686,7 +2998,7 @@
         "publication_operator": "osc.tuning_shift",
         "publication_seam": "voice.parameter_value",
         "row_indices": [
-          9
+          11
         ]
       }
     },
@@ -2758,7 +3070,7 @@
         "publication_operator": "osc.phase_offset",
         "publication_seam": "voice.parameter_value",
         "row_indices": [
-          10
+          12
         ]
       }
     },
@@ -2822,7 +3134,7 @@
         "publication_operator": "norm.always_on",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          11
+          13
         ]
       }
     },
@@ -2886,7 +3198,7 @@
         "publication_operator": "norm.off",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          12
+          14
         ]
       }
     },
@@ -2950,7 +3262,7 @@
         "publication_operator": "norm.wrong_peak",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          13
+          15
         ]
       }
     },
@@ -3014,7 +3326,7 @@
         "publication_operator": "norm.wrong_reciprocal",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          14
+          16
         ]
       }
     },
@@ -3080,7 +3392,7 @@
         "publication_operator": "norm.always_on",
         "publication_seam": "voice.normalization_decision",
         "row_indices": [
-          15
+          17
         ]
       }
     },
@@ -3165,7 +3477,71 @@
         "publication_operator": "clip.round_step + clip.saturation_ceiling",
         "publication_seam": "voice.post_module",
         "row_indices": [
-          16
+          18
+        ]
+      }
+    },
+    {
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "configuration": {
+        "slot": "$case.batch_slot",
+        "trace": "mixer.output"
+      },
+      "counts_toward_runtime_total": false,
+      "detector_ids": [
+        "det-signal-01"
+      ],
+      "development_cases": [],
+      "disposition": "deferred_unmeasured",
+      "expected_blast_radius": "not applicable: no runtime injection is preregistered",
+      "expected_event": "none",
+      "expected_failure": "not executed in the actual Voice (deferred_unmeasured); no runtime expectation is preregistered until a later declared revision promotes the entry",
+      "family": "signal",
+      "gated_detectors": [],
+      "historical_apparatus": {
+        "apparatus_case": "directed:signal-family-0",
+        "expected_failure": "publication apparatus expectation only; not a runtime expectation",
+        "fixture_truths": [],
+        "normative_for_runtime": false
+      },
+      "id": "signal:clip.truncate_step vs clip.round_step (directed distinction)",
+      "invariance_assertions": [],
+      "magnitude": [
+        {
+          "operator": "clip.truncate_step",
+          "unit": "amplitude_step",
+          "value": null
+        }
+      ],
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "obligation_open": true,
+      "operators": [
+        "clip.truncate_step"
+      ],
+      "repeats_required": 0,
+      "runtime_evidence_class": "none",
+      "runtime_seam": "voice.post_module",
+      "runtime_target": "vco_1.post_vca",
+      "runtime_truth": {
+        "admissibility": {
+          "gate": null,
+          "on_inadmissible": "not_applicable",
+          "required": false
+        },
+        "derivation": "deferred_unmeasured; the apparatus fixture expectation is historical only and is not a runtime expectation",
+        "operands": [
+          "none: no actual-Voice truth is derived until a declared revision promotes this entry"
+        ],
+        "rule": "not_executed"
+      },
+      "source": {
+        "apparatus_case": "directed:signal-family-0",
+        "fault": "clip.truncate_step vs clip.round_step (directed distinction)",
+        "publication": "sim/reference/mutation-signal-v1.json",
+        "publication_operator": "clip.truncate_step",
+        "publication_seam": "voice.post_module",
+        "row_indices": [
+          19
         ]
       }
     }
@@ -3345,6 +3721,16 @@
       "family": "timing",
       "id": "timing.duplicate_sample",
       "registered": true
+    },
+    {
+      "family": "timing",
+      "id": "envelope.sustain_shift",
+      "registered": true
+    },
+    {
+      "family": "signal",
+      "id": "clip.truncate_step",
+      "registered": true
     }
   ],
   "pins": {
@@ -3374,9 +3760,6 @@
   },
   "proposed_additions": [
     {
-      "counts_in_frozen_denominator": false,
-      "detector_ids": [],
-      "detector_requirement": "a paired time-locked exactness row on the registry-named downstream traces listed in compared_traces (exact_equal and max_abs_error against the plain attempt of the same case and process) must FAIL; the control_upsample.* seam capture keeps the original bytes and is asserted equal to plain as an invariant, never used as a detector operand; the adapter registers the detector binding in a manifest revision",
       "compared_traces": [
         "vco_1.raw",
         "vco_1.post_vca",
@@ -3384,13 +3767,16 @@
         "vco_2.post_vca",
         "noise.post_vca"
       ],
+      "counts_in_frozen_denominator": false,
+      "detector_ids": [],
+      "detector_requirement": "a paired time-locked exactness row on the registry-named downstream traces listed in compared_traces (exact_equal and max_abs_error against the plain attempt of the same case and process) must FAIL; the control_upsample.* seam capture keeps the original bytes and is asserted equal to plain as an invariant, never used as a detector operand; the adapter registers the detector binding in a manifest revision",
+      "family": "timing",
+      "id": "timing:interp.align_corners_false",
+      "injection_site": "replacement of the declared batch slot of the control_upsample.<destination> output of the pinned torchsynth.module.ControlRateUpsample (torch.nn.Upsample(buffer_size, mode='linear', align_corners=True), module.py lines 1127-1129 at the pin); the replacement is torch.nn.functional.interpolate over the same invocation's own input argument with mode='linear', align_corners=False, size=176400; the original is snapshotted by the passive observer first",
       "invariants": [
         "the control_upsample.<destination> seam capture is byte-equal to the plain attempt (it preserves the original)",
         "the registry endpoint contract (i*1763/176399) holds on the preserved original seam capture; endpoint conformance of the replacement bytes is checkable only if a separate replacement artifact is named and retained, which this proposal does not register"
       ],
-      "family": "timing",
-      "id": "timing:interp.align_corners_false",
-      "injection_site": "replacement of the declared batch slot of the control_upsample.<destination> output of the pinned torchsynth.module.ControlRateUpsample (torch.nn.Upsample(buffer_size, mode='linear', align_corners=True), module.py lines 1127-1129 at the pin); the replacement is torch.nn.functional.interpolate over the same invocation's own input argument with mode='linear', align_corners=False, size=176400; the original is snapshotted by the passive observer first",
       "operand_ownership": "the input argument of the same ControlRateUpsample invocation, associated by the #22 CallTracker producer-to-consumer binding; passive capture stays the sole owner of original bytes",
       "operator": "interp.align_corners_false",
       "reason": "DR-0012 D4: the literal flag toggle is required for the campaign to claim align_corners coverage; interp.off_endpoint is a different (dropped-endpoint) fault",
@@ -3423,7 +3809,7 @@
     ],
     "status": "ratified_by_decision_record_on_merge"
   },
-  "revision": 1,
+  "revision": 2,
   "revision_policy": "Adding, removing or re-dispositioning any entry (including #297/#298 additions and the proposed align_corners operator) requires a new manifest revision with a new frozen digest and a decision-record note; the denominator never changes silently.",
   "schema": "torchsynth-runtime-family-campaign",
   "schema_version": 1,
@@ -3667,6 +4053,258 @@
       "publication_status": "ineffective_not_detected",
       "reason": "ineffective in the apparatus fixture; never a kill",
       "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.breakpoint_shift-decay-below-0.005",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.005
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.breakpoint_shift-decay-above-0.03",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.03
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.breakpoint_shift-release-below-0.005",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.005
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.breakpoint_shift-release-above-0.03",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.breakpoint_shift",
+          "unit": "control_sample",
+          "value": 0.03
+        }
+      ],
+      "operators": [
+        "envelope.breakpoint_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.sustain_shift-below-5e-06",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.sustain_shift",
+          "unit": "amplitude",
+          "value": 5e-06
+        }
+      ],
+      "operators": [
+        "envelope.sustain_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:envelope.sustain_shift-above-5e-05",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "envelope.sustain_shift",
+          "unit": "amplitude",
+          "value": 5e-05
+        }
+      ],
+      "operators": [
+        "envelope.sustain_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.lfo_rate_shift-below-0.005",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_rate_shift",
+          "unit": "hz",
+          "value": 0.005
+        }
+      ],
+      "operators": [
+        "modulation.lfo_rate_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.lfo_rate_shift-above-0.05",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_rate_shift",
+          "unit": "hz",
+          "value": 0.05
+        }
+      ],
+      "operators": [
+        "modulation.lfo_rate_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.lfo_depth_shift-below-0.002",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_depth_shift",
+          "unit": "native",
+          "value": 0.002
+        }
+      ],
+      "operators": [
+        "modulation.lfo_depth_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.lfo_depth_shift-above-0.03",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.lfo_depth_shift",
+          "unit": "native",
+          "value": 0.03
+        }
+      ],
+      "operators": [
+        "modulation.lfo_depth_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": false,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.route_depth_shift-below-2e-09",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.route_depth_shift",
+          "unit": "ratio",
+          "value": 2e-09
+        }
+      ],
+      "operators": [
+        "modulation.route_depth_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
+    },
+    {
+      "development_cases": [],
+      "disposition": "sensitivity_not_counted",
+      "executed_in_campaign": false,
+      "expected_detected": true,
+      "family": "timing",
+      "id": "timing:floor-probe:modulation.route_depth_shift-above-5e-08",
+      "kind": "floor_probe",
+      "magnitude": [
+        {
+          "operator": "modulation.route_depth_shift",
+          "unit": "ratio",
+          "value": 5e-08
+        }
+      ],
+      "operators": [
+        "modulation.route_depth_shift"
+      ],
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "runtime_evidence_class": "none"
     }
   ],
   "sources": {
@@ -3675,8 +4313,8 @@
     "env/release-era/repeatability-matrix.json": "04e43c72a3b61cf1945483b0876f10c74bb10f788797224c263381a25d63354c",
     "env/release-era/requirements.lock": "1966379fb95fed9ddbd61ce981840629bcc24fa5ab2dd3b7779fdd6035381b25",
     "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
-    "sim/reference/mutation-signal-v1.json": "a7b23cfa53a806a12ac01bc0f32abc27f379ef435a9b27b4b28b12ab6af58022",
-    "sim/reference/mutation-timing-v1.json": "3c29297da3f739c395f49d17986aee0f9f0296649f91c24ceb60728281d8291d",
+    "sim/reference/mutation-signal-v1.json": "045793c215274eb98a20b002fac29e54ccb94750a9c4bd99ddf2b75f4f86671a",
+    "sim/reference/mutation-timing-v1.json": "08a0d9a457046d7711be0d5036f05f071dcceeb02ea99b2ad9984a8a175d3699",
     "spec/reference/corpus-v0.json": "141c7f0550c062ce42d24ccfad88a385e52608cec52e5408aad4a08fd9c56181",
     "spec/reference/holdout-seal-v0.json": "1084eff6fe7d599f2e27f903532d953830ebf7a59c968d9e3a374b1ae3caf516",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
@@ -3684,8 +4322,8 @@
     "spec/reference/trace-registry-v1.json": "6fd72ca97edda4ea9ede968208aeed69badc2b4f642296123cb12fe1a338d34c",
     "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
     "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
-    "src/torchsynth_voice/mutations_signal.py": "170691d10b75f3adacde54e1f5236f380bbe7c9a6999c6c273c00de444c8bed9",
-    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "src/torchsynth_voice/mutations_signal.py": "581682b103b8ce4a7fb7a84f82a707d4efffcf0fe6d053e46de024b14ca9a211",
+    "src/torchsynth_voice/mutations_timing.py": "4815e6d6a848025dd9b824c0301260925c5e58d019e9af91d4aabce5fce68ab4",
     "tools/qualify_mutations_runtime.py": "a153004dd94cea0aa7988b7c4a280547340f5f2a6ce41db13f38515fbd5b5217"
   },
   "status": "preregistered-unmeasured",

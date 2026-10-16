@@ -489,6 +489,30 @@ def _applicator_breakpoint(instance: Dict[str, Any], document: Dict[str, Any]):
     return document, detail
 
 
+def _applicator_sustain(instance: Dict[str, Any], document: Dict[str, Any]):
+    params = document["parameters"]
+    shift = instance["magnitude"]["value"]
+    faulted_sustain = params["sustain"] + shift
+    _require(
+        0.0 <= faulted_sustain <= 1.0,
+        "faulted sustain amplitude outside the declared [0, 1] range: "
+        + repr(faulted_sustain),
+    )
+    faulted = _replace_params(params, sustain=faulted_sustain)
+    rebuilt = _adsr_samples(faulted)
+    detail = {
+        "lane": LANE_ADSR,
+        "property": "sustain_amplitude",
+        "shift_amplitude": shift,
+        "faulted_construction": {"sustain": faulted_sustain},
+        "declared_truth": {"sustain": params["sustain"]},
+        "original_lane_sha256": _lane_digest(lane_samples(document, LANE_ADSR)),
+        "replacement_lane_sha256": _lane_digest(rebuilt),
+    }
+    write_lane(document, LANE_ADSR, rebuilt)
+    return document, detail
+
+
 def _applicator_lfo_rate(instance: Dict[str, Any], document: Dict[str, Any]):
     params = document["parameters"]
     shift = instance["magnitude"]["value"]
@@ -588,6 +612,7 @@ FAMILY_APPLICATORS: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]],
     "interp.zoh_control": _applicator_zoh,
     "interp.off_endpoint": _applicator_off_endpoint,
     "envelope.breakpoint_shift": _applicator_breakpoint,
+    "envelope.sustain_shift": _applicator_sustain,
     "modulation.lfo_rate_shift": _applicator_lfo_rate,
     "modulation.lfo_depth_shift": _applicator_lfo_depth,
     "modulation.route_sign_flip": _applicator_route_sign,
@@ -680,6 +705,20 @@ FAMILY_OPERATORS: Dict[str, Dict[str, Any]] = {
         "summary": "shift one declared ADSR breakpoint by the declared control-"
         "sample magnitude through the fixture builder; the direct envelope "
         "detector must report the shifted coordinate against the declared truth",
+    },
+    "envelope.sustain_shift": {
+        "version": 1,
+        "seam": FAMILY_SEAM,
+        "sham": False,
+        "magnitude": {"type": "number", "unit": "amplitude",
+                      "minimum": -1, "maximum": 1},
+        "configuration": {},
+        "composes_with": [],
+        "summary": "shift the declared ADSR sustain amplitude by the declared "
+        "amplitude magnitude through the fixture builder (an amplitude "
+        "perturbation, not a control-sample breakpoint); the direct envelope "
+        "detector must report the shifted sustain_amplitude against the "
+        "declared truth, and a faulted sustain outside [0, 1] refuses",
     },
     "modulation.lfo_rate_shift": {
         "version": 1,
@@ -1073,6 +1112,57 @@ def fault_matrix(root: Path) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
                          "attempt": shift_attempt, "rows": shift_rows,
                          "faults": ["attack-breakpoint-shift-plus2"]})
 
+    for breakpoint_name, property_name, fault_name, truth_note in (
+        ("decay", "decay_end", "decay-breakpoint-shift-plus2",
+         "decay_end measured near 54.0 against declared truth 52.0"),
+        ("release", "release_end", "release-breakpoint-shift-plus2",
+         "release_end measured near 190.0 against declared truth 188.0"),
+    ):
+        selector_plan = adsr.fault("mti-adsr-" + breakpoint_name + "-plus2",
+                                   "envelope.breakpoint_shift", 2.0,
+                                   {"breakpoint": breakpoint_name})
+        selector_attempt = adsr.attempt(selector_plan)
+        selector_rows, _ = envelope_rows(
+            lane_samples(_attempt_document(selector_attempt), LANE_ADSR),
+            adsr_params, "directed:mutation-timing:adsr-control")
+        entries.append(_row(
+            fault_name,
+            "envelope.breakpoint_shift",
+            FAMILY_SEAM,
+            "envelope_estimators.estimate_envelope + qualification_rows ("
+            + property_name + ")",
+            "breakpoint coordinate FAIL beyond the 0.02 control-sample bound "
+            "on " + property_name + " only",
+            control_env_ok,
+            detector_refusal(selector_rows, property_name,
+                             truth_note, control_env_ok),
+        ))
+        case_records.append({"case": "adsr-control", "plan": selector_plan,
+                             "attempt": selector_attempt, "rows": selector_rows,
+                             "faults": [fault_name]})
+
+    sustain_plan = adsr.fault("mti-adsr-sustain-plus0.1", "envelope.sustain_shift",
+                              0.1)
+    sustain_attempt = adsr.attempt(sustain_plan)
+    sustain_rows, _ = envelope_rows(
+        lane_samples(_attempt_document(sustain_attempt), LANE_ADSR), adsr_params,
+        "directed:mutation-timing:adsr-control")
+    entries.append(_row(
+        "sustain-amplitude-shift-plus0.1",
+        "envelope.sustain_shift",
+        FAMILY_SEAM,
+        "envelope_estimators.estimate_envelope + qualification_rows "
+        "(sustain_amplitude)",
+        "sustain amplitude FAIL beyond the 0.00002 absolute amplitude bound",
+        control_env_ok,
+        detector_refusal(sustain_rows, "sustain_amplitude",
+                         "sustain_amplitude measured near 0.85 against declared "
+                         "truth 0.75", control_env_ok),
+    ))
+    case_records.append({"case": "adsr-control", "plan": sustain_plan,
+                         "attempt": sustain_attempt, "rows": sustain_rows,
+                         "faults": ["sustain-amplitude-shift-plus0.1"]})
+
     delay_plan = adsr.fault("mti-adsr-delay1", "timing.delay_control_sample", 1,
                             {"lane": LANE_ADSR})
     delay_attempt = adsr.attempt(delay_plan)
@@ -1411,10 +1501,204 @@ def sensitivity_floor(root: Path) -> List[Dict[str, Any]]:
             "measured_error": None if measured is None
             else abs(measured - params["attack"]),
             "qualified_resolution_control_samples": ENVELOPE_COORD_BOUND,
+            "property": "attack_end",
+            "magnitude": magnitude,
+            "magnitude_unit": "control_sample",
+            "side": "above" if expected_detected else "below",
+            "boundary": ENVELOPE_COORD_BOUND,
+            "boundary_unit": "control_sample",
+            "error_relative_to_boundary": None if measured is None else (
+                "above" if abs(measured - params["attack"]) > ENVELOPE_COORD_BOUND
+                else "below"),
+            "verdict": verdict_of(rows, "attack_end"),
             "detected": detected,
             "expected_detected": expected_detected,
         })
+    probes.extend(_boundary_probes(root))
     return probes
+
+
+FLOOR_BOUNDARIES: Dict[str, Dict[str, Any]] = {
+    "envelope.breakpoint_shift/decay": {
+        "operator": "envelope.breakpoint_shift", "property": "decay_end",
+        "boundary": ENVELOPE_COORD_BOUND, "boundary_unit": "control_sample",
+        "boundary_source": ENVELOPE_LIMIT_SOURCE,
+        "magnitude_unit": "control_sample", "above": 0.03, "below": 0.005,
+    },
+    "envelope.breakpoint_shift/release": {
+        "operator": "envelope.breakpoint_shift", "property": "release_end",
+        "boundary": ENVELOPE_COORD_BOUND, "boundary_unit": "control_sample",
+        "boundary_source": ENVELOPE_LIMIT_SOURCE,
+        "magnitude_unit": "control_sample", "above": 0.03, "below": 0.005,
+    },
+    "envelope.sustain_shift": {
+        "operator": "envelope.sustain_shift", "property": "sustain_amplitude",
+        "boundary": ENVELOPE_AMPLITUDE_BOUND, "boundary_unit": "1",
+        "boundary_source": ENVELOPE_LIMIT_SOURCE,
+        "magnitude_unit": "amplitude", "above": 5e-5, "below": 5e-6,
+    },
+    "modulation.lfo_rate_shift": {
+        "operator": "modulation.lfo_rate_shift", "property": "frequency_hz",
+        "boundary": LFO_RATE_LIMIT, "boundary_unit": "hz",
+        "boundary_source": LFO_LIMIT_SOURCE,
+        "magnitude_unit": "hz", "above": 0.05, "below": 0.005,
+    },
+    "modulation.lfo_depth_shift": {
+        "operator": "modulation.lfo_depth_shift",
+        "property": "depth_peak_to_peak",
+        "boundary": LFO_DEPTH_LIMIT, "boundary_unit": "native",
+        "boundary_source": LFO_LIMIT_SOURCE,
+        "magnitude_unit": "native", "above": 0.03, "below": 0.002,
+    },
+    "modulation.route_depth_shift": {
+        "operator": "modulation.route_depth_shift", "property": "gain.vco_1_amp",
+        "boundary": ROUTE_GAIN_BOUND, "boundary_unit": "1",
+        "boundary_source": ROUTE_LIMIT_SOURCE,
+        "magnitude_unit": "ratio", "above": 5e-8, "below": 2e-9,
+    },
+}
+
+
+def _boundary_measure(root: Path, key: str, magnitude: float):
+    """Run one probe fault; return (measured, truth, status_reason, verdict)."""
+    spec = FLOOR_BOUNDARIES[key]
+    operator_id = spec["operator"]
+    if operator_id == "envelope.breakpoint_shift":
+        harness = TimingSignalHarness(root, "adsr-control")
+        params = CASES["adsr-control"]
+        plan = harness.fault("mti-boundary", operator_id, magnitude,
+                             {"breakpoint": key.split("/")[1]})
+        attempt = harness.attempt(plan)
+        rows, _ = envelope_rows(lane_samples(_attempt_document(attempt), LANE_ADSR),
+                                params, "directed:mutation-timing:boundary-probe")
+        truth = envelope_truth(params)[spec["property"]]
+        reason = None
+    elif operator_id == "envelope.sustain_shift":
+        harness = TimingSignalHarness(root, "adsr-control")
+        params = CASES["adsr-control"]
+        plan = harness.fault("mti-boundary", operator_id, magnitude)
+        attempt = harness.attempt(plan)
+        rows, _ = envelope_rows(lane_samples(_attempt_document(attempt), LANE_ADSR),
+                                params, "directed:mutation-timing:boundary-probe")
+        truth = envelope_truth(params)[spec["property"]]
+        reason = None
+    elif operator_id in ("modulation.lfo_rate_shift", "modulation.lfo_depth_shift"):
+        harness = TimingSignalHarness(root, "lfo-control")
+        params = CASES["lfo-control"]
+        plan = harness.fault("mti-boundary", operator_id, magnitude)
+        attempt = harness.attempt(plan)
+        rows, measurement = lfo_rows(
+            lane_samples(_attempt_document(attempt), LANE_LFO), params,
+            "directed:mutation-timing:boundary-probe", root)
+        truth = (params["frequency_hz"] if spec["property"] == "frequency_hz"
+                 else params["depth"])
+        reason = None if measurement["status"] == "valid" else measurement["reason"]
+    else:
+        harness = TimingSignalHarness(root, "route-control")
+        params = CASES["route-control"]
+        plan = harness.fault("mti-boundary", operator_id, magnitude,
+                             {"destination": "vco_1_amp"})
+        attempt = harness.attempt(plan)
+        rows, _ = route_rows(_attempt_document(attempt), params,
+                             "directed:mutation-timing:boundary-probe")
+        truth = params["gains"]["vco_1_amp"]
+        reason = None
+    _require(attempt.errored is None, "boundary probe attempt errored")
+    measured = None
+    for row in rows:
+        if row["property"] == spec["property"]:
+            measured = row["observed"]
+    return measured, truth, reason, verdict_of(rows, spec["property"])
+
+
+def _boundary_probes(root: Path) -> List[Dict[str, Any]]:
+    """Two-sided floor/applicability probes against the declared limits.
+
+    For each numeric operator/property one probe sits below the existing
+    declared detector limit (honest not-detected: the verdict is not FAIL)
+    and one sits above it (detected). The detector limits are never changed;
+    a probe that misses its expectation is published as such.
+    """
+    probes = []
+    for key in FLOOR_BOUNDARIES:
+        spec = FLOOR_BOUNDARIES[key]
+        for side in ("below", "above"):
+            magnitude = spec[side]
+            measured, truth, reason, verdict = _boundary_measure(root, key, magnitude)
+            detected = verdict == "FAIL"
+            probe = {
+                "probe": key.replace("/", "-") + "-" + side + "-" + str(magnitude),
+                "operator": spec["operator"],
+                "seam": FAMILY_SEAM,
+                "property": spec["property"],
+                "side": side,
+                "magnitude": magnitude,
+                "magnitude_unit": spec["magnitude_unit"],
+                "declared_truth": truth,
+                "boundary": spec["boundary"],
+                "boundary_unit": spec["boundary_unit"],
+                "boundary_source": spec["boundary_source"],
+                "verdict": verdict,
+                "detected": detected,
+                "expected_detected": side == "above",
+            }
+            if measured is None:
+                probe["error_relative_to_boundary"] = None
+            else:
+                error = abs(measured - truth)
+                probe["error_relative_to_boundary"] = (
+                    "above" if error > spec["boundary"] else "below")
+                if not spec["operator"].startswith("modulation.lfo"):
+                    # The periodic detector is a NumPy FFT estimator whose
+                    # last-ulp values are host dependent; only its declared
+                    # verdict structure is published, never raw estimates.
+                    probe["measured"] = measured
+                    probe["measured_error"] = error
+            if reason is not None:
+                probe["unavailable_reason"] = reason
+            probes.append(probe)
+    return probes
+
+
+NUMERIC_BOUNDARY_OPERATORS = (
+    "envelope.breakpoint_shift",
+    "envelope.sustain_shift",
+    "modulation.lfo_rate_shift",
+    "modulation.lfo_depth_shift",
+    "modulation.route_depth_shift",
+)
+
+
+def magnitude_applicability(probes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Second-magnitude applicability for every declared family operator.
+
+    Numeric operators cite their two-sided floor probes; fixed/discrete
+    operators record the second magnitude as not applicable rather than
+    inventing one.
+    """
+    records = []
+    for operator_id in sorted(FAMILY_OPERATORS):
+        magnitude = FAMILY_OPERATORS[operator_id]["magnitude"]
+        if operator_id in NUMERIC_BOUNDARY_OPERATORS:
+            cited = sorted(probe["probe"] for probe in probes
+                           if probe["operator"] == operator_id)
+            records.append({"operator": operator_id,
+                            "second_magnitude": "recorded",
+                            "magnitude_unit": magnitude["unit"],
+                            "floor_probes": cited})
+            continue
+        _require(magnitude["type"] == "null"
+                 or (magnitude["type"] == "integer"
+                     and magnitude["minimum"] == magnitude["maximum"]),
+                 "numeric operator lacks a boundary declaration: " + operator_id)
+        records.append({
+            "operator": operator_id,
+            "second_magnitude": "not applicable",
+            "reason": "fixed/discrete operator: "
+            + ("no magnitude" if magnitude["type"] == "null"
+               else "single-valued integer magnitude domain"),
+        })
+    return records
 
 
 def coverage_cases(root: Path) -> Dict[str, List[Dict[str, Any]]]:
@@ -1471,6 +1755,37 @@ def coverage_cases(root: Path) -> Dict[str, List[Dict[str, Any]]]:
     return {"envelope_and_high_rate": envelope}
 
 
+def _wrong_then_right(root: Path) -> bool:
+    """A refused or failing new fault must not contaminate the next attempt."""
+    harness = TimingSignalHarness(root, "adsr-control")
+    valid = harness.fault("mti-wtr-valid", "envelope.breakpoint_shift", 2.0,
+                          {"breakpoint": "decay"})
+    fresh = harness.attempt(valid)
+    refused_at_plan = False
+    try:
+        harness.fault("mti-wtr-domain", "envelope.sustain_shift", 2.0)
+    except MutationError:
+        refused_at_plan = True
+    errored = harness.attempt(
+        harness.fault("mti-wtr-range", "envelope.sustain_shift", 0.5))
+    failing = harness.attempt(
+        harness.fault("mti-wtr-failing", "envelope.sustain_shift", 0.1))
+    final = harness.attempt(valid)
+    return bool(
+        refused_at_plan
+        and errored.errored is not None
+        and errored.events[0]["status"] == "errored"
+        and failing.errored is None
+        and fresh.errored is None
+        and final.errored is None
+        and final.store == fresh.store
+        and final.events == fresh.events
+        and final.events_summary == fresh.events_summary
+        and harness.plain_attempt().store == TimingSignalHarness(
+            root, "adsr-control").plain_attempt().store
+    )
+
+
 def qualification_controls(root: Path) -> Dict[str, Any]:
     """Ordinary/empty/sham controls and cleanup guarantees for the family."""
     import random
@@ -1509,6 +1824,8 @@ def qualification_controls(root: Path) -> Dict[str, Any]:
     faulted_case.attempt(depth_plan)
     sibling_unchanged = TimingSignalHarness(root, "route-control").payload == sibling_before
 
+    wrong_then_right = _wrong_then_right(root)
+
     small = harness.fault("mti-small", "envelope.breakpoint_shift", 0.5,
                           {"breakpoint": "attack"})
     other_breakpoint = harness.fault("mti-small", "envelope.breakpoint_shift", 0.5,
@@ -1535,4 +1852,5 @@ def qualification_controls(root: Path) -> Dict[str, Any]:
         and empty.errored is None
         and sham.errored is None,
         "sibling_case_bytes_unchanged_by_faulted_case": sibling_unchanged,
+        "wrong_then_right_no_contamination": wrong_then_right,
     }

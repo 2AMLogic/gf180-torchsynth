@@ -18,3 +18,5 @@ questions and must not be represented as finished hardware decisions.
 | [0010](0010-one-shot-rtl-microarchitecture.md) | Accepted | One-shot RTL microarchitecture and schedule (issue #63) |
 | [0011](0011-holdout-unseal-policy.md) | Accepted | Mechanical holdout seal gate and single-exposure re-use policy (issue #55) |
 | [0012](0012-runtime-family-campaign-contract.md) | Proposed | Actual-Voice family campaign contract: inventory, reliability, align_corners, normalization deferral and host admission (issue #333, preregistration only) |
+| [0013](0013-rubric-v2-mutation-matrix.md) | Accepted | Rubric v2 for the grown mutation-matrix row set (issue #297) |
+| [0014](0014-runtime-family-campaign-revision-2.md) | Proposed | Runtime-family campaign manifest revision 2: #297 additions registered as deferred_unmeasured (issue #379) |
