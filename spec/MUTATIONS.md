@@ -229,7 +229,7 @@ publication, neither is executed by it, and holdout stays sealed.
 ## Actual-Voice family campaign contract (#333, preregistration)
 
 The staged actual-Voice measurement of the identity, timing and signal family
-operators (#300) is preregistered, not measured. DR-0013
+operators (#300) is preregistered, not measured. DR-0012
 (`spec/decision-records/0012-runtime-family-campaign-contract.md`, Proposed
 until reviewed merge) and the versioned manifest
 `spec/reference/runtime-family-campaign-v1.json` (schema
