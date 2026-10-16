@@ -1,0 +1,10 @@
+{
+  "quarter_wave_audio.memh": {
+    "entries": 4097,
+    "sha256": "8818e98fbfcbdb1e179bfabce25bcaab010efade4292abc4fdd6c952aecd25a5"
+  },
+  "quarter_wave_control.memh": {
+    "entries": 4097,
+    "sha256": "c4e8d2b852309dca659c724096ce383c8b9a5a752d0ff12e8f8cfcd26d7a6f7a"
+  }
+}

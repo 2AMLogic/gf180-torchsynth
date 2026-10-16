@@ -1,0 +1,689 @@
+{
+  "clock_constraint_mhz": 25.0,
+  "commands": [
+    "#!/usr/bin/env bash",
+    "# FPGA feasibility-measurement build (DR-0013, issue #80).",
+    "#",
+    "#   fpga/build.sh [stage ...]     stages: env stage synth engines pnr report (default: all)",
+    "#",
+    "# Everything is written under fpga/build/ (git-ignored); the small evidence",
+    "# files are copied to fpga/reports/. Single-threaded by design (one yosys,",
+    "# one nextpnr; read_slang -j 1; nextpnr --threads 1). Device: LFE5U-85F,",
+    "# CABGA381, speed 6. Clock constraint: FREQ_MHZ (default 25).",
+    "set -euo pipefail",
+    "",
+    "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
+    "ROOT=\"$(cd \"$HERE/..\" && pwd)\"",
+    "B=\"$HERE/build\"",
+    "VENV=\"$B/venv\"",
+    "SRC=\"$B/src\"",
+    "OUT=\"$B/out\"",
+    "REP=\"$HERE/reports\"",
+    "FREQ_MHZ=\"${FREQ_MHZ:-25}\"",
+    "PY=\"$VENV/bin/python\"",
+    "RUN=\"$PY -W ignore $HERE/scripts/yowasp_bigstack.py\"",
+    "SOURCES=\"gf180_rtl_constants_pkg.sv adsr_engine.sv lfo_vca_engine.sv mod_matrix_engine.sv upsample_engine.sv quarter_wave_lut.sv sine_vco_engine.sv square_saw_vco_engine.sv noise_stream_dut.sv audio_mix_engine.sv normalization_replay_engine.sv one_shot_voice_top.sv fpga_oneshot_top.sv\"",
+    "TOP=fpga_oneshot_top",
+    "STAGES=(\"$@\"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(env stage synth engines pnr report)",
+    "want() { local s; for s in \"${STAGES[@]}\"; do [ \"$s\" = \"$1\" ] && return 0; done; return 1; }",
+    "",
+    "mkdir -p \"$B\" \"$OUT\" \"$REP\"",
+    "",
+    "if want env; then",
+    "  [ -x \"$PY\" ] || uv venv --python 3.14 \"$VENV\"",
+    "  uv pip install --python \"$PY\" -r \"$HERE/requirements.txt\"",
+    "fi",
+    "",
+    "if want stage; then",
+    "  python3 \"$HERE/scripts/gen_luts.py\" \"$SRC\" > \"$OUT/luts.json\"",
+    "  python3 \"$HERE/scripts/prepare_sources.py\" \"$SRC\" > \"$OUT/sources.json\"",
+    "  cp \"$HERE/rtl/fpga_oneshot_top.sv\" \"$SRC/\"",
+    "fi",
+    "",
+    "if want synth; then",
+    "  cd \"$SRC\"",
+    "  READ=\"read_slang -j 1 --top $TOP $SOURCES\"",
+    "  # synth_ecp5 always runs abc9 in map_luts; it had not finished after 590 s",
+    "  # on this design, so map_luts is replaced by plain `abc -lut 4:7`.",
+    "  MAPLUTS=\"check -latchonly -assert; techmap -map +/lattice/latches_map.v; abc -lut 4:7 -dress; clean\"",
+    "  # (a) flat, for resource totals and the netlist handed to nextpnr",
+    "  $RUN yosys -q -l \"$OUT/synth_flat.log\" -p \"$READ; synth_ecp5 -top $TOP -run :map_luts; $MAPLUTS; synth_ecp5 -top $TOP -run map_cells: -json $OUT/$TOP.json; tee -o $OUT/stat_flat.txt stat\" >/dev/null 2>\"$OUT/synth_flat.stderr\"",
+    "fi",
+    "",
+    "if want engines; then",
+    "  cd \"$SRC\"",
+    "  MAPLUTS=\"check -latchonly -assert; techmap -map +/lattice/latches_map.v; abc -lut 4:7 -dress; clean\"",
+    "  ENGSRC=\"${SOURCES% one_shot_voice_top.sv fpga_oneshot_top.sv}\"",
+    "  # per-engine bottleneck table. A -noflatten run of the whole top was",
+    "  # killed after ~10 min (4 GiB wasm limit), so each engine is synthesized",
+    "  # standalone with the same flow; instance counts come from one_shot_voice_top.",
+    "  : > \"$OUT/stat_engines.txt\"",
+    "  for spec in adsr_engine:6 lfo_vca_engine:2 mod_matrix_engine:1 upsample_engine:5 \\",
+    "              sine_vco_engine:1 square_saw_vco_engine:1 noise_stream_dut:1 \\",
+    "              audio_mix_engine:1 normalization_replay_engine:1; do",
+    "    eng=\"${spec%%:*}\"; n=\"${spec##*:}\"",
+    "    $RUN yosys -q -l \"$OUT/synth_$eng.log\" -p \"read_slang -j 1 --top $eng $ENGSRC; synth_ecp5 -top $eng -run :map_luts; $MAPLUTS; synth_ecp5 -top $eng -run map_cells:; tee -o $OUT/stat_$eng.txt stat\" >/dev/null 2>\"$OUT/synth_$eng.stderr\" || echo \"FAILED $eng\" >> \"$OUT/stat_engines.txt\"",
+    "    echo \"### $eng x$n\" >> \"$OUT/stat_engines.txt\"",
+    "    cat \"$OUT/stat_$eng.txt\" >> \"$OUT/stat_engines.txt\" 2>/dev/null || true",
+    "  done",
+    "fi",
+    "",
+    "if want pnr; then",
+    "  cd \"$OUT\"",
+    "  set +e",
+    "  timeout 3000 $RUN nextpnr-ecp5 --85k --package CABGA381 --speed 6 --freq \"$FREQ_MHZ\" \\",
+    "    --threads 1 --seed 1 --json \"$OUT/$TOP.json\" --report \"$OUT/pnr_report.json\" \\",
+    "    --log \"$OUT/pnr.log\" --textcfg \"$OUT/$TOP.cfg\" >/dev/null 2>\"$OUT/pnr.stderr\"",
+    "  echo \"nextpnr exit code: $?\" > \"$OUT/pnr.rc\"",
+    "  set -e",
+    "fi",
+    "",
+    "if want report; then",
+    "  python3 \"$HERE/scripts/make_report.py\" \"$ROOT\" \"$OUT\" \"$SRC\" \"$REP\" \"$FREQ_MHZ\"",
+    "fi"
+  ],
+  "cycles": {
+    "audio_pass_cycles": 705611,
+    "basis": "sequencer arithmetic in fpga/rtl/fpga_oneshot_top.sv; see sim_cycle_check for the simulated confirmation",
+    "clip_cycles_start_to_done": 1418281,
+    "control_walk_cycles": 7058,
+    "control_walk_ticks": 1764,
+    "cycles_per_sample_per_pass": 4,
+    "dr0010_serialized_candidate_clip_cycles": 86400000,
+    "normalization_replay_pass_cycles (pass 2 re-render)": 705611,
+    "samples_per_pass": 176400,
+    "wall_seconds_IF_the_clock_were_met_NOT_ACHIEVED": {
+      "100": 0.01418281,
+      "25": 0.05673124,
+      "50": 0.02836562
+    }
+  },
+  "decision_record": "DR-0013",
+  "device": "LFE5U-85F CABGA381 speed 6 (nextpnr --85k)",
+  "device_capacity": {
+    "DP16KD": 208,
+    "LUT4": 83640,
+    "MULT18X18D": 156,
+    "TRELLIS_FF": 83640,
+    "source": "Lattice ECP5 family data sheet, LFE5U-85F"
+  },
+  "engines_failed": [],
+  "git": {
+    "branch": "feature/issue-80",
+    "dirty": true,
+    "head": "4d650c122f4148112b7dad5b314545014923d17e",
+    "porcelain": [
+      " M fpga/README.md",
+      " M spec/decision-records/README.md",
+      "?? fpga/.gitignore",
+      "?? fpga/build.sh",
+      "?? fpga/reports/cycle_check.txt",
+      "?? fpga/reports/fpga-build-report.json",
+      "?? fpga/reports/luts.json",
+      "?? fpga/reports/pnr.rc",
+      "?? fpga/reports/pnr_tail.log",
+      "?? fpga/reports/sources.json",
+      "?? fpga/reports/stat_engines.txt",
+      "?? fpga/reports/stat_flat.txt",
+      "?? fpga/requirements.txt",
+      "?? fpga/rtl/fpga_oneshot_top.sv",
+      "?? fpga/scripts/gen_luts.py",
+      "?? fpga/scripts/make_report.py",
+      "?? fpga/scripts/prepare_sources.py",
+      "?? fpga/scripts/yowasp_bigstack.py",
+      "?? fpga/tb/tb_fpga_cycles.sv",
+      "?? spec/decision-records/0013-fpga-measurement-target.md"
+    ],
+    "tracked_diff_plus_untracked_sha256": "382de9e0eb82d430499d454f0dd409b6104d3f62fa727e2306010fba590e64b7"
+  },
+  "hashes_sha256": {
+    "build_script": "f3ee6844c46d7d5383132e14f963db938cd82b2db83f5b0e43aba5efceaa5e3b",
+    "golden_vector_fixed_voice": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+    "memory_images": {
+      "quarter_wave_audio.memh": "8818e98fbfcbdb1e179bfabce25bcaab010efade4292abc4fdd6c952aecd25a5",
+      "quarter_wave_control.memh": "c4e8d2b852309dca659c724096ce383c8b9a5a752d0ff12e8f8cfcd26d7a6f7a"
+    },
+    "netlist_json": "905f586414358fdb4b4c6aacbda46400cd763b2d8f13912571d69c16fa4abbb5",
+    "requirements": "19af6dd387ea258ec35cc2cde6e32abb4bd71856f62b53291eaa30133ab8e2e9",
+    "staged_sources": {
+      "adsr_engine.sv": "2003d437c37cd23320c0b79728a7f2fc1036142491d711a0bc65055be45e1585",
+      "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "fpga_oneshot_top.sv": "b9d3e117df12bc0bc468f2606d88e1583e373537c809b51dcaddf3746b2e3f41",
+      "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "lfo_vca_engine.sv": "c83f377007c5bea3c7a6da9787536066be28e045a5290eeb5e2bf59eb0b6ed95",
+      "mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+      "noise_stream_dut.sv": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+      "normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "one_shot_voice_top.sv": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+      "quarter_wave_lut.sv": "b319602cc68e14a99e6390882e5c6efdc75c5120e036f88571b015cdfa40e2ee",
+      "sine_vco_engine.sv": "047d22b29065dc753a80578892ec6412cdcef7c1cc1b99e8b432f1a42f73818f",
+      "square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+      "upsample_engine.sv": "d0103bb2e11cfed42f815c17a4e1c854302753d5d84a5aa2dc007ea6c74de8a0"
+    },
+    "tb_sv_sources": {
+      "adsr_engine.sv": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+      "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "lfo_vca_engine.sv": "fdd347eba0150822bd485444e1209a686df6c9741a664c06fcc7357392ae7021",
+      "mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+      "noise_stream_dut.sv": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+      "normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "one_shot_voice_top.sv": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+      "quarter_wave_lut.sv": "ce933d1ba7f7d54342f9442054897e5023ccd4ff481358195d9b3f1499bea8a4",
+      "sine_vco_engine.sv": "a8eaa792a678b56b96a4cab03728ddd1da4c2333d191ad0dbedf93657ca9ffbd",
+      "square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+      "upsample_engine.sv": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679"
+    },
+    "wrapper": "b9d3e117df12bc0bc468f2606d88e1583e373537c809b51dcaddf3746b2e3f41"
+  },
+  "issue": 80,
+  "lut_manifest": {
+    "quarter_wave_audio.memh": {
+      "entries": 4097,
+      "sha256": "8818e98fbfcbdb1e179bfabce25bcaab010efade4292abc4fdd6c952aecd25a5"
+    },
+    "quarter_wave_control.memh": {
+      "entries": 4097,
+      "sha256": "c4e8d2b852309dca659c724096ce383c8b9a5a752d0ff12e8f8cfcd26d7a6f7a"
+    }
+  },
+  "nextpnr_banner": null,
+  "place_and_route": {
+    "errors": [],
+    "nextpnr_exit": "nextpnr exit code: 1",
+    "timing": [],
+    "utilisation_lines": [
+      {
+        "avail": 365,
+        "pct": 2,
+        "resource": "TRELLIS_IO",
+        "used": 8
+      },
+      {
+        "avail": 56,
+        "pct": 1,
+        "resource": "DCCA",
+        "used": 1
+      },
+      {
+        "avail": 208,
+        "pct": 0,
+        "resource": "DP16KD",
+        "used": 0
+      },
+      {
+        "avail": 156,
+        "pct": 207,
+        "resource": "MULT18X18D",
+        "used": 324
+      },
+      {
+        "avail": 78,
+        "pct": 0,
+        "resource": "ALU54B",
+        "used": 0
+      },
+      {
+        "avail": 4,
+        "pct": 0,
+        "resource": "EHXPLLL",
+        "used": 0
+      },
+      {
+        "avail": 2,
+        "pct": 0,
+        "resource": "EXTREFB",
+        "used": 0
+      },
+      {
+        "avail": 2,
+        "pct": 0,
+        "resource": "DCUA",
+        "used": 0
+      },
+      {
+        "avail": 2,
+        "pct": 0,
+        "resource": "PCSCLKDIV",
+        "used": 0
+      },
+      {
+        "avail": 224,
+        "pct": 0,
+        "resource": "IOLOGIC",
+        "used": 0
+      },
+      {
+        "avail": 141,
+        "pct": 0,
+        "resource": "SIOLOGIC",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "GSR",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "JTAGG",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "OSCG",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "SEDGA",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "DTR",
+        "used": 0
+      },
+      {
+        "avail": 1,
+        "pct": 0,
+        "resource": "USRMCLK",
+        "used": 0
+      },
+      {
+        "avail": 4,
+        "pct": 0,
+        "resource": "CLKDIVF",
+        "used": 0
+      },
+      {
+        "avail": 10,
+        "pct": 0,
+        "resource": "ECLKSYNCB",
+        "used": 0
+      },
+      {
+        "avail": 8,
+        "pct": 0,
+        "resource": "DLLDELD",
+        "used": 0
+      },
+      {
+        "avail": 4,
+        "pct": 0,
+        "resource": "DDRDLL",
+        "used": 0
+      },
+      {
+        "avail": 14,
+        "pct": 0,
+        "resource": "DQSBUFM",
+        "used": 0
+      },
+      {
+        "avail": 8,
+        "pct": 0,
+        "resource": "TRELLIS_ECLKBUF",
+        "used": 0
+      },
+      {
+        "avail": 2,
+        "pct": 0,
+        "resource": "ECLKBRIDGECS",
+        "used": 0
+      },
+      {
+        "avail": 2,
+        "pct": 0,
+        "resource": "DCSC",
+        "used": 0
+      },
+      {
+        "avail": 83640,
+        "pct": 5,
+        "resource": "TRELLIS_FF",
+        "used": 4754
+      },
+      {
+        "avail": 83640,
+        "pct": 400,
+        "resource": "TRELLIS_COMB",
+        "used": 335198
+      },
+      {
+        "avail": 10455,
+        "pct": 38,
+        "resource": "TRELLIS_RAMW",
+        "used": 3996
+      }
+    ],
+    "warning_count": 0
+  },
+  "python_packages_in_build_venv": [
+    "click-8.5.0",
+    "platformdirs-4.13.0",
+    "wasmtime-47.0.1",
+    "yowasp_nextpnr_ecp5-0.11.1.0.post826",
+    "yowasp_runtime-1.96",
+    "yowasp_yosys-0.70.0.0.post1259"
+  ],
+  "sim_cycle_check": "WALK=176400 cycles_start_to_fin_or_done=1418282 expected_incl_start_cycle=1418282 done=1 error=0\nst=13 noise_error=0 noise_code=0 core_error=0 core_code=0 bytes=0\n../../tb/tb_fpga_cycles.sv:37: $finish called at 14182935000 (1ps)",
+  "staging_manifest": [
+    {
+      "edited": false,
+      "file": "gf180_rtl_constants_pkg.sv",
+      "source_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "staged_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7"
+    },
+    {
+      "edited": true,
+      "file": "adsr_engine.sv",
+      "source_sha256": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+      "staged_sha256": "2003d437c37cd23320c0b79728a7f2fc1036142491d711a0bc65055be45e1585"
+    },
+    {
+      "edited": true,
+      "file": "lfo_vca_engine.sv",
+      "source_sha256": "fdd347eba0150822bd485444e1209a686df6c9741a664c06fcc7357392ae7021",
+      "staged_sha256": "c83f377007c5bea3c7a6da9787536066be28e045a5290eeb5e2bf59eb0b6ed95"
+    },
+    {
+      "edited": false,
+      "file": "mod_matrix_engine.sv",
+      "source_sha256": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+      "staged_sha256": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9"
+    },
+    {
+      "edited": true,
+      "file": "upsample_engine.sv",
+      "source_sha256": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679",
+      "staged_sha256": "d0103bb2e11cfed42f815c17a4e1c854302753d5d84a5aa2dc007ea6c74de8a0"
+    },
+    {
+      "edited": true,
+      "file": "quarter_wave_lut.sv",
+      "source_sha256": "ce933d1ba7f7d54342f9442054897e5023ccd4ff481358195d9b3f1499bea8a4",
+      "staged_sha256": "b319602cc68e14a99e6390882e5c6efdc75c5120e036f88571b015cdfa40e2ee"
+    },
+    {
+      "edited": true,
+      "file": "sine_vco_engine.sv",
+      "source_sha256": "a8eaa792a678b56b96a4cab03728ddd1da4c2333d191ad0dbedf93657ca9ffbd",
+      "staged_sha256": "047d22b29065dc753a80578892ec6412cdcef7c1cc1b99e8b432f1a42f73818f"
+    },
+    {
+      "edited": false,
+      "file": "square_saw_vco_engine.sv",
+      "source_sha256": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+      "staged_sha256": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3"
+    },
+    {
+      "edited": false,
+      "file": "noise_stream_dut.sv",
+      "source_sha256": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+      "staged_sha256": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d"
+    },
+    {
+      "edited": false,
+      "file": "audio_mix_engine.sv",
+      "source_sha256": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "staged_sha256": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60"
+    },
+    {
+      "edited": false,
+      "file": "normalization_replay_engine.sv",
+      "source_sha256": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "staged_sha256": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1"
+    },
+    {
+      "edited": false,
+      "file": "one_shot_voice_top.sv",
+      "source_sha256": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+      "staged_sha256": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95"
+    }
+  ],
+  "synthesis_flat": {
+    "cells": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 54229,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 27605,
+      "LUT4": 196764,
+      "MULT18X18D (DSP)": 324,
+      "PFUMX": 50074,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 3996,
+      "TRELLIS_FF": 4754
+    },
+    "raw_cell_types": {
+      "CCU2C": 54229,
+      "L6MUX21": 27605,
+      "LUT4": 196764,
+      "MULT18X18D": 324,
+      "PFUMX": 50074,
+      "TRELLIS_DPR16X4": 3996,
+      "TRELLIS_FF": 4754,
+      "cells": 337746,
+      "ports": 8,
+      "wires": 212953
+    }
+  },
+  "synthesis_per_engine_standalone": {
+    "adsr_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 796,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 344,
+      "LUT4": 2248,
+      "MULT18X18D (DSP)": 18,
+      "PFUMX": 630,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 163,
+      "instances": 6,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 4776,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 2064,
+        "LUT4": 13488,
+        "MULT18X18D (DSP)": 108,
+        "PFUMX": 3780,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 978
+      }
+    },
+    "audio_mix_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 1544,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 590,
+      "LUT4": 5871,
+      "MULT18X18D (DSP)": 45,
+      "PFUMX": 1487,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 457,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 1544,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 590,
+        "LUT4": 5871,
+        "MULT18X18D (DSP)": 45,
+        "PFUMX": 1487,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 457
+      }
+    },
+    "lfo_vca_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 5108,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 4466,
+      "LUT4": 30393,
+      "MULT18X18D (DSP)": 44,
+      "PFUMX": 8242,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 476,
+      "instances": 2,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 10216,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 8932,
+        "LUT4": 60786,
+        "MULT18X18D (DSP)": 88,
+        "PFUMX": 16484,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 952
+      }
+    },
+    "mod_matrix_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 2324,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 795,
+      "LUT4": 5807,
+      "MULT18X18D (DSP)": 80,
+      "PFUMX": 1739,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 900,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 2324,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 795,
+        "LUT4": 5807,
+        "MULT18X18D (DSP)": 80,
+        "PFUMX": 1739,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 900
+      }
+    },
+    "noise_stream_dut": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 176,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 26,
+      "LUT4": 581,
+      "MULT18X18D (DSP)": 0,
+      "PFUMX": 75,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 168,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 176,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 26,
+        "LUT4": 581,
+        "MULT18X18D (DSP)": 0,
+        "PFUMX": 75,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 168
+      }
+    },
+    "normalization_replay_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 4384,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 5364,
+      "LUT4": 22115,
+      "MULT18X18D (DSP)": 4,
+      "PFUMX": 9097,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 290,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 4384,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 5364,
+        "LUT4": 22115,
+        "MULT18X18D (DSP)": 4,
+        "PFUMX": 9097,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 290
+      }
+    },
+    "sine_vco_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 23915,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 22839,
+      "LUT4": 93278,
+      "MULT18X18D (DSP)": 6,
+      "PFUMX": 34750,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 395,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 23915,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 22839,
+        "LUT4": 93278,
+        "MULT18X18D (DSP)": 6,
+        "PFUMX": 34750,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 395
+      }
+    },
+    "square_saw_vco_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 4456,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 2968,
+      "LUT4": 34091,
+      "MULT18X18D (DSP)": 27,
+      "PFUMX": 6941,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+      "TRELLIS_FF": 429,
+      "instances": 1,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 4456,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 2968,
+        "LUT4": 34091,
+        "MULT18X18D (DSP)": 27,
+        "PFUMX": 6941,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 0,
+        "TRELLIS_FF": 429
+      }
+    },
+    "upsample_engine": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 1974,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 189,
+      "LUT4": 8034,
+      "MULT18X18D (DSP)": 4,
+      "PFUMX": 1386,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 1332,
+      "TRELLIS_FF": 343,
+      "instances": 5,
+      "total_for_instances": {
+        "ALU54B": 0,
+        "CCU2C_carry_slices (2 LUT4 each)": 9870,
+        "DP16KD (block RAM)": 0,
+        "L6MUX21": 945,
+        "LUT4": 40170,
+        "MULT18X18D (DSP)": 20,
+        "PFUMX": 6930,
+        "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 6660,
+        "TRELLIS_FF": 1715
+      }
+    }
+  },
+  "warnings": {
+    "yosys_slang_async_load_value_missing": 136,
+    "yosys_warning_lines_in_log": 1
+  },
+  "yosys": "Yosys 0.70 (git sha1 28ba3cb92"
+}

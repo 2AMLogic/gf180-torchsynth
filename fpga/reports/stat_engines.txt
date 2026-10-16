@@ -1,0 +1,198 @@
+### adsr_engine x6
+
+7. Printing statistics.
+
+=== adsr_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+     2578 wires
+    14711 wire bits
+     2578 public wires
+    14711 public wire bits
+       23 ports
+      540 port bits
+     4199 cells
+      796   CCU2C
+      344   L6MUX21
+     2248   LUT4
+       18   MULT18X18D
+      630   PFUMX
+      163   TRELLIS_FF
+
+### lfo_vca_engine x2
+
+7. Printing statistics.
+
+=== lfo_vca_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+    34512 wires
+   104804 wire bits
+    34512 public wires
+   104804 public wire bits
+       21 ports
+      485 port bits
+    48729 cells
+     5108   CCU2C
+     4466   L6MUX21
+    30393   LUT4
+       44   MULT18X18D
+     8242   PFUMX
+      476   TRELLIS_FF
+
+### mod_matrix_engine x1
+
+7. Printing statistics.
+
+=== mod_matrix_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+     7011 wires
+    34401 wire bits
+     7011 public wires
+    34401 public wire bits
+       23 ports
+      989 port bits
+    11645 cells
+     2324   CCU2C
+      795   L6MUX21
+     5807   LUT4
+       80   MULT18X18D
+     1739   PFUMX
+      900   TRELLIS_FF
+
+### upsample_engine x5
+
+7. Printing statistics.
+
+=== upsample_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+     8694 wires
+    36729 wire bits
+     8694 public wires
+    36729 public wire bits
+       18 ports
+      322 port bits
+    13262 cells
+     1974   CCU2C
+      189   L6MUX21
+     8034   LUT4
+        4   MULT18X18D
+     1386   PFUMX
+     1332   TRELLIS_DPR16X4
+      343   TRELLIS_FF
+
+### sine_vco_engine x1
+
+7. Printing statistics.
+
+=== sine_vco_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+   131645 wires
+   318184 wire bits
+   131645 public wires
+   318184 public wire bits
+       19 ports
+      437 port bits
+   175183 cells
+    23915   CCU2C
+    22839   L6MUX21
+    93278   LUT4
+        6   MULT18X18D
+    34750   PFUMX
+      395   TRELLIS_FF
+
+### square_saw_vco_engine x1
+
+7. Printing statistics.
+
+=== square_saw_vco_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+    32020 wires
+   103200 wire bits
+    32020 public wires
+   103200 public wire bits
+       23 ports
+      541 port bits
+    48912 cells
+     4456   CCU2C
+     2968   L6MUX21
+    34091   LUT4
+       27   MULT18X18D
+     6941   PFUMX
+      429   TRELLIS_FF
+
+### noise_stream_dut x1
+
+7. Printing statistics.
+
+=== noise_stream_dut ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      427 wires
+     2497 wire bits
+      427 public wires
+     2497 public wire bits
+       16 ports
+      159 port bits
+     1026 cells
+      176   CCU2C
+       26   L6MUX21
+      581   LUT4
+       75   PFUMX
+      168   TRELLIS_FF
+
+### audio_mix_engine x1
+
+7. Printing statistics.
+
+=== audio_mix_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+     5933 wires
+    26065 wire bits
+     5933 public wires
+    26065 public wire bits
+       27 ports
+      589 port bits
+     9994 cells
+     1544   CCU2C
+      590   L6MUX21
+     5871   LUT4
+       45   MULT18X18D
+     1487   PFUMX
+      457   TRELLIS_FF
+
+### normalization_replay_engine x1
+
+7. Printing statistics.
+
+=== normalization_replay_engine ===
+
+        +----------Local Count, excluding submodules.
+        | 
+    33261 wires
+    78498 wire bits
+    33261 public wires
+    78498 public wire bits
+       25 ports
+      327 port bits
+    41254 cells
+     4384   CCU2C
+     5364   L6MUX21
+    22115   LUT4
+        4   MULT18X18D
+     9097   PFUMX
+      290   TRELLIS_FF
+
