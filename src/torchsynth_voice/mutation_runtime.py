@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -426,6 +427,126 @@ def instance(
         "configuration": dict(configuration or {}),
         "sham": bool(definition["sham"]),
     }
+
+
+FAMILY_SEAM = "apparatus.producer_call"
+PAYLOAD_PATH = "attempt/fixture.json"
+
+
+def encode_fixture(document: Dict[str, Any]) -> bytes:
+    return json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+
+
+def decode_fixture(payload: bytes, schema: str, label: str) -> Dict[str, Any]:
+    document = json.loads(payload)
+    _require(document.get("schema") == schema, "payload is not a " + label + " fixture")
+    return document
+
+
+class FamilySession(InjectionSession):
+    """Injection session with one mutation family's applicators installed.
+
+    Subclasses set ``applicators`` (operator id to applicator), ``decode`` and
+    ``encode`` (staticmethods over the family fixture payload).
+    """
+
+    applicators: Dict[str, Callable[..., Any]] = {}
+    decode: Callable[[bytes], Dict[str, Any]]
+    encode: Callable[[Dict[str, Any]], bytes]
+
+    def _apply(self, seam: str, instance: Dict[str, Any], value: Any) -> Any:
+        applicator = self.applicators.get(instance["operator"])
+        if applicator is None:
+            return super()._apply(seam, instance, value)
+        try:
+            replacement, detail = applicator(instance, self.decode(value))
+        except BaseException as error:
+            self._record(
+                instance,
+                seam,
+                "errored",
+                {"error": type(error).__name__, "message": str(error)},
+            )
+            raise
+        if replacement is None:
+            self._record(instance, seam, "ineffective", dict(detail))
+            return value
+        payload = self.encode(replacement)
+        if payload == value:
+            self._record(
+                instance,
+                seam,
+                "ineffective",
+                dict(detail, reason="replacement equals original"),
+            )
+            return value
+        self._record(instance, seam, "applied", detail)
+        return payload
+
+
+class FamilyFixtureHarness:
+    """Deterministic fixture producer over the landed seam contract.
+
+    Subclasses set ``session_class``, ``case_prefix``, ``sham_id`` and
+    ``build_fixture`` (staticmethod from case name to fixture document).
+    """
+
+    session_class: type
+    case_prefix: str
+    sham_id: str
+    build_fixture: Callable[[str], Dict[str, Any]]
+
+    def __init__(self, root: Path, case: str):
+        self.root = Path(root)
+        self.case = case
+        self.catalog = mutations.load_seam_catalog(self.root / mutations.SEAM_CATALOG_PATH)
+        self.document = self.build_fixture(case)
+        self.payload = self.session_class.encode(self.document)
+
+    def binding(self) -> Dict[str, Any]:
+        return {
+            "case_id": self.case_prefix + self.case,
+            "partition": "development",
+            "fixture_identity": sha256(self.payload),
+        }
+
+    def _produce(self) -> bytes:
+        return self.payload
+
+    def plain_attempt(self) -> AttemptResult:
+        result = AttemptResult()
+        result.store[PAYLOAD_PATH] = self.payload
+        return result
+
+    def attempt(self, plan: Dict[str, Any]) -> AttemptResult:
+        result = AttemptResult()
+        session = self.session_class(plan, {FAMILY_SEAM: self._produce})
+        try:
+            with session:
+                result.store[PAYLOAD_PATH] = session.targets[FAMILY_SEAM]()
+        except BaseException as error:
+            result.errored = type(error).__name__ + ": " + str(error)
+        result.events = session.events
+        result.events_summary = session.finish()
+        return result
+
+    def empty_plan(self) -> Dict[str, Any]:
+        return mutations.make_plan(self.binding(), [], self.catalog)
+
+    def sham_plan(self) -> Dict[str, Any]:
+        return mutations.make_plan(
+            self.binding(),
+            [instance(self.sham_id, "noop.sham", FAMILY_SEAM)],
+            self.catalog,
+        )
+
+    def fault(self, instance_id: str, operator_id: str, magnitude: Any = None,
+              configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return mutations.make_plan(
+            self.binding(),
+            [instance(instance_id, operator_id, FAMILY_SEAM, magnitude, configuration)],
+            self.catalog,
+        )
 
 
 def _plan_for(harness: MutationHarness, *instances: Dict[str, Any]) -> Dict[str, Any]:
