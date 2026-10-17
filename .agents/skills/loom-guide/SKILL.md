@@ -615,8 +615,8 @@ has_superseding_block() {
   # Any PR that would close this issue (Closes #N / closingIssuesReferences)
   # still OPEN is a superseding, CURRENT block reason — regardless of what
   # the body's Dependencies section says — when ANY of the following holds:
-  #   1. it carries loom:changes-requested, loom:blocked, or loom:operator
-  #      (a Champion merge-risk hold — a human decision is pending), or
+  #   1. it carries loom:changes-requested, loom:blocked or loom:operator
+  #      (a Champion hold or a human decision is pending), or
   #   2. mergeable == "CONFLICTING", or mergeStateStatus is "DIRTY" or
   #      "CONFLICTING" (it cannot currently land no matter what its labels
   #      say).
@@ -816,6 +816,9 @@ pr_state=$(gh pr view "$pr_number" --json state,mergedAt --jq '.state')
   blocked**, regardless of its labels (`has_superseding_block`, #7267) — a PR
   in that state cannot currently land no matter what
 - If issue was blocked for non-dependency reasons → Check comments for context
+- **PR-side (#10937)**: a standing Champion hold (`loom-daemon champion-hold
+  classify` → `state=champion-hold`) is a human evidence gate: never unblock it
+  because a recorded `Blocked by` closed
 - **PR-side (#8925)**: `pr_has_superseding_block` true → keep blocked, even if
   every declared blocker closed; a `loom:blocked` that is a policy hold, not a
   dependency wait (an operator/quarantine call) → leave it, do not write a
@@ -1879,7 +1882,7 @@ render_plan_body() {
   approved_json=$("$GH_READ" pr list --label "loom:pr" --state open --limit 200 --json number,title,labels,closingIssuesReferences \
     --jq 'sort_by(.number) | [.[] | select(any(.labels[]?.name; . == "loom:frozen") | not)]')
   approved=$(printf '%s' "$approved_json" | jq -r '.[] | "- **#\(.number)**: \(.title)"')
-  held=$(printf '%s' "$approved_json" | jq -r '.[] | select([(.labels // [])[].name] | index("loom:operator")) | "- **#\(.number)**: \(.title)"')
+  held=$(printf '%s' "$approved_json" | jq -r '.[] | select([(.labels // [])[].name] | index("loom:operator") or index("loom:blocked")) | "- **#\(.number)**: \(.title)"')
   # #7083: derive the set of issue numbers already closed by an open
   # `loom:pr`-labeled PR from `approved_json`'s own `closingIssuesReferences`
   # (each PR's closes-graph) — the same "reuse the already-fetched PR list,
@@ -1904,7 +1907,7 @@ render_plan_body() {
     --jq 'sort_by(.number) | .[] | select(any(.labels[]?.name; . == "loom:frozen") | not) | "- **#\(.number)**: \(.title)"')
 
   section "Operator Attention: Merge-Risk-Hold Pileup" \
-    "Judge-approved PRs stuck under a \`loom:operator\` merge-risk hold — implementation work is done, only a human merge decision is missing." \
+    "Judge-approved PRs under a hold (\`loom:blocked\` or \`loom:operator\`) — only a human merge decision is missing." \
     "$held"
   echo
   section "Very Important" "\`loom:very-important\` (one counts per workspace); every stage takes these first." "$vimp"
