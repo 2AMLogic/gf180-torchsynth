@@ -347,6 +347,36 @@ class PairingTests(unittest.TestCase):
         self.assertEqual(verdicts["max_abs_error"], "FAIL")
         self.assertEqual(verdicts["exact_equal"], "FAIL")
 
+    def test_small_gain_fails_exactness_rows_while_clean_control_passes(self):
+        clean_lane = family.render_lane("vco_1.post_vca")
+        self.assertTrue(
+            all(verdict == "PASS" for verdict in self.verdicts(clean_lane, clean_lane).values())
+        )
+        faulted, _ = family.apply_gain_db(clean_lane, 0.01)
+        verdicts = self.verdicts(clean_lane, faulted)
+        self.assertEqual(verdicts["exact_equal"], "FAIL")
+        self.assertEqual(verdicts["max_abs_error"], "FAIL")
+        self.assertEqual(verdicts["framing_match"], "PASS")
+
+    def test_small_gain_optional_observation_never_rescues_mandatory_rows(self):
+        if importlib.util.find_spec("numpy") is None:
+            self.skipTest("optional band observation needs the metrics extra")
+        clean_lane = family.render_lane("vco_1.post_vca")
+        faulted, _ = family.apply_gain_db(clean_lane, 0.01)
+        comparison = pm.compare_paired(
+            clean_lane,
+            faulted,
+            reference_rate_hz=family.SAMPLE_RATE_HZ,
+            candidate_rate_hz=family.SAMPLE_RATE_HZ,
+            unit="amplitude",
+            spectral=True,
+        )
+        optional = comparison["metrics"]["band.20000_up.error_rms"]["value"]
+        self.assertLessEqual(optional, 0.01)
+        verdicts = self.verdicts(clean_lane, faulted)
+        self.assertEqual(verdicts["exact_equal"], "FAIL")
+        self.assertEqual(verdicts["max_abs_error"], "FAIL")
+
     def test_always_on_fails_below_one_bypass_rows_control_passes(self):
         clip = family.directed_clip(family.PEAK_BELOW_ONE)
         clean_output, _, clean_gain, clean_branch = float_mix.normalize_if_clipping(clip)
@@ -410,6 +440,105 @@ class PublicationTests(unittest.TestCase):
                     self.assert_property_refusal_declared(committed_row, row)
                 else:
                     self.assertEqual(committed_row, row)
+
+    def small_gain_refusal(self, mutate=None):
+        """Run the +0.01 dB outcome gate on (a mutated copy of) the committed
+        record's evidence; stdlib-only, so it runs without the metrics extra."""
+        import copy
+        import json
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import qualify_mutations_signal
+
+            committed = json.loads(qualify_mutations_signal.PUBLICATION_PATH.read_bytes())
+            record = copy.deepcopy(committed["contract_wrong_demonstrations"][0])
+            if mutate is not None:
+                mutate(record)
+            return qualify_mutations_signal.small_gain_outcome_refusal(
+                record["applied_event"],
+                record["mandatory_rows"]["fault"],
+                record["mandatory_rows"]["clean_control"],
+                record["optional_observation"],
+            )
+        finally:
+            sys.path.remove(str(ROOT / "tools"))
+            sys.modules.pop("qualify_mutations_signal", None)
+
+    def test_small_gain_gate_accepts_the_committed_outcome(self):
+        self.assertIsNone(self.small_gain_refusal())
+
+    def test_small_gain_gate_reports_unrun_optional_as_cannot_run(self):
+        def unrun(record):
+            record["optional_observation"]["observed"] = None
+            record["optional_observation"]["tolerant"] = False
+
+        message = self.small_gain_refusal(unrun)
+        self.assertIn("could not run", message)
+        self.assertIn("NOT established in this environment", message)
+        self.assertNotIn("return for contract revision", message)
+
+    def test_small_gain_gate_returns_measured_nontolerance_for_revision(self):
+        def nontolerant(record):
+            record["optional_observation"]["observed"] = 0.5
+            record["optional_observation"]["tolerant"] = False
+
+        message = self.small_gain_refusal(nontolerant)
+        self.assertIn("did not meet the stated", message)
+        self.assertIn("return for contract revision", message)
+
+    def test_small_gain_gate_rejects_passing_mandatory_row_or_failed_control(self):
+        def passing_mandatory(record):
+            record["mandatory_rows"]["fault"]["max_abs_error"]["verdict"] = "PASS"
+
+        def failing_control(record):
+            record["mandatory_rows"]["clean_control"]["exact_equal"]["verdict"] = "FAIL"
+
+        for mutate in (passing_mandatory, failing_control):
+            with self.subTest(mutation=mutate.__name__):
+                message = self.small_gain_refusal(mutate)
+                self.assertIn("return for contract revision", message)
+
+    def test_committed_small_gain_demonstration_is_contract_wrong_and_unverified(self):
+        import json
+
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import qualify_mutations_signal
+
+            committed = json.loads(qualify_mutations_signal.PUBLICATION_PATH.read_bytes())
+        finally:
+            sys.path.remove(str(ROOT / "tools"))
+            sys.modules.pop("qualify_mutations_signal", None)
+        records = committed["contract_wrong_demonstrations"]
+        self.assertEqual(
+            [record["demonstration_id"] for record in records],
+            ["contract-wrong/gain.db+0.01dB"],
+        )
+        record = records[0]
+        self.assertEqual(record["magnitude"], {"unit": "dB", "value": 0.01})
+        self.assertEqual(record["applied_event"]["status"], "applied")
+        self.assertEqual(record["applied_event"]["detail"]["db"], 0.01)
+        self.assertEqual(record["target"], {"trace": "vco_1.post_vca", "slot": 0})
+        self.assertEqual(record["fixture_binding"], committed["fixture"]["binding"])
+        fault = record["mandatory_rows"]["fault"]
+        control = record["mandatory_rows"]["clean_control"]
+        self.assertEqual(fault["exact_equal"]["verdict"], "FAIL")
+        self.assertEqual(fault["max_abs_error"]["verdict"], "FAIL")
+        self.assertEqual(fault["exact_equal"]["tolerance"], 0)
+        self.assertEqual(fault["max_abs_error"]["tolerance"], 1e-9)
+        self.assertEqual(
+            {name: row["verdict"] for name, row in control.items()},
+            {name: "PASS" for name in control},
+        )
+        self.assertEqual(record["mandatory_outcome"], "FAIL")
+        self.assertTrue(record["optional_observation"]["tolerant"])
+        self.assertEqual(record["optional_observation"]["tolerance"], 0.01)
+        self.assertFalse(record["optional_counts_as_contract_pass"])
+        self.assertEqual(record["perceptual_similarity"]["status"], "not_run")
+        self.assertEqual(record["evidence_scope"], "directed fixture")
+        # The +1 dB row is retained alongside the new record.
+        self.assertIn("gain.db", [row["fault"] for row in committed["fault_matrix"]])
 
     def test_committed_publication_matches_fresh_rebuild(self):
         import json
