@@ -1,0 +1,23 @@
+{
+  "schema": "klt.functional_verification.request/1",
+  "engine": "icarus",
+  "sources": [
+    "../sv/gf180_rtl_constants_pkg.sv",
+    "../sv/quarter_wave_lut.sv",
+    "../sv/square_saw_vco_engine.sv",
+    "../sv/tb_square_saw_vco.sv"
+  ],
+  "hdl_toplevel": "tb",
+  "testbench": {
+    "module": "test_vco2"
+  },
+  "options": {
+    "timescale": [
+      "1ns",
+      "1ps"
+    ],
+    "defines": {
+      "KLT_COCOTB": "1"
+    }
+  }
+}
