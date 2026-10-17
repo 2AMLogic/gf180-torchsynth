@@ -97,7 +97,7 @@ tests/      PDK-free contract and identity tests
 tools/      contract checker and reference-render entry point
 rtl/        reserved for RTL after the fixed-point contract is measured
 tb/         reserved for model-to-RTL verification
-asic/       reserved for the gf180mcu flow
+asic/       gf180mcu synthesis-feasibility record and klt friction (issue #82; no layout/signoff)
 fpga/       reserved for an optional demonstration target
 sim/        append-only evidence records once evidence exists
 ```
