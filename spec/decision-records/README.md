@@ -18,3 +18,4 @@ questions and must not be represented as finished hardware decisions.
 | [0010](0010-one-shot-rtl-microarchitecture.md) | Accepted | One-shot RTL microarchitecture and schedule (issue #63) |
 | [0011](0011-holdout-unseal-policy.md) | Accepted | Mechanical holdout seal gate and single-exposure re-use policy (issue #55) |
 | [0012](0012-runtime-family-campaign-contract.md) | Proposed | Actual-Voice family campaign contract: inventory, reliability, align_corners, normalization deferral and host admission (issue #333, preregistration only) |
+| [0013](0013-versioned-historical-source-binding.md) | Accepted | Sealed rubrics bind archived historical sources via an explicit versioned table; no re-seal (PR #378) |
