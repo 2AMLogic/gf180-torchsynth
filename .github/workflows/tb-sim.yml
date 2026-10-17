@@ -399,7 +399,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: Install klt with cocotb (pinned commit)
         timeout-minutes: 10
-        run: python3 -m pip install "klayout-tools[functional-verification] @ git+https://github.com/2AMLogic/klayout-tools@7ee09483b74867a47a05eb353015c2cf5ca33ef3"
+        run: python3 -m pip install "klayout-tools[functional-verification] @ git+https://github.com/2AMLogic/klayout-tools@a7b27571bbf82be6075b18320bcc110198f35ac0"
       - name: Committed functional-verification record is fresh against the tree
         timeout-minutes: 5
         run: python3 tb/klt/run_lanes.py check
