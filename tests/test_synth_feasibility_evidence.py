@@ -309,5 +309,87 @@ class TestCommittedRecord(unittest.TestCase):
         self.assertTrue(check_record(bad))
 
 
+PLAN = ROOT / "asic" / "whole-voice-feasibility-plan.md"
+README = ROOT / "asic" / "README.md"
+
+
+def pinned_figures(plan_text: str) -> list:
+    """Return ``[(dotted_path, expected_text)]`` from the plan's pinned block."""
+    match = re.search(r"```pinned-figures\n(.*?)\n```", plan_text, re.S)
+    if not match:
+        return []
+    pins = []
+    for line in match.group(1).splitlines():
+        if line.strip():
+            path, _, expected = line.partition(" = ")
+            pins.append((path.strip(), expected.strip()))
+    return pins
+
+
+def resolve(record, dotted: str):
+    node = record
+    for part in dotted.split("."):
+        node = node[int(part)] if isinstance(node, list) else node[part]
+    return node
+
+
+def check_plan_pins(record: dict, plan_text: str) -> list:
+    """Return problems where a pinned plan figure disagrees with the record."""
+    problems = []
+    pins = pinned_figures(plan_text)
+    if not pins:
+        problems.append("plan has no pinned figures")
+    for path, expected in pins:
+        try:
+            actual = resolve(record, path)
+        except (KeyError, IndexError, ValueError, TypeError):
+            problems.append("%s: not in the record" % path)
+            continue
+        if isinstance(actual, float):
+            decimals = len(expected.partition(".")[2])
+            if round(actual, decimals) != round(float(expected), decimals):
+                problems.append("%s: plan %s != record %r" % (path, expected, actual))
+        elif str(actual) != expected:
+            problems.append("%s: plan %s != record %r" % (path, expected, actual))
+    return problems
+
+
+@unittest.skipUnless(RECORD.exists() and PLAN.exists(), "no record or plan")
+class TestWholeVoicePlan(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.record = json.loads(RECORD.read_text(encoding="utf-8"))
+        cls.plan = PLAN.read_text(encoding="utf-8")
+
+    def test_every_pinned_figure_matches_the_record(self):
+        self.assertEqual(check_plan_pins(self.record, self.plan), [])
+
+    def test_an_altered_pinned_figure_is_refused(self):
+        pins = pinned_figures(self.plan)
+        self.assertGreater(len(pins), 10)
+        path, expected = pins[0]
+        bad = self.plan.replace("%s = %s" % (path, expected), "%s = 1" % path)
+        self.assertNotEqual(bad, self.plan)
+        self.assertTrue(check_plan_pins(self.record, bad))
+
+    def test_a_drifted_record_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        bad["overall"]["whole_voice_synthesis"] = "ok"
+        self.assertTrue(check_plan_pins(bad, self.plan))
+
+    def test_plan_keeps_the_unmet_status_and_scope_wording(self):
+        lowered = self.plan.lower()
+        self.assertIn("synthesis feasibility", lowered)
+        self.assertIn("**unmet**", self.plan)
+        self.assertIn("evaluation point", lowered)
+        self.assertIn("inferred, not measured", lowered)
+        for phrase in ("signoff achieved", "closes #82", "closed #82"):
+            self.assertNotIn(phrase, lowered)
+
+    def test_readme_links_the_plan_and_record_still_claims_nothing_more(self):
+        self.assertIn("whole-voice-feasibility-plan.md", README.read_text(encoding="utf-8"))
+        self.assertEqual(check_record(self.record), [])
+
+
 if __name__ == "__main__":
     unittest.main()

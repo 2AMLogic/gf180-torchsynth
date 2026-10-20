@@ -193,5 +193,9 @@ the worker's pinned tools.
   two completed divider modules took 17-30 minutes each); none exist today.
 * Re-running the #79 simulation lane on the synthesis view, or a gate-level
   simulation, to tie the mapped logic to the sample-exact evidence.
+* The ranked bottleneck table, the sample-identity gap analysis and the
+  ordered cheaper-check list for these follow-ups are in
+  [`whole-voice-feasibility-plan.md`](whole-voice-feasibility-plan.md)
+  (plan only; it changes no RTL, record or clock).
 * Sine-VCO `/` `%` and the control-column memories (flip-flops) are the first
   things a macro-vs-distributed memory decision (DR-0010 P2) must address.
