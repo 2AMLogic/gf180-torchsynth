@@ -95,8 +95,10 @@ spec/       target contract, decision records, upstream and corpus manifests
 src/        sound identity and pinned TorchSynth reference adapter
 tests/      PDK-free contract and identity tests
 tools/      contract checker and reference-render entry point
-rtl/        reserved for RTL after the fixed-point contract is measured
-tb/         reserved for model-to-RTL verification
+rtl/        pointer README only; per-stage RTL lives in tb/sv/ (no top-level RTL tree yet)
+tb/         model-to-RTL verification: RTL and testbenches in tb/sv/, runners tb/run_*.py
+manifests/  T1 signoff manifest graded by `klt signoff --manifest`
+evidence/   klt-attested T1 item 9 and 10 inventories and envelopes
 asic/       gf180mcu synthesis-feasibility record and klt friction (issue #82; no layout/signoff)
 fpga/       reserved for an optional demonstration target
 sim/        append-only evidence records once evidence exists
