@@ -71,7 +71,7 @@ from torchsynth_voice.fixed_voice import (  # noqa: E402
 from torchsynth_voice.fixedpoint.choices import ChoiceNotAccepted  # noqa: E402
 from torchsynth_voice.float_voice import FloatVoiceModel  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
-from torchsynth_voice.digest import sha256_bytes, sha256_json  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_file, sha256_json  # noqa: E402
 
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
 RECEIPT_OUT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
@@ -135,10 +135,6 @@ _SENTINEL_TRACES = (
     "vco_1.raw",
     "mixer.output",
 )
-
-
-def file_digest(path: Path) -> str:
-    return sha256_bytes(path.read_bytes())
 
 
 def load_json(path: Path):
@@ -456,8 +452,8 @@ def build_sentinel(manifest, formats, request):
                 "no RTL claim."
             ),
             "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
-            "dr_0008_constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
-            "choices_register_sha256": file_digest(CHOICES_REGISTER),
+            "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
+            "choices_register_sha256": sha256_file(CHOICES_REGISTER),
             "lut_sha256": formats.identities["lut_sha256"],
         },
         "trace_registry_version": gv.load_registry_document()["semantic_version"],
@@ -588,10 +584,10 @@ def main() -> int:
         },
         "bindings": {
             "dr_0008_status": register_doc["dr_status"],
-            "dr_0008_record_sha256": file_digest(DR_0008),
-            "choices_register_sha256": file_digest(CHOICES_REGISTER),
+            "dr_0008_record_sha256": sha256_file(DR_0008),
+            "choices_register_sha256": sha256_file(CHOICES_REGISTER),
             "constants_package": "tb/sv/gf180_rtl_constants_pkg.sv",
-            "constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
+            "constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
             "lut_sha256": formats.identities["lut_sha256"],
             "lut_m2_evidence": (
                 "sim/candidates/audio-sources-sweep-v1.json lut_tables['4096'] "
