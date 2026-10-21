@@ -47,6 +47,15 @@ no observation is silently dropped and no open row is reported as a pass.
 
 This tool makes no RTL, synthesis, layout, signoff, hardware-playback, or
 sound-fidelity claim.
+
+Development-corpus store: the generator reads ``<store>/indexes/*.json`` and
+``<store>/artifacts/<id>/metadata.json`` (``--store``, default
+``out/corpus-store``, git-ignored). Rebuild it with::
+
+    python3 tools/render_corpus.py --store out/corpus-store
+
+(a full render is long-running and needs the DR-0006 pinned runtime; see
+``spec/DEVELOPMENT-CORPUS.md``). A missing store is an error, never a fallback.
 """
 
 from __future__ import annotations
@@ -77,7 +86,7 @@ DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
 RECEIPT_OUT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
 SENTINEL_OUT = ROOT / "sim/reference/golden-vector-fixed-anchor.json"
 TRACES_OUT = ROOT / "sim/reference/fixed-voice-golden-v1-traces"
-CORPUS_STORE = Path("/Users/joseph/dev/gf180-issue19-corpus-store")
+CORPUS_STORE_DEFAULT = ROOT / "out/corpus-store"  # git-ignored (``out/``)
 SWEEP_RECEIPT = ROOT / "sim/candidates/audio-sources-sweep-v1.json"
 CONSTANTS_PACKAGE = ROOT / "tb/sv/gf180_rtl_constants_pkg.sv"
 DR_0008 = ROOT / "spec/decision-records/0008-fixed-point-numeric-contract.md"
@@ -229,10 +238,13 @@ def build_directed_requests(directed):
     return requests
 
 
-def build_corpus_requests():
-    index_files = sorted((CORPUS_STORE / "indexes").glob("*.json"))
+def build_corpus_requests(store):
+    index_files = sorted((store / "indexes").glob("*.json"))
     if not index_files:
-        raise SystemExit("development corpus store index not found at " + str(CORPUS_STORE))
+        raise SystemExit(
+            "development corpus store index not found at %s; rebuild it with: "
+            "python3 tools/render_corpus.py --store %s" % (store, store)
+        )
     index = load_json(index_files[0])
     dev = [
         entry for entry in index["cases"]
@@ -243,7 +255,7 @@ def build_corpus_requests():
     for entry in dev[::CORPUS_STRIDE]:
         case_id = entry["case_id"]
         artifact_id = entry["artifact"]["artifact_id"]
-        metadata_path = CORPUS_STORE / "artifacts" / artifact_id / "metadata.json"
+        metadata_path = store / "artifacts" / artifact_id / "metadata.json"
         metadata = load_json(metadata_path)
         inputs = metadata["inputs"]["value"]
         parameters = inputs["parameters"]
@@ -490,6 +502,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=RECEIPT_OUT)
     parser.add_argument("--sentinel", type=Path, default=SENTINEL_OUT)
+    parser.add_argument(
+        "--store",
+        type=Path,
+        default=CORPUS_STORE_DEFAULT,
+        help="development corpus store (default: %(default)s); rebuild with "
+        "'python3 tools/render_corpus.py --store out/corpus-store'",
+    )
     args = parser.parse_args()
 
     try:
@@ -498,7 +517,7 @@ def main() -> int:
         raise SystemExit("accepted register refused: %s" % error)
 
     directed = load_json(DIRECTED_PATH)
-    cases = build_directed_requests(directed) + build_corpus_requests()
+    cases = build_directed_requests(directed) + build_corpus_requests(args.store)
 
     manifests = []
     for selected in cases:
