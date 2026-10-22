@@ -543,7 +543,13 @@ class ReportValidationTests(unittest.TestCase):
         for entry_id in ("timing:attack-breakpoint-shift-plus2", "timing:lfo-rate-shift-plus-half-hz",
                          "timing:route-sign-flip", "timing:route-depth-shift-plus25",
                          "timing:route-destination-swap"):
-            self.assertEqual(outcomes[entry_id], "open_gated_detector_unevaluated")
+            # The synthetic traces are outside every analytic domain, so each gate
+            # refuses; a refusal neither blocks nor creates a kill (D7).
+            self.assertEqual(outcomes[entry_id], "detected")
+        for cell in self.report["cells"]:
+            for gated in cell["gated_detectors"]:
+                self.assertEqual(gated["outcome"], tr.GATE_REFUSED, cell["entry_id"])
+                self.assertNotEqual(gated["outcome"], "not_evaluated")
         self.assertEqual(len(outcomes), 10)
         self.assertEqual([r["status"] for r in self.report["refusals"]], ["refused", "refused"])
         self.assertEqual([r["detail"]["observed_count"] for r in self.report["refusals"]], [1763, 1765])
@@ -640,6 +646,110 @@ class ReportValidationTests(unittest.TestCase):
 # Fake tensor backend: just enough of the Torch surface the timing session
 # uses (slot read/write, clone, hooks) to exercise its mechanics without Torch.
 # ---------------------------------------------------------------------------
+
+
+class GatedDetectorTests(unittest.TestCase):
+    """Admissibility gates over analytic stand-ins (mechanics only, no Voice)."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(ROOT / "tools"))
+        from qualify_envelope_estimators import constructed_envelope
+
+        def envelope(attack):
+            return constructed_envelope(attack=attack, decay=25.5, release=30.75, sustain=0.4,
+                                        alpha=1, note=90.5, count=ops.CONTROL_SAMPLES)[0]
+
+        cls.envelope = staticmethod(envelope)
+        cls.context = {"alpha": 1, "note_on_seconds": 90.5 / 441, "lfo_fundamental_in_band": True}
+
+    def gated(self, entry_id):
+        entry = tr.entry_by_id(MANIFEST, entry_id)
+        return entry, entry["gated_detectors"]
+
+    def run_gate(self, entry_id, plain, faulted, context=None):
+        entry, _ = self.gated(entry_id)
+        return tr.evaluate_gated(entry, plain.__getitem__, faulted.__getitem__,
+                                 self.context if context is None else context)
+
+    @staticmethod
+    def lfo(frequency, count=ops.CONTROL_SAMPLES):
+        return [(1 - math.cos(2 * math.pi * frequency * i / 441)) / 2 for i in range(count)]
+
+    def routes(self, gains, source):
+        outputs = {"mod_matrix." + d: [g * x + 0.1 for x in source]
+                   for d, g in zip(("vco_1_pitch", "vco_1_amp", "vco_2_pitch", "vco_2_amp", "noise_amp"), gains)}
+        return dict(outputs, **{"adsr_1.output": source})
+
+    def test_attack_gate_detects_an_admitted_shift_and_leaves_an_unmoved_case_open(self):
+        entry = "timing:attack-breakpoint-shift-plus2"
+        plain = {"adsr_1.output": self.envelope(20.25)}
+        [row] = self.run_gate(entry, plain, {"adsr_1.output": self.envelope(22.25)})
+        self.assertEqual(row["outcome"], tr.GATE_DETECTED)
+        self.assertAlmostEqual(row["deviation"], 2.0, places=1)
+        [row] = self.run_gate(entry, plain, plain)
+        self.assertEqual(row["outcome"], tr.GATE_NOT_DETECTED)
+
+    def test_attack_gate_refuses_inadmissible_inputs_on_either_attempt(self):
+        entry = "timing:attack-breakpoint-shift-plus2"
+        good = {"adsr_1.output": self.envelope(20.25)}
+        degenerate = {"adsr_1.output": [0.0] * ops.CONTROL_SAMPLES}
+        for plain, faulted in ((good, degenerate), (degenerate, good)):
+            [row] = self.run_gate(entry, plain, faulted)
+            self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        [row] = self.run_gate(entry, good, good, context={})
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        self.assertIn("alpha", row["reason"])
+        [row] = self.run_gate(entry, good, good, context={"alpha": 99, "note_on_seconds": 0.2})
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+
+    def test_lfo_gate_detected_not_detected_and_refused(self):
+        entry = "timing:lfo-rate-shift-plus-half-hz"
+        plain = {"lfo_1.raw": self.lfo(4.37)}
+        [row] = self.run_gate(entry, plain, {"lfo_1.raw": self.lfo(4.87)})
+        self.assertEqual(row["outcome"], tr.GATE_DETECTED)
+        self.assertAlmostEqual(row["deviation"], 0.5, places=2)
+        [row] = self.run_gate(entry, plain, plain)
+        self.assertEqual(row["outcome"], tr.GATE_NOT_DETECTED)
+        [row] = self.run_gate(entry, plain, {"lfo_1.raw": [0.5] * ops.CONTROL_SAMPLES})
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        [row] = self.run_gate(entry, plain, plain, context={})
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+
+    def test_route_gate_detects_sign_flip_and_refuses_unexcited_or_nonlinear(self):
+        entry = "timing:route-sign-flip"
+        source = self.envelope(20.25)
+        plain = self.routes([0.5, 0.25, -0.75, 1.0, 0.125], source)
+        [row] = self.run_gate(entry, plain, self.routes([-0.5, 0.25, -0.75, 1.0, 0.125], source))
+        self.assertEqual(row["outcome"], tr.GATE_DETECTED)
+        [row] = self.run_gate(entry, plain, plain)
+        self.assertEqual(row["outcome"], tr.GATE_NOT_DETECTED)
+        flat = self.routes([0.5, 0.25, -0.75, 1.0, 0.125], [0.5] * ops.CONTROL_SAMPLES)
+        [row] = self.run_gate(entry, flat, flat)
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        nonlinear = dict(plain, **{"mod_matrix.vco_1_amp": [x * x for x in source]})
+        [row] = self.run_gate(entry, plain, nonlinear)
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        self.assertIn("faulted", row["reason"])
+
+    def test_policy_or_binding_drift_fails_closed(self):
+        entry = copy.deepcopy(tr.entry_by_id(MANIFEST, "timing:route-sign-flip"))
+        entry["gated_detectors"][0]["detector_id"] = "det-timing-99"
+        with self.assertRaisesRegex(MutationError, "no admissibility binding"):
+            tr.evaluate_gated(entry, lambda t: [], lambda t: [], {})
+        entry = copy.deepcopy(tr.entry_by_id(MANIFEST, "timing:route-sign-flip"))
+        entry["gated_detectors"][0]["counts_as_kill"] = True
+        with self.assertRaisesRegex(MutationError, "policy differs"):
+            tr.evaluate_gated(entry, lambda t: [], lambda t: [], {})
+
+    def test_missing_retained_trace_fails_closed(self):
+        entry, _ = self.gated("timing:lfo-rate-shift-plus-half-hz")
+
+        def missing(trace):
+            raise MutationError("retained trace missing: " + trace)
+
+        with self.assertRaisesRegex(MutationError, "retained trace missing"):
+            tr.evaluate_gated(entry, missing, missing, self.context)
 
 
 class _Device:
