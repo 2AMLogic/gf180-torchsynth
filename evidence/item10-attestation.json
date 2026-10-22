@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 10,
+  "summary": "T1 item 10 (Repo hygiene): 6/6 attestation checks passed (klt signoff --attest)",
+  "source": "evidence/item10-inventory.json",
+  "attestation": {
+    "producer": "klt signoff --attest",
+    "inventory_schema_version": 1,
+    "hash_algorithm": "sha256-raw-bytes",
+    "check_count": 6,
+    "passed_count": 6,
+    "checks": [
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/ci.yml",
+        "passed": true,
+        "content_hash": "sha256:33249f34068a170467c30f3e562e0382cf116f308d73a21d7e12756c77d22701"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/tb-sim.yml",
+        "passed": true,
+        "content_hash": "sha256:42a170dd93056289946037975802abddc560a70f6aef06289558e63ea8db3400"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "LICENSE",
+        "passed": true,
+        "content_hash": "sha256:d47483eb3e7e0b8cdc6f5252d857935661943f6c10bcecf49ae4b8dfe8c26317"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "README.md",
+        "passed": true,
+        "content_hash": "sha256:7da9bda7364b2eb12322c6f3a6cf4082bec4456f24297fc6a0cfb041fc49e71d"
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "ci-lane-wiring",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "tests.test_ci_lane_wiring"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "contract",
+        "argv": [
+          "python3",
+          "tools/check_contract.py"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      }
+    ]
+  },
+  "provenance": {
+    "klt_version": "0.7.1.dev1743+g7ee09483b748",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
+    "input": {
+      "path": {
+        "path": "evidence/item10-inventory.json",
+        "scope": "repo"
+      },
+      "content_hash": "sha256:c0f0e25e550e5c28d1f387d0c918fe15ac9c47ab5b0b1815d9bf98adac231564"
+    }
+  }
+}
