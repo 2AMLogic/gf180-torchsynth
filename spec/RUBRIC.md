@@ -187,7 +187,7 @@ Proposed), performs no holdout unsealing, invents no threshold beyond the
 declared measure-then-preregister policy, and makes no synthesis, layout,
 signoff, hardware-playback, or sound-fidelity claim.
 
-## Rubric v2 (DR-0013, issue #297)
+## Rubric v2 (DR-0014, issue #297)
 
 [`reference/rubric-v2.json`](reference/rubric-v2.json) (frozen 2026-10-15) is
 the next version after v1. Adding the missing family faults grew the
@@ -206,4 +206,4 @@ v0 and v1 are untouched and still pin the original
 
 Every other row, threshold and source is carried over from v1 unchanged. No
 fresh-holdout policy is defined yet, so v2 must not back a release or holdout
-claim until one is recorded (DR-0011, DR-0013).
+claim until one is recorded (DR-0011, DR-0014).

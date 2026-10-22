@@ -92,7 +92,7 @@
       "LFO amplitude-depth fault (timing:lfo-depth-shift-plus-0.1) realization at a writable output seam (deferred; #300/#9 criteria stay open)",
       "literal align_corners operator registration and execution (proposed addition)",
       "#297/#298 additions (declared revision)",
-      "six #297 publication faults registered deferred_unmeasured by revision 2 (DR-0014): decay/release breakpoint, sustain, -1 dB gain, truncation and the truncation-vs-rounding directed distinction"
+      "six #297 publication faults registered deferred_unmeasured by revision 2 (DR-0015): decay/release breakpoint, sustain, -1 dB gain, truncation and the truncation-vs-rounding directed distinction"
     ],
     "status_values": [
       "COMPLETE",
@@ -308,7 +308,7 @@
   },
   "frozen_inventory_digest": {
     "algorithm": "sha256 over canonical JSON {sort_keys, separators (',',':'), ascii} of the object {inventory, sensitivity_inventory, supporting, cases, detectors}",
-    "sha256": "6c4fa0dcab6f2e2ed742ec646e8f59225d5a8914d4934dfd7734ce108fb25708"
+    "sha256": "b632d7ee43e2da2f0319e6ea9612f9101ef30040211af290f8d3ef0a914f1cd9"
   },
   "holdout": {
     "corpus_holdout_first_index": 96,
@@ -955,7 +955,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": null,
       "counts_toward_runtime_total": false,
       "detector_ids": [
@@ -983,7 +983,7 @@
           "value": 2.0
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "envelope.breakpoint_shift"
@@ -1016,7 +1016,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": null,
       "counts_toward_runtime_total": false,
       "detector_ids": [
@@ -1044,7 +1044,7 @@
           "value": 2.0
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "envelope.breakpoint_shift"
@@ -1077,7 +1077,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": null,
       "counts_toward_runtime_total": false,
       "detector_ids": [
@@ -1105,7 +1105,7 @@
           "value": 0.1
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "envelope.sustain_shift"
@@ -2170,7 +2170,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": {
         "slot": "$case.batch_slot",
         "trace": "mixer.output"
@@ -2201,7 +2201,7 @@
           "value": -1.0
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "gain.db"
@@ -2468,7 +2468,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": {
         "slot": "$case.batch_slot",
         "trace": "mixer.output"
@@ -2499,7 +2499,7 @@
           "value": null
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "clip.truncate_step"
@@ -3482,7 +3482,7 @@
       }
     },
     {
-      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0014); no runtime cell is preregistered for this publication fault; obligation stays open",
+      "applicability": "not executed: registered as deferred_unmeasured by the manifest revision 2 (DR-0015); no runtime cell is preregistered for this publication fault; obligation stays open",
       "configuration": {
         "slot": "$case.batch_slot",
         "trace": "mixer.output"
@@ -3513,7 +3513,7 @@
           "value": null
         }
       ],
-      "notes": "proposed binding only; registered by #297 and deferred by DR-0014 D1 (conservative route, DR-0012 D8 precedent)",
+      "notes": "proposed binding only; registered by #297 and deferred by DR-0015 D1 (conservative route, DR-0012 D8 precedent)",
       "obligation_open": true,
       "operators": [
         "clip.truncate_step"
@@ -4072,7 +4072,7 @@
       "operators": [
         "envelope.breakpoint_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4093,7 +4093,7 @@
       "operators": [
         "envelope.breakpoint_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4114,7 +4114,7 @@
       "operators": [
         "envelope.breakpoint_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4135,7 +4135,7 @@
       "operators": [
         "envelope.breakpoint_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4156,7 +4156,7 @@
       "operators": [
         "envelope.sustain_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4177,7 +4177,7 @@
       "operators": [
         "envelope.sustain_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4198,7 +4198,7 @@
       "operators": [
         "modulation.lfo_rate_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4219,7 +4219,7 @@
       "operators": [
         "modulation.lfo_rate_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4240,7 +4240,7 @@
       "operators": [
         "modulation.lfo_depth_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4261,7 +4261,7 @@
       "operators": [
         "modulation.lfo_depth_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4282,7 +4282,7 @@
       "operators": [
         "modulation.route_depth_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     },
     {
@@ -4303,7 +4303,7 @@
       "operators": [
         "modulation.route_depth_shift"
       ],
-      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0014) from the #297 publication; never executed or counted",
+      "reason": "magnitude sensitivity is separate from repetition reliability; registered by manifest revision 2 (DR-0015) from the #297 publication; never executed or counted",
       "runtime_evidence_class": "none"
     }
   ],

@@ -1,4 +1,4 @@
-# DR-0014: Runtime-family campaign manifest revision 2 (#297 additions)
+# DR-0015: Runtime-family campaign manifest revision 2 (#297 additions)
 
 - Status: Proposed
 - Date: 2026-10-16

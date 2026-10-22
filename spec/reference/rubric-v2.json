@@ -63,7 +63,7 @@
     "holdout_policy_on_change": "a new rubric version invokes the explicit holdout policy: the sealed 32-case holdout is revealed only after the new version's thresholds are frozen, and it never rewrites the old scorecard",
     "version_bump": "rubric-v2",
     "v0_to_v1": "rubric-v1 (issue #53, 2026-09-21): binds the calibrated R-L3-M1/M2/M3 rows from the DR-0008 ratification; rubric-v0 stays frozen and every v0 scorecard keeps its meaning under the holdout policy",
-    "v1_to_v2": "rubric-v2 (issue #297, DR-0013, 2026-10-15): the mutation-matrix row set grows from 44 to 50 required faults (identity 14, signal 17->20, timing 13->16; 24->28 mandatory detectors; 13->19 sensitivity-NO VERDICT; CI subset 20->21 rows) and its source moves to sim/reference/mutation-matrix-v2.json; every other row, threshold and source is carried over unchanged from rubric-v1; rubric-v0 and rubric-v1 stay frozen with their original matrix artifact, and their scorecards keep their meaning under the holdout policy"
+    "v1_to_v2": "rubric-v2 (issue #297, DR-0014, 2026-10-15): the mutation-matrix row set grows from 44 to 50 required faults (identity 14, signal 17->20, timing 13->16; 24->28 mandatory detectors; 13->19 sensitivity-NO VERDICT; CI subset 20->21 rows) and its source moves to sim/reference/mutation-matrix-v2.json; every other row, threshold and source is carried over unchanged from rubric-v1; rubric-v0 and rubric-v1 stay frozen with their original matrix artifact, and their scorecards keep their meaning under the holdout policy"
   },
   "holdout_seal": {
     "policy": "sealed-until-thresholds-frozen",

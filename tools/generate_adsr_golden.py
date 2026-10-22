@@ -23,7 +23,6 @@ against the committed files (determinism gate).
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -49,19 +48,6 @@ STAGE_NAMES = ("attack", "decay", "sustain", "alpha", "release")
 ULP_Q1630 = 2.0**-30  # one LSB of the Q16.30 stage-time entry word, in seconds
 
 
-def load_frozen_physical() -> dict:
-    """The frozen receipt case's public physical map (all consumed names)."""
-
-    directed = json.loads(DIRECTED_PATH.read_text(encoding="utf-8"))
-    base = {name: entry["physical"] for name, entry in directed["base"].items()}
-    by_id = {case["id"]: case for case in directed["cases"]}
-    case = by_id[FROZEN_CASE_ID]
-    physical = dict(base)
-    for name, override in case["overrides"].items():
-        physical[name] = override["physical"]
-    return physical
-
-
 def case_parameters(physical: dict) -> dict:
     """Only the parameters the ADSR engine consumes, in canonical order."""
 
@@ -69,12 +55,6 @@ def case_parameters(physical: dict) -> dict:
     for prefix in ag.ADSR_PREFIXES:
         names.extend(prefix + stage for stage in STAGE_NAMES)
     return {name: physical[name] for name in names}
-
-
-def apply_overrides(physical: dict, overrides: dict) -> dict:
-    merged = dict(physical)
-    merged.update(overrides)
-    return merged
 
 
 def build_case_document(
@@ -127,7 +107,7 @@ def build_case_document(
             gv.CONSTANTS_PACKAGE_PATH
         ),
         "choices_register_sha256": gv.sha256_file(gv.CHOICES_REGISTER_PATH),
-        "dr_0008_record_sha256": frozen_receipt_record_digest(),
+        "dr_0008_record_sha256": gv.frozen_receipt_record_digest(RECEIPT_PATH),
         "derivation": (
             "FixedControlPath(accepted control_spec)._adsr over "
             "quantize_params(S1) entries; per-tick **alpha shadow words "
@@ -164,40 +144,6 @@ def build_case_document(
     gv.load_vector(document, registry=registry, inventory=inventory)
     gv.verify_accepted_contract(document)
     return document
-
-
-def frozen_receipt_record_digest() -> str:
-    receipt = json.loads(RECEIPT_PATH.read_text(encoding="utf-8"))
-    return receipt["bindings"]["dr_0008_record_sha256"]
-
-
-def frozen_receipt_binding(document: dict) -> dict:
-    """Re-derive the frozen receipt's six ADSR digests for one document."""
-
-    receipt = json.loads(RECEIPT_PATH.read_text(encoding="utf-8"))
-    case = next(c for c in receipt["cases"] if c["id"] == FROZEN_CASE_ID)
-    digests = {}
-    for trace in document["traces"]:
-        name = trace["name"]
-        declared = case["traces"][name]
-        blob = json.dumps(
-            trace["values"], sort_keys=True, separators=(",", ":"), ensure_ascii=True
-        ).encode("utf-8")
-        actual = hashlib.sha256(blob).hexdigest()
-        if actual != declared:
-            raise SystemExit(
-                "FROZEN RECEIPT DRIFT: %s digests to %s but the frozen "
-                "receipt (#54, PR #156) declares %s — the model or its "
-                "inputs moved; regenerate, do not overwrite the binding"
-                % (name, actual, declared)
-            )
-        digests[name] = declared
-    return {
-        "receipt": "sim/reference/fixed-voice-golden-v1.json",
-        "case_id": FROZEN_CASE_ID,
-        "trace_digests": digests,
-        "verified": True,
-    }
 
 
 def case_table(frozen_physical: dict) -> list:
@@ -322,10 +268,10 @@ def case_table(frozen_physical: dict) -> list:
 def build_all(documents_out: dict = None) -> int:
     formats = AcceptedFormats()
     fcp = FixedControlPath(formats.control_spec)
-    frozen_physical = load_frozen_physical()
+    frozen_physical = gv.load_frozen_physical(DIRECTED_PATH, FROZEN_CASE_ID)
     failures = 0
     for case_id, stage_values, is_frozen in case_table(frozen_physical):
-        physical = apply_overrides(frozen_physical, stage_values)
+        physical = gv.apply_overrides(frozen_physical, stage_values)
         document = build_case_document(
             formats,
             fcp,
@@ -363,7 +309,7 @@ def frozen_receipt_binding_document(
             for prefix in ag.ADSR_PREFIXES
         ]
     }
-    return frozen_receipt_binding(document)
+    return gv.frozen_receipt_binding(document, FROZEN_CASE_ID, RECEIPT_PATH)
 
 
 def check_committed() -> int:

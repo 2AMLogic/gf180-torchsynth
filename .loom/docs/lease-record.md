@@ -452,7 +452,11 @@ EITHER leg holds:
    (genuinely **renewed**, not merely created) and still within the
    reclamation TTL (`LOOM_LEASE_TTL_MINUTES`, default 15 — the same window
    the #6286 reclamation gate and `sweep-lease-fence.sh` use) — Issue
-   **#8840**.
+   **#8840**. A never-renewed record (`updated_at == created_at`) is also
+   admitted while it is younger than `FIRST_RENEWAL_WINDOW_SECS` (360s: the
+   renewer's 300s cadence plus grace), because the renewer sleeps first and a
+   live lease is otherwise invisible from 90s to its first renewal — Issue
+   **#12825**. Older never-renewed records stay excluded.
 
 Leg 2 exists because **a lease is renewed in place**: `sweep-lease-renew.sh`
 PATCHes the same comment, so a live owner's `created_at` stays frozen at the
@@ -728,7 +732,13 @@ the same lease semantics, **keyed by role**:
   `loom:pr-lease-yield` record and exits 4. A winner starts the renewer and
   exits 0, and only then does the role add its label. The label is a
   projection of the lease, never the evidence. After its own lease is posted,
-  an unverifiable ordering proceeds, as on the issue path.
+  an unverifiable ordering proceeds, as on the issue path, for a stepless
+  claim (a role prompt's own, which fences before every push and verdict). A
+  `--step` claim (the step engine's pre-claim, which spawns a session on exit
+  0) instead reads back twice more after 2 s and 5 s; if the order is still
+  unverifiable it marks its own lease released (one PATCH, no read) and exits
+  5, which the engine records as `claim_unverified` and cools down for that
+  item alone (#12252).
 - **Doctor activity guard (#12105).** The role key means a Doctor's `claim`
   sees only other Doctors. So before it posts, a Doctor also stands down
   (exit 7, nothing written) when another actor is working the PR: a live
@@ -825,10 +835,6 @@ the same lease semantics, **keyed by role**:
   the lease: concurrent reclaimers of the same stale claim each post a lease,
   and the earliest comment `id` is the only winner. Rules:
   `loom-daemon/src/pr_lease_reap.rs`.
-- **Provenance.** Lease and yield comments end with the `loom:provenance v1`
-  line (`loom-daemon provenance`'s format). Its `host=` carries the published id
-  rather than the raw hostname, so one comment never pairs an opaque id with
-  the name it hides.
 - **Gitea** has no `gh api` comments path, so every verb exits 0 there and
   the label claim works as before.
 - **Older binaries.** A `loom-daemon` without `lease pr` exits 2 (clap's usage

@@ -47,7 +47,7 @@ from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
 from torchsynth_voice import vco_golden as vg  # noqa: E402
-from torchsynth_voice.digest import sha256_bytes  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_file  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     FixedVoiceModel,
@@ -162,10 +162,6 @@ SHADOW_BOUNDARY = (
 )
 
 
-def file_digest(path: Path) -> str:
-    return sha256_bytes(path.read_bytes())
-
-
 def load_json(path: Path):
     return json.loads(path.read_bytes())
 
@@ -234,8 +230,8 @@ def build_vector(
         "regime": dict(regime),
         "shadow_boundary": SHADOW_BOUNDARY,
         "dr_0008_status": "Accepted",
-        "dr_0008_constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
-        "choices_register_sha256": file_digest(CHOICES_REGISTER),
+        "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
+        "choices_register_sha256": sha256_file(CHOICES_REGISTER),
         "static_words": {
             "keyboard.midi_f0": derivation["words"]["keyboard.midi_f0"],
             "vco_1.tuning": derivation["words"]["vco_1.tuning"],
@@ -408,7 +404,7 @@ def build_all(formats: AcceptedFormats, verbose: bool = False) -> dict:
                 "golden_case_id": case_id,
                 "digest": digest,
                 "sidecar_file": sidecar_file,
-                "sidecar_sha256": file_digest(ROOT / sidecar_file),
+                "sidecar_sha256": sha256_file(ROOT / sidecar_file),
             },
         )
         if verbose:

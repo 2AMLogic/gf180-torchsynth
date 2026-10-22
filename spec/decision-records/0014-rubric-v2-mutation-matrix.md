@@ -1,4 +1,4 @@
-# DR-0013: Rubric v2 for the grown mutation-matrix row set
+# DR-0014: Rubric v2 for the grown mutation-matrix row set
 
 - Status: Accepted
 - Date: 2026-10-15
