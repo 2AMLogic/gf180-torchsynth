@@ -38,6 +38,17 @@ from torchsynth_voice.digest import sha256_file  # noqa: E402
 SEMANTIC_VERSION = "rubric-v0"  # default; the expected version is derived per file (issue #53: rubric-v1 binds the calibrated rows)
 
 
+# Versioned source bindings: a sealed rubric pins a source by id, digest and
+# path, but the live file at that path may have been legitimately refreshed
+# since. A rubric listed here resolves the named source to its immutable
+# archived bytes instead; the pinned sha256 is still verified (never skipped,
+# never re-sealed). See DR-0013.
+HISTORICAL_SOURCE_BINDINGS = {
+    ("rubric-v0", "mutation-matrix-v1"): "sim/reference/history/mutation-matrix-v1-7c87809d.json",
+    ("rubric-v1", "mutation-matrix-v1"): "sim/reference/history/mutation-matrix-v1-7c87809d.json",
+}
+
+
 def expected_semantic_version(rubric_path: Path) -> str:
     """The rubric's semantic_version is its own file stem (rubric-v0.json ->
     'rubric-v0'; rubric-v1.json -> 'rubric-v1')."""
@@ -240,6 +251,9 @@ def validate_rubric(root: Path, rubric_rel: str = "spec/reference/rubric-v0.json
         if sid in seen_ids:
             f.add(f"duplicate source id {sid}")
         seen_ids.add(sid)
+        bound = HISTORICAL_SOURCE_BINDINGS.get((rubric_path.stem, sid))
+        if bound is not None:
+            rel = bound
         rel_path = Path(rel)
         if ".." in rel_path.parts or rel_path.is_absolute():
             f.add(f"source {sid}: unsafe path {rel!r}")

@@ -47,6 +47,15 @@ no observation is silently dropped and no open row is reported as a pass.
 
 This tool makes no RTL, synthesis, layout, signoff, hardware-playback, or
 sound-fidelity claim.
+
+Development-corpus store: the generator reads ``<store>/indexes/*.json`` and
+``<store>/artifacts/<id>/metadata.json`` (``--store``, default
+``out/corpus-store``, git-ignored). Rebuild it with::
+
+    python3 tools/render_corpus.py --store out/corpus-store
+
+(a full render is long-running and needs the DR-0006 pinned runtime; see
+``spec/DEVELOPMENT-CORPUS.md``). A missing store is an error, never a fallback.
 """
 
 from __future__ import annotations
@@ -71,13 +80,13 @@ from torchsynth_voice.fixed_voice import (  # noqa: E402
 from torchsynth_voice.fixedpoint.choices import ChoiceNotAccepted  # noqa: E402
 from torchsynth_voice.float_voice import FloatVoiceModel  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
-from torchsynth_voice.digest import sha256_bytes, sha256_json  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_file, sha256_json  # noqa: E402
 
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
 RECEIPT_OUT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
 SENTINEL_OUT = ROOT / "sim/reference/golden-vector-fixed-anchor.json"
 TRACES_OUT = ROOT / "sim/reference/fixed-voice-golden-v1-traces"
-CORPUS_STORE = Path("/Users/joseph/dev/gf180-issue19-corpus-store")
+CORPUS_STORE_DEFAULT = ROOT / "out/corpus-store"  # git-ignored (``out/``)
 SWEEP_RECEIPT = ROOT / "sim/candidates/audio-sources-sweep-v1.json"
 CONSTANTS_PACKAGE = ROOT / "tb/sv/gf180_rtl_constants_pkg.sv"
 DR_0008 = ROOT / "spec/decision-records/0008-fixed-point-numeric-contract.md"
@@ -135,10 +144,6 @@ _SENTINEL_TRACES = (
     "vco_1.raw",
     "mixer.output",
 )
-
-
-def file_digest(path: Path) -> str:
-    return sha256_bytes(path.read_bytes())
 
 
 def load_json(path: Path):
@@ -233,10 +238,13 @@ def build_directed_requests(directed):
     return requests
 
 
-def build_corpus_requests():
-    index_files = sorted((CORPUS_STORE / "indexes").glob("*.json"))
+def build_corpus_requests(store):
+    index_files = sorted((store / "indexes").glob("*.json"))
     if not index_files:
-        raise SystemExit("development corpus store index not found at " + str(CORPUS_STORE))
+        raise SystemExit(
+            "development corpus store index not found at %s; rebuild it with: "
+            "python3 tools/render_corpus.py --store %s" % (store, store)
+        )
     index = load_json(index_files[0])
     dev = [
         entry for entry in index["cases"]
@@ -247,7 +255,7 @@ def build_corpus_requests():
     for entry in dev[::CORPUS_STRIDE]:
         case_id = entry["case_id"]
         artifact_id = entry["artifact"]["artifact_id"]
-        metadata_path = CORPUS_STORE / "artifacts" / artifact_id / "metadata.json"
+        metadata_path = store / "artifacts" / artifact_id / "metadata.json"
         metadata = load_json(metadata_path)
         inputs = metadata["inputs"]["value"]
         parameters = inputs["parameters"]
@@ -456,8 +464,8 @@ def build_sentinel(manifest, formats, request):
                 "no RTL claim."
             ),
             "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
-            "dr_0008_constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
-            "choices_register_sha256": file_digest(CHOICES_REGISTER),
+            "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
+            "choices_register_sha256": sha256_file(CHOICES_REGISTER),
             "lut_sha256": formats.identities["lut_sha256"],
         },
         "trace_registry_version": gv.load_registry_document()["semantic_version"],
@@ -494,6 +502,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=RECEIPT_OUT)
     parser.add_argument("--sentinel", type=Path, default=SENTINEL_OUT)
+    parser.add_argument(
+        "--store",
+        type=Path,
+        default=CORPUS_STORE_DEFAULT,
+        help="development corpus store (default: %(default)s); rebuild with "
+        "'python3 tools/render_corpus.py --store out/corpus-store'",
+    )
     args = parser.parse_args()
 
     try:
@@ -502,7 +517,7 @@ def main() -> int:
         raise SystemExit("accepted register refused: %s" % error)
 
     directed = load_json(DIRECTED_PATH)
-    cases = build_directed_requests(directed) + build_corpus_requests()
+    cases = build_directed_requests(directed) + build_corpus_requests(args.store)
 
     manifests = []
     for selected in cases:
@@ -588,10 +603,10 @@ def main() -> int:
         },
         "bindings": {
             "dr_0008_status": register_doc["dr_status"],
-            "dr_0008_record_sha256": file_digest(DR_0008),
-            "choices_register_sha256": file_digest(CHOICES_REGISTER),
+            "dr_0008_record_sha256": sha256_file(DR_0008),
+            "choices_register_sha256": sha256_file(CHOICES_REGISTER),
             "constants_package": "tb/sv/gf180_rtl_constants_pkg.sv",
-            "constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
+            "constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
             "lut_sha256": formats.identities["lut_sha256"],
             "lut_m2_evidence": (
                 "sim/candidates/audio-sources-sweep-v1.json lut_tables['4096'] "

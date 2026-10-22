@@ -40,7 +40,7 @@ from torchsynth_voice import float_interfaces as fi  # noqa: E402
 from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import vco2_golden as vg  # noqa: E402
-from torchsynth_voice.digest import sha256_bytes  # noqa: E402
+from torchsynth_voice.digest import sha256_bytes, sha256_file  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     FixedVoiceModel,
@@ -100,10 +100,6 @@ SHADOW_BOUNDARY = (
     "(pitch sum, clamp, increment division, phase wrap, both LUT "
     "interps, driven, right narrowing, combine, saturations) is RTL-owned."
 )
-
-
-def file_digest(path: Path) -> str:
-    return sha256_bytes(path.read_bytes())
 
 
 def load_json(path: Path):
@@ -171,8 +167,8 @@ def build_vector(
         "case_id": case_id,
         "shadow_boundary": SHADOW_BOUNDARY,
         "dr_0008_status": "Accepted",
-        "dr_0008_constants_package_sha256": file_digest(CONSTANTS_PACKAGE),
-        "choices_register_sha256": file_digest(CHOICES_REGISTER),
+        "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
+        "choices_register_sha256": sha256_file(CHOICES_REGISTER),
         "static_words": {
             "keyboard.midi_f0": derivation["words"]["keyboard.midi_f0"],
             "vco_2.tuning": derivation["words"]["vco_2.tuning"],
@@ -278,7 +274,7 @@ def build_all(formats: AcceptedFormats) -> dict:
                 "golden_case_id": case_id,
                 "digest": digest,
                 "sidecar_file": sidecar_file,
-                "sidecar_sha256": file_digest(ROOT / sidecar_file),
+                "sidecar_sha256": sha256_file(ROOT / sidecar_file),
             },
         )
 

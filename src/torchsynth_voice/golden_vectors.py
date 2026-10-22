@@ -120,6 +120,61 @@ class Mismatch:
         )
 
 
+def load_frozen_physical(directed_path: Path, case_id: str) -> Dict[str, Any]:
+    """The frozen receipt case's public physical map (all consumed names)."""
+
+    directed = json.loads(directed_path.read_text(encoding="utf-8"))
+    base = {name: entry["physical"] for name, entry in directed["base"].items()}
+    by_id = {case["id"]: case for case in directed["cases"]}
+    case = by_id[case_id]
+    physical = dict(base)
+    for name, override in case["overrides"].items():
+        physical[name] = override["physical"]
+    return physical
+
+
+def apply_overrides(physical: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(physical)
+    merged.update(overrides)
+    return merged
+
+
+def frozen_receipt_record_digest(receipt_path: Path = RECEIPT_PATH) -> str:
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    return receipt["bindings"]["dr_0008_record_sha256"]
+
+
+def frozen_receipt_binding(
+    document: Dict[str, Any], case_id: str, receipt_path: Path = RECEIPT_PATH
+) -> Dict[str, Any]:
+    """Re-derive the frozen receipt's trace digests for one document."""
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    case = next(c for c in receipt["cases"] if c["id"] == case_id)
+    digests = {}
+    for trace in document["traces"]:
+        name = trace["name"]
+        declared = case["traces"][name]
+        blob = json.dumps(
+            trace["values"], sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+        actual = hashlib.sha256(blob).hexdigest()
+        if actual != declared:
+            raise SystemExit(
+                "FROZEN RECEIPT DRIFT: %s digests to %s but the frozen "
+                "receipt (#54, PR #156) declares %s — the model or its "
+                "inputs moved; regenerate, do not overwrite the binding"
+                % (name, actual, declared)
+            )
+        digests[name] = declared
+    return {
+        "receipt": "sim/reference/fixed-voice-golden-v1.json",
+        "case_id": case_id,
+        "trace_digests": digests,
+        "verified": True,
+    }
+
+
 def format_mismatch(mismatch: Mismatch) -> str:
     """Render the first-mismatch report with the mandated column header."""
     header = " | ".join(MISMATCH_COLUMNS)

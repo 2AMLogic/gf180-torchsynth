@@ -145,6 +145,14 @@ if it were. In the incident behind #6883 the fix was wrong, its regression test
 fabricated the source payload the fix assumed, and the bug survived the close
 undetected until a human asked why the item still had not appeared.
 
+**Per-repo switch (#12703)**: optional config key `champion.outOfBandAcGate`
+(boolean; absent = `true`, today's behaviour), resolved through the daemon's
+config tiers (`loom-daemon config get champion.outOfBandAcGate --json`), so
+fleet-gitops can set it for one repo. Only an explicit `false` turns the gate
+off: Step 4 then skips the classifier and never adds `loom:operator` for an
+out-of-band criterion. Absent, unreadable or non-boolean values keep it on.
+First use case: 2AMLogic/loom-ui, whose live site is where testing happens.
+
 **Handling**: `champion-pr-merge.md` → Step 4 → "Out-of-Band Acceptance-Criteria
 Gate" runs `./.loom/scripts/classify-ac-verification.sh --issue <N> --pr <PR>
 --head-sha <head>` for every linked issue before confirming or forcing its close:
@@ -225,9 +233,9 @@ the PR's only blocker (#6852).** The route fires from a held state too — it is
 the only automated path from `loom:pr` to Doctor, and gating it behind the hold
 left 20 of 21 held PRs conflicting with Doctor's queue empty. On the held
 **hold-plus-feedback** variant (a failing required check, unrelated to the
-hold) the `champion:merge-risk-hold` marker is **preserved** and
-`loom:operator` is **kept** (the human merge decision is still outstanding);
-on the unheld variant `loom:operator` is cleared as before (#5802). On the held
+hold) the `champion:merge-risk-hold` marker and park record are **preserved**
+and `loom:blocked` **stays on**: Doctor works a held PR by its trusted marker,
+and the PR cannot merge while the hold stands (#11861). On the held
 **hold-only** variant (no failing check, nothing else red) the PR is left in
 place instead — routing it would not resolve anything the hold isn't already
 the resolution for, and `main` moving again would just repeat the cycle (the
@@ -280,7 +288,7 @@ gh pr view "$PR_NUMBER" --comments
 # aggregate updatedAt, which Champion's own comment would bump (see #4966).
 VERDICT_MARKER="<!-- champion:proposal-verdict:body-$BODY_HASH -->"
 
-# Concurrency: claim before evaluating, staleness-aware (LOOM_STALE_EVALUATING_MINUTES, default 15m).
+# Concurrency: claim before evaluating, staleness-aware (LOOM_STALE_EVALUATING_MINUTES, default 45m).
 gh issue edit <number> --add-label "loom:evaluating"
 ```
 
@@ -294,10 +302,10 @@ gh issue edit <number> --add-label "loom:evaluating"
 | Issue already carries `loom:evaluating` and the claim is older than `LOOM_STALE_EVALUATING_MINUTES` | **Stale claim — a prior Champion pass likely died mid-evaluation** | Reclaim (`--add-label "loom:evaluating"` again) then evaluate normally. |
 | ≥2 prior "NEEDS REVISION" comments exist, the issue is not already `loom:operator`, and the recurring findings are **not** dependency-only and **not** all `premise-false` | **N=2 threshold reached** | Escalate instead of posting a third+ near-identical rejection: comment with `<!-- champion:proposal-escalated -->` and add `loom:operator` (Champion routes, a human decides — the proposal label stays, nothing is closed). |
 | ≥2 prior "NEEDS REVISION" comments, and **every** recurring finding is tagged `premise-false` (a cited path/line-range/repo-state claim, re-verified false against `origin/main` — on the **resolved** path and with **positive** evidence; an inconclusive re-run escalates instead, #8593) | **N=2 threshold reached, but no human decision is needed (#7657)** | **Close, do not escalate.** Comment with `<!-- champion:premise-false-closed:<main-sha> -->` naming the re-run check(s), then `gh issue close --reason "not planned"`. No `loom:operator`. A mixed finding set still escalates via the row above. |
-| ≥2 prior rejections but **every** recurring finding names a dependency *and* cites an open, non-cycle issue/PR | **Timing finding, not a merits finding (#5664)** | **Block — do not escalate** (#11860). `--check-defer` returns `DEFER`; `park-record apply` on the open blockers. `release-stale-blocked` lifts it when they close. |
+| ≥2 prior rejections but **every** recurring finding names a dependency *and* cites an open, non-cycle issue/PR | **Timing finding, not a merits finding (#5664)** | **Block — do not escalate** (#11860). `--check-defer` returns `DEFER`; `park-record apply` on the open blockers. It stays blocked until lifted once they close (nothing lifts it automatically since #11301). |
 | Same, but every recorded blocker has since **closed** | **Stale verdict (#5664)** | `--check-defer` returns `REEVALUATE`; re-run the 8 criteria instead of escalating on a finding that no longer holds. |
-| Already `loom:operator`, escalation was Champion's own and dependency-only, every recorded blocker now closed | **Self-healing un-escalation (#5664)** | `classify-dependency-block.sh --check-unescalate --apply` removes `loom:operator` and posts one `<!-- champion:proposal-unescalated:<fingerprint> -->` comment; the proposal rejoins normal evaluation in the same pass. A merits escalation, a `<!-- champion:dep-cycle:` escalation, or a human-applied label is never un-escalated. |
-| Blocker is still **open**, but the issue declares a `## Startable Subset` — a part of its work stated to be independent of that blocker | **Sub-issue granularity carve-out ("recurred after closure", #5664)** | Criterion 2 does not fail on this dependency; promote (Step 3) scoped to the declared subset, directing the Builder to `Part of #<issue>` and leaving the remainder for a later pass. Already-parked case: `--check-unescalate` also un-escalates here (`SUBSET_CARVEOUT: yes`) even though the blocker is still open — distinct from the row above, which requires the blocker to have *closed*. |
+| Dependency-only finding at the bound, blocker still open | **Park, never escalate (#5664, #11861)** | `park-record apply --blocked-by <open blockers>` adds `loom:blocked` + one record per blocker (#11860); once they close and it is lifted (nothing lifts it automatically since #11301), the next pass re-evaluates (`REEVALUATE`). Pass 0's un-escalation of old `loom:operator` escalations is retired: `labels migrate --holds` moved them. |
+| Blocker is still **open**, but the issue declares a `## Startable Subset` — a part of its work stated to be independent of that blocker | **Sub-issue granularity carve-out ("recurred after closure", #5664)** | Criterion 2 does not fail on this dependency; promote (Step 3) scoped to the declared subset, directing the Builder to `Part of #<issue>` and leaving the remainder for a later pass. An escalation parked on `loom:operator` before #11861 is the migration's (`labels migrate --holds`). |
 | Fewer than 2 prior rejections | **Revise** | Post the "NEEDS REVISION" comment with `VERDICT_MARKER` and the revise marker; in one edit drop `loom:curated` and `loom:evaluating`, add `loom:triage` (#11860). |
 
 **Rationale**: This is the *same* idempotency-marker + escalation-marker + operator-routing shape as Edge Case 5b's Capped-PR Recovery Pass, applied to the proposal-evaluation side of Champion instead of the PR-merge side — a marker keyed to the thing whose change would invalidate it (here, the proposal's own title+body text; there, the latest Judge rejection comment ID) stops duplicate comments, and a bounded escalation threshold (here, N=2 identical verdicts; there, the Doctor-cycle cap) converts an infinite silent loop into a single human-visible routing decision.
@@ -308,7 +316,7 @@ gh issue edit <number> --add-label "loom:evaluating"
 
 ### Edge Case 5d: Capacity Deferral (#6729) — retired (#11860)
 
-A level cap now stops evaluation before the claim, so a passing proposal is never held back with no verdict (`champion-issue-promo.md` → "Promotion Order"). `classify-capacity-defer.sh` has no caller in the promotion flow.
+A level cap now stops evaluation before the claim, so a passing proposal is never held back with no verdict (`champion-issue-promo.md` → "Promotion Order"). Its idempotency classifier, `classify-capacity-defer.sh`, is retired (#11904).
 
 ---
 
@@ -395,9 +403,9 @@ fi
 
 **Scenario**: A PR touches a file matching `CRITICAL_PATTERNS` (e.g. a new `.github/workflows/*.yml` job), with no version-only carve-out applicable. Before #6879, this FAIL routed through the same generic "Transient failures — keep `loom:pr`, retry next tick" template as `label-check`/`size-check`/`ci-status`, even though nothing about a diff's critical-file-ness ever clears without a human decision or a force-push that narrows the diff — one fleet PR was re-evaluated and re-rejected ~59 times over 36 hours this way, at 200-300s per tick.
 
-**Handling**: Criterion #3 now mirrors criterion #2's merge-risk-hold pattern (see Edge Case 11b below): on FAIL, comment once behind a `<!-- champion:critical-file-hold -->` idempotency marker and add `loom:operator` (#5502), instead of the shared transient-failure template. Unlike criterion #2 it needs no sticky-hold precheck: the pattern match is deterministic, so a later re-read of the *same* diff cannot score it differently. Two releases (#9016): a later push narrowing the diff below every pattern (removes `loom:operator`, posts `<!-- champion:critical-file-hold-cleared -->`), or the operator hand-removing `loom:operator` at the held head — durable, so their own `merge-pr.sh` run does not race a tick past #8112; a moved head re-arms. `loom:auto-merge-ok` does **not** release it — scoped to criterion #2 only (Edge Case 11).
+**Handling**: Criterion #3 now mirrors criterion #2's merge-risk-hold pattern (see Edge Case 11b below): on FAIL, comment once behind a `<!-- champion:critical-file-hold -->` idempotency marker and add `loom:blocked` with a reason-only park record (#11861; `loom:operator` before), instead of the shared transient-failure template. Unlike criterion #2 it needs no sticky-hold precheck: the pattern match is deterministic, so a later re-read of the *same* diff cannot score it differently. Two releases (#9016): a later push narrowing the diff below every pattern (removes `loom:blocked`, posts `<!-- champion:critical-file-hold-cleared -->`), or the operator hand-removing `loom:blocked` at the held head — durable, so their own `merge-pr.sh` run does not race a tick past #8112; a moved head re-arms. `loom:auto-merge-ok` does **not** release it — scoped to criterion #2 only (Edge Case 11).
 
-**Decision**: **Durable hold, not a retry** — `loom:operator` joins the PR, and the Held-PR Census (`loom:operator`-keyed) counts it alongside merge-risk holds for free. The exact commands live in `champion-critical-file-hold.md` (#9016).
+**Decision**: **Durable hold, not a retry** — `loom:blocked` joins the PR beside `loom:pr` (the janitor exception), and the Held-PR Census (keyed on that pair) counts it alongside merge-risk holds for free. The exact commands live in `champion-critical-file-hold.md` (#9016).
 
 ---
 
@@ -433,7 +441,7 @@ HOLD_BODY=$(jq -r --arg m "<!-- champion:merge-risk-hold -->" \
 # and not be a question — "do not merge anyway" / "is it ok to merge?" do NOT
 # release) | a new head SHA (recorded as `champion:hold-state head=<sha>` in the
 # hold comment) | a new Judge review after the hold | a human removing
-# `loom:operator` after the hold (an `unlabeled` event; #11416).
+# `loom:blocked` after the hold (an `unlabeled` event; #11416, #11861).
 ```
 
 **Decision**: **Hold stands** — skip the PR for this pass whatever the axes say this tick. A green re-read of an unchanged diff is not a release signal, and Champion's own comments never count as one.
@@ -498,13 +506,15 @@ per-repo class instead of a hardcoded, always-safe one.
   `loom:auto-merge-ok`'s semantics or its critical-file caveat.
 - **Fail-safe on malformed config.** A class entry missing `id`,
   `filePatterns`, or `conditions`, or naming a condition outside the closed
-  vocabulary (today: `judgeApproval`, `greenCi`), is skipped — that entry
+  vocabulary (today: `judgeApproval`, `greenCi`, `authorIsDependabot`, `noMajorBump`), is skipped — that entry
   never authorizes anything, and a malformed entry never disables sibling
   entries in the array. No config, or an empty array, is a full no-op.
 - **Criteria #1/#3/#4/#5/#6 still run independently.** A standing
   authorization only ever waives criterion #2's four-axis judgment for a
-  matching PR — nothing else. A PR that matches a class but fails, say, the
-  critical-file check (#3) or CI (#6) still does not merge.
+  matching PR — nothing else, **except** criterion #3 for a class that
+  opts in with `"coversCriticalFiles": true` (#12528, below). A PR that
+  matches a class but fails, say, the critical-file check (#3) on a class
+  without that flag, or CI (#6), still does not merge.
 
 **Decision**:
 - Full changed-file list matches an authorized class's patterns and every
@@ -520,6 +530,97 @@ that does not cleanly match an authorized class. It gives an operator a way
 to retire a whole class of recurring, already-decided merge-risk judgments
 without weakening review for anything outside that class, addressing the
 monotonically-growing held-PR backlog documented in #6848.
+
+**Covering critical files (#12528)**: a class may add
+`"coversCriticalFiles": true`, `"excludeFilePatterns": [...]` (globs) and
+`"forbiddenDiffPatterns": [...]` (jq `test()` regexes over every added/removed line). Criterion
+#3 then runs the class check before it emits FAIL. Worked examples, class
+`ci-steps` = `filePatterns: [".github/workflows/*.yml"]`, `coversCriticalFiles: true`,
+`privilegedContentPatterns` (below), no name excludes,
+`forbiddenDiffPatterns: ["^\\s*permissions:", "id-token", "secrets\\.", "pull_request_target"]`,
+`conditions: ["judgeApproval", "greenCi"]`:
+
+| PR | Result |
+|---|---|
+| `.github/workflows/ci.yml`, one added `run:` step, Judge-approved, CI green | #3 **PASS**, rationale names `ci-steps`; no hold |
+| `ci.yml` plus `Cargo.toml` | `Cargo.toml` is outside the class: **FAIL**, today's hold |
+| `.github/workflows/publish.yml` holding `npm publish` or a non-`GITHUB_TOKEN` secret | privileged content: **FAIL**, hold |
+| `.github/workflows/claude-bot-deploy-plan.yml`, credential-free and read-only, a `runs-on` edit | no privileged content: #3 **PASS**, whatever the name |
+| `ci.yml` with an existing `secrets.CLOUDFLARE_API_TOKEN` step, a `runs-on` edit | privileged content at the head SHA: **FAIL**, hold |
+| `ci.yml`, but its contents cannot be read at the head SHA | unreadable content: **FAIL**, hold |
+| `ci.yml` adding a `permissions:` block | forbidden diff line: **FAIL**, hold |
+| `ci.yml`, but the files API returns no patch for it | unreadable diff: **FAIL**, hold |
+| `ci.yml`, CI red or pending | `greenCi` does not hold: **FAIL**, hold |
+| same class without `coversCriticalFiles` | #3 unchanged: **FAIL**, hold |
+| `defaults/hooks/guard-x.sh` under a class that lists it with the flag | kept set: **FAIL**, hold |
+
+**Classify by capability, not by filename (#12954)**: `"privilegedContentPatterns": [...]`
+(jq `test()` regexes, matched line by line against each covered file's full
+contents at the PR head SHA) holds any file that carries a privilege and
+covers any file that does not, whatever it is called. `forbiddenDiffPatterns`
+still catches a PR that adds a privilege. Example list for `ci-steps`:
+`["secrets\\.(?!GITHUB_TOKEN\\b)", "secrets:\\s*inherit", "^\\s*environment:", ":\\s*write\\b", "write-all", "id-token", "pull_request_target", "workflow_run", "^\\s*release:", "types:.*released", "wrangler\\s+deploy", "npm\\s+publish", "gh\\s+release"]`.
+Unreadable or empty content, an oversized or removed file, an invalid regex or
+a head SHA that moved fails closed. Whole-line YAML comments are not scanned
+(a comment grants nothing; the 2026-10-20 fixtures say "no id-token: write"
+in comments); trailing comments and every other line are. The fixture set in
+`defaults/scripts/tests/fixtures/champion-workflows/` (`cases.tsv`) pins the
+expected outcomes so an attended mirror can run the same cases.
+
+The kept set (irreversible migrations, the merge gate itself, credential/token
+selection, guard hooks, installers/updaters that rewrite installed files on
+roll) is never satisfiable by a class. Revertability is red only for a one-way
+effect that happens on merge or roll, not for one an operator later triggers
+by hand. Absent `coversCriticalFiles`, nothing changes.
+
+**Critical files only (#12648)**: `"criticalFilesOnly": true` narrows a class
+to the critical-file hits. Its `filePatterns`, `excludeFilePatterns` and
+`forbiddenDiffPatterns` are applied to the files criterion #3 flags (and each
+one's `previous_filename`) and nothing else; the kept set still covers every
+changed file. It waives criterion #3 only and is never eligible for criterion
+#2. Class `ci-only` = `ci-steps` above with `criticalFilesOnly: true`:
+
+| PR | Result |
+|---|---|
+| `.github/workflows/ci.yml` plus `docs/guide.md`, Judge-approved, CI green | #3 **PASS** under `ci-only`, naming `ci.yml`; criterion #2 still judges the whole PR on the four axes and may hold it |
+| same PR, `ci.yml` adds a `permissions:` block | forbidden line in a critical file: #3 **FAIL**, hold |
+| `ci.yml` plus `defaults/scripts/install-loom.sh` | kept set: #3 **FAIL**, hold |
+| `src/ci.yml` renamed to `.github/workflows/ci.yml` | the previous name is outside the class: #3 **FAIL**, hold |
+| `docs/guide.md` alone | no critical-file hit: the class does not apply, #3 passes on its own |
+
+**Dependabot bumps merge by default (#12948)**: operator direction 2026-10-20,
+"merge Dependabot and then fix things that break". Two more conditions express
+it, so no new config block is needed:
+
+- `authorIsDependabot`: the PR object's `user.login` is `dependabot[bot]` and
+  `user.type` is `Bot`, read live from the forge. A comment, title or label
+  claim never counts; a failed or empty read fails closed.
+- `noMajorBump`: opt-out for semver majors. Reads the version move from the
+  title Dependabot writes (`Bump X from A to B`); a changed first component
+  (second for `0.x`), or a title that does not parse (group bumps), holds.
+
+Fleet-default class (set in the fleet tier, not in this repo's committed file;
+omit `noMajorBump` to merge majors, which is the default):
+
+```json
+{
+  "id": "dependabot-bumps",
+  "description": "Dependabot manifest/lockfile bumps, given Judge approval and green CI",
+  "filePatterns": ["package.json", "*/package.json", "package-lock.json", "*/package-lock.json",
+                   "pnpm-lock.yaml", "yarn.lock", "Cargo.toml", "*/Cargo.toml", "Cargo.lock",
+                   "go.mod", "go.sum", "requirements*.txt", "uv.lock", "poetry.lock"],
+  "conditions": ["authorIsDependabot", "judgeApproval", "greenCi"],
+  "coversCriticalFiles": true
+}
+```
+
+It sets no `forbiddenDiffPatterns`: that list is per class and optional, so
+version lines are not refused unless a class asks. A human PR with the same
+manifest diff fails `authorIsDependabot` (held); a Dependabot PR that also
+touches any file outside `filePatterns` is held; the kept set still applies.
+Fix forward: a red `main` after such a merge is Auditor or Builder work, not a
+reason to pre-hold. After a Dependabot merge, `champion-pr-merge.md` Step 3.5
+comments `@dependabot rebase` once on open Dependabot PRs that now conflict.
 
 **Action** (single authoritative policy — implemented in
 `champion-pr-merge.md` → "Safety Criteria → 2. Merge-Risk Judgment →
@@ -617,16 +718,15 @@ EXISTING=$(gh issue list --search "Follow-on from PR #$PR_NUMBER" --limit 500)
 | Doctor-cycle-capped PR (`loom:blocked` + `loom:changes-requested`) | Three-way on forward progress | Distinct new defects → grant a cycle (remove `loom:blocked` only); same-defect/ambiguous → keep parked with rationale; approach not viable → add `loom:operator`, recommend closing (never close it) |
 | Proposal already recorded as dependency-deferred | Dependency-Defer Fast Path (run FIRST) | `--check-defer` still `DEFER` → block on the open blockers (#11860); `REEVALUATE` → fall through to the Idempotency check |
 | Unrevised proposal re-entering the queue every cycle | Idempotency marker + `PRIOR_REJECTIONS` bound | Every evaluation ends in a verdict (#11860): an unchanged body goes straight to Step 4's bound (title+body hash marker, never `updatedAt`); revise → `loom:triage`; at the bound a final/disposition Curator round, then a ranked decision; `loom:evaluating` prevents double evaluation |
-| Proposal whose only recurring finding is an open, non-cycle dependency | Dependency-timing gate (`classify-dependency-block.sh --check-defer`) | **Block, never escalate** — `release-stale-blocked` lifts it when the blocker closes; blocker already closed → re-evaluate rather than escalate on a stale finding (#5664) |
-| Proposal stuck at `loom:operator` from a dependency-only escalation whose blocker has since closed | Pass 0 self-healing re-scan (`--check-unescalate --apply`) | Remove `loom:operator`, post one fingerprinted un-escalation comment, rejoin evaluation the same pass; merits/cycle/human-applied escalations are never touched (#5664) |
-| Proposal (parked or not) whose blocker is still open but that declares a `## Startable Subset` covering only part of its scope | Sub-issue granularity carve-out ("recurred after closure", #5664) | Criterion 2's dependency finding does not fail the whole issue; promote scoped to the declared subset (`Part of #<issue>`), or un-escalate an already-parked one via `--check-unescalate` (`SUBSET_CARVEOUT: yes`) even while the blocker stays open — `detect-startable-subset.sh` |
+| Proposal whose only recurring finding is an open, non-cycle dependency | Dependency-timing gate (`classify-dependency-block.sh --check-defer`) | **Block, never escalate** — it stays blocked until lifted once the blocker closes (nothing lifts it automatically since #11301); blocker already closed → re-evaluate rather than escalate on a stale finding (#5664) |
+| Proposal (parked or not) whose blocker is still open but that declares a `## Startable Subset` covering only part of its scope | Sub-issue granularity carve-out ("recurred after closure", #5664) | Criterion 2's dependency finding does not fail the whole issue; promote scoped to the declared subset (`Part of #<issue>`) — `detect-startable-subset.sh` |
 | Test-only changes | Allow | Standard criteria apply |
 | Human holds PR (removes `loom:pr`) | Skip | Not a merge candidate without `loom:pr` |
 | Multiple linked issues | Allow | Verify all closed (each is gated independently by the out-of-band AC gate below) |
 | Linked issue's AC names a live-source / real-run / over-time step, with no `loom:ac-verified` marker at the merged head | **Merge, but hold the issue's close** (#6883) | `classify-ac-verification.sh` exit `12`/`13`/`1` → reopen if GitHub auto-closed, comment quoting the unmet criterion verbatim (idempotent `<!-- champion:ac-hold pr=<N> sha=<head> -->`), add `loom:operator`. Exits `0`/`10`/`11` close exactly as before — a body with no AC checklist is a byte-for-byte no-op |
 | Mixed-state CI | Fail on `fail`/`cancel` | `pending` defers; `skipping` is OK |
 | Unknown critical file | Miss | Needs pattern update |
-| Critical file matched (no version-only carve-out) | **Durable hold, not a retry** (#6879) | Comment once behind `<!-- champion:critical-file-hold -->`, add `loom:operator`, keep `loom:pr`; releases when a later push matches no pattern (removes `loom:operator`, posts `<!-- champion:critical-file-hold-cleared -->`) or when the operator hand-removes it at the held head (#9016; a new head re-arms); `loom:auto-merge-ok` does not release it |
+| Critical file matched (no version-only carve-out) | **Durable hold, not a retry** (#6879) | Comment once behind `<!-- champion:critical-file-hold -->`, add `loom:blocked` (#11861), keep `loom:pr`; releases when a later push matches no pattern (removes `loom:blocked`, posts `<!-- champion:critical-file-hold-cleared -->`) or when the operator hand-removes it at the held head (#9016; a new head re-arms); `loom:auto-merge-ok` does not release it |
 | Large but low-risk PR (e.g. mostly tests) | Allow | Judged on the 4 risk axes, not line count |
 | Small but high-blast-radius PR | Hold for human | Comment names the specific concern, keep `loom:pr`, retry next tick |
 | Prior merge-risk hold, later tick scores the same diff green | **Hold stands (sticky)** | Skip silently, post nothing (anti-spam guard already covers it). Release only on `loom:auto-merge-ok`, an explicit operator clearing comment after the hold (leading-clause instruction, not a negation or a question), a new head SHA, or a new Judge review |
