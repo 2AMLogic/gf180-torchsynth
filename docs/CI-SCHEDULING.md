@@ -91,12 +91,35 @@ later, and Loom's per-commit main-health gate reads commits between batches as
 Merging the implementation does not satisfy the following; issue #284 stays
 open until they are recorded here with dates, commands and run URLs.
 
-### Live verification after merge: PENDING
+### Live verification after merge: PARTIAL
 
-- A real scheduled dispatch and both resulting suite runs (actual SHAs and
-  executed jobs).
-- A later unchanged-tip no-op linked to the prior successful evidence.
-- A main-advancement case showing a started main run was not cancelled.
+Observed 2026-10-14 with `gh run list` / `gh run view` (read-only). Two real
+`schedule` dispatcher runs, each followed by a `workflow_dispatch` of both
+suites whose own `headSha` equals the selected SHA:
+
+| Dispatcher run | Main SHA | CI run (jobs) | TB sim run (jobs) |
+|---|---|---|---|
+| [38479980393](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479980393) (2026-10-13 22:46Z) | `ea5c9b1` | [38479997870](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38479997870): contract 3.11/3.12/3.13 success | [38480012255](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38480012255): oneshot-whole-voice, oneshot-tail-chain, rtl-module-qualification, sim-lanes-engines, sim-lanes-vco, sim-selftest 3.11/3.12/3.13 all success |
+| [38513918607](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513918607) (2026-10-14 04:55Z) | `bb1efd2` | [38513933083](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513933083): contract 3.11/3.12/3.13 success | [38513944067](https://github.com/2AMLogic/gf180-torchsynth/actions/runs/38513944067): same 8 jobs, all success |
+
+Schedule slots, observed 2026-10-14T11:21Z (`gh run list --workflow
+ci-main-schedule.yml` and `gh api .../actions/workflows`, read-only).  The
+cron is `17 */3 * * *`.  The forge reports the workflow `created_at`
+2026-10-13T16:23:29Z, even though the file merged on 2026-10-07 (`9d2aa7a`).
+No `CI main schedule` run of any event exists before 2026-10-13T22:46Z.
+Between registration and the observation time there were six eligible slots:
+10-13 18:17Z, 21:17Z, and 10-14 00:17Z, 03:17Z, 06:17Z, 09:17Z.  Only two
+dispatcher runs exist.  Taking each run as the most recent preceding slot, the
+21:17Z run started 22:46Z and the 03:17Z run started 04:55Z, about 89 and 98
+minutes late.  The 18:17Z, 00:17Z, 06:17Z and 09:17Z slots had no dispatcher
+run.  GitHub does not guarantee that scheduled workflows start on time or start
+at all.
+
+Still PENDING (not observed):
+
+- A later unchanged-tip no-op linked to prior successful evidence.
+- A main-advancement case showing a started main run was not cancelled (main
+  did not advance during either run above).
 
 ### Seven-day measurement: PENDING
 
@@ -104,4 +127,8 @@ Record rollout SHA, query/window definition, main job-min/day including
 scheduled/manual suite execution and dispatcher overhead, PR job-min/day, merge
 counts, run outcomes, and comparison with the baseline (16 merges/day, 1,721
 main job-min/day, PRs about 830/day; 7 days to 2026-10-06).  The roughly 48%
-reduction at a three-hour cadence is a forecast, not a result.
+reduction at a three-hour cadence is a forecast, not a result.  The effective
+rollout start is 2026-10-13, when the scheduler registered the workflow
+(16:23Z), not the 2026-10-07 merge.  Before 10-13 there were no scheduled runs,
+so the window must not start earlier.  Missed and late slots (see above) are
+measured outcomes and must be counted in the record, not filtered out.
