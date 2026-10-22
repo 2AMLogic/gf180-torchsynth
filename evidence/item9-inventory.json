@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "t1-attestation-inventory",
+  "t1_item": 9,
+  "description": "Committed testbenches and runners. Cold start is the PDK-free synthetic DUT self-test (tb/run_tb.py selftest); this attests inventory and a cold-start invocation, not that every lane passes (those run in tb-sim.yml).",
+  "testbenches": [
+    "tb/sv/tb_adsr_engine.sv",
+    "tb/sv/tb_audio_mix_engine.sv",
+    "tb/sv/tb_lfo_vca_engine.sv",
+    "tb/sv/tb_lut_sine_dut.sv",
+    "tb/sv/tb_mod_matrix_upsample.sv",
+    "tb/sv/tb_noise_stream_dut.sv",
+    "tb/sv/tb_normalization_replay_engine.sv",
+    "tb/sv/tb_one_shot_tail.sv",
+    "tb/sv/tb_one_shot_voice.sv",
+    "tb/sv/tb_patch_control.sv",
+    "tb/sv/tb_render_binding.sv",
+    "tb/sv/tb_sine_vco_engine.sv",
+    "tb/sv/tb_square_saw_vco.sv",
+    "tb/sv/tb_synth_dut.sv",
+    "tb/run_tb.py",
+    "tb/run_oneshot.py",
+    "tb/run_voice.py"
+  ],
+  "cold_start": {
+    "argv": [
+      "python3",
+      "tb/run_tb.py",
+      "selftest"
+    ]
+  },
+  "pins": {
+    "pdk": {
+      "name": "gf180mcuD",
+      "revision": "f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+    },
+    "tools": {
+      "iverilog": "12.0",
+      "klt": "0.7.1.dev1743+g7ee09483b748"
+    }
+  }
+}

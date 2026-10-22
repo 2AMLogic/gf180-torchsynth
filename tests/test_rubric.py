@@ -132,6 +132,38 @@ class TestRubricInternalConsistency(unittest.TestCase):
         )
 
 
+class TestHistoricalSourceBinding(unittest.TestCase):
+    """DR-0013: sealed rubrics bind archived bytes, never the refreshed file."""
+
+    def test_sealed_rubrics_resolve_matrix_to_archive(self) -> None:
+        for rel in (RUBRIC_REL, RUBRIC_V1_REL):
+            self.assertEqual(validate_rubric.validate_rubric(ROOT, rel), [], rel)
+            pinned = next(
+                s for s in json.loads((ROOT / rel).read_text(encoding="utf-8"))["sources"]
+                if s["id"] == "mutation-matrix-v1"
+            )
+            archive = ROOT / validate_rubric.HISTORICAL_SOURCE_BINDINGS[
+                (Path(rel).stem, "mutation-matrix-v1")
+            ]
+            self.assertEqual(validate_rubric.sha256_file(archive), pinned["sha256"])
+
+    def test_tampered_archive_is_caught(self) -> None:
+        def mutate(document: dict) -> None:
+            archive = ROOT / validate_rubric.HISTORICAL_SOURCE_BINDINGS[
+                ("rubric-v0", "mutation-matrix-v1")
+            ]
+            for source in document["sources"]:
+                if source["id"] == "mutation-matrix-v1":
+                    source["sha256"] = "0" * 64
+            self.assertTrue(archive.is_file())
+
+        errors, tmp = validated_copy(mutate)
+        try:
+            self.assertTrue(any("sha256 does not match landed file" in e for e in errors))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 class TestValidatorCatchesBreakage(unittest.TestCase):
     def test_tampered_threshold_is_caught(self) -> None:
         def mutate(document: dict) -> None:

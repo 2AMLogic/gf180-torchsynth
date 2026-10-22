@@ -2189,7 +2189,7 @@
     "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
     "sim/reference/mutation-signal-v1.json": "a7b23cfa53a806a12ac01bc0f32abc27f379ef435a9b27b4b28b12ab6af58022",
     "sim/reference/mutation-timing-v1.json": "3c29297da3f739c395f49d17986aee0f9f0296649f91c24ceb60728281d8291d",
-    "spec/MUTATIONS.md": "e98682b28da9fa33df34b161631a1c2b069d15b752c35194774f05d3273c7c8d",
+    "spec/MUTATIONS.md": "8c22f9848a7d05752b326d7c54107ec3cec4d0ddfe1545fb3b705f643fa1202c",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
