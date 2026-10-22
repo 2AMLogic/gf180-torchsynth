@@ -20,6 +20,7 @@ import struct
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -32,6 +33,12 @@ from torchsynth_voice import timing_voice_ops as ops  # noqa: E402
 from torchsynth_voice.mutations import MutationError  # noqa: E402
 
 import mutation_worker_timing as worker  # noqa: E402
+
+try:
+    import numpy  # noqa: F401
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
 
 CATALOG = mutations.load_seam_catalog(ROOT / mutations.SEAM_CATALOG_PATH)
 DOCUMENT = json.loads((ROOT / "spec/reference/trace-registry-v1.json").read_text())
@@ -703,6 +710,18 @@ class GatedDetectorTests(unittest.TestCase):
         [row] = self.run_gate(entry, good, good, context={"alpha": 99, "note_on_seconds": 0.2})
         self.assertEqual(row["outcome"], tr.GATE_REFUSED)
 
+    def test_lfo_gate_refuses_without_numpy_or_provenance_context(self):
+        entry = "timing:lfo-rate-shift-plus-half-hz"
+        plain = {"lfo_1.raw": self.lfo(4.37)}
+        faulted = {"lfo_1.raw": self.lfo(4.87)}
+        with mock.patch.dict(sys.modules, {"numpy": None}):
+            [row] = self.run_gate(entry, plain, faulted)
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+        self.assertIn("numpy_unavailable", row["reason"])
+        [row] = self.run_gate(entry, plain, plain, context={})
+        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
+
+    @unittest.skipUnless(HAVE_NUMPY, "NumPy unavailable; the mutations.yml timing-numerical job runs this with the metrics extra")
     def test_lfo_gate_detected_not_detected_and_refused(self):
         entry = "timing:lfo-rate-shift-plus-half-hz"
         plain = {"lfo_1.raw": self.lfo(4.37)}
@@ -712,8 +731,6 @@ class GatedDetectorTests(unittest.TestCase):
         [row] = self.run_gate(entry, plain, plain)
         self.assertEqual(row["outcome"], tr.GATE_NOT_DETECTED)
         [row] = self.run_gate(entry, plain, {"lfo_1.raw": [0.5] * ops.CONTROL_SAMPLES})
-        self.assertEqual(row["outcome"], tr.GATE_REFUSED)
-        [row] = self.run_gate(entry, plain, plain, context={})
         self.assertEqual(row["outcome"], tr.GATE_REFUSED)
 
     def test_route_gate_detects_sign_flip_and_refuses_unexcited_or_nonlinear(self):
