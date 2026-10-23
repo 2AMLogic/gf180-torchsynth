@@ -8,7 +8,6 @@ host; an unrun check is never reported as a pass).
 
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
@@ -46,10 +48,6 @@ EXPECTED_CASES = {
 }
 
 EXPECTED_TRACE_NAMES = ["mod_matrix." + route for route in MOD_MATRIX_OUTPUTS]
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 def words_digest(values) -> str:

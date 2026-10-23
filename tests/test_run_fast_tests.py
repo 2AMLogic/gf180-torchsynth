@@ -19,7 +19,6 @@ of outcome). These tests exercise that aggregation two ways:
 """
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -31,11 +30,9 @@ ROOT = Path(__file__).resolve().parents[1]
 WRAPPER = ROOT / "tools" / "run_fast_tests.py"
 
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT / "tests"))
 import run_fast_tests as rft  # noqa: E402
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
+from hw_tools import has_iverilog  # noqa: E402
 
 
 #: A minimal stand-in for ``tb/run_tb.py``'s CLI contract: a positional
