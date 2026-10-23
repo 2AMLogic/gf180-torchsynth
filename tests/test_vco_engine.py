@@ -11,7 +11,6 @@ import io
 import json
 import math
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -22,6 +21,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
@@ -48,10 +50,6 @@ CLAMP_CASE = "boundary:vco_1.mod_depth:upper"
 PHASE_CASE = "boundary:vco_1.initial_phase:upper"
 #: The prefix walk used by the fast tests (a fraction of the clip).
 PREFIX_SAMPLES = 20000
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 class SineVcoGoldenTest(unittest.TestCase):
