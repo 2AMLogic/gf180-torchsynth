@@ -11,7 +11,7 @@ This directory is unrelated to `manifests/gf180-torchsynth.signoff.json`, the
 `klt signoff` manifest.
 
 Evidence bytes are private; manifests are public. Never write a bucket, account
-id, `s3://` URI or broker URL here. Manifests are append-only: do not edit or
+id, storage-bucket URI or broker URL here. Manifests are append-only: do not edit or
 delete one. New runs only; evidence and golden vectors already committed under
 `sim/` stay where they are.
 
