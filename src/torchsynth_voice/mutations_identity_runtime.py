@@ -45,7 +45,6 @@ from __future__ import annotations
 import base64
 import copy
 import functools
-import hashlib
 import importlib.util
 import json
 import sys
@@ -100,13 +99,8 @@ RENDER_KEYS = (
 _MODULES: Dict[str, Any] = {}
 
 
-def _require(condition: bool, reason: str) -> None:
-    if not condition:
-        raise MutationError(reason)
-
-
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+_require = mutation_runtime._require
+sha256 = mutation_runtime.sha256
 
 
 def canonical(value: Any) -> bytes:

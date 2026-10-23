@@ -39,12 +39,11 @@ literal ``align_corners`` operator stays a proposed addition (D4, AQ-3).
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import envelope_estimators
+from . import mutation_family_runtime as family
 from . import mutations
 from . import paired_metrics
 from . import periodic_estimators
@@ -166,13 +165,10 @@ DATAFLOW: Dict[str, List[str]] = {
 PARAMETER_ROOTS = {"adsr_1.attack": "adsr_1.output", "lfo_1.frequency": "lfo_1.raw"}
 
 
-def _require(condition: bool, reason: str) -> None:
-    if not condition:
-        raise MutationError(reason)
+_require = family._require
 
 
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+sha256 = family.sha256
 
 
 # --------------------------------------------------------------------------
@@ -182,26 +178,11 @@ def sha256(data: bytes) -> str:
 
 def load_manifest(root: Path) -> Tuple[Dict[str, Any], str]:
     """Load the committed manifest; fail closed on revision/digest drift."""
-    data = (Path(root) / ops.MANIFEST_PATH).read_bytes()
-    manifest = json.loads(data)
-    try:
-        ops.require_manifest_binding(manifest)
-    except ValueError as error:
-        raise MutationError(str(error))
-    return manifest, sha256(data)
+    return family.load_manifest(root, ops)
 
 
 def manifest_binding(manifest: Dict[str, Any], manifest_sha256: str) -> Dict[str, Any]:
-    try:
-        ops.require_manifest_binding(manifest)
-    except ValueError as error:
-        raise MutationError(str(error))
-    return {
-        "identity": ops.MANIFEST_IDENTITY,
-        "revision": ops.MANIFEST_REVISION,
-        "frozen_inventory_sha256": ops.MANIFEST_FROZEN_SHA256,
-        "manifest_sha256": manifest_sha256,
-    }
+    return family.manifest_binding(manifest, manifest_sha256, ops)
 
 
 def timing_entries(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -280,24 +261,7 @@ def require_inventory_match(manifest: Dict[str, Any]) -> Dict[str, int]:
 
 
 def case_record(manifest: Dict[str, Any], case_id: str) -> Dict[str, Any]:
-    for case in manifest["cases"]:
-        if case["id"] == case_id:
-            holdout = manifest["holdout"]
-            _require(case["partition"] == "development", "case outside the development partition")
-            _require(
-                not holdout["corpus_holdout_first_index"]
-                <= case["global_sound_index"]
-                <= holdout["corpus_holdout_last_index"],
-                "case lies in the sealed holdout",
-            )
-            _require(case["batch_size"] == ops.BATCH_SIZE, "case batch outside the pinned batch")
-            _require(
-                divmod(case["global_sound_index"], case["batch_size"])
-                == (case["batch_block"], case["batch_slot"]),
-                "case coordinates are inconsistent",
-            )
-            return dict(case)
-    raise MutationError("unknown campaign case: " + str(case_id))
+    return family.case_record(manifest, case_id, ops)
 
 
 def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
@@ -353,27 +317,12 @@ def runtime_definitions() -> Dict[str, Dict[str, Any]]:
 
 def register_runtime_operators() -> None:
     """Explicit trusted-code registration; identical re-registration is a no-op."""
-    for operator_id, definition in runtime_definitions().items():
-        registered = mutations.OPERATORS.get(operator_id)
-        if registered is not None:
-            _require(registered == definition,
-                     "operator already registered with a different definition: " + operator_id)
-            continue
-        mutations.register_operator(operator_id, definition)
+    family.register_runtime_operators(runtime_definitions())
 
 
 def _instance(instance_id: str, operator_id: str, magnitude: Optional[Dict[str, Any]],
               configuration: Dict[str, Any]) -> Dict[str, Any]:
-    spec = ops.RUNTIME_OPERATORS[operator_id]
-    return {
-        "instance_id": instance_id,
-        "operator": operator_id,
-        "operator_version": 1,
-        "seam": spec["seam"],
-        "magnitude": magnitude,
-        "configuration": dict(configuration),
-        "sham": operator_id == ops.SHAM,
-    }
+    return family.instance(instance_id, operator_id, magnitude, configuration, ops)
 
 
 def _source_binding(manifest: Dict[str, Any], case: Dict[str, Any]) -> Dict[str, Any]:
@@ -467,22 +416,11 @@ def family_seam_map(document: Dict[str, Any]) -> Dict[str, Tuple[str, int, Optio
 
 
 def _registry_trace(document: Dict[str, Any], name: str) -> Dict[str, Any]:
-    for trace in document["traces"]:
-        if trace["name"] == name:
-            return trace
-    raise MutationError("unknown registry trace: " + str(name))
+    return family.registry_trace(document, name)
 
 
 def _inventory_range(inventory: Dict[str, Any], name: str) -> Dict[str, Any]:
-    for parameter in inventory["parameters"]:
-        if parameter["name"] == name:
-            return {
-                "minimum": float(parameter["minimum"]),
-                "maximum": float(parameter["maximum"]),
-                "curve": float(parameter["curve"]),
-                "symmetric": parameter["symmetric"],
-            }
-    raise MutationError("unknown inventory parameter: " + str(name))
+    return family.inventory_range(inventory, name)
 
 
 def resolve_schedule(plan: Dict[str, Any], manifest: Dict[str, Any], manifest_sha256: str,
@@ -599,14 +537,7 @@ def process_schedules(manifest: Dict[str, Any], manifest_sha256: str, case_id: s
 
 
 def downstream(trace: str) -> List[str]:
-    seen: List[str] = []
-    stack = list(DATAFLOW[trace])
-    while stack:
-        name = stack.pop()
-        if name not in seen:
-            seen.append(name)
-            stack.extend(DATAFLOW[name])
-    return sorted(seen)
+    return family.downstream(trace, DATAFLOW)
 
 
 def blast_radius(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
@@ -635,17 +566,7 @@ def seam_traces(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
 
 def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_digest: str) -> List[float]:
     """Frame and identity preflight; runs before any metric and refuses on mismatch."""
-    trace = _registry_trace(document, name)
-    _require(trace["dtype"] == "float32", "trace dtype is not float32: " + name)
-    frame = 1
-    for size in trace["shape"]:
-        frame *= size
-    _require(type(data) is bytes and len(data) == 4 * frame,
-             "frame preflight refusal: " + name + " declares " + str(frame) + " samples, observed "
-             + str(len(data) // 4 if type(data) is bytes else None))
-    _require(sha256(data) == inventory_digest,
-             "identity preflight refusal: retained bytes do not match the capture inventory: " + name)
-    return list(ops.floats(data, frame))
+    return family.trace_preflight(document, name, data, inventory_digest, ops)
 
 
 def paired_exactness(reference: List[float], candidate: List[float], rate_hz: float, trace: str) -> Dict[str, Any]:
@@ -859,27 +780,15 @@ def evaluate_gated(entry: Dict[str, Any], plain: Callable[[str], List[float]],
 # Process report validation
 # --------------------------------------------------------------------------
 
-_IDENTITY_KEYS = (
-    "batch_audio_sha256",
-    "audio_slot_sha256",
-    "slot_sha256",
-    "noise_sha256",
-    "rng_state",
-    "labels_all",
-    "invocation_counts",
-    "capture_inventory",
-    "parameters_before_sha256",
-)
+_IDENTITY_KEYS = family.IDENTITY_KEYS
 
 
 def _inventory_digests(record: Dict[str, Any]) -> Dict[str, str]:
-    return {item["name"]: item["sha256"] for item in record["capture_inventory"]}
+    return family.inventory_digests(record)
 
 
 def _require_identical(plain: Dict[str, Any], record: Dict[str, Any], label: str) -> None:
-    for key in _IDENTITY_KEYS:
-        _require(record.get(key) == plain.get(key),
-                 "control is not byte-identical to plain: " + label + " (" + key + ")")
+    family.require_identical(plain, record, label, _IDENTITY_KEYS)
 
 
 def _plan_for(manifest: Dict[str, Any], attempt: str, case_id: str, catalog: Dict[str, Any]) -> Dict[str, Any]:
