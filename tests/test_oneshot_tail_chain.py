@@ -12,6 +12,7 @@ elaboration test below is skipped, not passed, where Icarus is absent.
 """
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
