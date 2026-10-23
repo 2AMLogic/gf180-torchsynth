@@ -90,6 +90,8 @@ jobs:
         run: uv run --no-sync python -c "import numpy"
       - name: Run the timing family tests with NumPy
         run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing.py -v
+      - name: Run the timing runtime gate tests with NumPy
+        run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing_runtime.py -v
       - name: Check the committed timing publication against a fresh rebuild
         run: uv run --no-sync python tools/qualify_mutations_timing.py --check
 

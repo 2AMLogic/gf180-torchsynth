@@ -28,9 +28,12 @@ Scope limits, stated so they cannot be mistaken for results: no Voice is
 rendered here; unit fixtures exercise adapter mechanics only and never
 qualify actual-Voice coverage; reliability across fresh processes, host
 admission and publication belong to the campaign (#337). The analytic
-gated detectors (``det-timing-01/04/05``) are reported ``not_evaluated``, so
-the five cells that carry them stay open until their admissibility bindings
-land. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8) and the
+gated detectors (``det-timing-01/04/05``) run the estimators' own domain
+refusals on the plain and the faulted attempt of the same process (DR-0012
+D7): a refusal on either is ``refused_inadmissible_not_counted``, an admitted
+result is ``detected`` or ``not_detected`` (the latter leaves the case open),
+and a gated detector never counts as a kill by itself. A cell whose attempt
+produced no faulted trace keeps ``not_evaluated``. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8) and the
 literal ``align_corners`` operator stays a proposed addition (D4, AQ-3).
 """
 
@@ -41,8 +44,10 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from . import envelope_estimators
 from . import mutations
 from . import paired_metrics
+from . import periodic_estimators
 from . import timing_voice_ops as ops
 from .artifacts import canonical_bytes
 from .mutations import MutationError
@@ -711,6 +716,146 @@ def frame_refusal(manifest: Dict[str, Any], document: Dict[str, Any], entry_id: 
 
 
 # --------------------------------------------------------------------------
+# Admissibility-gated analytic detectors (DR-0012 D7)
+# --------------------------------------------------------------------------
+
+GATE_DETECTED = "detected"
+GATE_NOT_DETECTED = "not_detected"
+GATE_REFUSED = "refused_inadmissible_not_counted"
+GATE_OUTCOMES = (GATE_DETECTED, GATE_NOT_DETECTED, GATE_REFUSED)
+CONTROL_RATE_HZ = 441
+ATTACK_LIMIT_CONTROL_SAMPLES = 0.02  # manifest bound of det-timing-01
+LFO_RATE_LIMIT_HZ = 0.02  # manifest bound of det-timing-04
+ROUTE_GAIN_LIMIT = 1e-8  # manifest bound of det-timing-05
+ROUTE_SOURCE = "adsr_1.output"
+LFO_TRACE = "lfo_1.raw"
+LFO_UNIT = "linear-amplitude"
+GATED_TRUTH_RULE = "plain_attempt_paired_reference"
+
+
+def _gate_row(gated: Dict[str, Any], outcome: str, reason: str, **evidence: Any) -> Dict[str, Any]:
+    return dict({"detector_id": gated["detector_id"], "outcome": outcome, "reason": reason}, **evidence)
+
+
+def _gate_refusal(gated: Dict[str, Any], reason: str, **evidence: Any) -> Dict[str, Any]:
+    return _gate_row(gated, GATE_REFUSED, reason, **evidence)
+
+
+def _metric_values(results: List[Dict[str, Any]], names: List[str]) -> Tuple[Optional[List[List[float]]], str]:
+    """Per-result metric values, or the first estimator refusal reason."""
+    values: List[List[float]] = []
+    for label, result in zip(("plain", "faulted"), results):
+        row = []
+        for name in names:
+            metric = result["metrics"][name]
+            if metric["value"] is None:
+                return None, label + " attempt refused " + name + ": " + str(metric["reason"])
+            row.append(metric["value"])
+        values.append(row)
+    return values, ""
+
+
+def _gate_attack(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                 faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    alpha, note = context.get("alpha"), context.get("note_on_seconds")
+    if alpha is None or note is None:
+        return _gate_refusal(gated, "known alpha and note duration unavailable (gate context)")
+    try:
+        results = [envelope_estimators.estimate_envelope(
+            read("adsr_1.output"), rate_hz=CONTROL_RATE_HZ, note_on_seconds=note, alpha=alpha)
+            for read in (plain, faulted)]
+    except ValueError as error:
+        return _gate_refusal(gated, "estimator input refused: " + str(error))
+    values, reason = _metric_values(results, ["attack_end"])
+    if values is None:
+        return _gate_refusal(gated, reason)
+    reference, observed = values[0][0], values[1][0]
+    deviation = abs(observed - reference)
+    return _gate_row(
+        gated, GATE_DETECTED if deviation > ATTACK_LIMIT_CONTROL_SAMPLES else GATE_NOT_DETECTED,
+        "attack_end deviation against the plain-attempt estimate",
+        estimator="envelope_estimators.estimate_envelope", unit="control_sample",
+        plain_estimate=reference, faulted_estimate=observed, deviation=deviation,
+        limit=ATTACK_LIMIT_CONTROL_SAMPLES)
+
+
+def _gate_lfo_rate(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                   faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    if context.get("lfo_fundamental_in_band") is not True:
+        return _gate_refusal(gated, "fundamental_in_band provenance unavailable (gate context)")
+    estimates = []
+    for label, read in (("plain", plain), ("faulted", faulted)):
+        samples = read(LFO_TRACE)
+        try:
+            result = periodic_estimators.estimate_periodic(
+                samples, sample_rate_hz=CONTROL_RATE_HZ, unit=LFO_UNIT, family="lfo",
+                reference_hz=1.0,  # only scales the unused cents property
+                preparation=periodic_estimators.identity_metadata(len(samples), CONTROL_RATE_HZ, LFO_UNIT),
+                fundamental_in_band=True)
+        except ValueError as error:
+            return _gate_refusal(gated, label + " attempt input refused: " + str(error))
+        frequency = result["estimates"]["frequency_hz"]
+        if result["status"] != "valid" or frequency is None:
+            return _gate_refusal(gated, label + " attempt refused: " + str(result["reason"]))
+        estimates.append(frequency)
+    deviation = abs(estimates[1] - estimates[0])
+    return _gate_row(
+        gated, GATE_DETECTED if deviation > LFO_RATE_LIMIT_HZ else GATE_NOT_DETECTED,
+        "frequency_hz deviation against the plain-attempt estimate",
+        estimator="periodic_estimators.estimate_periodic", unit="Hz",
+        plain_estimate=estimates[0], faulted_estimate=estimates[1], deviation=deviation,
+        limit=LFO_RATE_LIMIT_HZ)
+
+
+def _gate_routes(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                 faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    source = plain(ROUTE_SOURCE)
+    names = ["gain." + destination for destination in envelope_estimators.DESTINATIONS]
+    try:
+        results = [envelope_estimators.estimate_routes(
+            source, {destination: read("mod_matrix." + destination)
+                     for destination in envelope_estimators.DESTINATIONS}, rate_hz=CONTROL_RATE_HZ)
+            for read in (plain, faulted)]
+    except ValueError as error:
+        return _gate_refusal(gated, "estimator input refused: " + str(error))
+    values, reason = _metric_values(results, names)
+    if values is None:
+        return _gate_refusal(gated, reason)
+    deviations = {name: abs(b - a) for name, a, b in zip(names, values[0], values[1])}
+    return _gate_row(
+        gated, GATE_DETECTED if max(deviations.values()) > ROUTE_GAIN_LIMIT else GATE_NOT_DETECTED,
+        "route gain deviation against the plain-attempt estimates",
+        estimator="envelope_estimators.estimate_routes", unit="1",
+        plain_estimate=dict(zip(names, values[0])), faulted_estimate=dict(zip(names, values[1])),
+        deviation=deviations, limit=ROUTE_GAIN_LIMIT)
+
+
+GATED_DETECTORS: Dict[str, Callable[..., Dict[str, Any]]] = {
+    "det-timing-01": _gate_attack,
+    "det-timing-04": _gate_lfo_rate,
+    "det-timing-05": _gate_routes,
+}
+
+
+def evaluate_gated(entry: Dict[str, Any], plain: Callable[[str], List[float]],
+                   faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Gate outcome for every gated detector of a cell; structural drift fails closed."""
+    rows = []
+    for gated in entry["gated_detectors"]:
+        detector = gated["detector_id"]
+        _require(detector in GATED_DETECTORS, "no admissibility binding for gated detector: " + str(detector))
+        _require(gated["truth_rule"] == GATED_TRUTH_RULE and gated["counts_as_kill"] is False
+                 and gated["on_inadmissible"] == GATE_REFUSED,
+                 "gated detector policy differs from the bound policy: " + detector)
+        row = GATED_DETECTORS[detector](gated, plain, faulted, context)
+        _require(row["detector_id"] == detector and row["outcome"] in GATE_OUTCOMES,
+                 "gate outcome missing or malformed: " + detector)
+        rows.append(row)
+    return rows
+
+
+
+# --------------------------------------------------------------------------
 # Process report validation
 # --------------------------------------------------------------------------
 
@@ -783,8 +928,14 @@ def _check_parameter_event(event: Dict[str, Any], swap: Dict[str, Any], record: 
 def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: Dict[str, Any],
                      inventory: Dict[str, Any], catalog: Dict[str, Any], case_id: str, repeat: int,
                      schedules: Dict[str, Dict[str, Any]], records: Dict[str, Dict[str, Any]],
-                     read_bytes: Callable[[str], bytes]) -> Dict[str, Any]:
+                     read_bytes: Callable[[str], bytes],
+                     gate_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Offline validation of one (case, repeat) worker process report.
+
+    ``gate_context`` carries the resolved case scalars the admissibility gates
+    need and the report does not retain (``alpha``, ``note_on_seconds`` of
+    ``adsr_1`` and ``lfo_fundamental_in_band`` provenance); a gate whose context
+    is absent is ``refused_inadmissible_not_counted``, never guessed.
 
     Structural problems (binding, inventory, plan/schedule tamper, event
     completeness/order, controls, preflight, cleanup, evidence association)
@@ -850,7 +1001,7 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
             "mandatory_detectors": [],
             "gated_detectors": [
                 {"detector_id": gated["detector_id"], "outcome": "not_evaluated",
-                 "reason": "admissibility binding not implemented by this adapter; a missing gate outcome "
+                 "reason": "no faulted trace was produced; a missing gate outcome "
                            "leaves the case open (DR-0012 D7)"}
                 for gated in entry["gated_detectors"]
             ],
@@ -923,14 +1074,25 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
             cell["mandatory_detectors"].append(row)
         detected = all(row["verdict"] == "FAIL" and row["framing_match"] == 1
                        and row["max_abs_error"] not in (None, 0) for row in cell["mandatory_detectors"])
+        if entry["gated_detectors"]:
+            replaced = {trace: item for (_, trace), item in consumed.items()}
+
+            def faulted_trace(trace: str, record=record, replaced=replaced) -> List[float]:
+                if trace in replaced:
+                    data = read_bytes(replaced[trace]["file"])
+                    return trace_preflight(document, trace, data, sha256(data))
+                return samples_of(record, trace)
+
+            cell["gated_detectors"] = evaluate_gated(
+                entry, lambda trace: samples_of(plain, trace), faulted_trace, gate_context or {})
         if not all(cell["invariance"].values()):
             cell["outcome"] = "invariance_failed"
         elif not detected:
             cell["outcome"] = "open_not_detected"
         elif entry["disposition"] == "composition":
             cell["outcome"] = "composition_detected"
-        elif cell["gated_detectors"]:
-            cell["outcome"] = "open_gated_detector_unevaluated"
+        elif any(gated["outcome"] == GATE_NOT_DETECTED for gated in cell["gated_detectors"]):
+            cell["outcome"] = "open_gated_not_detected"
         else:
             cell["outcome"] = "detected"
 
