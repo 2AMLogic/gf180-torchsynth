@@ -317,24 +317,7 @@ def check_committed() -> int:
 
     documents = {}
     build_all(documents_out=documents)
-    ok = True
-    for case_id, payload in sorted(documents.items()):
-        path = OUT_DIR / (case_id + ".json")
-        if not path.exists():
-            print("CHECK FAIL: missing %s" % path)
-            ok = False
-            continue
-        committed = json.loads(path.read_text(encoding="utf-8"))
-        fresh = json.loads(payload)
-        if gv.compute_content_hash(committed) != gv.compute_content_hash(fresh):
-            print(
-                "CHECK FAIL: %s does not match regeneration; rerun "
-                "tools/generate_adsr_golden.py and commit" % path
-            )
-            ok = False
-        else:
-            print("CHECK OK: %s" % path.name)
-    return 0 if ok else 1
+    return gv.check_committed(documents, OUT_DIR, "generate_adsr_golden.py")
 
 
 def main(argv=None) -> int:

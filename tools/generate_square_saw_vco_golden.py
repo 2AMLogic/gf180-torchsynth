@@ -28,7 +28,6 @@ hardware-playback, or sound-fidelity claim is made.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -36,14 +35,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from torchsynth_voice import float_interfaces as fi  # noqa: E402
-from torchsynth_voice import float_sources as fs  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import vco2_golden as vg  # noqa: E402
 from torchsynth_voice.digest import sha256_bytes, sha256_file  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
-    FixedVoiceModel,
 )
 
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
@@ -106,48 +102,6 @@ def load_json(path: Path):
     return json.loads(path.read_bytes())
 
 
-def render_fixed_vco2(formats: AcceptedFormats, physical: dict):
-    """Render one case through the frozen whole-voice fixed model.
-
-    The normalized entries are placeholders: the fixed model consumes the
-    physical map only (the normalized map is the float-side seam), and the
-    committed evidence here is the fixed model's own vco_2.raw words.
-    """
-
-    noise_bytes = fs.NoiseSource.resolve(0)
-    request = fi.ResolvedRequest(
-        0,
-        {name: 0.0 for name in physical},
-        {
-            "seed": 13,
-            "slot": 0,
-            "sample_count": 176400,
-            "sha256": hashlib.sha256(noise_bytes).hexdigest(),
-            "samples": noise_bytes,
-        },
-        physical=dict(physical),
-        execution_status="canonical-batched",
-    )
-    model = FixedVoiceModel(request, formats)
-    fixed, _diagnostics = model.render()
-    return fixed["vco_2.raw"]
-
-
-def evidence_row(words: list) -> dict:
-    """The committed evidence row for one vco_2.raw stream (mm convention)."""
-
-    pins = {0: words[0], 1: words[1], 2: words[2]}
-    for j in (99, 441, 1764, 17640, 88200, 105840, 176397, 176398, 176399):
-        pins[j] = words[j]
-    return {
-        "sample_count": len(words),
-        "words_sha256": vg.voice_digest(words),
-        "first_word": words[0],
-        "last_word": words[-1],
-        "jitter": {str(j): w for j, w in sorted(pins.items())},
-    }
-
-
 def build_vector(
     case_id: str,
     physical: dict,
@@ -199,7 +153,7 @@ def build_vector(
             raise SystemExit(
                 "frozen sidecar words digest drift for %s" % case_id
             )
-        row = evidence_row(words)
+        row = gv.evidence_row(words)
         if row["words_sha256"] != frozen["digest"]:
             raise SystemExit("evidence digest mismatch for " + case_id)
         provenance["vco_2_raw"] = row
@@ -219,7 +173,7 @@ def build_vector(
                 "mirror does not reproduce the model's own vco_2.raw render "
                 "for %s" % case_id
             )
-        provenance["vco_2_raw"] = evidence_row(rendered_words)
+        provenance["vco_2_raw"] = gv.evidence_row(rendered_words)
         provenance["derivation"] = (
             "FixedVoiceModel.render of the declared parameters; the "
             "committed digest is the model's own vco_2.raw words; the host "
@@ -281,7 +235,7 @@ def build_all(formats: AcceptedFormats) -> dict:
     for case_id, overrides in DEDICATED_CASES:
         physical = dict(base_p)
         physical.update(overrides)
-        words = render_fixed_vco2(formats, physical)
+        words = gv.render_fixed_trace(formats, physical, "vco_2.raw")
         vectors[case_id] = build_vector(
             case_id, physical, formats, rendered_words=words
         )
