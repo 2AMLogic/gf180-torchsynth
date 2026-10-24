@@ -12,7 +12,6 @@ signoff, hardware playback, or sound fidelity.
 import hashlib
 import json
 import math
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,6 +20,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import directed as dr  # noqa: E402
 from torchsynth_voice import mix_golden as mx  # noqa: E402
@@ -43,10 +45,6 @@ MODEL_CASE = "source:noise"
 #: Declared directed fixtures the fixture-class checks read.
 SILENCE_FIXTURE = "special:silence"
 STRESS_FIXTURE = "special:stress"
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 def rtl_body(path: Path) -> str:

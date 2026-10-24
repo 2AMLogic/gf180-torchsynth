@@ -30,3 +30,17 @@ supersede. A `full`-profile record exists for the **tail-chain** lane only
 the structural reason a record can only be committed on an already-existing,
 clean, already-landed commit -- never inside the pull request that introduces
 the RTL/flow it certifies.
+
+## Stored evidence
+
+New run output is not committed as bytes. Stage it in the git-ignored
+`sim/stage/` directory, then run
+`python tools/store_evidence.py sim/stage/<dir> <bench> <run-id>`. This stores
+each file with `klt artifact put` and writes only
+`manifests/artifacts/<bench>-<run-id>.manifest.json` and a Markdown summary
+(name, size, sha256 per object). It exits nonzero and writes nothing if
+`$KLT_ARTIFACT_BROKER` is unset, `klt` lacks `artifact put`, or the broker is
+unreachable; there is no fallback to committing bytes. Verify with
+`klt artifact verify <manifest>`. Evidence and golden vectors already committed
+here, and the test inputs that read them, stay committed. See
+`manifests/artifacts/README.md`.

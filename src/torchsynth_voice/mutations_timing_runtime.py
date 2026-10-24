@@ -28,22 +28,26 @@ Scope limits, stated so they cannot be mistaken for results: no Voice is
 rendered here; unit fixtures exercise adapter mechanics only and never
 qualify actual-Voice coverage; reliability across fresh processes, host
 admission and publication belong to the campaign (#337). The analytic
-gated detectors (``det-timing-01/04/05``) are reported ``not_evaluated``, so
-the five cells that carry them stay open until their admissibility bindings
-land. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8), as do the
+gated detectors (``det-timing-01/04/05``) run the estimators' own domain
+refusals on the plain and the faulted attempt of the same process (DR-0012
+D7): a refusal on either is ``refused_inadmissible_not_counted``, an admitted
+result is ``detected`` or ``not_detected`` (the latter leaves the case open),
+and a gated detector never counts as a kill by itself. A cell whose attempt
+produced no faulted trace keeps ``not_evaluated``. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8), as do the
 revision-2 #297 additions (DR-0015), and the
 literal ``align_corners`` operator stays a proposed addition (D4, AQ-3).
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from . import envelope_estimators
+from . import mutation_family_runtime as family
 from . import mutations
 from . import paired_metrics
+from . import periodic_estimators
 from . import timing_voice_ops as ops
 from .artifacts import canonical_bytes
 from .mutations import MutationError
@@ -165,13 +169,10 @@ DATAFLOW: Dict[str, List[str]] = {
 PARAMETER_ROOTS = {"adsr_1.attack": "adsr_1.output", "lfo_1.frequency": "lfo_1.raw"}
 
 
-def _require(condition: bool, reason: str) -> None:
-    if not condition:
-        raise MutationError(reason)
+_require = family._require
 
 
-def sha256(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+sha256 = family.sha256
 
 
 # --------------------------------------------------------------------------
@@ -181,26 +182,11 @@ def sha256(data: bytes) -> str:
 
 def load_manifest(root: Path) -> Tuple[Dict[str, Any], str]:
     """Load the committed manifest; fail closed on revision/digest drift."""
-    data = (Path(root) / ops.MANIFEST_PATH).read_bytes()
-    manifest = json.loads(data)
-    try:
-        ops.require_manifest_binding(manifest)
-    except ValueError as error:
-        raise MutationError(str(error))
-    return manifest, sha256(data)
+    return family.load_manifest(root, ops)
 
 
 def manifest_binding(manifest: Dict[str, Any], manifest_sha256: str) -> Dict[str, Any]:
-    try:
-        ops.require_manifest_binding(manifest)
-    except ValueError as error:
-        raise MutationError(str(error))
-    return {
-        "identity": ops.MANIFEST_IDENTITY,
-        "revision": ops.MANIFEST_REVISION,
-        "frozen_inventory_sha256": ops.MANIFEST_FROZEN_SHA256,
-        "manifest_sha256": manifest_sha256,
-    }
+    return family.manifest_binding(manifest, manifest_sha256, ops)
 
 
 def timing_entries(manifest: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -279,24 +265,7 @@ def require_inventory_match(manifest: Dict[str, Any]) -> Dict[str, int]:
 
 
 def case_record(manifest: Dict[str, Any], case_id: str) -> Dict[str, Any]:
-    for case in manifest["cases"]:
-        if case["id"] == case_id:
-            holdout = manifest["holdout"]
-            _require(case["partition"] == "development", "case outside the development partition")
-            _require(
-                not holdout["corpus_holdout_first_index"]
-                <= case["global_sound_index"]
-                <= holdout["corpus_holdout_last_index"],
-                "case lies in the sealed holdout",
-            )
-            _require(case["batch_size"] == ops.BATCH_SIZE, "case batch outside the pinned batch")
-            _require(
-                divmod(case["global_sound_index"], case["batch_size"])
-                == (case["batch_block"], case["batch_slot"]),
-                "case coordinates are inconsistent",
-            )
-            return dict(case)
-    raise MutationError("unknown campaign case: " + str(case_id))
+    return family.case_record(manifest, case_id, ops)
 
 
 def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
@@ -352,27 +321,12 @@ def runtime_definitions() -> Dict[str, Dict[str, Any]]:
 
 def register_runtime_operators() -> None:
     """Explicit trusted-code registration; identical re-registration is a no-op."""
-    for operator_id, definition in runtime_definitions().items():
-        registered = mutations.OPERATORS.get(operator_id)
-        if registered is not None:
-            _require(registered == definition,
-                     "operator already registered with a different definition: " + operator_id)
-            continue
-        mutations.register_operator(operator_id, definition)
+    family.register_runtime_operators(runtime_definitions())
 
 
 def _instance(instance_id: str, operator_id: str, magnitude: Optional[Dict[str, Any]],
               configuration: Dict[str, Any]) -> Dict[str, Any]:
-    spec = ops.RUNTIME_OPERATORS[operator_id]
-    return {
-        "instance_id": instance_id,
-        "operator": operator_id,
-        "operator_version": 1,
-        "seam": spec["seam"],
-        "magnitude": magnitude,
-        "configuration": dict(configuration),
-        "sham": operator_id == ops.SHAM,
-    }
+    return family.instance(instance_id, operator_id, magnitude, configuration, ops)
 
 
 def _source_binding(manifest: Dict[str, Any], case: Dict[str, Any]) -> Dict[str, Any]:
@@ -466,22 +420,11 @@ def family_seam_map(document: Dict[str, Any]) -> Dict[str, Tuple[str, int, Optio
 
 
 def _registry_trace(document: Dict[str, Any], name: str) -> Dict[str, Any]:
-    for trace in document["traces"]:
-        if trace["name"] == name:
-            return trace
-    raise MutationError("unknown registry trace: " + str(name))
+    return family.registry_trace(document, name)
 
 
 def _inventory_range(inventory: Dict[str, Any], name: str) -> Dict[str, Any]:
-    for parameter in inventory["parameters"]:
-        if parameter["name"] == name:
-            return {
-                "minimum": float(parameter["minimum"]),
-                "maximum": float(parameter["maximum"]),
-                "curve": float(parameter["curve"]),
-                "symmetric": parameter["symmetric"],
-            }
-    raise MutationError("unknown inventory parameter: " + str(name))
+    return family.inventory_range(inventory, name)
 
 
 def resolve_schedule(plan: Dict[str, Any], manifest: Dict[str, Any], manifest_sha256: str,
@@ -598,14 +541,7 @@ def process_schedules(manifest: Dict[str, Any], manifest_sha256: str, case_id: s
 
 
 def downstream(trace: str) -> List[str]:
-    seen: List[str] = []
-    stack = list(DATAFLOW[trace])
-    while stack:
-        name = stack.pop()
-        if name not in seen:
-            seen.append(name)
-            stack.extend(DATAFLOW[name])
-    return sorted(seen)
+    return family.downstream(trace, DATAFLOW)
 
 
 def blast_radius(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
@@ -634,17 +570,7 @@ def seam_traces(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
 
 def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_digest: str) -> List[float]:
     """Frame and identity preflight; runs before any metric and refuses on mismatch."""
-    trace = _registry_trace(document, name)
-    _require(trace["dtype"] == "float32", "trace dtype is not float32: " + name)
-    frame = 1
-    for size in trace["shape"]:
-        frame *= size
-    _require(type(data) is bytes and len(data) == 4 * frame,
-             "frame preflight refusal: " + name + " declares " + str(frame) + " samples, observed "
-             + str(len(data) // 4 if type(data) is bytes else None))
-    _require(sha256(data) == inventory_digest,
-             "identity preflight refusal: retained bytes do not match the capture inventory: " + name)
-    return list(ops.floats(data, frame))
+    return family.trace_preflight(document, name, data, inventory_digest, ops)
 
 
 def paired_exactness(reference: List[float], candidate: List[float], rate_hz: float, trace: str) -> Dict[str, Any]:
@@ -715,30 +641,158 @@ def frame_refusal(manifest: Dict[str, Any], document: Dict[str, Any], entry_id: 
 
 
 # --------------------------------------------------------------------------
+# Admissibility-gated analytic detectors (DR-0012 D7)
+# --------------------------------------------------------------------------
+
+GATE_DETECTED = "detected"
+GATE_NOT_DETECTED = "not_detected"
+GATE_REFUSED = "refused_inadmissible_not_counted"
+GATE_OUTCOMES = (GATE_DETECTED, GATE_NOT_DETECTED, GATE_REFUSED)
+CONTROL_RATE_HZ = 441
+ATTACK_LIMIT_CONTROL_SAMPLES = 0.02  # manifest bound of det-timing-01
+LFO_RATE_LIMIT_HZ = 0.02  # manifest bound of det-timing-04
+ROUTE_GAIN_LIMIT = 1e-8  # manifest bound of det-timing-05
+ROUTE_SOURCE = "adsr_1.output"
+LFO_TRACE = "lfo_1.raw"
+LFO_UNIT = "linear-amplitude"
+GATED_TRUTH_RULE = "plain_attempt_paired_reference"
+
+
+def _gate_row(gated: Dict[str, Any], outcome: str, reason: str, **evidence: Any) -> Dict[str, Any]:
+    return dict({"detector_id": gated["detector_id"], "outcome": outcome, "reason": reason}, **evidence)
+
+
+def _gate_refusal(gated: Dict[str, Any], reason: str, **evidence: Any) -> Dict[str, Any]:
+    return _gate_row(gated, GATE_REFUSED, reason, **evidence)
+
+
+def _metric_values(results: List[Dict[str, Any]], names: List[str]) -> Tuple[Optional[List[List[float]]], str]:
+    """Per-result metric values, or the first estimator refusal reason."""
+    values: List[List[float]] = []
+    for label, result in zip(("plain", "faulted"), results):
+        row = []
+        for name in names:
+            metric = result["metrics"][name]
+            if metric["value"] is None:
+                return None, label + " attempt refused " + name + ": " + str(metric["reason"])
+            row.append(metric["value"])
+        values.append(row)
+    return values, ""
+
+
+def _gate_attack(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                 faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    alpha, note = context.get("alpha"), context.get("note_on_seconds")
+    if alpha is None or note is None:
+        return _gate_refusal(gated, "known alpha and note duration unavailable (gate context)")
+    try:
+        results = [envelope_estimators.estimate_envelope(
+            read("adsr_1.output"), rate_hz=CONTROL_RATE_HZ, note_on_seconds=note, alpha=alpha)
+            for read in (plain, faulted)]
+    except ValueError as error:
+        return _gate_refusal(gated, "estimator input refused: " + str(error))
+    values, reason = _metric_values(results, ["attack_end"])
+    if values is None:
+        return _gate_refusal(gated, reason)
+    reference, observed = values[0][0], values[1][0]
+    deviation = abs(observed - reference)
+    return _gate_row(
+        gated, GATE_DETECTED if deviation > ATTACK_LIMIT_CONTROL_SAMPLES else GATE_NOT_DETECTED,
+        "attack_end deviation against the plain-attempt estimate",
+        estimator="envelope_estimators.estimate_envelope", unit="control_sample",
+        plain_estimate=reference, faulted_estimate=observed, deviation=deviation,
+        limit=ATTACK_LIMIT_CONTROL_SAMPLES)
+
+
+def _gate_lfo_rate(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                   faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    if context.get("lfo_fundamental_in_band") is not True:
+        return _gate_refusal(gated, "fundamental_in_band provenance unavailable (gate context)")
+    estimates = []
+    for label, read in (("plain", plain), ("faulted", faulted)):
+        samples = read(LFO_TRACE)
+        try:
+            result = periodic_estimators.estimate_periodic(
+                samples, sample_rate_hz=CONTROL_RATE_HZ, unit=LFO_UNIT, family="lfo",
+                reference_hz=1.0,  # only scales the unused cents property
+                preparation=periodic_estimators.identity_metadata(len(samples), CONTROL_RATE_HZ, LFO_UNIT),
+                fundamental_in_band=True)
+        except ValueError as error:
+            return _gate_refusal(gated, label + " attempt input refused: " + str(error))
+        frequency = result["estimates"]["frequency_hz"]
+        if result["status"] != "valid" or frequency is None:
+            return _gate_refusal(gated, label + " attempt refused: " + str(result["reason"]))
+        estimates.append(frequency)
+    deviation = abs(estimates[1] - estimates[0])
+    return _gate_row(
+        gated, GATE_DETECTED if deviation > LFO_RATE_LIMIT_HZ else GATE_NOT_DETECTED,
+        "frequency_hz deviation against the plain-attempt estimate",
+        estimator="periodic_estimators.estimate_periodic", unit="Hz",
+        plain_estimate=estimates[0], faulted_estimate=estimates[1], deviation=deviation,
+        limit=LFO_RATE_LIMIT_HZ)
+
+
+def _gate_routes(gated: Dict[str, Any], plain: Callable[[str], List[float]],
+                 faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> Dict[str, Any]:
+    source = plain(ROUTE_SOURCE)
+    names = ["gain." + destination for destination in envelope_estimators.DESTINATIONS]
+    try:
+        results = [envelope_estimators.estimate_routes(
+            source, {destination: read("mod_matrix." + destination)
+                     for destination in envelope_estimators.DESTINATIONS}, rate_hz=CONTROL_RATE_HZ)
+            for read in (plain, faulted)]
+    except ValueError as error:
+        return _gate_refusal(gated, "estimator input refused: " + str(error))
+    values, reason = _metric_values(results, names)
+    if values is None:
+        return _gate_refusal(gated, reason)
+    deviations = {name: abs(b - a) for name, a, b in zip(names, values[0], values[1])}
+    return _gate_row(
+        gated, GATE_DETECTED if max(deviations.values()) > ROUTE_GAIN_LIMIT else GATE_NOT_DETECTED,
+        "route gain deviation against the plain-attempt estimates",
+        estimator="envelope_estimators.estimate_routes", unit="1",
+        plain_estimate=dict(zip(names, values[0])), faulted_estimate=dict(zip(names, values[1])),
+        deviation=deviations, limit=ROUTE_GAIN_LIMIT)
+
+
+GATED_DETECTORS: Dict[str, Callable[..., Dict[str, Any]]] = {
+    "det-timing-01": _gate_attack,
+    "det-timing-04": _gate_lfo_rate,
+    "det-timing-05": _gate_routes,
+}
+
+
+def evaluate_gated(entry: Dict[str, Any], plain: Callable[[str], List[float]],
+                   faulted: Callable[[str], List[float]], context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Gate outcome for every gated detector of a cell; structural drift fails closed."""
+    rows = []
+    for gated in entry["gated_detectors"]:
+        detector = gated["detector_id"]
+        _require(detector in GATED_DETECTORS, "no admissibility binding for gated detector: " + str(detector))
+        _require(gated["truth_rule"] == GATED_TRUTH_RULE and gated["counts_as_kill"] is False
+                 and gated["on_inadmissible"] == GATE_REFUSED,
+                 "gated detector policy differs from the bound policy: " + detector)
+        row = GATED_DETECTORS[detector](gated, plain, faulted, context)
+        _require(row["detector_id"] == detector and row["outcome"] in GATE_OUTCOMES,
+                 "gate outcome missing or malformed: " + detector)
+        rows.append(row)
+    return rows
+
+
+
+# --------------------------------------------------------------------------
 # Process report validation
 # --------------------------------------------------------------------------
 
-_IDENTITY_KEYS = (
-    "batch_audio_sha256",
-    "audio_slot_sha256",
-    "slot_sha256",
-    "noise_sha256",
-    "rng_state",
-    "labels_all",
-    "invocation_counts",
-    "capture_inventory",
-    "parameters_before_sha256",
-)
+_IDENTITY_KEYS = family.IDENTITY_KEYS
 
 
 def _inventory_digests(record: Dict[str, Any]) -> Dict[str, str]:
-    return {item["name"]: item["sha256"] for item in record["capture_inventory"]}
+    return family.inventory_digests(record)
 
 
 def _require_identical(plain: Dict[str, Any], record: Dict[str, Any], label: str) -> None:
-    for key in _IDENTITY_KEYS:
-        _require(record.get(key) == plain.get(key),
-                 "control is not byte-identical to plain: " + label + " (" + key + ")")
+    family.require_identical(plain, record, label, _IDENTITY_KEYS)
 
 
 def _plan_for(manifest: Dict[str, Any], attempt: str, case_id: str, catalog: Dict[str, Any]) -> Dict[str, Any]:
@@ -787,8 +841,14 @@ def _check_parameter_event(event: Dict[str, Any], swap: Dict[str, Any], record: 
 def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: Dict[str, Any],
                      inventory: Dict[str, Any], catalog: Dict[str, Any], case_id: str, repeat: int,
                      schedules: Dict[str, Dict[str, Any]], records: Dict[str, Dict[str, Any]],
-                     read_bytes: Callable[[str], bytes]) -> Dict[str, Any]:
+                     read_bytes: Callable[[str], bytes],
+                     gate_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Offline validation of one (case, repeat) worker process report.
+
+    ``gate_context`` carries the resolved case scalars the admissibility gates
+    need and the report does not retain (``alpha``, ``note_on_seconds`` of
+    ``adsr_1`` and ``lfo_fundamental_in_band`` provenance); a gate whose context
+    is absent is ``refused_inadmissible_not_counted``, never guessed.
 
     Structural problems (binding, inventory, plan/schedule tamper, event
     completeness/order, controls, preflight, cleanup, evidence association)
@@ -854,7 +914,7 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
             "mandatory_detectors": [],
             "gated_detectors": [
                 {"detector_id": gated["detector_id"], "outcome": "not_evaluated",
-                 "reason": "admissibility binding not implemented by this adapter; a missing gate outcome "
+                 "reason": "no faulted trace was produced; a missing gate outcome "
                            "leaves the case open (DR-0012 D7)"}
                 for gated in entry["gated_detectors"]
             ],
@@ -927,14 +987,25 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
             cell["mandatory_detectors"].append(row)
         detected = all(row["verdict"] == "FAIL" and row["framing_match"] == 1
                        and row["max_abs_error"] not in (None, 0) for row in cell["mandatory_detectors"])
+        if entry["gated_detectors"]:
+            replaced = {trace: item for (_, trace), item in consumed.items()}
+
+            def faulted_trace(trace: str, record=record, replaced=replaced) -> List[float]:
+                if trace in replaced:
+                    data = read_bytes(replaced[trace]["file"])
+                    return trace_preflight(document, trace, data, sha256(data))
+                return samples_of(record, trace)
+
+            cell["gated_detectors"] = evaluate_gated(
+                entry, lambda trace: samples_of(plain, trace), faulted_trace, gate_context or {})
         if not all(cell["invariance"].values()):
             cell["outcome"] = "invariance_failed"
         elif not detected:
             cell["outcome"] = "open_not_detected"
         elif entry["disposition"] == "composition":
             cell["outcome"] = "composition_detected"
-        elif cell["gated_detectors"]:
-            cell["outcome"] = "open_gated_detector_unevaluated"
+        elif any(gated["outcome"] == GATE_NOT_DETECTED for gated in cell["gated_detectors"]):
+            cell["outcome"] = "open_gated_not_detected"
         else:
             cell["outcome"] = "detected"
 
