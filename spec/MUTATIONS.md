@@ -183,7 +183,7 @@ the committed publication with stdlib only.
 `tools/qualify_mutations_matrix.py` composes the three landed family
 publications into the single bidirectional mutation-coverage matrix and
 writes the bounded publication
-`sim/reference/mutation-matrix-v2.json` (v1 stays frozen for rubric v0/v1, DR-0013); `tests/test_mutations_matrix.py`
+`sim/reference/mutation-matrix-v2.json` (v1 stays frozen for rubric v0/v1, DR-0014); `tests/test_mutations_matrix.py`
 binds the committed publication to the landed registry, and the
 `matrix-numerical` job of `.github/workflows/mutations.yml` executes the
 composition and `--check` under the locked metrics extra (four family rows
