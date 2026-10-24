@@ -46,6 +46,7 @@ module tb;
 
     wire signed [C1_WIDTH-1:0] vco_word;
     wire        [C2_WIDTH-1:0] phase_out;
+    wire signed [C4_WIDTH-1:0] midi_sum;
     wire                       vco_valid;
     wire [31:0] op_m, op_a, op_n, op_sh, op_s, op_c;
 
@@ -65,6 +66,7 @@ module tb;
         .vco_word           (vco_word),
         .phase_out          (phase_out),
         .out_valid          (vco_valid),
+        .midi_sum           (midi_sum),
         .op_mults           (op_m),
         .op_adds            (op_a),
         .op_narrows         (op_n),
@@ -125,7 +127,7 @@ module tb;
                 @(posedge clk);
                 #1;
                 if (vco_valid) begin
-                    $fwrite(cap_fd[run], "%0d %0d\n", vco_word, phase_out);
+                    $fwrite(cap_fd[run], "%0d %0d %0d\n", vco_word, phase_out, midi_sum);
                 end
                 walked = walked + 1;
                 @(negedge clk);
