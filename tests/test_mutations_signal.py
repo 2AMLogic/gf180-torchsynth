@@ -81,6 +81,7 @@ class RegistrationTests(unittest.TestCase):
             "gain.db": "dB",
             "gain.dc_offset": "amplitude",
             "clip.round_step": "amplitude_step",
+            "clip.truncate_step": "amplitude_step",
             "clip.saturation_ceiling": "amplitude",
         }
         for operator_id, unit in expected_units.items():
@@ -376,6 +377,211 @@ class PairingTests(unittest.TestCase):
             plan(family.instance("ms-sham", "signal.sham", "voice.post_module", configuration={"trace": "vco_1.post_vca", "slot": 0}))
         ).run(slot=0)
         self.assertEqual(random.getstate(), before)
+
+
+class SignedGainTests(unittest.TestCase):
+    def test_minus_one_db_attenuates_and_plus_one_db_boosts_through_the_public_api(self):
+        lane_trace = "vco_1.post_vca"
+        clean = family.SignalFixtureSession(plan()).run(slot=0)
+        for db, direction in ((-1.0, -1), (1.0, 1)):
+            with self.subTest(db=db):
+                instance = family.instance(
+                    "ms-gain-signed", "gain.db", "voice.post_module", db,
+                    {"trace": lane_trace, "slot": 0},
+                )
+                outcome = family.SignalFixtureSession(plan(instance)).run(slot=0)
+                self.assertEqual([event["status"] for event in outcome["events"]], ["applied"])
+                self.assertEqual(outcome["events"][0]["detail"]["db"], db)
+                gain = outcome["events"][0]["detail"]["gain_linear"]
+                self.assertEqual(gain < 1.0, direction < 0)
+                clean_lane = clean["lanes"][lane_trace]
+                faulted_lane = outcome["lanes"][lane_trace]
+                for before, after in zip(clean_lane, faulted_lane):
+                    if before != 0.0:
+                        self.assertEqual(abs(after) < abs(before), direction < 0)
+
+    def test_minus_one_db_fails_exactness_rows_while_the_clean_control_passes(self):
+        pairing = PairingTests()
+        clean_lane = family.render_lane("vco_1.post_vca")
+        self.assertTrue(all(v == "PASS" for v in pairing.verdicts(clean_lane, clean_lane).values()))
+        faulted, _ = family.apply_gain_db(clean_lane, -1.0)
+        verdicts = pairing.verdicts(clean_lane, faulted)
+        self.assertEqual(verdicts["max_abs_error"], "FAIL")
+        self.assertEqual(verdicts["exact_equal"], "FAIL")
+
+
+class TruncationTests(unittest.TestCase):
+    STEP = 0.25
+
+    def test_rule_covers_positive_negative_exact_grid_and_zero(self):
+        truncate = family.truncate_to_step
+        self.assertEqual(truncate(0.3, self.STEP), 0.25)
+        self.assertEqual(truncate(0.45, self.STEP), 0.25)
+        self.assertEqual(truncate(-0.3, self.STEP), -0.25)
+        self.assertEqual(truncate(-0.45, self.STEP), -0.25)
+        self.assertEqual(truncate(0.25, self.STEP), 0.25)
+        self.assertEqual(truncate(-0.5, self.STEP), -0.5)
+        self.assertEqual(truncate(0.0, self.STEP), 0.0)
+        # sub-step values of either sign truncate to positive zero
+        for value in (0.1, -0.1):
+            result = truncate(value, self.STEP)
+            self.assertEqual(result, 0.0)
+            self.assertEqual(math.copysign(1.0, result), 1.0)
+        # an exact binary32 grid point of an inexact step is not lost to
+        # quotient rounding
+        grid_point = family.f32(0.3)
+        self.assertEqual(family.truncate_to_step(grid_point, 0.1), grid_point)
+
+    def test_truncation_is_distinct_from_rounding(self):
+        samples = [family.f32(value) for value in (0.45, -0.45, 0.375, 0.3, 0.25, 0.0)]
+        truncated, detail = family.apply_truncate_step(samples, self.STEP)
+        rounded, _ = family.apply_round_step(samples, self.STEP)
+        self.assertEqual(truncated, [0.25, -0.25, 0.25, 0.25, 0.25, 0.0])
+        self.assertEqual(rounded, [0.5, -0.5, 0.5, 0.25, 0.25, 0.0])
+        self.assertNotEqual(truncated, rounded)
+        self.assertEqual(detail["mode"], "truncate-toward-zero")
+        self.assertEqual(detail["affected_samples"], 4)
+
+    def test_nonpositive_step_refused_deterministically(self):
+        with self.assertRaises(mutations.MutationError):
+            family.apply_truncate_step([0.5], 0.0)
+        with self.assertRaises(mutations.MutationError):
+            family.apply_round_step([0.5], 0.0)
+
+    def test_session_truncation_fails_rows_and_differs_from_rounding(self):
+        lane_trace = "vco_1.post_vca"
+        configuration = {"trace": lane_trace, "slot": 0}
+        truncate = family.SignalFixtureSession(plan(family.instance(
+            "ms-trunc", "clip.truncate_step", "voice.post_module", 2.0 ** -7, configuration,
+        ))).run(slot=0)
+        rounded = family.SignalFixtureSession(plan(family.instance(
+            "ms-round", "clip.round_step", "voice.post_module", 2.0 ** -7, configuration,
+        ))).run(slot=0)
+        clean = family.render_lane(lane_trace)
+        self.assertEqual(truncate["events"][0]["status"], "applied")
+        pairing = PairingTests()
+        verdicts = pairing.verdicts(clean, truncate["lanes"][lane_trace])
+        self.assertEqual(verdicts["exact_equal"], "FAIL")
+        self.assertEqual(verdicts["max_abs_error"], "FAIL")
+        self.assertNotEqual(truncate["lanes"][lane_trace], rounded["lanes"][lane_trace])
+        for before, after in zip(clean, truncate["lanes"][lane_trace]):
+            self.assertLessEqual(abs(after), abs(before))
+
+    def test_directed_publication_vectors_distinguish_truncation(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            import qualify_mutations_signal as tool
+
+            directed = tool.truncation_directed()
+        finally:
+            sys.path.remove(str(ROOT / "tools"))
+            sys.modules.pop("qualify_mutations_signal", None)
+        self.assertTrue(directed["distinguishes_from_round"])
+        self.assertTrue(directed["exact_grid_points_unchanged"])
+        self.assertTrue(directed["inexact_step_exact_grid_point"]["unchanged"])
+
+
+class SecondMagnitudeTests(unittest.TestCase):
+    def run_gain(self, db):
+        instance = family.instance(
+            "ms-sm", "gain.db", "voice.post_module", db, {"trace": "vco_1.post_vca", "slot": 0},
+        )
+        return family.SignalFixtureSession(plan(instance)).run(slot=0)
+
+    def test_gain_below_the_binary32_resolution_is_an_honest_no_change(self):
+        clean = family.render_lane("vco_1.post_vca")
+        below = self.run_gain(1e-7)
+        at = self.run_gain(1e-6)
+        self.assertEqual(below["lanes"]["vco_1.post_vca"], clean)
+        self.assertEqual(below["events"][0]["status"], "ineffective")
+        self.assertNotEqual(at["lanes"]["vco_1.post_vca"], clean)
+        self.assertEqual(at["events"][0]["status"], "applied")
+
+    def test_saturation_ceiling_is_a_binary32_lane_level(self):
+        samples = [family.f32(0.5), family.f32(0.5000000001)]
+        # a ceiling below one binary32 step of the lane is an honest no-op
+        output, detail = family.apply_saturation(samples, 0.5 + 1e-10)
+        self.assertEqual(output, samples)
+        self.assertEqual(detail["affected_samples"], 0)
+
+    def test_variant_lane_renders_do_not_alias_in_the_cache(self):
+        base = family.render_lane_with("vco_1.post_vca")
+        shifted = family.render_lane_with("vco_1.post_vca", phase_rad=1e-45)
+        self.assertNotEqual(base, shifted)
+        self.assertIs(family.render_lane_with("vco_1.post_vca"), base)
+        family._RENDER_CACHE.pop(
+            ("lane_with", "vco_1.post_vca", 110.0, 1e-45, None), None
+        )
+
+    def test_committed_records_bracket_every_numeric_operator(self):
+        import json
+
+        committed = json.loads((ROOT / "sim/reference/mutation-signal-v1.json").read_bytes())
+        records = {record["operator"]: record for record in committed["second_magnitude"]["records"]}
+        numeric = {
+            operator_id
+            for operator_id, definition in mutations.OPERATORS.items()
+            if operator_id in FAMILY_OPERATORS and definition["magnitude"]["type"] == "number"
+        }
+        self.assertEqual(set(records), numeric)
+        self.assertIn("clip.truncate_step", records)
+        for operator_id, record in records.items():
+            with self.subTest(operator=operator_id):
+                candidates = record["candidates"]
+                self.assertGreaterEqual(len(candidates), 2)
+                self.assertEqual(record["mandatory_row"], "exact_equal")
+                *unchanged, boundary = candidates
+                self.assertTrue(all(not entry["lane_bytes_changed"] for entry in unchanged))
+                self.assertTrue(all(entry["verdict"] == "NO VERDICT" for entry in unchanged))
+                self.assertTrue(boundary["lane_bytes_changed"])
+                self.assertEqual(boundary["verdict"], "FAIL")
+                self.assertEqual(record["immediately_smaller_verdict"], "NO VERDICT")
+                self.assertEqual(record["boundary_magnitude"], boundary["magnitude"])
+                self.assertEqual(
+                    record["immediately_smaller_magnitude"], unchanged[-1]["magnitude"]
+                )
+                self.assertIn("not a perceptual floor", record["note"])
+        not_applicable = {entry["operator"] for entry in committed["second_magnitude"]["not_applicable"]}
+        self.assertEqual(
+            not_applicable,
+            {
+                "signal.sham", "osc.mode_substitute", "gain.polarity", "norm.always_on",
+                "norm.off", "norm.wrong_peak", "norm.wrong_reciprocal",
+            },
+        )
+        self.assertEqual(not_applicable | numeric, set(FAMILY_OPERATORS))
+
+
+class WrongThenRightTests(unittest.TestCase):
+    def valid(self):
+        return family.instance(
+            "ms-wtr", "clip.truncate_step", "voice.post_module", 2.0 ** -7,
+            {"trace": "vco_1.post_vca", "slot": 0},
+        )
+
+    def test_refused_and_failing_faults_do_not_contaminate_the_next_valid_attempt(self):
+        fresh = family.SignalFixtureSession(plan(self.valid())).run(slot=0)
+        with self.assertRaises(mutations.MutationError):
+            plan(family.instance(
+                "ms-wtr-domain", "clip.truncate_step", "voice.post_module", 2.0,
+                {"trace": "vco_1.post_vca", "slot": 0},
+            ))
+        with self.assertRaises(mutations.MutationError):
+            family.SignalFixtureSession(plan(family.instance(
+                "ms-wtr-zero", "clip.truncate_step", "voice.post_module", 0.0,
+                {"trace": "vco_1.post_vca", "slot": 0},
+            ))).run(slot=0)
+        family.SignalFixtureSession(plan(family.instance(
+            "ms-wtr-gain", "gain.db", "voice.post_module", -1.0,
+            {"trace": "vco_1.post_vca", "slot": 0},
+        ))).run(slot=0)
+        final = family.SignalFixtureSession(plan(self.valid())).run(slot=0)
+        self.assertEqual(final["lanes"], fresh["lanes"])
+        self.assertEqual(final["rendered"], fresh["rendered"])
+        self.assertEqual(final["events"], fresh["events"])
+        self.assertEqual(final["events_summary"], fresh["events_summary"])
+        clean = family.SignalFixtureSession(plan()).run(slot=0)
+        self.assertEqual(clean["lanes"]["vco_1.post_vca"], family.render_lane("vco_1.post_vca"))
 
 
 class PublicationTests(unittest.TestCase):

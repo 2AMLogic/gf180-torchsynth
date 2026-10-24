@@ -68,7 +68,7 @@ class CommittedManifestTests(unittest.TestCase):
 
     def test_every_publication_fault_row_is_reconciled_and_matrix_agrees(self):
         manifest = load()
-        matrix = json.loads((ROOT / "sim/reference/mutation-matrix-v1.json").read_bytes())
+        matrix = json.loads((ROOT / "sim/reference/mutation-matrix-v2.json").read_bytes())
         matrix_rows = sorted((r["family"], r["fault"]) for r in matrix["faults_to_tests"])
         inventory_rows = []
         for e in manifest["inventory"]:
@@ -84,7 +84,7 @@ class CommittedManifestTests(unittest.TestCase):
         by_disposition = {}
         for e in manifest["inventory"]:
             by_disposition.setdefault(e["disposition"], []).append(e["id"])
-        self.assertEqual(len(by_disposition["deferred_unmeasured"]), 5)
+        self.assertEqual(len(by_disposition["deferred_unmeasured"]), 11)
         self.assertIn("timing:lfo-depth-shift-plus-0.1", by_disposition["deferred_unmeasured"])
         self.assertIn("signal:normalization-decision-replacement", by_disposition["refusal"])
         self.assertIn("timing:missing-sample", by_disposition["refusal"])

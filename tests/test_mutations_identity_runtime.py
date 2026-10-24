@@ -740,7 +740,7 @@ class CampaignAccountingTests(unittest.TestCase):
 
     def test_other_campaign_revision_is_refused(self):
         evaluations = self.relabelled()
-        evaluations[0]["campaign"] = dict(evaluations[0]["campaign"], revision=2)
+        evaluations[0]["campaign"] = dict(evaluations[0]["campaign"], revision=3)
         with self.assertRaisesRegex(mutations.MutationError, "different campaign"):
             rt.campaign_outcomes(MANIFEST, evaluations)
 

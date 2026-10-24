@@ -228,6 +228,29 @@ OPERATOR_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "count and must fail paired exactness rows"
         ),
     },
+    "clip.truncate_step": {
+        "version": 1,
+        "seam": SEAM_POST_MODULE,
+        "sham": False,
+        "magnitude": {
+            "type": "number",
+            "unit": "amplitude_step",
+            "minimum": 0,
+            "maximum": 1,
+        },
+        "configuration": {
+            "trace": list(POST_VCA_TRACES),
+            "slot": {"type": "integer", "minimum": 0},
+        },
+        "composes_with": [],
+        "summary": (
+            "truncate one declared module output slot toward zero to the "
+            "declared amplitude step (explicit positive numeric magnitude; "
+            "distinct from clip.round_step, which rounds to nearest-even); "
+            "reports the affected sample count and must fail paired "
+            "exactness rows"
+        ),
+    },
     "clip.saturation_ceiling": {
         "version": 1,
         "seam": SEAM_POST_MODULE,
@@ -372,7 +395,7 @@ def render_squaresaw(
     partials are all harmonics with alternating signs; the declared shape
     weight mixes them. Directed fixture semantics, not a TorchSynth claim.
     """
-    key = ("squaresaw", f32(shape), f32(freq_hz), f32(phase_rad), f32(amplitude), count)
+    key = ("squaresaw", float(shape), float(freq_hz), float(phase_rad), float(amplitude), count)
     return _cached(key, lambda: _render_squaresaw(shape, freq_hz, phase_rad, amplitude, count))
 
 
@@ -483,9 +506,9 @@ def render_lane_with(
     key = (
         "lane_with",
         trace,
-        f32(context["freq_hz"]),
-        f32(context["phase_rad"]),
-        None if context["shape"] is None else f32(context["shape"]),
+        float(context["freq_hz"]),
+        float(context["phase_rad"]),
+        None if context["shape"] is None else float(context["shape"]),
     )
     return _cached(key, lambda: _render_lane_context(trace, context))
 
@@ -566,18 +589,61 @@ def apply_dc_offset(samples: List[float], offset: float) -> Tuple[List[float], D
 
 
 def apply_round_step(samples: List[float], step: float) -> Tuple[List[float], Dict[str, Any]]:
-    if step < 0.0:
-        raise mutations.MutationError("amplitude step must be nonnegative")
+    if not step > 0.0:
+        raise mutations.MutationError("amplitude step must be positive")
     output = [f32(round(value / step) * step) for value in samples]
     affected = sum(1 for a, b in zip(samples, output) if a != b)
     return output, {"step_amplitude": step, "mode": "round-to-nearest", "affected_samples": affected}
 
 
+def truncate_to_step(value: float, step: float) -> float:
+    """Truncate one binary32 lane value toward zero onto the ``step`` grid.
+
+    Deterministic rule: the grid is the binary32-rounded multiples
+    ``f32(k * step)`` for integer ``k >= 0``, mirrored about zero. The output
+    is the grid point of largest magnitude not exceeding ``|value|`` with the
+    sign of ``value`` (so positive values round down, negative values round
+    up toward zero). A value that is already an exact grid point is returned
+    unchanged, and zero (or any value smaller in magnitude than one step)
+    truncates to positive zero. The quotient is corrected by one step against
+    the binary32 grid so exact grid points are not lost to ``|v| / step``
+    rounding.
+    """
+    magnitude = abs(value)
+    k = math.floor(magnitude / step)
+    # One-step corrections only: the quotient is within one grid step of the
+    # binary32 grid, and a step below the lane's binary32 resolution must
+    # terminate (it then returns the value itself via the final clamp).
+    if k > 0 and f32(k * step) > magnitude:
+        k -= 1
+    elif f32((k + 1) * step) <= magnitude:
+        k += 1
+    if k == 0:
+        return 0.0
+    grid = min(f32(k * step), magnitude)
+    return grid if value > 0.0 else -grid
+
+
+def apply_truncate_step(samples: List[float], step: float) -> Tuple[List[float], Dict[str, Any]]:
+    if not step > 0.0:
+        raise mutations.MutationError("amplitude step must be positive")
+    output = [truncate_to_step(value, step) for value in samples]
+    affected = sum(1 for a, b in zip(samples, output) if a != b)
+    return output, {
+        "step_amplitude": step,
+        "mode": "truncate-toward-zero",
+        "affected_samples": affected,
+    }
+
+
 def apply_saturation(samples: List[float], ceiling: float) -> Tuple[List[float], Dict[str, Any]]:
     if ceiling < 0.0:
         raise mutations.MutationError("saturation ceiling must be nonnegative")
+    # The lane is binary32: the replacement level is the binary32 ceiling, so
+    # a ceiling below one binary32 step of the lane peak is an honest no-op.
+    level = f32(ceiling)
     output = [
-        ceiling if value > ceiling else (-ceiling if value < -ceiling else value)
+        level if value > level else (-level if value < -level else value)
         for value in samples
     ]
     affected = sum(1 for a, b in zip(samples, output) if a != b)
@@ -827,6 +893,8 @@ class SignalFixtureSession:
                 replacement, detail = apply_dc_offset(original, magnitude)
             elif operator_id == "clip.round_step":
                 replacement, detail = apply_round_step(original, magnitude)
+            elif operator_id == "clip.truncate_step":
+                replacement, detail = apply_truncate_step(original, magnitude)
             elif operator_id == "clip.saturation_ceiling":
                 replacement, detail = apply_saturation(original, magnitude)
             elif operator_id == "osc.mode_substitute":
