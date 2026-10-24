@@ -1,4 +1,95 @@
 {
+  "contract_wrong_demonstrations": [
+    {
+      "applied_event": {
+        "detail": {
+          "delayed_by_samples": 1,
+          "lane": "analytic.control_upsample"
+        },
+        "instance_id": "mti-audio-delay1",
+        "order": 0,
+        "seam": "apparatus.producer_call",
+        "sham": false,
+        "status": "applied"
+      },
+      "comparison_preparation": "none (primary unaligned time-locked rows; no alignment, trimming, level fitting or normalization; any supplementary aligned result cannot override these rows)",
+      "demonstration_id": "contract-wrong/timing.delay_audio_sample+1sample",
+      "detector_relationship": "paired_metrics time-locked exactness property rows (exact_equal, max_abs_error); not an identity/provenance detector",
+      "evidence_scope": "directed fixture",
+      "family": "timing",
+      "fixture_binding": {
+        "case_id": "directed:mutation-timing:upsample-audio",
+        "fixture_identity": "cf16a097fbf3b07d08570392e66cfe360fe6219fa9b84f39411638500acde7a2",
+        "partition": "development"
+      },
+      "kind": "contract-wrong-demonstration",
+      "magnitude": {
+        "unit": "sample",
+        "value": 1
+      },
+      "magnitude_seconds": "1/44100",
+      "mandatory_outcome": "FAIL",
+      "mandatory_rows": {
+        "clean_control": {
+          "exact_equal": {
+            "expected": 1,
+            "observed": 1,
+            "tolerance": 0,
+            "verdict": "PASS"
+          },
+          "framing_match": {
+            "expected": 1,
+            "observed": 1,
+            "tolerance": 0,
+            "verdict": "PASS"
+          },
+          "max_abs_error": {
+            "expected": 0,
+            "observed": 0.0,
+            "tolerance": 1e-09,
+            "verdict": "PASS"
+          }
+        },
+        "fault": {
+          "exact_equal": {
+            "expected": 1,
+            "observed": 0,
+            "tolerance": 0,
+            "verdict": "FAIL"
+          },
+          "framing_match": {
+            "expected": 1,
+            "observed": 1,
+            "tolerance": 0,
+            "verdict": "PASS"
+          },
+          "max_abs_error": {
+            "expected": 0,
+            "observed": 0.5738800516653348,
+            "tolerance": 1e-09,
+            "verdict": "FAIL"
+          }
+        }
+      },
+      "operator": "timing.delay_audio_sample",
+      "optional_counts_as_contract_pass": false,
+      "optional_observation": null,
+      "owning_fault_row": "one-audio-sample-delay",
+      "perceptual_similarity": {
+        "evidence_scope": "directed fixture",
+        "note": "no listening test, calibrated perceptual metric, actual-Voice run, hardware playback or fidelity measurement was executed; no perceptual verdict is manufactured",
+        "status": "not_run"
+      },
+      "required_failures": [
+        "exact_equal",
+        "max_abs_error"
+      ],
+      "seam": "apparatus.producer_call",
+      "target": {
+        "lane": "analytic.control_upsample"
+      }
+    }
+  ],
   "controls": {
     "cleanup_after_producer_crash": true,
     "empty_plan_events_complete": true,
@@ -162,7 +253,7 @@
       "artifacts": [
         {
           "path": "attempt/fixture.json",
-          "sha256": "1ceaffb463eecc2d2119ef1d1dfc1c71cdc3b5b4d205323e1df54aba20bd1945",
+          "sha256": "ba4e12882ecf6acd43fdc13e3d9ec387e2479879a5f2935907a703336a7af595",
           "size_bytes": 19187
         }
       ],
@@ -179,7 +270,7 @@
         "sham_plan_identity_distinct": true,
         "sibling_case_bytes_unchanged_by_faulted_case": true
       },
-      "envelope_id": "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5",
+      "envelope_id": "mu1-450d4d3b611ea7314bfcdde64371a4421466aeb5f25f3cf9ca63f613f35a3faf",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -208,12 +299,12 @@
         "holdout partitions (sealed; development-only constructed fixtures)",
         "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
       ],
-      "plan_id": "mp1-bb04507757188baf5cb44ee8ed854461c5e9516b0adfacf69fe11be5950bb426",
+      "plan_id": "mp1-71262d4b6e5b06efed56bb05eed95e579345f16ebd1f329181e5a54f72644df3",
       "runtime_scope": "stdlib-apparatus-analytic-fixtures",
       "schema_version": 1,
       "source_binding": {
         "case_id": "directed:mutation-timing:lfo-control",
-        "fixture_identity": "7c0175f4a784db0c94d4c186e6404fe172b61107cc3f6fe224e7e4b64677dff0",
+        "fixture_identity": "2d993672f362a3ffa49c3c86ee680a20453b26859ec91a54c7ee769cabcc44cc",
         "partition": "development"
       }
     },
@@ -221,7 +312,7 @@
       "artifacts": [
         {
           "path": "attempt/fixture.json",
-          "sha256": "c11be3bb6e2b9dccc8b72406e9e969b08a34d7693869a1b51c918607a2b4b454",
+          "sha256": "87b17307a4eea3d6a1cf4226e8a3149903febf03603ceb872b288f76b2ae76ec",
           "size_bytes": 19187
         }
       ],
@@ -238,7 +329,7 @@
         "sham_plan_identity_distinct": true,
         "sibling_case_bytes_unchanged_by_faulted_case": true
       },
-      "envelope_id": "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5",
+      "envelope_id": "mu1-534c8642da6a556774f3baf016f4767384b6ffd0041877140a46281c85f97239",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -267,12 +358,12 @@
         "holdout partitions (sealed; development-only constructed fixtures)",
         "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
       ],
-      "plan_id": "mp1-fdf6e8b444aa617297eaa32c9f124747c69c1211ef9652286308f6b38d7b7611",
+      "plan_id": "mp1-ac002f9c3fc38c8bd155e1be0abfbe83aff89f50c1cadc847c3f2017a4b07a99",
       "runtime_scope": "stdlib-apparatus-analytic-fixtures",
       "schema_version": 1,
       "source_binding": {
         "case_id": "directed:mutation-timing:lfo-control",
-        "fixture_identity": "7c0175f4a784db0c94d4c186e6404fe172b61107cc3f6fe224e7e4b64677dff0",
+        "fixture_identity": "2d993672f362a3ffa49c3c86ee680a20453b26859ec91a54c7ee769cabcc44cc",
         "partition": "development"
       }
     },
@@ -359,7 +450,7 @@
       "artifacts": [
         {
           "path": "attempt/fixture.json",
-          "sha256": "8379cb5ae2a04f6900d766a89bded21ce8b84d801c0945b5076378cb8be16be0",
+          "sha256": "168961a156a38f3d01da8053a164c33ce035ba48bb8507c525259d9f90914337",
           "size_bytes": 1901042
         }
       ],
@@ -376,7 +467,7 @@
         "sham_plan_identity_distinct": true,
         "sibling_case_bytes_unchanged_by_faulted_case": true
       },
-      "envelope_id": "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3",
+      "envelope_id": "mu1-3dfb49f1db51d341a332349d213a2232fc4a9a7a722290496214ab03d6afc63b",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -435,12 +526,12 @@
         "holdout partitions (sealed; development-only constructed fixtures)",
         "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
       ],
-      "plan_id": "mp1-bace82e5fdbed3981c66ae2511c0e6ade297bfcdbf30d1e79e537e4a7bceb16f",
+      "plan_id": "mp1-0d0077cc5ae7bd3c0aafe95169bf7b2807ca4478caf9218e19bf9b03c24ae8ba",
       "runtime_scope": "stdlib-apparatus-analytic-fixtures",
       "schema_version": 1,
       "source_binding": {
         "case_id": "directed:mutation-timing:upsample-audio",
-        "fixture_identity": "5e3da7c43fa3f17e88d92b97e1e2375b177d65475533ace7a5593744e6e86bf9",
+        "fixture_identity": "cf16a097fbf3b07d08570392e66cfe360fe6219fa9b84f39411638500acde7a2",
         "partition": "development"
       }
     }
@@ -613,7 +704,7 @@
     "src/torchsynth_voice/envelope_estimators.py": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
-    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "src/torchsynth_voice/mutations_timing.py": "8e8481320838db77a64a400512c50622aa8a0a6cc9c8b116a7b282fa1f3eac14",
     "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
     "src/torchsynth_voice/periodic_estimators.py": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
     "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
