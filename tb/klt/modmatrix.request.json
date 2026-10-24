@@ -1,0 +1,13 @@
+{
+  "schema": "klt.functional_verification.request/1",
+  "engine": "icarus",
+  "sources": [
+    "../sv/gf180_rtl_constants_pkg.sv",
+    "../sv/mod_matrix_engine.sv",
+    "../sv/upsample_engine.sv",
+    "../sv/tb_mod_matrix_upsample.sv"
+  ],
+  "hdl_toplevel": "tb",
+  "testbench": {"module": "test_modmatrix"},
+  "options": {"timescale": ["1ns", "1ps"], "defines": {"KLT_COCOTB": "1"}}
+}

@@ -16,6 +16,12 @@ import gf180_rtl_constants::*;
 
 module tb;
 
+`ifdef KLT_COCOTB
+    // Set only after captured.txt/cycles.txt are closed; a cocotb test waits
+    // on it. Every error path still calls $finish, which fails the test.
+    reg klt_done = 1'b0;
+`endif
+
     localparam integer MAX_CYCLES = 262144;
 
     reg                        clk = 1'b0;
@@ -100,7 +106,11 @@ module tb;
         $fwrite(cfd, "%0d\n", measured_cycles);
         $fclose(cfd);
         $display("TB-DONE %0d samples in %0d enabled cycles", n_samples, measured_cycles);
+`ifdef KLT_COCOTB
+        klt_done = 1'b1;
+`else
         $finish;
+`endif
     end
 
 endmodule
