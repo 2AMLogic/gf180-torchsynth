@@ -30,9 +30,14 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import mutations, mutation_runtime  # noqa: E402
 from torchsynth_voice import trace_capture, trace_registry  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
+    PORTABLE_COMMAND_REPRESENTATION,
+    ReceiptPortabilityError,
     dispatch_flags,
     dispatch_unset_flags,
+    launch_and_described,
+    mount_options,
     release_profile_environment,
+    validate_published_command,
 )
 from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 
@@ -413,51 +418,53 @@ def host_run(args):
         image_info["Architecture"] == "amd64" and image_info["Os"] == "linux",
         "wrong image platform",
     )
-    command = [
-        "docker",
-        "run",
-        "--rm",
-        "--pull",
-        "never",
-        "--platform",
-        "linux/amd64",
-        "--network",
-        "none",
-        "--memory",
-        "6g",
-        "--cpus",
-        "1",
-    ]
-    for name in (
-        "OMP_NUM_THREADS",
-        "MKL_NUM_THREADS",
-        "OPENBLAS_NUM_THREADS",
-        "VECLIB_MAXIMUM_THREADS",
-        "NUMEXPR_NUM_THREADS",
-    ):
-        command += ["--env", name + "=1"]
     # Derived from the preregistered plan, never restated: mutation_worker.py
     # asserts the plan's whole profile_environment["release"] before it renders
     # ("worker environment outside release-mkl-compatible-v1"; issue #3).
     profile = release_profile_environment()
-    command += [
-        *dispatch_flags(profile),
-        "--mount",
-        "type=bind,src=" + str(ROOT) + ",dst=/repo,readonly",
-        "--mount",
-        "type=bind,src=" + str(output) + ",dst=/output",
-        "--entrypoint",
-        "env",
-        image,
-        *dispatch_unset_flags(profile),
-        "python",
-        "/repo/env/release-era/mutation_worker.py",
-        "--worker",
-        "--output",
-        "/output",
-        "--schedules",
-        "/output/schedules",
-    ]
+
+    def launch(project_source, output_source):
+        command = [
+            "docker",
+            "run",
+            "--rm",
+            "--pull",
+            "never",
+            "--platform",
+            "linux/amd64",
+            "--network",
+            "none",
+            "--memory",
+            "6g",
+            "--cpus",
+            "1",
+        ]
+        for name in (
+            "OMP_NUM_THREADS",
+            "MKL_NUM_THREADS",
+            "OPENBLAS_NUM_THREADS",
+            "VECLIB_MAXIMUM_THREADS",
+            "NUMEXPR_NUM_THREADS",
+        ):
+            command += ["--env", name + "=1"]
+        command += [
+            *dispatch_flags(profile),
+            *mount_options(project_source, output_source),
+            "--entrypoint",
+            "env",
+            image,
+            *dispatch_unset_flags(profile),
+            "python",
+            "/repo/env/release-era/mutation_worker.py",
+            "--worker",
+            "--output",
+            "/output",
+            "--schedules",
+            "/output/schedules",
+        ]
+        return command
+
+    command, described = launch_and_described(launch, ROOT, output)
     result = subprocess.run(command, capture_output=True, text=True, timeout=1800)
     (output / "worker.stdout").write_text(result.stdout)
     (output / "worker.stderr").write_text(result.stderr)
@@ -622,7 +629,8 @@ def host_run(args):
             "docker_server": server,
         },
         "launch": {
-            "command": command,
+            "command": described,
+            "command_representation": PORTABLE_COMMAND_REPRESENTATION,
             "exit_code": result.returncode,
             "stderr": result.stderr,
             "build_command": build,
@@ -678,6 +686,10 @@ def check_publication_fields(publication):
         == sha256(trace_registry.REGISTRY_PATH.read_bytes()),
         "publication registry bytes are stale",
     )
+    try:
+        validate_published_command(publication.get("launch", {}))
+    except ReceiptPortabilityError as error:
+        require(False, "publication launch command: " + str(error))
     require(
         publication["worker"]["baseline_sentinel"] == "PASS",
         "publication baseline sentinel missing",

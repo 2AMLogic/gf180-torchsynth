@@ -193,3 +193,31 @@ one measured host, sound fidelity, independent-model DSP, RTL, synthesis,
 layout, signoff, or hardware playback. The companion documents authenticate
 exactly the bytes they pin; they are not a sandbox against an actor who can
 rewrite the store and every trusted record.
+
+## Integrated audit (#7)
+
+The #7 criterion-to-evidence audit is in
+[TRACE-REGISTRY.md, "Integrated evidence audit"](TRACE-REGISTRY.md#integrated-evidence-audit-7-2026-10-07).
+It records the following evidence limits for this path:
+
+- **Selection.** The path stores 29 of the 32 registry traces. The three
+  normalization seams are captured only by #23's qualified worker, as
+  hash-level publication entries, not as content-addressed artifact traces.
+- **Payload rehash.** `--check-publication` without `--store` validates
+  documents only. Its store-dependent payload rehash is not a pass when the
+  raw store is absent.
+- **Storage cost.** The two-case figures here are measured. A traced
+  development-corpus cost is not yet measured (#287). The instrument is
+  specified in [DEVELOPMENT-TRACE-COST.md](DEVELOPMENT-TRACE-COST.md), and
+  its receipt is `UNRUN`.
+- **Host refusal.** On a non-macOS host the default run refuses at host
+  admission through an uncaught `sysctl` `CalledProcessError`, before any
+  store write. That is a refusal, not a clean diagnostic.
+
+The [re-verification at `a38ab0a`](TRACE-REGISTRY.md#re-verification-at-a38ab0a-2026-10-07)
+reproduced each of these limits on unchanged inputs. The payload rehash
+still did not run, and the host refusal recurred.
+
+A [further re-verification at `5400ec2`](TRACE-REGISTRY.md#re-verification-at-5400ec2-2026-10-07)
+(Python 3.12.3, Linux) gave the same outcomes. The payload rehash did not run, the
+host refusal recurred, and the traced run remains unrun.

@@ -71,17 +71,8 @@ source "$SCRIPT_DIR/lib/require-daemon-bin.sh"
 # each argument as a standalone subcommand path (leaf included).
 loom_test_require_daemon_bin "$SCRIPTS_DIR" "merge-pr mergeable-recheck"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/assert.sh"
 YELLOW='\033[0;33m'  # retired() below
-NC='\033[0m'
-
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
-
-pass() { TESTS_RUN=$((TESTS_RUN + 1)); TESTS_PASSED=$((TESTS_PASSED + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
-fail() { TESTS_RUN=$((TESTS_RUN + 1)); TESTS_FAILED=$((TESTS_FAILED + 1)); echo -e "  ${RED}FAIL${NC}: $1"; }
 
 # An assertion that CANNOT survive the port to Rust, retired under the
 # three-part test in defaults/docs/verification-recipes.md §6. Printed, not
@@ -168,10 +159,18 @@ assert_grep '>/dev/null 2>&1 \|\| true' "$MERGE_PR" \
 # post-#6978): "recheck #N" when the recheck resolved true mid-loop,
 # otherwise the configured retry count (every other path exhausts all
 # retries before returning).
-assert_grep '_MSM_REASON" =~ recheck' "$MERGE_PR" \
-    "retries_used is parsed from the reason string's 'recheck #N' pattern when present"
-assert_grep '_MSM_RETRIES_USED="\$_MSM_RETRIES"' "$MERGE_PR" \
-    "retries_used defaults to the configured retry count otherwise"
+retired "the grep for the in-shell '_MSM_REASON =~ recheck' regex" \
+    "retries_used is parsed from the reason string's 'recheck #N' pattern when present" \
+    "the =~ match left merge-pr.sh in the #8191 retries-used slice; it is Rust in loom-daemon/src/merge_pr/retries_used.rs, so no grep of this file can pass" \
+    "loom-daemon/tests/merge_pr_retries_used_differential.rs (frozen retired =~ block vs the verb over a once-generated corpus) and the_resolved_attempt_is_read_from_the_reason in src/merge_pr/retries_used/tests.rs"
+retired "the grep for '_MSM_RETRIES_USED=\"\$_MSM_RETRIES\"' as a bare assignment" \
+    "retries_used defaults to the configured retry count otherwise" \
+    "the default now travels as the verb's --configured argument, and the shell fallback is the || arm of one command substitution, so the bare assignment line no longer exists to grep" \
+    "every_other_path_reports_the_configured_budget in src/merge_pr/retries_used/tests.rs and the differential's configured corpus"
+assert_grep 'merge-pr retries-used --reason "\$_MSM_REASON" --configured "\$_MSM_RETRIES"' "$MERGE_PR" \
+    "retries_used delegates to 'merge-pr retries-used', falling back to the configured count"
+assert_grep '2>/dev/null)" \|\| _MSM_RETRIES_USED="\$_MSM_RETRIES"' "$MERGE_PR" \
+    "a faulting retries-used verb falls back to the configured retry count (telemetry only)"
 
 # The telemetry emission must happen BEFORE the case/error branch below it --
 # `error()` calls `exit 1`, so if telemetry were emitted only inside (or

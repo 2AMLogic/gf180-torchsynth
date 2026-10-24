@@ -36,7 +36,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Union
 
-from .digest import sha256_file
+from .digest import digest_words, sha256_file
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "spec/reference/trace-registry-v1.json"
@@ -118,6 +118,135 @@ class Mismatch:
             self.expected,
             self.actual,
         )
+
+
+def load_frozen_physical(directed_path: Path, case_id: str) -> Dict[str, Any]:
+    """The frozen receipt case's public physical map (all consumed names)."""
+
+    directed = json.loads(directed_path.read_text(encoding="utf-8"))
+    base = {name: entry["physical"] for name, entry in directed["base"].items()}
+    by_id = {case["id"]: case for case in directed["cases"]}
+    case = by_id[case_id]
+    physical = dict(base)
+    for name, override in case["overrides"].items():
+        physical[name] = override["physical"]
+    return physical
+
+
+def apply_overrides(physical: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(physical)
+    merged.update(overrides)
+    return merged
+
+
+def frozen_receipt_record_digest(receipt_path: Path = RECEIPT_PATH) -> str:
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    return receipt["bindings"]["dr_0008_record_sha256"]
+
+
+def frozen_receipt_binding(
+    document: Dict[str, Any], case_id: str, receipt_path: Path = RECEIPT_PATH
+) -> Dict[str, Any]:
+    """Re-derive the frozen receipt's trace digests for one document."""
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    case = next(c for c in receipt["cases"] if c["id"] == case_id)
+    digests = {}
+    for trace in document["traces"]:
+        name = trace["name"]
+        declared = case["traces"][name]
+        blob = json.dumps(
+            trace["values"], sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+        actual = hashlib.sha256(blob).hexdigest()
+        if actual != declared:
+            raise SystemExit(
+                "FROZEN RECEIPT DRIFT: %s digests to %s but the frozen "
+                "receipt (#54, PR #156) declares %s — the model or its "
+                "inputs moved; regenerate, do not overwrite the binding"
+                % (name, actual, declared)
+            )
+        digests[name] = declared
+    return {
+        "receipt": "sim/reference/fixed-voice-golden-v1.json",
+        "case_id": case_id,
+        "trace_digests": digests,
+        "verified": True,
+    }
+
+
+def check_committed(documents: Dict[str, str], out_dir: Path, tool_name: str) -> int:
+    """Byte-compare a fresh in-memory regeneration against the commits.
+
+    ``documents`` maps case id to the freshly generated JSON payload;
+    ``tool_name`` names the generator in the "rerun" message.
+    """
+
+    ok = True
+    for case_id, payload in sorted(documents.items()):
+        path = out_dir / (case_id + ".json")
+        if not path.exists():
+            print("CHECK FAIL: missing %s" % path)
+            ok = False
+            continue
+        committed = json.loads(path.read_text(encoding="utf-8"))
+        fresh = json.loads(payload)
+        if compute_content_hash(committed) != compute_content_hash(fresh):
+            print(
+                "CHECK FAIL: %s does not match regeneration; rerun "
+                "tools/%s and commit" % (path, tool_name)
+            )
+            ok = False
+        else:
+            print("CHECK OK: %s" % path.name)
+    return 0 if ok else 1
+
+
+def render_fixed_trace(formats: Any, physical: Dict[str, Any], trace_name: str) -> List[int]:
+    """Render one case through the frozen whole-voice fixed model.
+
+    The normalized entries are placeholders: the fixed model consumes the
+    physical map only (the normalized map is the float-side seam), and the
+    committed evidence is the fixed model's own ``trace_name`` words.
+    """
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from . import float_interfaces as fi
+    from . import float_sources as fs
+    from .fixed_voice import FixedVoiceModel
+
+    noise_bytes = fs.NoiseSource.resolve(0)
+    request = fi.ResolvedRequest(
+        0,
+        {name: 0.0 for name in physical},
+        {
+            "seed": 13,
+            "slot": 0,
+            "sample_count": 176400,
+            "sha256": hashlib.sha256(noise_bytes).hexdigest(),
+            "samples": noise_bytes,
+        },
+        physical=dict(physical),
+        execution_status="canonical-batched",
+    )
+    model = FixedVoiceModel(request, formats)
+    fixed, _diagnostics = model.render()
+    return fixed[trace_name]
+
+
+def evidence_row(words: List[int]) -> Dict[str, Any]:
+    """The committed evidence row for one raw word stream."""
+
+    pins = {0: words[0], 1: words[1], 2: words[2]}
+    for j in (99, 441, 1764, 17640, 88200, 105840, 176397, 176398, 176399):
+        pins[j] = words[j]
+    return {
+        "sample_count": len(words),
+        "words_sha256": digest_words(words),
+        "first_word": words[0],
+        "last_word": words[-1],
+        "jitter": {str(j): w for j, w in sorted(pins.items())},
+    }
 
 
 def format_mismatch(mismatch: Mismatch) -> str:

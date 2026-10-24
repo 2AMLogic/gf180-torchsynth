@@ -25,7 +25,19 @@ from torchsynth_voice.artifacts import ValidationError, loads  # noqa: E402
 from torchsynth_voice.corpus import read_reference, run_corpus  # noqa: E402
 from torchsynth_voice.storage import ArtifactStore  # noqa: E402
 
-from test_artifact_renderer import FakeBackend, template as base_template  # noqa: E402
+from test_artifact_renderer import (  # noqa: E402
+    FakeBackend,
+    assert_portable_launch,
+    fake_project_root,
+    mocked_docker_launch,
+    mount_source,
+    template as base_template,
+)
+from torchsynth_voice.artifact_renderer import host_path_findings  # noqa: E402
+from torchsynth_voice.corpus import verify_run  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "tools"))
+import qualify_trace_artifacts as qta  # noqa: E402  (imported, never run_smoke)
 
 SUBSET = [
     "keyboard.midi_f0",
@@ -577,6 +589,65 @@ class VariantLinkageTests(SurfaceMixin):
         linked["variant_index"] = dict(companion["index"])
         with self.assertRaisesRegex(ValidationError, "distinct renders"):
             ta.validate_companion(linked, root=self.store_root, store=self.store)
+
+
+class TracedDockerReceiptTests(unittest.TestCase):
+    """#289: the traced producer publishes the same portable command form.
+
+    Host facts and the worker process are mocked; the historical evidence
+    producer (``run_smoke``) is never executed.
+    """
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.base = Path(temp.name).resolve()
+        self.project_root = fake_project_root(self.base)
+        self.template = traced_template(names=SUBSET)
+        self.backend = qta.TracedDockerBackend(project_root=self.project_root)
+
+    def test_traced_backend_real_argv_and_placeholder_receipt(self):
+        store = ArtifactStore(self.base / "store")
+        request = dict(copy.deepcopy(self.template), fixture=fixture(0))
+        with mocked_docker_launch(
+            qta, request["project_git"], TracedBackend()
+        ) as executed:
+            product = render_artifact(request, store, self.backend)
+        self.assertEqual(len(executed), 1)
+        assert_portable_launch(self, executed, product.receipt, self.project_root)
+        self.assertIn("/output/driver.py", product.receipt["command"])
+        self.assertIn(
+            "type=bind,src=<worker-output>,dst=/output", product.receipt["command"]
+        )
+
+    def test_traced_corpus_finish_records_are_path_free(self):
+        root = self.base / "store"
+        with mocked_docker_launch(
+            qta, self.template["project_git"], TracedBackend()
+        ) as executed:
+            envelope = run_corpus(
+                root,
+                ROOT / "spec/reference/corpus-v0.json",
+                self.template,
+                lambda request, store: render_artifact(request, store, self.backend),
+                indices=[0, 1],
+            )
+        self.assertEqual(envelope["status"], "complete")
+        self.assertEqual(len(executed), 2)
+        sources = {mount_source(argv, "/repo") for argv in executed} | {
+            mount_source(argv, "/output") for argv in executed
+        }
+        self.assertIn(str(self.project_root), sources)
+        self.assertEqual(len(sources), 3)
+        records = list((root / "runs" / envelope["run_id"]).rglob("*.json"))
+        self.assertTrue(records)
+        for record in records:
+            data = record.read_bytes()
+            for source in sources:
+                self.assertNotIn(source.encode(), data)
+        for attempt in envelope["attempts"]:
+            self.assertEqual(host_path_findings(attempt["receipt"]), [])
+        self.assertEqual(verify_run(root, envelope["run_id"]), envelope)
 
 
 class HoldoutGateTests(unittest.TestCase):

@@ -47,7 +47,15 @@ Usage::
     python3 tools/qualify_rtl_modules.py --lint                  # fast gate
     python3 tools/qualify_rtl_modules.py --lanes fast            # bounded set
     python3 tools/qualify_rtl_modules.py --lanes all --record out/rec.json
-    python3 tools/qualify_rtl_modules.py --lint --update-baseline
+    python3 tools/qualify_rtl_modules.py --lint --update-baseline   # CI toolchain only
+    python3 tools/qualify_rtl_modules.py --lint --integrated all \\
+        --integrated-artifacts out/integrated-artifacts \\
+        --producer-result oneshot-tail-chain=success \\
+        --producer-result oneshot-whole-voice=success
+
+``--integrated`` folds in the standalone one-shot harnesses
+(``tb/run_oneshot.py``, ``tb/run_voice.py``; issue #264) -- see the
+"Integrated one-shot lanes" section of ``spec/RTL-MODULE-QUALIFICATION.md``.
 """
 
 from __future__ import annotations
@@ -494,7 +502,8 @@ def scan_transcript(lane: str, transcript: str) -> list[Diagnostic]:
 
 
 def _sources(unit: str, root: Path) -> list[str]:
-    return ["%s/%s" % (SV_DIR, name) for name in LINT_UNITS[unit]]
+    names = LINT_UNITS[unit] if unit in LINT_UNITS else INTEGRATED_LINT_UNITS[unit]
+    return ["%s/%s" % (SV_DIR, name) for name in names]
 
 
 def lint_unit(unit: str, root: Path) -> tuple[list[Diagnostic], list[str]]:
@@ -618,7 +627,13 @@ def _waiver(entry: dict) -> dict:
 
 
 def build_baseline(
-    observed: dict[str, dict], previous: dict, *, tiers: Sequence[str]
+    observed: dict[str, dict],
+    previous: dict,
+    *,
+    tiers: Sequence[str],
+    provenance: Optional[dict] = None,
+    integrated: Optional[dict] = None,
+    runtime_units: Optional[Sequence[str]] = None,
 ) -> dict:
     """Rewrite the ledger for the tiers that ran, keeping the others intact.
 
@@ -627,21 +642,54 @@ def build_baseline(
     waivers just because it did not run any lanes.
     """
 
+    def replaced(value: dict) -> bool:
+        if value.get("tier") not in tiers:
+            return False
+        if value.get("tier") == "runtime" and runtime_units is not None:
+            # only the lanes that actually ran are re-observed; the others'
+            # runtime waivers are carried over, not silently deleted
+            return bool(set(value.get("units", [])) & set(runtime_units))
+        return True
+
     waivers = {
         key: value
         for key, value in previous.get("waivers", {}).items()
-        if value.get("tier") not in tiers
+        if not replaced(value)
     }
     for key, entry in observed.items():
-        if entry["tier"] in tiers:
+        if entry["tier"] in tiers and (
+            entry["tier"] != "runtime" or runtime_units is None
+            or set(entry.get("units", [])) & set(runtime_units)
+        ):
             waivers[key] = _waiver(entry)
-    return {
+    result = {
         "schema_version": 1,
         "generated_by": "tools/qualify_rtl_modules.py --update-baseline",
         "policy": POLICY_DOC,
         "excluded_classes": dict(sorted(EXCLUDED_CLASSES.items())),
         "waivers": {key: waivers[key] for key in sorted(waivers)},
     }
+    # Provenance and the integrated-lane registry are carried over verbatim
+    # unless this run produced new ones: a lint-only update must never erase
+    # what an earlier run established about the runtime tier.
+    previous_provenance = previous.get("provenance")
+    if provenance is not None:
+        result["provenance"] = provenance
+    elif previous_provenance is not None:
+        result["provenance"] = previous_provenance
+    registry = {
+        name: dict(entry)
+        for name, entry in previous.get(INTEGRATED_BASELINE_KEY, {}).items()
+    }
+    for name, entry in (integrated or {}).items():
+        merged = dict(registry.get(name, {}))
+        merged.update(entry)
+        registry[name] = merged
+    if registry:
+        result[INTEGRATED_BASELINE_KEY] = {
+            name: registry[name] for name in sorted(registry)
+        }
+    return result
 
 
 def gate_diagnostics(
@@ -794,6 +842,474 @@ def resolve_lanes(selector: str) -> list[str]:
 
 
 # --------------------------------------------------------------------------
+# Integrated one-shot lanes (issue #264)
+# --------------------------------------------------------------------------
+#
+# ``tb/run_oneshot.py`` (the #76 -> #77 tail chain) and ``tb/run_voice.py`` (the
+# integrated whole voice) are standalone harnesses: they are NOT ``tb/run_tb.py``
+# commands, so they are deliberately kept out of ``LANES`` (whose equality with
+# ``run_tb.py``'s ``choices=[...]`` is still enforced). They own their own
+# conformance checks; this layer only *dispatches* them (or consumes the
+# evidence record they already wrote) and *validates* that record. It never
+# re-implements a simulation check and never parses their stdout for a verdict:
+# the verdict is the harness exit status plus the structured evidence record,
+# validated by ``tools/verify_oneshot_evidence.py``.
+
+INTEGRATED_SCHEMA_PREFIX = "gf180-torchsynth/"
+
+
+@dataclass(frozen=True)
+class IntegratedLane:
+    """Metadata and dispatch for one standalone one-shot harness."""
+
+    name: str
+    harness: str                    # repo-relative script
+    schema: str                     # evidence ``schema`` the harness writes
+    evidence_name: str              # file the harness writes under --workdir
+    profiles: tuple[str, ...]       # the harness's own --profile choices
+    lint_sources: tuple[str, ...]   # the exact iverilog source set, in order
+    scope: str                      # what the lane does and does not cover
+    timeout_seconds: int            # per-lane wall-clock budget when executed
+    #: profile -> (minimum committed cases, minimum DETECTED controls). Taken
+    #: from the committed evidence records and the harness's own plan.
+    obligations: dict
+    issue: int = 79
+
+
+INTEGRATED_LANES: dict[str, IntegratedLane] = {
+    "oneshot-tail-chain": IntegratedLane(
+        name="oneshot-tail-chain",
+        harness="tb/run_oneshot.py",
+        schema=INTEGRATED_SCHEMA_PREFIX + "oneshot-tail-chain-evidence-v1",
+        evidence_name="oneshot-evidence.json",
+        profiles=("regression", "full"),
+        lint_sources=(
+            PKG, "audio_mix_engine.sv", "normalization_replay_engine.sv",
+            "one_shot_tail_top.sv", "tb_one_shot_tail.sv",
+        ),
+        scope=(
+            "tail chain only: mixer (#76) -> replay controller (#77) over "
+            "HOST-FED source/amplitude streams; NOT the whole-voice top"
+        ),
+        timeout_seconds=150 * 60,
+        obligations={"regression": (8, 10), "full": (30, 10)},
+    ),
+    "oneshot-whole-voice": IntegratedLane(
+        name="oneshot-whole-voice",
+        harness="tb/run_voice.py",
+        schema=INTEGRATED_SCHEMA_PREFIX + "oneshot-whole-voice-evidence-v1",
+        evidence_name="voice-evidence.json",
+        profiles=("regression", "directed", "full"),
+        lint_sources=(
+            PKG, "adsr_engine.sv", "lfo_vca_engine.sv", "mod_matrix_engine.sv",
+            "upsample_engine.sv", "quarter_wave_lut.sv", "sine_vco_engine.sv",
+            "square_saw_vco_engine.sv", "noise_stream_dut.sv",
+            "audio_mix_engine.sv", "normalization_replay_engine.sv",
+            "one_shot_voice_top.sv", "tb_one_shot_voice.sv",
+        ),
+        scope=(
+            "integrated whole-voice one-shot top (#70-#77); the host still "
+            "supplies the ratified host-replayed shadow words, S1 entry words, "
+            "C8 noise bytes and phase enables"
+        ),
+        timeout_seconds=120 * 60,
+        obligations={"regression": (2, 13), "directed": (5, 13),
+                     "full": (31, 13)},
+    ),
+}
+INTEGRATED_NAMES: tuple[str, ...] = tuple(INTEGRATED_LANES)
+
+#: Lint units for the integrated lanes. Keyed by lane name (a unit and its lane
+#: share a name). Kept apart from ``LINT_UNITS`` so the module-lane inventory
+#: invariants are untouched.
+INTEGRATED_LINT_UNITS: dict[str, tuple[str, ...]] = {
+    name: lane.lint_sources for name, lane in INTEGRATED_LANES.items()
+}
+
+#: The toolchain the ledger is calibrated to (``tb-sim.yml``'s
+#: ``ubuntu-24.04`` apt packages). ``--update-baseline`` refuses any other
+#: toolchain unless ``--allow-foreign-toolchain`` is given, because a ledger
+#: generated on a different linter build shifts which diagnostics it waives.
+CI_TOOLCHAIN_PREFIXES: dict[str, str] = {
+    "iverilog": "Icarus Verilog version 12.",
+    "verilator": "Verilator 5.020",
+}
+
+INTEGRATED_BASELINE_KEY = "integrated_lanes"
+
+
+def resolve_integrated(selector: str) -> list[str]:
+    if selector == "none":
+        return []
+    if selector == "all":
+        return list(INTEGRATED_NAMES)
+    chosen: list[str] = []
+    for name in (part.strip() for part in selector.split(",")):
+        if not name:
+            continue
+        if name not in INTEGRATED_LANES:
+            raise SystemExit(
+                "ERROR: unknown integrated lane %r (choices: %s, or all/none)"
+                % (name, ", ".join(INTEGRATED_NAMES))
+            )
+        if name not in chosen:
+            chosen.append(name)
+    if not chosen:
+        raise SystemExit("ERROR: --integrated selected nothing")
+    return chosen
+
+
+def integrated_command(
+    lane: IntegratedLane, profile: str, workdir: Path
+) -> list[str]:
+    """The exact command that runs one standalone harness."""
+
+    return [
+        sys.executable, lane.harness, "--profile", profile,
+        "--workdir", str(workdir),
+    ]
+
+
+def integrated_label(lane: IntegratedLane, profile: str) -> str:
+    """Honest profile/scope label for one lane's result."""
+
+    extent = (
+        "full profile" if profile == "full"
+        else "%s profile only (bounded; NOT full-profile qualification)"
+        % profile
+    )
+    return "%s, %s; %s" % (lane.name, extent, lane.scope)
+
+
+@dataclass
+class IntegratedResult:
+    """What happened to one integrated lane. ``exit_code`` None = never ran."""
+
+    lane: str
+    mode: str                         # "executed" or "artifact"
+    exit_code: Optional[int]
+    transcript: Optional[str]
+    evidence_path: Optional[Path]
+    errors: list = None               # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.errors is None:
+            self.errors = []
+
+
+def run_integrated_lane(
+    lane: IntegratedLane,
+    profile: str,
+    root: Path,
+    workdir: Path,
+    *,
+    which=shutil.which,
+    runner=subprocess.run,
+) -> IntegratedResult:
+    """Dispatch one standalone harness; every non-zero path is a failure.
+
+    Missing simulator, timeout, a non-zero exit (including the harnesses'
+    own 3 = no iverilog, 4 = inconclusive corrupt capture) all leave
+    ``exit_code`` non-zero or None and an explanatory error -- never a pass.
+    """
+
+    result = IntegratedResult(
+        lane.name, "executed", None, None, workdir / lane.evidence_name
+    )
+    if which("iverilog") is None:
+        result.errors.append(
+            "iverilog is not installed; %s cannot execute here and an unrun "
+            "lane is never a pass" % lane.name
+        )
+        return result
+    workdir.mkdir(parents=True, exist_ok=True)
+    command = integrated_command(lane, profile, workdir)
+    try:
+        completed = runner(
+            command, cwd=root, capture_output=True, text=True,
+            timeout=lane.timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as error:
+        partial = error.stdout or ""
+        if isinstance(partial, bytes):
+            partial = partial.decode("utf-8", "replace")
+        result.transcript = partial
+        result.errors.append(
+            "%s timed out after %ds; the run is incomplete, not a pass"
+            % (lane.name, lane.timeout_seconds)
+        )
+        return result
+    result.exit_code = completed.returncode
+    result.transcript = (completed.stdout or "") + (completed.stderr or "")
+    if completed.returncode != 0:
+        result.errors.append(
+            "%s exited %d%s" % (
+                lane.name, completed.returncode,
+                " (inconclusive: corrupt capture, no verdict)"
+                if completed.returncode == 4 else "",
+            )
+        )
+    return result
+
+
+def consume_integrated_artifact(
+    lane: IntegratedLane,
+    artifacts: Path,
+    producer_results: dict,
+) -> IntegratedResult:
+    """Bind a producer job's artifact to this run, failing closed.
+
+    ``artifacts/<lane>/<evidence file>`` must exist and the producer job must
+    have reported ``success`` -- an absent producer result is not success.
+    """
+
+    folder = artifacts / lane.name
+    result = IntegratedResult(
+        lane.name, "artifact", None, None, folder / lane.evidence_name
+    )
+    producer = producer_results.get(lane.name)
+    if producer != "success":
+        result.errors.append(
+            "producer job for %s reported %r, not 'success'; its artifact "
+            "cannot be trusted" % (lane.name, producer)
+        )
+        return result
+    # The producer job succeeded, which is exactly the harness's exit 0.
+    result.exit_code = 0
+    transcript = folder / "transcript.log"
+    if transcript.is_file():
+        result.transcript = transcript.read_text(
+            encoding="utf-8", errors="replace"
+        )
+    return result
+
+
+def _verifier():
+    tools = str(ROOT / "tools")
+    if tools not in sys.path:
+        sys.path.insert(0, tools)
+    import verify_oneshot_evidence  # noqa: E402
+
+    return verify_oneshot_evidence
+
+
+def load_integrated_evidence(
+    lane: IntegratedLane,
+    path: Optional[Path],
+    profile: str,
+    *,
+    expect_head: Optional[str],
+    tree_root: Optional[Path],
+) -> tuple[Optional[dict], list]:
+    """Read and validate one harness evidence record. Returns (record, errors).
+
+    Absent, unreadable, malformed, wrong-schema, wrong-profile, failed, dirty,
+    stale (source digests no longer match ``tree_root``) and wrong-revision
+    records are all errors. ``expect_head=None`` skips the revision binding
+    and is for tests only; the CLI always binds to ``git rev-parse HEAD``.
+    """
+
+    if path is None or not path.is_file():
+        return None, ["%s evidence record %s is absent" % (lane.name, path)]
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        return None, ["%s evidence record is unreadable/malformed: %s"
+                      % (lane.name, error)]
+    if not isinstance(record, dict):
+        return None, ["%s evidence record is not a JSON object" % lane.name]
+    errors: list = []
+    if record.get("schema") != lane.schema:
+        errors.append(
+            "%s evidence schema is %r, expected %r"
+            % (lane.name, record.get("schema"), lane.schema)
+        )
+    if record.get("profile") != profile:
+        errors.append(
+            "%s evidence profile is %r but %r was required; a different "
+            "profile's record never satisfies this run"
+            % (lane.name, record.get("profile"), profile)
+        )
+    try:
+        errors += _verifier().verify(record, expect_head, repo_root=tree_root)
+    except Exception as error:  # noqa: BLE001 - a malformed record must not crash the gate
+        errors.append("%s evidence record failed validation: %s"
+                      % (lane.name, error))
+    return record, errors
+
+
+def integrated_coverage(lane: IntegratedLane, record: Optional[dict]) -> dict:
+    """Counts the aggregate ledger carries, read from the harness's record."""
+
+    if not isinstance(record, dict):
+        return {}
+    detected = undetected = 0
+    mutations = record.get("mutations")
+    if isinstance(mutations, dict):
+        for value in mutations.values():
+            verdict = value.get("verdict") if isinstance(value, dict) else value
+            if verdict == "DETECTED":
+                detected += 1
+            else:
+                undetected += 1
+    branches = record.get("branch_coverage")
+    branches = branches if isinstance(branches, dict) else {}
+    return {
+        "profile": record.get("profile"),
+        "result": record.get("result"),
+        "cases": record.get("case_count"),
+        "mutations_detected": detected,
+        "mutations_undetected": undetected,
+        "branch_divide": branches.get("divide") is True,
+        "branch_bypass": branches.get("bypass") is True,
+        "scope": record.get("scope"),
+    }
+
+
+def gate_integrated(
+    lane: IntegratedLane, profile: str, coverage: dict
+) -> list[str]:
+    """Check a lane's evidence against its declared obligations."""
+
+    if not coverage:
+        return ["%s produced no usable evidence record" % lane.name]
+    failures: list[str] = []
+    min_cases, min_mutations = lane.obligations[profile]
+    if coverage["result"] != "PASS":
+        failures.append(
+            "%s evidence result is %r, not PASS" % (lane.name, coverage["result"])
+        )
+    if not isinstance(coverage["cases"], int) or coverage["cases"] < min_cases:
+        failures.append(
+            "%s covered %r case(s), below the %s profile's declared minimum "
+            "of %d" % (lane.name, coverage["cases"], profile, min_cases)
+        )
+    if coverage["mutations_undetected"]:
+        failures.append(
+            "%s reported %d undetected required mutation(s)"
+            % (lane.name, coverage["mutations_undetected"])
+        )
+    if coverage["mutations_detected"] < min_mutations:
+        failures.append(
+            "%s demonstrated %d mutation(s), below the declared minimum of %d"
+            % (lane.name, coverage["mutations_detected"], min_mutations)
+        )
+    if not (coverage["branch_divide"] and coverage["branch_bypass"]):
+        failures.append(
+            "%s did not reach both normalization branches (divide %s, "
+            "bypass %s)" % (lane.name, coverage["branch_divide"],
+                            coverage["branch_bypass"])
+        )
+    return failures
+
+
+def integrated_baselined(baseline: dict, name: str) -> dict:
+    """The ledger's record that this lane's diagnostics were baselined on CI."""
+
+    entry = baseline.get(INTEGRATED_BASELINE_KEY, {}).get(name)
+    return entry if isinstance(entry, dict) else {}
+
+
+def integrated_baseline_gaps(
+    baseline: dict, name: str, *, lint: bool, runtime_observed: bool
+) -> list[str]:
+    """Why an integrated lane's diagnostics cannot yet be enforced (empty = ready).
+
+    A lane is enforceable only when the ledger's own provenance says it was
+    generated on CI's toolchain AND records that this lane's lint units (and
+    runtime transcript) were baselined there. Until then the verdict is
+    withheld; it is never a pass and the diagnostics are never silently waived.
+    """
+
+    gaps: list[str] = []
+    toolchain = (baseline.get("provenance") or {}).get("toolchain") or {}
+    entry = integrated_baselined(baseline, name)
+    if toolchain_matches_ci(toolchain):
+        gaps.append(
+            "%s: %s carries no CI-toolchain provenance (Icarus 12.0 / "
+            "Verilator 5.020); verdict withheld" % (name, BASELINE_PATH)
+        )
+    if not (lint and entry.get("lint_baselined")):
+        gaps.append(
+            "%s lint units are not baselined in %s (or --lint was not "
+            "run); verdict withheld" % (name, BASELINE_PATH)
+        )
+    if not (runtime_observed and entry.get("runtime_baselined")):
+        gaps.append(
+            "%s runtime transcript is unobserved or its runtime diagnostics "
+            "are not baselined; verdict withheld" % name
+        )
+    return gaps
+
+
+def tool_versions() -> dict:
+    """First-line ``--version`` of each linter actually installed."""
+
+    versions: dict = {}
+    for tool, flag in (("iverilog", "-V"), ("verilator", "--version")):
+        if shutil.which(tool) is None:
+            versions[tool] = None
+            continue
+        completed = subprocess.run(
+            [tool, flag], capture_output=True, text=True
+        )
+        lines = (completed.stdout + completed.stderr).splitlines()
+        versions[tool] = lines[0].strip() if lines else None
+    return versions
+
+
+def toolchain_matches_ci(versions: dict) -> list[str]:
+    """Reasons the local toolchain is not the ledger's CI toolchain."""
+
+    problems: list[str] = []
+    for tool, prefix in CI_TOOLCHAIN_PREFIXES.items():
+        found = versions.get(tool)
+        if not found or not found.startswith(prefix):
+            problems.append(
+                "%s is %r; the ledger is calibrated to %r*"
+                % (tool, found, prefix)
+            )
+    return problems
+
+
+def compute_verdict(
+    *,
+    ok: bool,
+    lint: bool,
+    lanes: Sequence[str],
+    check_exit: Optional[int],
+    integrated: Sequence[str],
+    integrated_complete: bool,
+) -> tuple[str, list[str]]:
+    """Return ``(verdict, withheld reasons)``.
+
+    PASS needs the lint tier, every module lane, the registered check AND
+    every integrated lane executed/consumed, baselined and passing. Anything
+    partial is ``NO VERDICT`` -- never a pass for the whole node.
+    """
+
+    withheld: list[str] = []
+    if not lint:
+        withheld.append("lint tier not selected")
+    if set(lanes) != set(LANES):
+        withheld.append("module lanes %d/%d" % (len(set(lanes)), len(LANES)))
+    if check_exit != 0:
+        withheld.append("registered check not run/passed")
+    if set(integrated) != set(INTEGRATED_NAMES):
+        withheld.append(
+            "integrated lanes %d/%d" % (len(set(integrated)),
+                                        len(INTEGRATED_NAMES))
+        )
+    elif not integrated_complete:
+        withheld.append(
+            "integrated lanes' diagnostics baseline/transcript incomplete"
+        )
+    if not ok:
+        return "FAIL", withheld
+    return ("NO VERDICT" if withheld else "PASS"), withheld
+
+
+# --------------------------------------------------------------------------
 # Evidence record
 # --------------------------------------------------------------------------
 
@@ -911,6 +1427,40 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         % BASELINE_PATH,
     )
     parser.add_argument(
+        "--integrated", default="none",
+        help="standalone one-shot harnesses to include: 'all', 'none', or a "
+        "comma-separated list of %s (issue #264). Executed via their own "
+        "scripts unless --integrated-artifacts is given" %
+        ", ".join(INTEGRATED_NAMES),
+    )
+    parser.add_argument(
+        "--integrated-profile", default="regression",
+        help="the harness profile the integrated lanes must have run "
+        "(default: regression, the bounded CI profile)",
+    )
+    parser.add_argument(
+        "--integrated-workdir", type=Path, default=Path("out/integrated"),
+        help="per-lane --workdir root when the harnesses are executed",
+    )
+    parser.add_argument(
+        "--integrated-artifacts", type=Path, default=None,
+        help="consume the producer jobs' downloaded artifacts "
+        "(<dir>/<lane>/<evidence file> [+ transcript.log]) instead of "
+        "re-running the long simulations; bound to this revision and to "
+        "--producer-result, failing closed on anything absent or stale",
+    )
+    parser.add_argument(
+        "--producer-result", action="append", default=[],
+        metavar="LANE=RESULT",
+        help="the producing CI job's result for a lane (must be 'success'); "
+        "required with --integrated-artifacts",
+    )
+    parser.add_argument(
+        "--allow-foreign-toolchain", action="store_true",
+        help="let --update-baseline run on a toolchain that is not CI's; the "
+        "recorded provenance then keeps integrated lanes unbaselined",
+    )
+    parser.add_argument(
         "--log", type=Path, default=None,
         help="write the aggregate transcript here (required with --record)",
     )
@@ -925,19 +1475,41 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
     args = parse_args(argv)
     root = args.root.resolve()
     lanes = resolve_lanes(args.lanes)
-    if not args.lint and not lanes:
+    integrated = resolve_integrated(args.integrated)
+    if not args.lint and not lanes and not integrated:
         print(
-            "ERROR: nothing selected; pass --lint and/or --lanes all|fast|<list>"
+            "ERROR: nothing selected; pass --lint and/or --lanes "
+            "all|fast|<list> and/or --integrated all|<list>"
         )
         return 2
+    if args.integrated_profile not in {
+        p for lane in INTEGRATED_LANES.values() for p in lane.profiles
+    }:
+        print("ERROR: unknown --integrated-profile %r" % args.integrated_profile)
+        return 2
+    for name in integrated:
+        if args.integrated_profile not in INTEGRATED_LANES[name].profiles:
+            print("ERROR: %s has no %r profile (choices: %s)" % (
+                name, args.integrated_profile,
+                ", ".join(INTEGRATED_LANES[name].profiles)))
+            return 2
+    producer_results: dict = {}
+    for item in args.producer_result:
+        lane_name, _, value = item.partition("=")
+        producer_results[lane_name] = value
 
     transcript: list[str] = [
         "tools/qualify_rtl_modules.py aggregate RTL-module qualification run",
         "lint units: %s" % (", ".join(sorted(LINT_UNITS)) if args.lint else "none"),
         "lanes: %s" % (", ".join(lanes) if lanes else "none"),
+        "integrated lanes: %s%s" % (
+            ", ".join(integrated) if integrated else "none",
+            " (profile %s)" % args.integrated_profile if integrated else "",
+        ),
         "linters available: %s" % (", ".join(linters_available()) or "none"),
     ]
     diagnostics: list[Diagnostic] = []
+    integrated_diagnostics: list[Diagnostic] = []
     failures: list[str] = []
     notes: list[str] = []
     lane_results: dict[str, dict] = {}
@@ -958,6 +1530,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
             print(
                 "lint %-20s %d diagnostic(s) after declared exclusions"
                 % (unit, len(tally(unit_diagnostics)))
+            )
+        for unit in INTEGRATED_NAMES:
+            unit_diagnostics, unit_transcript = lint_unit(unit, root)
+            integrated_diagnostics += unit_diagnostics
+            transcript.append("-- integrated unit %s" % unit)
+            transcript += unit_transcript
+            print(
+                "lint %-20s %d diagnostic(s) after declared exclusions "
+                "(integrated unit)" % (unit, len(tally(unit_diagnostics)))
             )
 
     if lanes:
@@ -994,20 +1575,162 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
             )
         transcript.append("lane tier wall-clock: %.1fs" % elapsed)
 
-    observed_tally = tally(diagnostics)
-    tiers = tuple(
-        tier for tier, selected in (("lint", args.lint), ("runtime", bool(lanes)))
-        if selected
+    # ---- integrated one-shot lanes (issue #264) ------------------------
+    integrated_ledger: dict[str, dict] = {}
+    integrated_runtime: dict[str, bool] = {}
+    if integrated:
+        head = _project_commit(root)
+        if head is None:
+            failures.append(
+                "cannot resolve the project commit; integrated evidence "
+                "cannot be bound to a revision"
+            )
+        transcript.append("")
+        transcript.append("== integrated lane tier ==")
+        for name in integrated:
+            lane = INTEGRATED_LANES[name]
+            if args.integrated_artifacts is not None:
+                result = consume_integrated_artifact(
+                    lane, args.integrated_artifacts, producer_results
+                )
+            else:
+                result = run_integrated_lane(
+                    lane, args.integrated_profile, root,
+                    root / args.integrated_workdir / name,
+                )
+            record, evidence_errors = (None, [])
+            if result.exit_code is not None:
+                record, evidence_errors = load_integrated_evidence(
+                    lane, result.evidence_path, args.integrated_profile,
+                    expect_head=head if head else "0" * 40, tree_root=root,
+                )
+            result.errors += evidence_errors
+            coverage = integrated_coverage(lane, record)
+            if result.exit_code is not None and not evidence_errors:
+                result.errors += gate_integrated(
+                    lane, args.integrated_profile, coverage
+                )
+            failures += result.errors
+            if result.transcript is not None:
+                diagnostics_seen = scan_transcript(name, result.transcript)
+                integrated_diagnostics += diagnostics_seen
+                integrated_runtime[name] = True
+            else:
+                integrated_runtime[name] = False
+            integrated_ledger[name] = {
+                "harness": lane.harness,
+                "command": " ".join(
+                    integrated_command(lane, args.integrated_profile,
+                                       Path("<workdir>"))
+                ),
+                "profile": args.integrated_profile,
+                "status": result.mode if result.exit_code is not None
+                else "not-run",
+                "exit_code": result.exit_code,
+                "coverage": coverage,
+                "lint_units": list(lane.lint_sources),
+                "label": integrated_label(lane, args.integrated_profile),
+                "errors": list(result.errors),
+            }
+            transcript.append("-- integrated lane %s (%s, exit %s)" % (
+                name, result.mode, result.exit_code))
+            if result.transcript:
+                transcript.append(result.transcript)
+            print("integrated %-20s %s exit %s: %s" % (
+                name, result.mode, result.exit_code,
+                "FAIL (%d)" % len(result.errors) if result.errors
+                else integrated_label(lane, args.integrated_profile)))
+
+    selected_tiers = (
+        ("lint", args.lint),
+        ("runtime", bool(lanes) or any(integrated_runtime.values())),
     )
+    tiers = tuple(tier for tier, selected in selected_tiers if selected)
 
     if args.update_baseline:
-        baseline = build_baseline(observed_tally, load_baseline(root), tiers=tiers)
+        integrated_errors = [
+            error for name in integrated
+            for error in integrated_ledger[name]["errors"]
+        ]
+        if integrated_errors:
+            print(
+                "ERROR: refusing --update-baseline: an integrated lane "
+                "failed/was stale, and a baseline is never generated from a "
+                "run that did not pass: " + "; ".join(integrated_errors)
+            )
+            return 2
+        update_tally = tally(diagnostics + integrated_diagnostics)
+        versions = tool_versions()
+        foreign = toolchain_matches_ci(versions)
+        if foreign and not args.allow_foreign_toolchain:
+            print(
+                "ERROR: refusing --update-baseline on a non-CI toolchain "
+                "(%s). Generate it on the CI toolchain (see %s) or pass "
+                "--allow-foreign-toolchain, which keeps the integrated "
+                "lanes' baseline unrecognised." % ("; ".join(foreign),
+                                                    POLICY_DOC)
+            )
+            return 2
+        provenance = {
+            "toolchain": versions,
+            "revision": _project_commit(root),
+            "command": "python3 tools/qualify_rtl_modules.py "
+            + " ".join(sys.argv[1:] if argv is None else list(argv)),
+            "generated_at": datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"),
+        }
+        registry = {}
+        for name in INTEGRATED_NAMES:
+            entry: dict = {}
+            if args.lint:
+                entry["lint_baselined"] = True
+                entry["lint_units"] = list(INTEGRATED_LINT_UNITS[name])
+            if integrated_runtime.get(name):
+                entry["runtime_baselined"] = True
+                entry["profile"] = args.integrated_profile
+            if entry:
+                registry[name] = entry
+        baseline = build_baseline(
+            update_tally, load_baseline(root), tiers=tiers,
+            provenance=provenance, integrated=registry,
+            runtime_units=list(lanes) + [
+                n for n in integrated if integrated_runtime.get(n)],
+        )
         (root / BASELINE_PATH).write_text(
             json.dumps(baseline, indent=2) + "\n", encoding="utf-8"
         )
         print("wrote %s (%d waiver(s))" % (BASELINE_PATH, len(baseline["waivers"])))
 
     baseline = load_baseline(root)
+    # An integrated lane's diagnostics are only GATED once the ledger records
+    # that they were baselined on CI's own toolchain. Until then they are
+    # reported and the verdict is withheld: neither silently waived nor
+    # enforced against a baseline nobody generated for them.
+    ledger_toolchain = (baseline.get("provenance") or {}).get("toolchain") or {}
+    ci_baseline = not toolchain_matches_ci(ledger_toolchain)
+    integrated_complete = bool(integrated)
+    gated_integrated: list[Diagnostic] = []
+    for diagnostic in integrated_diagnostics:
+        entry = integrated_baselined(baseline, diagnostic.unit)
+        flag = "lint_baselined" if diagnostic.tier == "lint" else "runtime_baselined"
+        if ci_baseline and entry.get(flag):
+            gated_integrated.append(diagnostic)
+    pending = [d for d in integrated_diagnostics if d not in gated_integrated]
+    for name in integrated:
+        gaps = integrated_baseline_gaps(
+            baseline, name, lint=args.lint,
+            runtime_observed=integrated_runtime.get(name, False),
+        )
+        if gaps:
+            integrated_complete = False
+            notes += gaps
+    if pending:
+        for key, entry in sorted(tally(pending).items()):
+            notes.append(
+                "pending (ungated) integrated diagnostic %s x%d: %s"
+                % (key, entry["count"], entry["example"])
+            )
+    observed_tally = tally(diagnostics + gated_integrated)
     gate_failures, gate_notes = gate_diagnostics(
         observed_tally, baseline, tiers=tiers
     )
@@ -1020,6 +1743,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
         transcript.append("excluded %s: %s" % (name, reason))
     for lane in lanes:
         transcript.append("%s: %r" % (lane, lane_results.get(lane)))
+    if integrated_ledger:
+        transcript.append("")
+        transcript.append("== integrated lanes ==")
+        for name in integrated:
+            transcript.append(
+                "%s: %s" % (name, json.dumps(integrated_ledger[name],
+                                             sort_keys=True))
+            )
 
     detected_total = sum(
         entry["mutations_detected"] for entry in lane_results.values()
@@ -1059,8 +1790,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
         transcript.append("FAIL: " + failure)
         print("FAIL: " + failure)
     ok = not failures
-    complete = args.lint and set(lanes) == set(LANES) and check_exit == 0
-    verdict = "PASS" if (ok and complete) else "FAIL" if not ok else "NO VERDICT"
+    verdict, withheld = compute_verdict(
+        ok=ok, lint=args.lint, lanes=lanes, check_exit=check_exit,
+        integrated=integrated, integrated_complete=integrated_complete,
+    )
     reason = (
         "lint units %d, lanes %d/%d, diagnostics %d after declared exclusions, "
         "mutations detected %d, undetected %d"
@@ -1068,8 +1801,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:  # noqa: C901
            sum(entry["count"] for entry in observed_tally.values()),
            detected_total, undetected_total)
     )
+    if integrated:
+        reason += "; integrated lanes (%s): %s" % (
+            ", ".join(integrated),
+            "full profile" if args.integrated_profile == "full"
+            else "%s profile only, NOT full-profile qualification"
+            % args.integrated_profile,
+        )
     if verdict == "NO VERDICT":
-        reason += "; a partial selection is never a pass for the whole node"
+        reason += (
+            "; a partial selection is never a pass for the whole node "
+            "(withheld: %s)" % "; ".join(withheld)
+        )
     transcript.append("%s: %s" % (verdict, reason))
     print("%s: %s" % (verdict, reason))
 

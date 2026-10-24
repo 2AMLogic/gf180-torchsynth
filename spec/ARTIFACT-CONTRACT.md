@@ -149,7 +149,9 @@ It deliberately supports no URI forms, percent escapes, backslashes, colons,
 home expansion, empty components, or dot/dot-dot components. This rejects
 absolute POSIX/Windows/UNC paths and traversal on every host. Public runtime
 descriptors are restricted strings and warnings/reasons are portable codes,
-not raw log messages that could embed host paths. A storage reader must also
+not raw log messages that could embed host paths. Corpus run attempt receipts
+follow the same rule under the portable-receipt policy in
+[CORPUS-RUNNER.md](CORPUS-RUNNER.md#portable-attempt-receipts). A storage reader must also
 enforce filesystem containment against symlinks; metadata validation does not
 open references.
 

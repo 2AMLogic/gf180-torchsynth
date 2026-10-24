@@ -2,54 +2,145 @@ name: TB sim
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Job/step budget policy (issue #265). GitHub-hosted runners hard-stop
+  # every job at 360 minutes; a job whose declared budget cannot fit under
+  # that would be cancelled by the platform, which reads as an
+  # infrastructure cancellation rather than as a lane verdict. So, for EVERY
+  # job below (pinned by tests/test_ci_lane_wiring.py's budget guard):
+  #   - the job declares an explicit timeout-minutes cap, and that cap is
+  #     <= 330 (>= 30 minutes of platform headroom under 360);
+  #   - EVERY step, including checkout/setup/install and artifact upload,
+  #     declares its own timeout-minutes, and the step budgets sum to at
+  #     least 10 minutes under the job cap, so a runaway step is stopped by
+  #     its own timeout (a named, attributable failure) rather than by the
+  #     job cap or the platform limit.
+  # Setup budgets are generous against measured wall-clock (checkout and
+  # setup-python ~2-3 s, apt Icarus install ~11-16 s on ubuntu-24.04).
+  # Nothing here is continue-on-error or `|| true`: a failed, timed-out or
+  # cancelled step fails its job. The one aggregation job,
+  # rtl-module-qualification (issue 264), runs `if: always()` over its
+  # producers so it is never silently skipped, and hands each producer's
+  # `needs.<job>.result` to the gate, which fails closed on anything but
+  # "success" -- so a missing/cancelled producer is a gate failure, never a
+  # pass. The guard admits that always() only with every forwarding present.
+
   sim-selftest:
     runs-on: ubuntu-24.04
+    # Step budgets sum to 65; measured job wall-clock ~30 s.
+    timeout-minutes: 75
     strategy:
+      # Deliberately not fail-fast: a failure under one interpreter must not
+      # cancel the others, so each version keeps its own attributable result
+      # (a cancelled sibling would be an absent verdict, not a pass).
+      fail-fast: false
       matrix:
         python: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
         with:
           python-version: ${{ matrix.python }}
       - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: Compile source
+        timeout-minutes: 5
         run: python -m compileall -q src tests tools
       - name: Golden-vector and constants-gate tests
+        timeout-minutes: 10
         run: python -m unittest -v tests.test_golden_vectors tests.test_fixedpoint_codegen
       - name: Synthetic DUT self-test (iverilog, PDK-free)
+        timeout-minutes: 5
         run: python3 tb/run_tb.py selftest
       - name: Anchor golden-vector run (iverilog, PDK-free)
+        timeout-minutes: 10
         run: python3 tb/run_tb.py anchor
       - name: Constants refusal-gate check
+        timeout-minutes: 5
         run: python3 tools/generate_rtl_constants.py --check
+      # T1 items 9 and 10 (issue 389). klt has no PyPI release with
+      # `signoff --attest` yet (0.7.0 lacks it), so pin the klayout-tools
+      # commit that does. Drift in an inventoried file turns this red.
+      - name: T1 item 9/10 attestation drift check (klt, PDK-free)
+        timeout-minutes: 10
+        run: |
+          KLT="git+https://github.com/2AMLogic/klayout-tools@7ee09483b74867a47a05eb353015c2cf5ca33ef3"
+          pip install uv
+          uvx --from "$KLT" klt signoff --attest 9 --inventory evidence/item9-inventory.json --check evidence/item9-attestation.json
+          uvx --from "$KLT" klt signoff --attest 10 --inventory evidence/item10-inventory.json --check evidence/item10-attestation.json
 
-  sim-lanes:
-    # One Python version: these RTL comparisons don't depend on the
-    # interpreter version, and running them across the ci.yml-style
-    # 3-version matrix would triple already-bounded RTL wall-clock for no
-    # verification value (issue #187).
-    # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
-    # outage and the operator's move of every public repo off Blacksmith (D5).
+  # The nine RTL golden-vector lanes (issue #187) used to share one
+  # `sim-lanes` job whose 370-minute step sum and 400-minute cap exceeded
+  # the 360-minute hosted job limit (issue #265). They are now split into
+  # two independently bounded jobs that run in parallel. Every lane keeps
+  # its own named step, its exact `tb/run_tb.py <lane>` invocation and its
+  # original per-lane timeout; tests/test_ci_lane_wiring.py pins that
+  # inventory so a split cannot silently drop a lane or shrink its
+  # allowance. Splitting also improves attribution: a failing lane in one
+  # group no longer prevents the other group's lanes from running.
+  #
+  # One Python version: these RTL comparisons don't depend on the
+  # interpreter version, and running them across the ci.yml-style
+  # 3-version matrix would triple already-bounded RTL wall-clock for no
+  # verification value (issue #187).
+  # GitHub-hosted (free on a public repo) since the 2026-09-30 Blacksmith
+  # outage and the operator's move of every public repo off Blacksmith
+  # (2am `docs/ci.md` §"Blacksmith: decided 2026-09-28, retire").
+
+  sim-lanes-vco:
+    # The two oscillator lanes: 210 minutes of lane budgets (measured
+    # ~10 + ~5.5 min on ubuntu-24.04 with apt iverilog 12.0, run
+    # 37281310453).
     runs-on: ubuntu-24.04
-    # >= the sum of the per-step budgets below (370) plus install/checkout
-    # margin, so a single runaway lane is caught by its own step timeout
-    # rather than by the job cap.
-    timeout-minutes: 400
+    # Step budgets: 20 setup + 90 + 120 = 230. Cap 250: 20 minutes over the
+    # step sum, 110 minutes under the 360-minute hosted limit.
+    timeout-minutes: 250
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: "Sine VCO engine lane (issue 73, iverilog, PDK-free)"
+        timeout-minutes: 90
+        run: python3 tb/run_tb.py vco
+      - name: "Square/saw VCO engine lane (issue 74, iverilog, PDK-free)"
+        timeout-minutes: 120
+        run: python3 tb/run_tb.py vco2
+
+  sim-lanes-engines:
+    # The other seven lanes: 160 minutes of lane budgets (measured ~34 min
+    # in total on ubuntu-24.04 with apt iverilog 12.0, run 37281310453).
+    runs-on: ubuntu-24.04
+    # Step budgets: 20 setup + 10 + 10 + 10 + 60 + 30 + 30 + 10 = 180.
+    # Cap 200: 20 minutes over the step sum, 160 minutes under the
+    # 360-minute hosted limit.
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: "ADSR envelope engine lane (issue 70, iverilog, PDK-free)"
         timeout-minutes: 10
@@ -63,19 +154,13 @@ jobs:
       - name: "Modulation-matrix + upsample lane (issue 72, iverilog, PDK-free)"
         timeout-minutes: 60
         run: python3 tb/run_tb.py modmatrix
-      - name: "Sine VCO engine lane (issue 73, iverilog, PDK-free)"
-        timeout-minutes: 90
-        run: python3 tb/run_tb.py vco
-      - name: "Square/saw VCO engine lane (issue 74, iverilog, PDK-free)"
-        timeout-minutes: 120
-        run: python3 tb/run_tb.py vco2
       # Lanes below landed after issue #187 was scoped. They are gated by
-      # the same has_iverilog() skip as the six above (noise via its
-      # tb/run_tb.py lane, which tests/test_noise_stream.py explicitly
+      # the same has_iverilog() skip as the six original lanes (noise via
+      # its tb/run_tb.py lane, which tests/test_noise_stream.py explicitly
       # defers the RTL to), so leaving them out would keep reporting them
-      # as "skipped" on every PR — the defect this job exists to close.
+      # as "skipped" on every PR -- the defect these jobs exist to close.
       # Budgets are ~3-5x the measured wall-clock of a local Icarus 12.0
-      # run (noise 555s, mix 359s, normreplay 108s — the normreplay figure
+      # run (noise 555s, mix 359s, normreplay 108s -- the normreplay figure
       # includes issue #211's patch_control -> bind_reject integration run
       # and its drop-the-wire mutant).
       - name: "Host-fed noise-stream lane (issue 75, iverilog, PDK-free)"
@@ -92,34 +177,61 @@ jobs:
     # Issue #79's integrated mixer -> replay-controller chain, regression
     # profile (8 cases x 2 x 176,400 samples + replay/hash/mutation sims;
     # ~18 min wall-clock on the dev Mac with iverilog 13.0). Its own job, not
-    # a sim-lanes step: it runs in parallel with sim-lanes, and adding its
-    # budget there would push the step sum past sim-lanes' cap (and past
-    # GitHub-hosted runners' 360-minute job limit). The full profile (the 26
+    # a step in one of the sim-lanes-* jobs: it runs in parallel with them,
+    # and adding its 150-minute budget to either would push that job past
+    # its cap (and the vco group past GitHub-hosted runners' 360-minute job
+    # limit). The full profile (the 26
     # param-committed receipt cases + 3 directed fixtures + 1 derived
     # fixture) is the release-era evidence command (spec/ONESHOT-E2E.md),
     # not a PR gate.
     runs-on: ubuntu-24.04
-    # >= the one lane step budget (150) plus install/checkout margin, so a
-    # runaway run is caught by its own step timeout rather than the job cap.
-    timeout-minutes: 170
+    # Step budgets: 20 setup + 1 mkdir + 150 lane + 5 upload = 176. Cap 190:
+    # 14 minutes over the step sum (so a runaway run is caught by its own
+    # step timeout rather than the job cap), 170 minutes under the
+    # 360-minute hosted limit.
+    timeout-minutes: 190
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Make evidence output directory
+        timeout-minutes: 1
+        run: mkdir -p out/tail-chain
       - name: "One-shot tail chain lane, regression profile (issue 79, iverilog, PDK-free)"
         timeout-minutes: 150
-        run: python3 tb/run_oneshot.py --profile regression
+        # An explicit `shell: bash` runs as `bash -eo pipefail`, so a failing
+        # harness still fails the step through the tee (the default shell has
+        # no pipefail; tests/test_ci_lane_wiring.py rejects a piped lane
+        # without it). The transcript is what the aggregate gate (issue 264)
+        # scans for runtime diagnostics.
+        shell: bash
+        run: python3 tb/run_oneshot.py --profile regression --workdir out/tail-chain 2>&1 | tee out/tail-chain/transcript.log
+      - name: Upload tail-chain evidence record
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: oneshot-tail-chain-evidence
+          path: |
+            out/tail-chain/oneshot-evidence.json
+            out/tail-chain/transcript.log
+          retention-days: 30
+          if-no-files-found: ignore
 
   oneshot-whole-voice:
     # Issue #79's INTEGRATED WHOLE-VOICE top: every landed Epic #2 engine
     # (#70 x6, #71 x2, #72 matrix + 5 upsample columns, #73, #74, #75, #76,
     # #77) composed into one clip renderer, regression profile. Its own job
     # for the same reason oneshot-tail-chain is: it runs in parallel with
-    # sim-lanes, and its budget would push sim-lanes' step sum past that
-    # job's cap and past GitHub-hosted runners' 360-minute job limit.
+    # the sim-lanes-* jobs, and its budget would push either one's step sum
+    # past that job's cap (the vco group's past GitHub-hosted runners'
+    # 360-minute job limit).
     #
     # The profile is 2 committed cases (one bypass branch, one divide) at
     # 1,764 control ticks + 2 x 176,400 audio samples each, 2 clean
@@ -130,7 +242,7 @@ jobs:
     # sample 176,400). Eight full-length simulations in all.
     #
     # Budgets are ~3.5x MEASURED wall-clock, matching the convention the
-    # sim-lanes comment above states. Observed: 33m32s for this whole job on
+    # sim-lanes-engines comment above states. Observed: 33m32s for this whole job on
     # ubuntu-24.04 with the apt iverilog 12.0 (run 36894315125), against
     # 54 min on the dev Mac (Apple silicon, iverilog 13.0, serial) -- the
     # hosted runner is the faster of the two for this workload, so the
@@ -140,59 +252,125 @@ jobs:
     # fixtures + 2 derived fixtures, ~15x this work) is the release-era
     # AWS-box evidence command in spec/ONESHOT-E2E.md, not a PR gate.
     runs-on: ubuntu-24.04
-    # >= the one lane step budget (120) plus install/checkout margin, and
-    # far inside GitHub-hosted's 360-minute hard job limit, so a runaway run
-    # is caught by its own step timeout rather than by the job cap.
-    timeout-minutes: 140
+    # Step budgets: 20 setup + 1 mkdir + 120 lane + 5 upload = 146. Cap 160:
+    # 14 minutes over the step sum (so a runaway run is caught by its own
+    # step timeout rather than by the job cap), 200 minutes under
+    # GitHub-hosted's 360-minute hard job limit.
+    timeout-minutes: 160
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog
       - name: Make evidence output directory
+        timeout-minutes: 1
         run: mkdir -p out/whole-voice
       - name: "Whole-voice one-shot lane, regression profile (issue 79, iverilog, PDK-free)"
         timeout-minutes: 120
-        run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice
+        # `bash -eo pipefail` (see oneshot-tail-chain): the tee cannot mask a
+        # failing harness.
+        shell: bash
+        run: python3 tb/run_voice.py --profile regression --workdir out/whole-voice 2>&1 | tee out/whole-voice/transcript.log
       - name: Upload whole-voice evidence record
         if: always()
-        uses: actions/upload-artifact@v4
+        timeout-minutes: 5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: oneshot-whole-voice-evidence
-          path: out/whole-voice/voice-evidence.json
+          path: |
+            out/whole-voice/voice-evidence.json
+            out/whole-voice/transcript.log
           retention-days: 30
           if-no-files-found: ignore
 
   rtl-module-qualification:
-    # Issue #78's aggregation/gating layer. sim-lanes above already re-proves
-    # every lane's own bit-exact conformance individually; this job proves
-    # the gate on top of them: it turns previously-unexamined compile/runtime
-    # diagnostics (width/sign, X/Z) into failures via tb/rtl-lint-baseline.json's
-    # ratchet, checks the declared coverage/negative-control obligations, and
+    # Issue #78's aggregation/gating layer. The sim-lanes-* jobs above
+    # already re-prove every lane's own bit-exact conformance individually;
+    # this job proves the gate on top of them: it turns previously-unexamined
+    # compile/runtime diagnostics (width/sign, X/Z) into failures via
+    # tb/rtl-lint-baseline.json's ratchet, checks the declared coverage/negative-control obligations, and
     # writes the indexed evidence record over the bounded FAST_LANES subset
     # (tools/qualify_rtl_modules.py). See spec/RTL-MODULE-QUALIFICATION.md.
+    #
+    # Issue 264: it also folds in both one-shot lanes by CONSUMING the
+    # artifacts oneshot-tail-chain / oneshot-whole-voice produced on this same
+    # revision, rather than re-running ~1.5 h of simulation. `if: always()`
+    # (never a bare `needs`) keeps a failed or cancelled producer from
+    # silently skipping this job -- a skipped required check can read as a
+    # pass -- and each producer's own result is handed to the gate, which
+    # fails closed on anything but "success". This is the one job-level
+    # always() tests/test_ci_lane_wiring.py admits, and only because every
+    # job it `needs` has its `needs.<job>.result` forwarded to the gate as a
+    # --producer-result; drop either forwarding and that guard fails.
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    needs: [oneshot-tail-chain, oneshot-whole-voice]
+    if: always()
+    # Step budgets: 20 setup + 5 evaluator + 1 mkdir + 2 x 5 artifact
+    # download + 25 aggregate gate + 5 upload = 66 (measured before #264:
+    # ~11 s install, ~2 s evaluator, ~2.5 min aggregate gate, run
+    # 37281310453). Cap 80: 14 minutes over the step sum, 280 minutes under
+    # the 360-minute hosted limit. The time spent waiting on the producers
+    # above is not charged here: a job's timeout-minutes runs from when the
+    # job starts on a runner, after its `needs` complete.
+    timeout-minutes: 80
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
         with:
           python-version: "3.12"
       - name: Install Icarus Verilog + Verilator (PDK-free)
+        timeout-minutes: 10
         run: sudo apt-get update && sudo apt-get install -y iverilog verilator
       - name: Registered evaluator (rtl-module-qualification-v1)
+        timeout-minutes: 5
         run: python3 -m unittest discover -s tests -p test_rtl_module_qualification.py -v
       - name: Make evidence output directory
+        timeout-minutes: 1
         run: mkdir -p out
-      - name: Aggregate gate -- lint tier + bounded fast-lane regression
+      # `pattern` (an exact artifact name, no glob) rather than `name`: a
+      # producer that uploaded nothing leaves its directory empty instead of
+      # failing the download, so the gate below still runs and records the
+      # absent evidence as a gate FAILURE. Any other download error fails
+      # the step, and so the job. No continue-on-error, no step-level
+      # always(): a failure before this point already fails the job.
+      - name: Download tail-chain evidence (same revision)
+        timeout-minutes: 5
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: oneshot-tail-chain-evidence
+          merge-multiple: true
+          path: out/integrated-artifacts/oneshot-tail-chain
+      - name: Download whole-voice evidence (same revision)
+        timeout-minutes: 5
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: oneshot-whole-voice-evidence
+          merge-multiple: true
+          path: out/integrated-artifacts/oneshot-whole-voice
+      - name: Aggregate gate -- lint tier + bounded fast-lane regression + integrated one-shot lanes
+        timeout-minutes: 25
+        # An absent artifact or a non-success producer is a gate FAILURE,
+        # not a skip. The integrated lanes' verdict stays withheld (NO
+        # VERDICT) until tb/rtl-lint-baseline.json carries a CI-toolchain
+        # baseline for their lint units; see spec/RTL-MODULE-QUALIFICATION.md.
         run: |
           python3 tools/qualify_rtl_modules.py --lint --lanes fast --parallel \
+            --integrated all --integrated-profile regression \
+            --integrated-artifacts out/integrated-artifacts \
+            --producer-result oneshot-tail-chain=${{ needs.oneshot-tail-chain.result }} \
+            --producer-result oneshot-whole-voice=${{ needs.oneshot-whole-voice.result }} \
             --log out/rtl-modules.log --record out/rtl-modules-evidence.json
       - name: Upload qualification evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        timeout-minutes: 5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: rtl-modules-evidence
           path: out/

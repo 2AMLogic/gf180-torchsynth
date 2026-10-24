@@ -192,7 +192,8 @@
             "oneOf": [{"type": "number", "minimum": 0}, {"type": "null"}]
           },
           "receipt": {
-            "type": "object"
+            "type": "object",
+            "description": "Portable attempt receipt (spec/CORPUS-RUNNER.md, Portable attempt receipts). Resume and interrupted attempts carry {}. Failed renders carry exactly error_type/message/message_sha256/message_status. Completed renders carry the backend receipt; a command must be marked command_representation=portable-placeholders-v1 and use <project-root>/<worker-output> mount placeholders. No key or string at any depth may contain a host path outside the declared field-scoped container roots. These semantic rules are enforced by validate_run (default receipt_policy portable-v1), not by this structural schema; historical-v1 verification of retained pre-#289 runs skips only them."
           }
         },
         "required": [

@@ -35,6 +35,9 @@
 # AC5 (the Rust half: `reconcile_stack` refuses with a named blocker) lives in
 # loom-daemon/tests/reconcile_stack_refname_guard.rs, next to the code it
 # guards; `loom-daemon/src/refname.rs` carries the Rust twin of AC1's table.
+# The AC2 scan's Rust counterpart — the same `--`-separator invariant, over
+# loom-daemon/src/**/*.rs — is loom-daemon/tests/git_ref_operand_scan.rs
+# (#9479), with merge_pr's two refusals in merge_pr_refname_guard.rs.
 #
 # Hermetic: every fixture is a `mktemp -d` git repo with a path-based origin.
 # Nothing touches the network, a forge, or `gh` (merge-pr.sh is driven through
@@ -51,16 +54,7 @@ loom_test_require_daemon_bin "$SCRIPTS_DIR" "worktree-base"
 REPO_ROOT="$(cd "$SCRIPTS_DIR/../.." && pwd)"
 LIB="$SCRIPTS_DIR/lib/default-branch.sh"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-NC='\033[0m'
-
-TESTS_RUN=0
-TESTS_PASSED=0
-TESTS_FAILED=0
-
-pass() { TESTS_RUN=$((TESTS_RUN + 1)); TESTS_PASSED=$((TESTS_PASSED + 1)); echo -e "  ${GREEN}PASS${NC}: $1"; }
-fail() { TESTS_RUN=$((TESTS_RUN + 1)); TESTS_FAILED=$((TESTS_FAILED + 1)); echo -e "  ${RED}FAIL${NC}: $1"; }
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/assert.sh"
 
 assert_contains() {
     local haystack="$1" needle="$2" what="$3"
@@ -169,7 +163,7 @@ if [[ -n "$UTF8_LOCALE" ]]; then
         fi
     done
 else
-    echo "  SKIP: no non-C UTF-8 locale on this host — cannot exercise the locale-collation case"
+    loom_test_skip "no non-C UTF-8 locale on this host — cannot exercise the locale-collation case"
 fi
 
 # The refusal has to be usable: it names the offending ref (so a log grep and a
@@ -345,13 +339,20 @@ else
     fail "loom_default_branch echoed an unsafe name: '$LDB_OUT'"
 fi
 
-# The Rust half must stay wired too — `reconcile_stack::plan` is the only
-# non-shell path a forge ref reaches a git argv through.
-if grep -q 'refname::check_all' "$REPO_ROOT/loom-daemon/src/reconcile_stack.rs" 2>/dev/null; then
-    pass "loom-daemon reconcile_stack calls refname::check_all"
-else
-    fail "loom-daemon/src/reconcile_stack.rs no longer validates its refs (refname::check_all)"
-fi
+# The Rust half must stay wired too. The `--` separator across ALL of
+# loom-daemon/src is machine-checked by loom-daemon/tests/git_ref_operand_scan.rs
+# (#9479 — this suite's awk scan only ever saw defaults/scripts/*.sh, which is
+# how four unguarded Rust sinks survived #9474). What is asserted here is the
+# validator half, for each module that receives a FORGE-derived name.
+for rust_sink in 'loom-daemon/src/reconcile_stack.rs' \
+                 'loom-daemon/src/merge_pr/version_policy.rs' \
+                 'loom-daemon/src/merge_pr/stacked_children.rs'; do
+    if grep -qE 'refname::check_(all|refname)' "$REPO_ROOT/$rust_sink" 2>/dev/null; then
+        pass "$rust_sink validates its refs (refname::check_all/check_refname)"
+    else
+        fail "$rust_sink hands a forge-derived branch name to git but no longer validates it"
+    fi
+done
 
 # Two sinks live OUTSIDE defaults/scripts and cannot source the validator: the
 # installer runs before `.loom/scripts/lib/` exists, and the uninstaller is
@@ -539,5 +540,5 @@ rm -rf "$MP"
 
 # --- Summary ----------------------------------------------------------------
 echo ""
-echo "Tests run: $TESTS_RUN, Passed: $TESTS_PASSED, Failed: $TESTS_FAILED"
+echo "Tests run: $TESTS_RUN, Passed: $TESTS_PASSED, Failed: $TESTS_FAILED, Skipped: ${TESTS_SKIPPED:-0}"
 [[ $TESTS_FAILED -eq 0 ]] || exit 1

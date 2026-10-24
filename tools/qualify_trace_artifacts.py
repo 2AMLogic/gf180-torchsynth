@@ -21,6 +21,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,8 +31,11 @@ from torchsynth_voice import trace_artifacts as ta  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
     DockerBackend,
+    PORTABLE_COMMAND_REPRESENTATION,
     PROFILE,
+    PROJECT_ROOT_PLACEHOLDER,
     THREAD_ENV,
+    WORKER_OUTPUT_PLACEHOLDER,
     digest,
     dispatch_flags,
     dispatch_unset_flags,
@@ -259,10 +263,20 @@ class TracedDockerBackend:
     The landed stock backend refuses providers; this #24-owned integration
     reuses its admission checks and launch environment and adds the
     container-side driver that binds ``TraceCapture`` to the same worker call.
+
+    ``driver_source`` and ``collect_telemetry`` are optional extension points
+    for #287's measurement runner; the defaults leave the #24 launch, driver
+    and receipt exactly as published in the two-case smoke evidence.
     """
+
+    driver_source = DRIVER_SOURCE
 
     def __init__(self, *, project_root=None):
         self.project_root = Path(project_root or repository_root()).resolve()
+
+    def collect_telemetry(self, directory, launcher_elapsed_seconds):
+        """Return optional worker telemetry for the receipt; None adds nothing."""
+        return None
 
     def __call__(self, request, *, capture_provider=None):
         validate_request(request)
@@ -291,41 +305,53 @@ class TracedDockerBackend:
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary).resolve()
             (directory / "request.json").write_bytes(json_bytes(request))
-            (directory / "driver.py").write_text(DRIVER_SOURCE)
-            command = [
-                "docker",
-                "run",
-                "--rm",
-                "--pull",
-                "never",
-                "--platform",
-                "linux/amd64",
-                "--network",
-                "none",
-                "--memory",
-                "6g",
-                "--cpus",
-                "1",
-                *[
-                    part
-                    for k, v in THREAD_ENV.items()
-                    for part in ("--env", k + "=" + v)
-                ],
-                *dispatch_flags(profile),
-                "--mount",
-                "type=bind,src=" + str(self.project_root) + ",dst=/repo,readonly",
-                "--mount",
-                "type=bind,src=" + str(directory) + ",dst=/output",
-                "--entrypoint",
-                "env",
-                image,
-                *dispatch_unset_flags(profile),
-                "python",
-                "/output/driver.py",
-            ]
+            (directory / "driver.py").write_text(self.driver_source)
+
+            def launch(project_source, output_source):
+                # Shared by the executed argv (real mount sources) and the
+                # published receipt (named placeholders); see
+                # spec/CORPUS-RUNNER.md "Portable attempt receipts".
+                return [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--pull",
+                    "never",
+                    "--platform",
+                    "linux/amd64",
+                    "--network",
+                    "none",
+                    "--memory",
+                    "6g",
+                    "--cpus",
+                    "1",
+                    *[
+                        part
+                        for k, v in THREAD_ENV.items()
+                        for part in ("--env", k + "=" + v)
+                    ],
+                    *dispatch_flags(profile),
+                    "--mount",
+                    "type=bind,src=" + project_source + ",dst=/repo,readonly",
+                    "--mount",
+                    "type=bind,src=" + output_source + ",dst=/output",
+                    "--entrypoint",
+                    "env",
+                    image,
+                    *dispatch_unset_flags(profile),
+                    "python",
+                    "/output/driver.py",
+                ]
+
+            command = launch(str(self.project_root), str(directory))
+            portable_command = launch(
+                PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER
+            )
+            launched = time.monotonic()
             result = subprocess.run(
                 command, capture_output=True, timeout=900, check=False
             )
+            launcher_elapsed_seconds = time.monotonic() - launched
             require(
                 result.returncode == 0,
                 "traced worker failed: "
@@ -370,11 +396,17 @@ class TracedDockerBackend:
                 runtime_profile=PROFILE,
                 host=host,
                 image=image,
-                command=command,
+                command=portable_command,
+                command_representation=PORTABLE_COMMAND_REPRESENTATION,
                 exit_code=result.returncode,
                 stdout_sha256=digest(result.stdout),
                 stderr_sha256=digest(result.stderr),
             )
+            telemetry = self.collect_telemetry(
+                directory, launcher_elapsed_seconds
+            )
+            if telemetry is not None:
+                receipt["worker_telemetry"] = telemetry
         require(
             project_identity(self.project_root) == request["project_git"],
             "producer changed during render",

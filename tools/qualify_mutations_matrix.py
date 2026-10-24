@@ -26,6 +26,12 @@ rows: counts are navigation aids only.
 composition (including the family reruns) and the current input digests.
 Absence is reported as absent, never as a pass; staleness fails.
 
+``--ci-subset`` is the small read-only sentinel: it selects exactly the 20
+published ``ci_subset`` rows, fails (exit 1) on any drift between the rule
+selection and the committed block or on any row not tripped with an accepted
+control in its family publication, and exits 2 when absent. It does not
+re-execute detectors (see ``select_ci_subset``).
+
 Analytic apparatus domain only: holdout stays sealed, no actual-Voice
 runtime injection is claimed, no numeric format is ratified, and the #44
 blind-listening protocol and #48 rubric qualification are recorded not-run
@@ -835,6 +841,83 @@ COMPARABLE_FIELDS = (
 )
 
 
+EXPECTED_CI_SUBSET_ROWS = 20
+
+
+def select_ci_subset() -> list:
+    """Sentinel selection and fail-visible drift check (no rerun, no write).
+
+    Contract (issue #299, follow-up F4 of docs/MUTATION-COVERAGE-AUDIT.md):
+
+    * Selection: apply the published deterministic rule
+      (``CI_SUBSET_RULE`` / ``CI_SUBSET_CATEGORIES`` via ``build_ci_subset``)
+      to the committed ``faults_to_tests`` rows; the selected rows are the
+      sorted fault names, which must number exactly
+      ``EXPECTED_CI_SUBSET_ROWS`` (20).
+    * Drift: the selection must equal the committed ``ci_subset`` block
+      (rows, categories, rule). Any difference exits 1 naming the delta.
+    * Membership evidence: every selected fault must be present in its
+      owning committed family publication with ``tripped`` and
+      ``control_accepted`` both true.
+    * Absence of the committed matrix exits 2 (never a pass).
+
+    This sentinel does not re-execute detectors: it is the fast per-PR
+    selection/consistency gate. Fresh detector re-execution of every row
+    remains the family ``--check`` runs composed by ``--check`` (the
+    ``matrix-numerical`` job). It never generates; it is independent of the
+    generate-before-check ordering defect tracked in #257.
+    """
+    if not PUBLICATION_PATH.exists():
+        print(
+            "publication: ABSENT — requires tools/qualify_mutations_matrix.py; "
+            "absence is never reported as a pass"
+        )
+        raise SystemExit(2)
+    committed = json.loads(PUBLICATION_PATH.read_bytes())
+    fresh = build_ci_subset(committed["faults_to_tests"])
+    problems = []
+    if len(fresh["rows"]) != EXPECTED_CI_SUBSET_ROWS:
+        problems.append(
+            "selected %d rows, expected %d"
+            % (len(fresh["rows"]), EXPECTED_CI_SUBSET_ROWS)
+        )
+    if committed.get("ci_subset") != fresh:
+        published = set(committed.get("ci_subset", {}).get("rows", ()))
+        problems.append(
+            "committed ci_subset differs from the rule selection (missing: %s; "
+            "unexpected: %s)"
+            % (
+                sorted(set(fresh["rows"]) - published),
+                sorted(published - set(fresh["rows"])),
+            )
+        )
+    by_fault = {row["fault"]: row for row in committed["faults_to_tests"]}
+    family_entries = {}
+    for family, path in FAMILY_PUBLICATIONS.items():
+        family_entries[family] = {
+            entry["fault"]: entry
+            for entry in json.loads((ROOT / path).read_bytes())["fault_matrix"]
+        }
+    for fault in fresh["rows"]:
+        entry = family_entries[by_fault[fault]["family"]].get(fault)
+        if entry is None or not (entry["tripped"] and entry["control_accepted"]):
+            problems.append("row not tripped with an accepted control: " + fault)
+    if problems:
+        print("FAIL: ci_subset sentinel: " + "; ".join(problems))
+        raise SystemExit(1)
+    print(
+        json.dumps(
+            {
+                "status": "PASS",
+                "sentinel": "ci_subset",
+                "ci_subset_rows": len(fresh["rows"]),
+                "rows": fresh["rows"],
+            }
+        )
+    )
+    return fresh["rows"]
+
+
 def check_publication() -> None:
     if not PUBLICATION_PATH.exists():
         print(
@@ -871,7 +954,18 @@ def main() -> None:
         action="store_true",
         help="revalidate the committed publication; never write",
     )
+    parser.add_argument(
+        "--ci-subset",
+        action="store_true",
+        help="run only the 20-row deterministic ci_subset sentinel against "
+        "the committed publication; read-only, no family reruns",
+    )
     args = parser.parse_args()
+    if args.ci_subset:
+        if args.check:
+            parser.error("--ci-subset and --check are mutually exclusive")
+        select_ci_subset()
+        return
     if args.check:
         check_publication()
         return

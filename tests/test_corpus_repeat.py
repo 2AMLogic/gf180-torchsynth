@@ -23,6 +23,7 @@ from compare_development_corpus import (  # noqa: E402
     paired_audio_metrics,
 )
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
+    PORTABLE_COMMAND_REPRESENTATION,
     digest,
     json_bytes,
     render_artifact,
@@ -57,6 +58,7 @@ class ReceiptShapedBackend(FakeBackend):
             process_id=os.getpid(),
             started_utc=datetime.now(timezone.utc).isoformat(),
             command=["synthetic", str(uuid.uuid4())],
+            command_representation=PORTABLE_COMMAND_REPRESENTATION,
             host=dict(synthetic_host=True),
             stdout_sha256="4" * 64,
             stderr_sha256="5" * 64,

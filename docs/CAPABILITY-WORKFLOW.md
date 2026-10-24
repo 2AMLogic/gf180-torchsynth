@@ -60,7 +60,9 @@ The [scorecard](SCORECARD.md) independently owns case/property coverage.
 `.github/workflows/capabilities.yml` runs read-only graph/view tests, agreement
 and strict health checks on every pull request. It never checks out PR code
 with a write token. Pushes to main and manual runs on main regenerate views
-from a fresh checkout of main under a serialized, non-cancelling refresh job.
+from a fresh checkout of main. The workflow-level concurrency policy
+(see [CI scheduling](CI-SCHEDULING.md)) never cancels a started main run and keeps
+at most one waiting.
 Only that job has `contents: write`; no personal access token is required.
 
 The refresh validates generation and tests before staging exactly the three
@@ -76,7 +78,8 @@ Generated-only pushes are excluded by path filters. Independently, a push made
 with the repository `GITHUB_TOKEN` does not recursively trigger push workflows
 ([GitHub trigger documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)).
 No skip-CI tag, commit-message-controlled bypass, or issue/label event is used.
-Distinct PR checks are not cancelled; only refresh publication is serialized.
+Only pull-request events cancel an in-progress run; main runs, including the
+refresh publication, are serialized and never cancelled.
 The write path must first run after merge; PR CI cannot demonstrate permission
 to push to protected main and this implementation does not claim that it has.
 

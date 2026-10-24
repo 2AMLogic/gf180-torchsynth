@@ -26,14 +26,20 @@
 .loom/claims/
 .loom/locks/
 .loom/signals/
+.loom/sweep-dispatch-tap/
 .loom/status/
 .loom/retry-state/
 .loom/exit-codes/
 .loom/sweep-checkpoint/
+.loom/private-jobs/
 .loom/sweep-run/
+.loom/targets/
+.loom/target*/
+.cargo-target*/
+.loom-target/
+/target-*/
 .loom/state/*
 !.loom/state/detect-unlabeled-epics-dismissed
-.loom/concierge/
 .loom/stats/
 .loom/diagnostics/
 .loom/guide-docs-state.json
@@ -85,8 +91,10 @@ build/
 *.egg-info/
 out/
 artifacts/
+!manifests/artifacts/
 spec/reference/generated/
 sim/work/
+sim/stage/
 
 # Repo Skills guard-hook logs (machine-local; carry absolute paths)
 .claude/skills/repo/logs/

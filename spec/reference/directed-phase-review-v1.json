@@ -343,7 +343,7 @@
     "sim/reference/float-voice-v1.json": "e0ed61aa680298204efca7f80983895ca0cf0ddf2cb345e549095e47b1e6065e",
     "sim/reference/lfo-vca-golden-v1/frozen-lfo-receipt.json": "5bcecb97da701acf4103632431810131526557460f65b8753e9ce1d32a476928",
     "sim/reference/mod-matrix-golden-v1/frozen-mod-matrix-receipt.json": "d4664906e61ceb6e8a89b4df8343ac78b880243cfa73823e0e91c2ff9534f557",
-    "sim/reference/scalar-execution.json": "78c4d08bbff8d99b545362b8301b871963c354321add19ea402d6e55d368498f",
+    "sim/reference/scalar-execution.json": "1c7737f0297f37eec6791dbc58677fec8f4037058943694228f9de84168f7c14",
     "sim/reference/trace-capture.json": "b803f015a63f723c95a20c287027a5168d0bf6df0f7bcf95f6fa817b88ccb56d",
     "spec/reference/case-registry-v1.json": "bbc1dc5028f213f23ffe7835b1335ff0e0279deb8672b33d39f5a0c5e54486bd",
     "spec/reference/directed-coverage-v1.json": "b181bc4b956eba7334b24111ac6ca54188b45923019a9586ecb04c8e9726c5bc",

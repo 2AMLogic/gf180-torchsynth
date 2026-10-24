@@ -1,9 +1,9 @@
 {
   "batch_1_oracle": "diagnostic",
-  "build_log_sha256": "c1d70c3681b7fb471060d27d22ca78cab1911c189ca33090aad1e71fa4d1c3c0",
+  "build_log_sha256": "7022721020210d06423de9649b33cf00d545c6160c922f398534ab7e33377d10",
   "build_warnings": [],
   "byte_equivalence": "PASS",
-  "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+  "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
   "capture_manifest": [
     {
       "name": "input.normalized",
@@ -17662,70 +17662,70 @@
   "docker_server": "linux/amd64 29.1.3",
   "execution_records": [
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "path": "run-1/canonical",
       "pid": 1,
       "repeat": 1,
       "side": "canonical",
-      "started_utc": "2026-09-24T19:18:42.103530+00:00",
-      "uuid": "886bc28b-a4f9-48a9-9889-3bee1f605bbe"
+      "started_utc": "2026-10-12T22:26:51.887195+00:00",
+      "uuid": "3ed4a684-1e56-4126-af3a-6c639fa0ebc4"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "path": "run-1/scalar",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-24T19:19:02.212450+00:00",
-      "uuid": "e294411e-33e0-4b16-aa1c-476f5f5ad919"
+      "started_utc": "2026-10-12T22:27:05.224539+00:00",
+      "uuid": "35bc4553-6922-43a6-b70c-e82b08aab32b"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "path": "run-2/canonical",
       "pid": 1,
       "repeat": 2,
       "side": "canonical",
-      "started_utc": "2026-09-24T19:19:09.427837+00:00",
-      "uuid": "417686a7-fed6-4574-8938-93126a77ee05"
+      "started_utc": "2026-10-12T22:27:10.285703+00:00",
+      "uuid": "ddad8122-3ce5-42df-9963-c7e2664154ad"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "path": "run-2/scalar",
       "pid": 1,
       "repeat": 2,
       "side": "scalar",
-      "started_utc": "2026-09-24T19:19:29.541251+00:00",
-      "uuid": "975a0d23-1166-43e9-9611-71698c8c287f"
+      "started_utc": "2026-10-12T22:27:23.210581+00:00",
+      "uuid": "e8173827-5d59-4ac9-864c-969ae8aabd6c"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "mutation": "wrong-parameter",
       "path": "controls/wrong-parameter",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-24T19:19:37.214804+00:00",
-      "uuid": "d3d87d80-e237-4828-b6ac-e68bfbc29206"
+      "started_utc": "2026-10-12T22:27:28.087204+00:00",
+      "uuid": "e38ad427-191a-4aae-93fb-60c13082feed"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "mutation": "wrong-noise",
       "path": "controls/wrong-noise",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-24T19:19:42.540375+00:00",
-      "uuid": "ff5f71d1-e5a9-4998-8c0b-8666f7cb0688"
+      "started_utc": "2026-10-12T22:27:31.868889+00:00",
+      "uuid": "053e79f4-1560-4f75-ba37-21e62c910df1"
     },
     {
-      "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+      "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
       "mutation": "fresh-randomization",
       "path": "controls/fresh-randomization",
       "pid": 1,
       "repeat": 1,
       "side": "scalar",
-      "started_utc": "2026-09-24T19:19:47.800888+00:00",
-      "uuid": "93ad0cf9-8976-4b14-85c5-019432cff5c5"
+      "started_utc": "2026-10-12T22:27:35.635447+00:00",
+      "uuid": "466df45c-f32e-4fc2-9907-f842abe8b340"
     }
   ],
   "fresh_process_repeats_equal": true,
@@ -17734,7 +17734,7 @@
     "machine": "x86_64",
     "system": "Linux"
   },
-  "image_id": "sha256:e9387e56e537c96b8e2db9f631f2bf4aba598d4bb4acdfcab7c6d222ef4eaf9a",
+  "image_id": "sha256:0253e6b107e89f492851867f248309e15f5dd58e8d6520756104c35be356cd54",
   "limitations": [
     "Development probes only. Directed variants retain corpus noise coordinates but are not unmodified corpus sounds. No holdout access. Runtime selection belongs to issue 12.",
     "Derived diagnostic 1/peak if peak>1, else 1. Upstream divides by peak; this is not a captured reciprocal multiplier.",
@@ -17748,8 +17748,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.normalized",
       "observed": {
-        "canonical_execution_uuid": "886bc28b-a4f9-48a9-9889-3bee1f605bbe",
-        "canonical_report_sha256": "4cf110013b947e4dd404954ed57d0224eebd7cb80461e46abb4b778e6f8ceabd",
+        "canonical_execution_uuid": "3ed4a684-1e56-4126-af3a-6c639fa0ebc4",
+        "canonical_report_sha256": "4d29f466354adfa8669dafba5cd32ecdf57d93b9434aab0e5e5c5fa4e54598f1",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -17936,7 +17936,7 @@
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
               "spec/reference/scalar-envelope-v1.json": "c5933c7a5218cb11e7f8383e21536025359eed8efed27192c8d61fe36dd06718",
               "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
-              "uv.lock": "0e49bf748c64b8f81d95401a05c1eb2cca70a2e1f4bc090274f26a57c3f5104c"
+              "uv.lock": "14f8730c60da411b191a3a35be83e9ba329f09d26792c7c71f10d1381793b26c"
             },
             "package_sha256": {
               "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
@@ -18049,7 +18049,7 @@
               "wheel": "0.37.1",
               "yarl": "1.8.2"
             },
-            "platform": "Linux-6.8.0-1063-aws-x86_64-with-glibc2.31",
+            "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.31",
             "python": "3.9.13",
             "thread_environment": {
               "MKL_NUM_THREADS": "1",
@@ -18063,11 +18063,11 @@
         },
         "error": "ValueError: input.normalized: changed value adsr_1.alpha",
         "execution": {
-          "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+          "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-24T19:19:47.800888+00:00",
-          "uuid": "93ad0cf9-8976-4b14-85c5-019432cff5c5"
+          "started_utc": "2026-10-12T22:27:35.635447+00:00",
+          "uuid": "466df45c-f32e-4fc2-9907-f842abe8b340"
         },
         "mutation": "fresh-randomization",
         "side": "scalar",
@@ -18091,8 +18091,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.noise",
       "observed": {
-        "canonical_execution_uuid": "886bc28b-a4f9-48a9-9889-3bee1f605bbe",
-        "canonical_report_sha256": "4cf110013b947e4dd404954ed57d0224eebd7cb80461e46abb4b778e6f8ceabd",
+        "canonical_execution_uuid": "3ed4a684-1e56-4126-af3a-6c639fa0ebc4",
+        "canonical_report_sha256": "4d29f466354adfa8669dafba5cd32ecdf57d93b9434aab0e5e5c5fa4e54598f1",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -18279,7 +18279,7 @@
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
               "spec/reference/scalar-envelope-v1.json": "c5933c7a5218cb11e7f8383e21536025359eed8efed27192c8d61fe36dd06718",
               "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
-              "uv.lock": "0e49bf748c64b8f81d95401a05c1eb2cca70a2e1f4bc090274f26a57c3f5104c"
+              "uv.lock": "14f8730c60da411b191a3a35be83e9ba329f09d26792c7c71f10d1381793b26c"
             },
             "package_sha256": {
               "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
@@ -18392,7 +18392,7 @@
               "wheel": "0.37.1",
               "yarl": "1.8.2"
             },
-            "platform": "Linux-6.8.0-1063-aws-x86_64-with-glibc2.31",
+            "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.31",
             "python": "3.9.13",
             "thread_environment": {
               "MKL_NUM_THREADS": "1",
@@ -18406,11 +18406,11 @@
         },
         "error": "ValueError: input.noise: selected slot, bytes or sample count mismatch",
         "execution": {
-          "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+          "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-24T19:19:42.540375+00:00",
-          "uuid": "ff5f71d1-e5a9-4998-8c0b-8666f7cb0688"
+          "started_utc": "2026-10-12T22:27:31.868889+00:00",
+          "uuid": "053e79f4-1560-4f75-ba37-21e62c910df1"
         },
         "mutation": "wrong-noise",
         "side": "scalar",
@@ -18434,8 +18434,8 @@
       "expected_exit_code": 1,
       "expected_seam": "input.normalized",
       "observed": {
-        "canonical_execution_uuid": "886bc28b-a4f9-48a9-9889-3bee1f605bbe",
-        "canonical_report_sha256": "4cf110013b947e4dd404954ed57d0224eebd7cb80461e46abb4b778e6f8ceabd",
+        "canonical_execution_uuid": "3ed4a684-1e56-4126-af3a-6c639fa0ebc4",
+        "canonical_report_sha256": "4d29f466354adfa8669dafba5cd32ecdf57d93b9434aab0e5e5c5fa4e54598f1",
         "control_observation": {
           "actual_noise": {
             "file": "actual-noise.f32le",
@@ -18622,7 +18622,7 @@
               "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
               "spec/reference/scalar-envelope-v1.json": "c5933c7a5218cb11e7f8383e21536025359eed8efed27192c8d61fe36dd06718",
               "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
-              "uv.lock": "0e49bf748c64b8f81d95401a05c1eb2cca70a2e1f4bc090274f26a57c3f5104c"
+              "uv.lock": "14f8730c60da411b191a3a35be83e9ba329f09d26792c7c71f10d1381793b26c"
             },
             "package_sha256": {
               "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
@@ -18735,7 +18735,7 @@
               "wheel": "0.37.1",
               "yarl": "1.8.2"
             },
-            "platform": "Linux-6.8.0-1063-aws-x86_64-with-glibc2.31",
+            "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.31",
             "python": "3.9.13",
             "thread_environment": {
               "MKL_NUM_THREADS": "1",
@@ -18749,11 +18749,11 @@
         },
         "error": "ValueError: input.normalized: changed value keyboard.midi_f0",
         "execution": {
-          "campaign_id": "0b81beae-2137-46b8-98d2-72e363726ea8",
+          "campaign_id": "8d0bba71-3a44-4aa1-80ba-a40ae1a9d45f",
           "pid": 1,
           "repeat": 1,
-          "started_utc": "2026-09-24T19:19:37.214804+00:00",
-          "uuid": "d3d87d80-e237-4828-b6ac-e68bfbc29206"
+          "started_utc": "2026-10-12T22:27:28.087204+00:00",
+          "uuid": "e38ad427-191a-4aae-93fb-60c13082feed"
         },
         "mutation": "wrong-parameter",
         "side": "scalar",
@@ -18816,7 +18816,7 @@
       "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
       "spec/reference/scalar-envelope-v1.json": "c5933c7a5218cb11e7f8383e21536025359eed8efed27192c8d61fe36dd06718",
       "spec/reference/upstream.json": "565236e22ad8b1dcd620783024a114b0960e5534b1cb26e8dcf8dafc9c96c0af",
-      "uv.lock": "0e49bf748c64b8f81d95401a05c1eb2cca70a2e1f4bc090274f26a57c3f5104c"
+      "uv.lock": "14f8730c60da411b191a3a35be83e9ba329f09d26792c7c71f10d1381793b26c"
     },
     "package_sha256": {
       "torchsynth/__info__.py": "25eac58711630ac32d52e2f9f67a8656a12daf317240136d6b59b22a248a89cd",
@@ -18843,16 +18843,16 @@
     }
   },
   "recapture": {
-    "commit": "89aadc21b2b66523a9de2b4566cd9934d32ec969",
-    "decision_record": "DR-0009 Amendment A2 (supersedes the sentinel-scope capture merged as #179; republished at full scope from the current main tree so that the protocol-refusal scope requirement holds against the A2-pinned runtime publication)",
-    "sha256": "a07aeb8246c3171008dfa38998dee4e43f448217c6ccf6b9095bf492e4d280f7"
+    "commit": "3c4eed1019d48b795b4f118c10161affdf6740b9",
+    "decision_record": "DR-0009 amendment A1 fix step 2 (recapture practice per amendment A2, note: recapture practice): full-preregistered-cases recapture from the PR #363 tree after the Renovate uv.lock regeneration (numpy 2.5.3 -> 2.5.4 on the python_full_version >= '3.12' marker, lock revision 3 -> 5). The receipt's provenance.definition_sha256 binds uv.lock bytes, so the lockfile-only change re-binds provenance; the release-era scalar runtime is untouched (it installs from env/release-era/requirements.lock inside the digest-pinned linux/amd64 image), and the compared runtime fields and rendered sentinel seams are byte-identical to the replaced receipt. Supersedes the #184 republish (replaced receipt identified by the sha256 below, captured from the tree that landed it).",
+    "sha256": "78c4d08bbff8d99b545362b8301b871963c354321add19ea402d6e55d368498f"
   },
-  "recorded_utc": "2026-09-24T19:20:03.099683+00:00",
+  "recorded_utc": "2026-10-12T22:27:42.923250+00:00",
   "run_report_sha256": {
-    "run-1/canonical/report.json": "4cf110013b947e4dd404954ed57d0224eebd7cb80461e46abb4b778e6f8ceabd",
-    "run-1/scalar/report.json": "953a8a6474d71cc6e589e2d44bb0a77198e85d7ca0a5baa8c1b56da6b23a6c85",
-    "run-2/canonical/report.json": "951513095c41df0ee18843d44c15b20cc13e2f87619aa33389d3ea61f5a17d10",
-    "run-2/scalar/report.json": "10da5af270316ca0d7520a6a785241361ab99053ccea41d1fde08d2658366144"
+    "run-1/canonical/report.json": "4d29f466354adfa8669dafba5cd32ecdf57d93b9434aab0e5e5c5fa4e54598f1",
+    "run-1/scalar/report.json": "91ec862a374d6862477f5e9fd48f61743234ccd5949c41e998cb6846b67b2eb8",
+    "run-2/canonical/report.json": "4efa2abe3b6d4c24a4ac945a475d30dd37bf4c48c4b8fae478494465ead88a6f",
+    "run-2/scalar/report.json": "56934a158dae7723057c57ca11d015e4c169628c53f7fcd4035c8a7ef8a23417"
   },
   "runtime": {
     "device": "cpu",
@@ -18941,7 +18941,7 @@
       "wheel": "0.37.1",
       "yarl": "1.8.2"
     },
-    "platform": "Linux-6.8.0-1063-aws-x86_64-with-glibc2.31",
+    "platform": "Linux-7.0.0-1014-aws-x86_64-with-glibc2.31",
     "python": "3.9.13",
     "thread_environment": {
       "MKL_NUM_THREADS": "1",
@@ -18953,7 +18953,7 @@
     "torch_build": "PyTorch built with:\n  - GCC 9.3\n  - C++ Version: 201402\n  - Intel(R) Math Kernel Library Version 2020.0.0 Product Build 20191122 for Intel(R) 64 architecture applications\n  - Intel(R) MKL-DNN v2.6.0 (Git Hash 52b5f107dd9cf10910aaa19cb47f3abf9b349815)\n  - OpenMP 201511 (a.k.a. OpenMP 4.5)\n  - LAPACK is enabled (usually provided by MKL)\n  - NNPACK is enabled\n  - CPU capability usage: AVX2\n  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CXX_COMPILER=/opt/rh/devtoolset-9/root/usr/bin/c++, CXX_FLAGS= -fabi-version=11 -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_KINETO -DLIBKINETO_NOCUPTI -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -DEDGE_PROFILER_USE_KINETO -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-function -Wno-unused-result -Wno-unused-local-typedefs -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Werror=cast-function-type -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.12.1, USE_CUDA=0, USE_CUDNN=OFF, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=OFF, USE_MPI=OFF, USE_NCCL=OFF, USE_NNPACK=ON, USE_OPENMP=ON, USE_ROCM=OFF, \n"
   },
   "runtime_reconciliation": "pending issue 12; no chosen-runtime bridge qualification",
-  "runtime_sha256": "d87b5655ef4e2a01023d8023e45bda0ebb18c35d40c411e7d7386a994cc0dd5a",
+  "runtime_sha256": "b97cde3d9f737331f1d2c34b0e6b2314b203f79c8e9f9bb2b39355f7f430dc36",
   "schema_version": 1,
   "scope": "full-preregistered-cases",
   "status": "PASS",

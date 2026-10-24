@@ -21,15 +21,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tb"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 import run_oneshot as ro  # noqa: E402
 
 RECEIPT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 def synthetic_expected(n=8):
@@ -323,18 +322,29 @@ class CiJobBudgetsAreConsistent(unittest.TestCase):
         self.assertEqual(text.count("tb/run_oneshot.py --profile regression"), 1)
 
     def test_step_budgets_fit_under_each_job_cap(self):
+        # Every job must declare a cap (#265): an absent cap is no longer
+        # skipped here. The stricter workflow-wide guard -- explicit budgets
+        # on every setup/artifact step, required headroom, negative
+        # fixtures -- is TestWorkflowBudgetsFitTheHostedLimit in
+        # tests/test_ci_lane_wiring.py; this is the one-shot lane's own
+        # coarse cross-check of the same property.
         for name, job in self._budgets().items():
-            if job["cap"] is None:
-                continue
             with self.subTest(job=name):
+                self.assertIsNotNone(job["cap"], "%s has no job cap" % name)
                 self.assertLess(sum(job["steps"]), job["cap"])
 
+    def test_every_job_cap_is_within_the_hosted_limit(self):
+        # Workflow-wide since #265 split the over-limit sim-lanes job
+        # (formerly a 400-min cap over a 370-min step sum) into
+        # sim-lanes-vco and sim-lanes-engines.
+        for name, job in self._budgets().items():
+            with self.subTest(job=name):
+                self.assertIsNotNone(job["cap"], "%s has no job cap" % name)
+                self.assertLess(job["cap"], self.HOSTED_JOB_LIMIT)
+
     def test_oneshot_job_cap_is_within_the_hosted_limit(self):
-        # Scoped to this lane's job. sim-lanes (370-min step sum, 400-min
-        # cap) predates #79 and already exceeds the hosted limit; that is a
-        # separate follow-up, not asserted (or hidden) here.
         job = self._budgets()["oneshot-tail-chain"]
-        self.assertLessEqual(job["cap"], self.HOSTED_JOB_LIMIT)
+        self.assertLess(job["cap"], self.HOSTED_JOB_LIMIT)
 
 
 class SimulatorPathsAreAbsolute(unittest.TestCase):

@@ -84,3 +84,17 @@ Single execution on one admitted host; not multi-host, sound-fidelity,
 scalar-qualification, or hardware evidence. Holdout characterization is #21;
 independent repeat and comparison is #20. Traces were explicitly not requested
 (audio-only); absent traces are not measured trace coverage.
+
+## Traced storage and memory measurement (#287)
+
+The run above is audio-only. A separate measurement of the same 96
+development identities, with the 29-trace production selection, is specified
+in [DEVELOPMENT-TRACE-COST.md](DEVELOPMENT-TRACE-COST.md). It uses its own
+runner, `tools/measure_development_trace_cost.py`, its own fresh store, and
+its own receipt, `sim/reference/development-trace-cost-v1.json`. It does not
+modify this record, its receipt or its store.
+
+That receipt is currently **`UNRUN`**: the qualified-runtime gate refused
+the available host, so no traced development-corpus measurement exists yet.
+For reproduction and live-execution instructions, see that record. They
+include the AWS box `python3.11` invocations and the expected refusal there.

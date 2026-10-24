@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   stdlib:
     runs-on: ubuntu-24.04
@@ -15,22 +19,51 @@ jobs:
       matrix:
         python: ["3.11", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: ${{ matrix.python }}
       - name: Compile mutation surfaces
-        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py tools/qualify_mutations_matrix.py tests/test_mutations_matrix.py
+        run: python -m compileall -q src/torchsynth_voice/mutations.py src/torchsynth_voice/mutation_runtime.py tests/test_mutations.py tools/qualify_mutations.py tools/qualify_mutations_matrix.py tests/test_mutations_matrix.py tests/test_mutations_identity.py tools/qualify_mutations_identity.py
       - name: Test fault-injection seam contract on the apparatus harness
         run: python -m unittest discover -s tests -p test_mutations.py -v
       - name: Test the committed bidirectional matrix publication structure
         run: python -m unittest discover -s tests -p test_mutations_matrix.py -v
-      - name: Qualify controls and fault matrix, then check the committed publication
+      - name: Check the committed publication, then requalify controls and fault matrix
+        # --check MUST run first, against the untouched checked-out
+        # sim/reference/mutation-framework-v1.json. The bare invocation rewrites
+        # that file, so running it first would make --check compare a freshly
+        # generated artifact against itself and committed-artifact drift could
+        # never fail CI (#257).
         run: |
-          python tools/qualify_mutations.py
           python tools/qualify_mutations.py --check
+          python tools/qualify_mutations.py
       - name: Check the committed actual-Voice runtime publication
         run: python tools/qualify_mutations_runtime.py --check-publication
+      # Issue #299 (F4): added steps are read-only and never generate, so
+      # they are startable independently of the ordering defect in #257
+      # (the generate-then-check step above is deliberately left untouched).
+      - name: Test the identity/parameter/noise family contract
+        run: python -m unittest discover -s tests -p test_mutations_identity.py -v
+      - name: Check the committed identity publication against a fresh rerun
+        run: python tools/qualify_mutations_identity.py --check
+
+  ci-subset-sentinel:
+    # Owner of the small deterministic sentinel: the 20 published ci_subset
+    # rows (identity, delay, interpolation, gain, normalization). Read-only
+    # and stdlib-only, so it fails fast on selection drift (row count != 20,
+    # rule selection != committed ci_subset, or a row not tripped with an
+    # accepted control in its family publication; exit 1, absence exit 2).
+    # It does not re-execute detectors: the full reruns stay in
+    # matrix-numerical.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+      - name: Run the 20-row ci_subset sentinel
+        run: python tools/qualify_mutations_matrix.py --ci-subset
 
   timing-numerical:
     # The #32 family's periodic rows need NumPy. The stdlib contract surface
@@ -46,17 +79,19 @@ jobs:
       MKL_NUM_THREADS: "1"
       VECLIB_MAXIMUM_THREADS: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.13"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
         run: uv run --no-sync python -c "import numpy"
       - name: Run the timing family tests with NumPy
         run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing.py -v
+      - name: Run the timing runtime gate tests with NumPy
+        run: uv run --no-sync python -m unittest discover -s tests -p test_mutations_timing_runtime.py -v
       - name: Check the committed timing publication against a fresh rebuild
         run: uv run --no-sync python tools/qualify_mutations_timing.py --check
 
@@ -74,11 +109,11 @@ jobs:
       MKL_NUM_THREADS: "1"
       VECLIB_MAXIMUM_THREADS: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.13"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
@@ -102,16 +137,21 @@ jobs:
       MKL_NUM_THREADS: "1"
       VECLIB_MAXIMUM_THREADS: "1"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.13"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
         run: uv run --no-sync python -c "import numpy"
-      - name: Compose the bidirectional matrix, then check the committed publication
+      - name: Check the committed publication, then recompose the bidirectional matrix
+        # --check MUST run first, against the untouched checked-out
+        # sim/reference/mutation-matrix-v1.json. The bare invocation rewrites
+        # that file, so running it first would make --check compare a freshly
+        # composed artifact against itself and committed-artifact drift could
+        # never fail CI (#257).
         run: |
-          uv run --no-sync python tools/qualify_mutations_matrix.py
           uv run --no-sync python tools/qualify_mutations_matrix.py --check
+          uv run --no-sync python tools/qualify_mutations_matrix.py

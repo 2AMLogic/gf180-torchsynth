@@ -25,19 +25,25 @@ explicitly skipped when it is absent, and nothing here simulates.
 
 from __future__ import annotations
 
+import contextlib
 import copy
+import io
 import json
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "tools"))
 
+import bind_producer_revision as bind  # noqa: E402
 import qualify_rtl_modules as q  # noqa: E402
 from torchsynth_voice.capabilities import (  # noqa: E402
     CHECKS,
@@ -639,6 +645,608 @@ class GateNegativeControlTests(unittest.TestCase):
             q.tally(diagnostics), baseline, tiers=("lint",)
         )
         self.assertEqual(failures, [])
+
+
+# --------------------------------------------------------------------------
+# Integrated one-shot lanes (issue #264)
+# --------------------------------------------------------------------------
+
+EVIDENCE_DIR = ROOT / "sim" / "evidence"
+TAIL = q.INTEGRATED_LANES["oneshot-tail-chain"]
+VOICE = q.INTEGRATED_LANES["oneshot-whole-voice"]
+COMMITTED = {
+    "oneshot-tail-chain": EVIDENCE_DIR / "oneshot-tail-chain-regression-v1.json",
+    "oneshot-whole-voice": EVIDENCE_DIR / "oneshot-whole-voice-regression-v1.json",
+}
+
+
+def committed_record(name: str) -> dict:
+    return json.loads(COMMITTED[name].read_text(encoding="utf-8"))
+
+
+class FakeCompleted:
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+class IntegratedInventoryTests(unittest.TestCase):
+    """Both standalone harnesses are inventoried and dispatched correctly,
+    while the original ``run_tb.py`` choices stay fully accounted for."""
+
+    def test_standalone_lanes_are_not_run_tb_choices(self):
+        harness = (ROOT / "tb" / "run_tb.py").read_text(encoding="utf-8")
+        declared = tuple(
+            re.findall(r'"([a-z0-9]+)"',
+                       re.search(r"choices=\[([^\]]*)\]", harness).group(1))
+        )
+        self.assertEqual(declared, q.LANES)
+        self.assertFalse(set(q.INTEGRATED_NAMES) & set(q.LANES))
+        self.assertFalse(set(q.INTEGRATED_NAMES) & set(declared))
+
+    def test_both_standalone_harnesses_are_covered(self):
+        self.assertEqual(
+            {lane.harness for lane in q.INTEGRATED_LANES.values()},
+            {"tb/run_oneshot.py", "tb/run_voice.py"},
+        )
+        self.assertEqual(set(q.INTEGRATED_LINT_UNITS), set(q.INTEGRATED_NAMES))
+        self.assertEqual(q.resolve_integrated("all"), list(q.INTEGRATED_NAMES))
+        self.assertEqual(q.resolve_integrated("none"), [])
+        with self.assertRaises(SystemExit):
+            q.resolve_integrated("run_tb")
+
+    def test_harness_profiles_match_the_harness_own_choices(self):
+        for lane in q.INTEGRATED_LANES.values():
+            with self.subTest(lane=lane.name):
+                text = (ROOT / lane.harness).read_text(encoding="utf-8")
+                match = re.search(
+                    r'"--profile".*?choices=\[([^\]]*)\]', text, re.S)
+                self.assertIsNotNone(match)
+                self.assertEqual(
+                    tuple(re.findall(r'"([a-z]+)"', match.group(1))),
+                    lane.profiles,
+                )
+                self.assertEqual(set(lane.obligations), set(lane.profiles))
+
+    @unittest.skipUnless(SV_TREE.is_dir(), "tb/sv is not present in this tree")
+    def test_lint_sources_exist_and_name_the_harness_tops(self):
+        for lane in q.INTEGRATED_LANES.values():
+            for name in lane.lint_sources:
+                with self.subTest(lane=lane.name, source=name):
+                    self.assertTrue((SV_TREE / name).is_file())
+        self.assertIn("one_shot_tail_top.sv", TAIL.lint_sources)
+        self.assertIn("one_shot_voice_top.sv", VOICE.lint_sources)
+        # the harnesses compile exactly these tops
+        self.assertIn("sv/one_shot_tail_top.sv",
+                      (ROOT / "tb/run_oneshot.py").read_text(encoding="utf-8"))
+        self.assertIn("sv/one_shot_voice_top.sv",
+                      (ROOT / "tb/run_voice.py").read_text(encoding="utf-8"))
+
+    def test_policy_document_names_both_integrated_lanes(self):
+        text = POLICY.read_text(encoding="utf-8")
+        for lane in q.INTEGRATED_LANES.values():
+            self.assertIn("`%s`" % lane.name, text)
+            self.assertIn(lane.harness, text)
+
+    def test_dispatch_targets_the_right_script_and_profile(self):
+        seen = []
+
+        def runner(command, **kwargs):
+            seen.append((command, kwargs))
+            return FakeCompleted(0, "ok")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            for lane, expected in ((TAIL, "tb/run_oneshot.py"),
+                                   (VOICE, "tb/run_voice.py")):
+                result = q.run_integrated_lane(
+                    lane, "regression", ROOT, Path(tmp) / lane.name,
+                    which=lambda _: "/usr/bin/iverilog", runner=runner,
+                )
+                command = seen[-1][0]
+                self.assertEqual(command[1], expected)
+                self.assertEqual(
+                    command[command.index("--profile") + 1], "regression")
+                self.assertEqual(result.exit_code, 0)
+                self.assertEqual(result.errors, [])
+                self.assertEqual(seen[-1][1]["timeout"], lane.timeout_seconds)
+
+
+class IntegratedFailurePathTests(unittest.TestCase):
+    def test_missing_simulator_never_runs_and_is_an_error(self):
+        ran = []
+        result = q.run_integrated_lane(
+            TAIL, "regression", ROOT, Path("unused"),
+            which=lambda _: None, runner=lambda *a, **k: ran.append(1),
+        )
+        self.assertEqual(ran, [])
+        self.assertIsNone(result.exit_code)
+        self.assertTrue(result.errors)
+
+    def test_nonzero_exit_is_an_error_and_exit_4_is_inconclusive(self):
+        for code in (1, 3, 4):
+            with self.subTest(code=code), tempfile.TemporaryDirectory() as tmp:
+                result = q.run_integrated_lane(
+                    VOICE, "regression", ROOT, Path(tmp),
+                    which=lambda _: "x",
+                    runner=lambda *a, **k: FakeCompleted(code),
+                )
+                self.assertEqual(result.exit_code, code)
+                self.assertTrue(result.errors)
+                self.assertEqual(code == 4,
+                                 "inconclusive" in result.errors[0])
+
+    def test_timeout_is_an_error_with_no_exit_code(self):
+        def runner(*args, **kwargs):
+            raise subprocess.TimeoutExpired(args[0], 1, output=b"partial")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = q.run_integrated_lane(
+                TAIL, "regression", ROOT, Path(tmp),
+                which=lambda _: "x", runner=runner,
+            )
+        self.assertIsNone(result.exit_code)
+        self.assertIn("timed out", result.errors[0])
+        self.assertEqual(result.transcript, "partial")
+
+    def test_artifact_needs_a_successful_producer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for results in ({}, {TAIL.name: "failure"}, {TAIL.name: "cancelled"},
+                            {TAIL.name: "skipped"}):
+                with self.subTest(results=results):
+                    result = q.consume_integrated_artifact(
+                        TAIL, Path(tmp), results)
+                    self.assertIsNone(result.exit_code)
+                    self.assertTrue(result.errors)
+            ok = q.consume_integrated_artifact(
+                TAIL, Path(tmp), {TAIL.name: "success"})
+            self.assertEqual(ok.exit_code, 0)
+            self.assertEqual(ok.errors, [])
+
+    def test_cli_fails_closed_without_producer_results(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code = q.main(["--integrated", "all",
+                           "--integrated-artifacts", tmp])
+        self.assertEqual(code, 1)
+        self.assertIn("FAIL", out.getvalue())
+        self.assertNotIn("PASS:", out.getvalue())
+
+
+@unittest.skipUnless(all(p.is_file() for p in COMMITTED.values()),
+                     "committed one-shot evidence is not in this tree")
+class IntegratedEvidenceTests(unittest.TestCase):
+    """Representative harness records survive aggregation honestly."""
+
+    def load(self, lane, path=None, **overrides):
+        record = committed_record(lane.name)
+        arguments = dict(
+            expect_head=record["identity"]["git_head"], tree_root=None)
+        arguments.update(overrides)
+        if path is None:
+            with tempfile.TemporaryDirectory() as tmp:
+                file = Path(tmp) / lane.evidence_name
+                file.write_text(json.dumps(record), encoding="utf-8")
+                return q.load_integrated_evidence(
+                    lane, file, record["profile"], **arguments)
+        return q.load_integrated_evidence(
+            lane, path, "regression", **arguments)
+
+    def test_regression_records_pass_with_profile_scope_and_counts(self):
+        for lane, cases, mutations in ((TAIL, 8, 10), (VOICE, 2, 13)):
+            with self.subTest(lane=lane.name):
+                record, errors = self.load(lane)
+                self.assertEqual(errors, [])
+                coverage = q.integrated_coverage(lane, record)
+                self.assertEqual(coverage["profile"], "regression")
+                self.assertEqual(coverage["cases"], cases)
+                self.assertEqual(coverage["mutations_detected"], mutations)
+                self.assertEqual(coverage["mutations_undetected"], 0)
+                self.assertEqual(
+                    q.gate_integrated(lane, "regression", coverage), [])
+                label = q.integrated_label(lane, "regression")
+                self.assertIn("regression profile only", label)
+                self.assertIn("NOT full-profile", label)
+
+    def test_tail_chain_scope_names_host_fed_inputs(self):
+        record, _ = self.load(TAIL)
+        coverage = q.integrated_coverage(TAIL, record)
+        self.assertIn("host-fed", coverage["scope"])
+        self.assertIn("NOT the whole-voice top", coverage["scope"])
+        self.assertIn("HOST-FED", q.integrated_label(TAIL, "regression"))
+
+    def test_regression_evidence_cannot_satisfy_a_full_profile_claim(self):
+        for lane in (TAIL, VOICE):
+            with self.subTest(lane=lane.name):
+                record, _ = self.load(lane)
+                self.assertTrue(q.gate_integrated(
+                    lane, "full", q.integrated_coverage(lane, record)))
+                with tempfile.TemporaryDirectory() as tmp:
+                    file = Path(tmp) / lane.evidence_name
+                    file.write_text(json.dumps(record), encoding="utf-8")
+                    _, errors = q.load_integrated_evidence(
+                        lane, file, "full",
+                        expect_head=record["identity"]["git_head"],
+                        tree_root=None)
+                self.assertTrue(any("profile" in e for e in errors), errors)
+
+    def test_wrong_revision_is_stale(self):
+        _, errors = self.load(TAIL, expect_head="f" * 40)
+        self.assertTrue(any("expected" in e for e in errors), errors)
+
+    def test_stale_source_digest_fails_against_the_tree(self):
+        record = committed_record("oneshot-tail-chain")
+        record["identity"]["rtl_sha256"]["audio_mix_engine.sv"] = "0" * 64
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / TAIL.evidence_name
+            file.write_text(json.dumps(record), encoding="utf-8")
+            _, errors = q.load_integrated_evidence(
+                TAIL, file, "regression",
+                expect_head=record["identity"]["git_head"], tree_root=ROOT)
+        self.assertTrue(errors)
+
+    def test_absent_malformed_and_wrong_schema_records_fail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            _, errors = q.load_integrated_evidence(
+                TAIL, tmp / "missing.json", "regression",
+                expect_head=None, tree_root=None)
+            self.assertIn("absent", errors[0])
+            bad = tmp / "bad.json"
+            bad.write_text("{not json", encoding="utf-8")
+            _, errors = q.load_integrated_evidence(
+                TAIL, bad, "regression", expect_head=None, tree_root=None)
+            self.assertIn("malformed", errors[0])
+            bad.write_text("[]", encoding="utf-8")
+            _, errors = q.load_integrated_evidence(
+                TAIL, bad, "regression", expect_head=None, tree_root=None)
+            self.assertTrue(errors)
+            # the whole-voice record handed to the tail-chain lane
+            bad.write_text(json.dumps(committed_record("oneshot-whole-voice")),
+                           encoding="utf-8")
+            _, errors = q.load_integrated_evidence(
+                TAIL, bad, "regression", expect_head=None, tree_root=None)
+            self.assertTrue(any("schema" in e for e in errors), errors)
+
+    def test_a_failed_or_dirty_record_is_never_usable(self):
+        record = committed_record("oneshot-tail-chain")
+        record["result"] = "FAIL"
+        record["identity"]["git_tree_dirty"] = True
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / TAIL.evidence_name
+            file.write_text(json.dumps(record), encoding="utf-8")
+            _, errors = q.load_integrated_evidence(
+                TAIL, file, "regression", expect_head=None, tree_root=None)
+        self.assertTrue(any("not PASS" in e for e in errors), errors)
+        self.assertTrue(any("dirty" in e for e in errors), errors)
+
+    def test_undetected_required_mutation_fails(self):
+        for lane, wrap in ((TAIL, lambda v: v),
+                           (VOICE, lambda v: {"verdict": v})):
+            with self.subTest(lane=lane.name):
+                record = committed_record(lane.name)
+                label = sorted(record["mutations"])[0]
+                record["mutations"][label] = wrap("NOT DETECTED")
+                failures = q.gate_integrated(
+                    lane, "regression", q.integrated_coverage(lane, record))
+                self.assertTrue(any("undetected" in f for f in failures))
+
+    def test_missing_cases_mutations_and_branches_fail(self):
+        record = committed_record("oneshot-whole-voice")
+        record["case_count"] = 1
+        record["mutations"].pop(sorted(record["mutations"])[0])
+        record["branch_coverage"]["bypass"] = False
+        failures = q.gate_integrated(
+            VOICE, "regression", q.integrated_coverage(VOICE, record))
+        self.assertEqual(len(failures), 3, failures)
+        self.assertTrue(q.gate_integrated(VOICE, "regression", {}))
+
+
+class VerdictAndLedgerTests(unittest.TestCase):
+    ALL = dict(lint=True, lanes=list(q.LANES), check_exit=0,
+               integrated=list(q.INTEGRATED_NAMES), integrated_complete=True)
+
+    def verdict(self, **overrides):
+        arguments = dict(self.ALL, ok=True)
+        arguments.update(overrides)
+        return q.compute_verdict(**arguments)[0]
+
+    def test_pass_needs_every_tier(self):
+        self.assertEqual(self.verdict(), "PASS")
+        self.assertEqual(self.verdict(ok=False), "FAIL")
+
+    def test_partial_selection_is_no_verdict(self):
+        for override in (
+            dict(lanes=list(q.FAST_LANES)),
+            dict(lint=False),
+            dict(check_exit=None),
+            dict(integrated=[]),
+            dict(integrated=["oneshot-tail-chain"]),
+            dict(integrated_complete=False),
+        ):
+            with self.subTest(override=override):
+                self.assertEqual(self.verdict(**override), "NO VERDICT")
+
+    def test_unbaselined_integrated_lanes_withhold_the_verdict(self):
+        baseline = {"schema_version": 1, "waivers": {}}
+        gaps = q.integrated_baseline_gaps(
+            baseline, TAIL.name, lint=True, runtime_observed=True)
+        self.assertEqual(len(gaps), 3)
+
+    def test_ci_toolchain_baseline_with_registered_lane_is_ready(self):
+        baseline = {
+            "provenance": {"toolchain": {
+                "iverilog": "Icarus Verilog version 12.0 (stable)",
+                "verilator": "Verilator 5.020 2024-01-01 rev x"}},
+            q.INTEGRATED_BASELINE_KEY: {
+                TAIL.name: {"lint_baselined": True, "runtime_baselined": True}},
+        }
+        self.assertEqual(q.integrated_baseline_gaps(
+            baseline, TAIL.name, lint=True, runtime_observed=True), [])
+        # no transcript observed -> runtime tier is a gap, not a pass
+        self.assertTrue(q.integrated_baseline_gaps(
+            baseline, TAIL.name, lint=True, runtime_observed=False))
+        # a foreign-toolchain ledger never counts
+        baseline["provenance"]["toolchain"]["iverilog"] = "Icarus Verilog version 13.0"
+        self.assertTrue(q.integrated_baseline_gaps(
+            baseline, TAIL.name, lint=True, runtime_observed=True))
+
+    def test_toolchain_check(self):
+        self.assertEqual(q.toolchain_matches_ci({
+            "iverilog": "Icarus Verilog version 12.0 (stable) (s20221226-1)",
+            "verilator": "Verilator 5.020 2024-01-01 rev UNKNOWN"}), [])
+        self.assertEqual(len(q.toolchain_matches_ci({
+            "iverilog": "Icarus Verilog version 13.0 (stable)",
+            "verilator": "Verilator 5.052 2026-09-05"})), 2)
+        self.assertEqual(len(q.toolchain_matches_ci(
+            {"iverilog": None, "verilator": None})), 2)
+
+    def test_lint_only_update_preserves_runtime_waivers_and_provenance(self):
+        previous = {
+            "waivers": {
+                "lane|adsr|TB-WARN": {
+                    "count": 6, "tier": "runtime", "units": ["adsr"],
+                    "reason": "kept", "example": "x"}},
+            "provenance": {"toolchain": {"iverilog": "Icarus Verilog version 12.0"}},
+            q.INTEGRATED_BASELINE_KEY: {
+                TAIL.name: {"runtime_baselined": True}},
+        }
+        updated = q.build_baseline(
+            {}, previous, tiers=("lint",),
+            integrated={TAIL.name: {"lint_baselined": True}})
+        self.assertIn("lane|adsr|TB-WARN", updated["waivers"])
+        self.assertEqual(updated["provenance"], previous["provenance"])
+        self.assertEqual(updated[q.INTEGRATED_BASELINE_KEY][TAIL.name],
+                         {"runtime_baselined": True, "lint_baselined": True})
+
+    def test_runtime_update_only_replaces_the_lanes_that_ran(self):
+        previous = {"waivers": {
+            "lane|adsr|TB-WARN": {"count": 6, "tier": "runtime",
+                                  "units": ["adsr"], "reason": "kept",
+                                  "example": "x"},
+            "lane|oneshot-tail-chain|SIM-WARNING": {
+                "count": 9, "tier": "runtime",
+                "units": ["oneshot-tail-chain"], "reason": "old",
+                "example": "y"}}}
+        observed = {"lane|oneshot-tail-chain|SIM-WARNING": {
+            "count": 2, "tier": "runtime", "code": "SIM-WARNING",
+            "example": "z", "units": ["oneshot-tail-chain"]}}
+        updated = q.build_baseline(
+            observed, previous, tiers=("lint", "runtime"),
+            runtime_units=["oneshot-tail-chain"])
+        self.assertEqual(
+            updated["waivers"]["lane|adsr|TB-WARN"]["count"], 6)
+        self.assertEqual(updated["waivers"][
+            "lane|oneshot-tail-chain|SIM-WARNING"]["count"], 2)
+
+    def test_update_baseline_refuses_a_foreign_toolchain(self):
+        before = BASELINE.read_bytes()
+        foreign = {"iverilog": "Icarus Verilog version 13.0",
+                   "verilator": "Verilator 5.052"}
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(q, "tool_versions", return_value=foreign), \
+                contextlib.redirect_stdout(io.StringIO()) as out:
+            code = q.main(["--integrated", "all", "--integrated-artifacts",
+                           tmp, "--update-baseline"])
+        self.assertEqual(code, 2)
+        self.assertIn("refusing --update-baseline", out.getvalue())
+        self.assertEqual(BASELINE.read_bytes(), before)
+
+    @unittest.skipUnless(has_verilator(), "verilator is not installed here")
+    @unittest.skipUnless(SV_TREE.is_dir(), "tb/sv is not present in this tree")
+    def test_integrated_lint_units_run_and_are_withheld_until_baselined(self):
+        diagnostics, _ = q.lint_unit(TAIL.name, ROOT)
+        self.assertIsInstance(diagnostics, list)
+
+
+#: Hermetic git for the binding tests: no user/system config (hooks, signing,
+#: LFS filters), so the PR-shaped history below is cheap and reproducible.
+HERMETIC_GIT_ENV = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _git(repo: Path, *args: str, stdin: Optional[str] = None) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=repo, check=True, capture_output=True, text=True,
+        input=stdin,
+    ).stdout.strip()
+
+
+def _commit(ref: str, message: str, files: dict, parent: str,
+            merge: Optional[str] = None) -> str:
+    body = ["commit refs/heads/%s" % ref,
+            "committer t <t@example.invalid> 0 +0000",
+            "data %d" % len(message), message]
+    if parent:
+        body.append("from refs/heads/%s" % parent)
+    if merge:
+        body.append("merge refs/heads/%s" % merge)
+    for name, text in files.items():
+        body += ["M 100644 inline %s" % name, "data %d" % len(text), text]
+    return "\n".join(body) + "\n\n"
+
+
+class ProducerRevisionBindingTests(unittest.TestCase):
+    """rtl-lint-baseline.yml must bind to the revision the producers ran on.
+
+    A pull_request tb-sim run's producers check out GitHub's test merge
+    commit, so their evidence names a SHA distinct from the run's headSha.
+    The generator must accept exactly that merge (second parent == headSha)
+    and reject the bare PR head, a stale merge, and any mismatched checkout.
+    """
+
+    BASE = "a" * 40
+    HEAD = "b" * 40
+    MERGE = "c" * 40
+    STALE_HEAD = "d" * 40
+
+    def write_evidence(self, folder: Path, heads: dict) -> None:
+        for name, head in heads.items():
+            lane = q.INTEGRATED_LANES[name]
+            target = folder / lane.name / lane.evidence_name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps({"identity": {"git_head": head}}),
+                              encoding="utf-8")
+
+    def both(self, head: str) -> dict:
+        return {name: head for name in q.INTEGRATED_LANES}
+
+    # ---- pure binding rules ---------------------------------------------
+    def test_pr_merge_revision_whose_second_parent_is_head_is_accepted(self):
+        self.assertEqual(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE, self.HEAD]), [])
+
+    def test_pr_head_itself_is_rejected_for_a_pull_request_run(self):
+        errors = bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE])
+        self.assertTrue(errors)
+        self.assertIn("test merge commit", errors[0])
+
+    def test_stale_pr_merge_is_rejected(self):
+        errors = bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.BASE, self.STALE_HEAD])
+        self.assertTrue(errors)
+        self.assertIn("stale", errors[0])
+
+    def test_merge_with_head_as_first_parent_is_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.HEAD, self.BASE]))
+
+    def test_non_merge_pr_revision_is_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="pull_request",
+            parents=[self.HEAD]))
+
+    def test_push_run_requires_exact_head(self):
+        self.assertEqual(bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="push",
+            parents=[self.BASE]), [])
+        self.assertTrue(bind.binding_errors(
+            self.MERGE, run_head_sha=self.HEAD, run_event="push",
+            parents=[self.BASE, self.HEAD]))
+
+    def test_unsupported_event_and_malformed_shas_are_rejected(self):
+        self.assertTrue(bind.binding_errors(
+            self.HEAD, run_head_sha=self.HEAD, run_event="workflow_dispatch",
+            parents=[self.BASE]))
+        self.assertTrue(bind.binding_errors(
+            "abc", run_head_sha=self.HEAD, run_event="push", parents=[]))
+        self.assertTrue(bind.binding_errors(
+            self.HEAD, run_head_sha="", run_event="push", parents=[]))
+
+    def test_checkout_must_be_the_recorded_revision_and_clean(self):
+        self.assertEqual(bind.checkout_errors(self.MERGE, self.MERGE, ""), [])
+        self.assertTrue(bind.checkout_errors(self.MERGE, self.HEAD, ""))
+        self.assertTrue(bind.checkout_errors(self.MERGE, None, ""))
+        self.assertTrue(
+            bind.checkout_errors(self.MERGE, self.MERGE, " M tb/x.sv\n"))
+
+    # ---- reading the recorded revision ----------------------------------
+    def test_recorded_revision_requires_all_lanes_to_agree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            self.write_evidence(folder, self.both(self.MERGE))
+            self.assertEqual(bind.recorded_revision(folder), (self.MERGE, []))
+            names = list(q.INTEGRATED_LANES)
+            self.write_evidence(folder, {names[0]: self.HEAD})
+            revision, errors = bind.recorded_revision(folder)
+            self.assertIsNone(revision)
+            self.assertIn("different revisions", errors[0])
+
+    def test_recorded_revision_rejects_absent_and_malformed_records(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            revision, errors = bind.recorded_revision(folder)
+            self.assertIsNone(revision)
+            self.assertEqual(len(errors), len(q.INTEGRATED_LANES))
+            self.write_evidence(folder, self.both("not-a-sha"))
+            self.assertIsNone(bind.recorded_revision(folder)[0])
+            lane = next(iter(q.INTEGRATED_LANES.values()))
+            (folder / lane.name / lane.evidence_name).write_text("{", "utf-8")
+            self.assertIsNone(bind.recorded_revision(folder)[0])
+
+    # ---- end to end against a real PR-shaped history --------------------
+    @unittest.skipUnless(shutil.which("git"), "git is not installed here")
+    def test_verify_against_real_pr_head_and_merge_commits(self):
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.dict("os.environ", HERMETIC_GIT_ENV):
+            repo, artifacts = Path(tmp) / "repo", Path(tmp) / "artifacts"
+            repo.mkdir()
+            # PR-shaped history in ONE fast-import: base; an old PR head and
+            # its (now stale) test merge; the new PR head and the test merge
+            # the producers check out (parents [base, head]).
+            stream = (
+                _commit("base", "base", {"f.txt": "base\n"}, "")
+                + _commit("oldhead", "old head", {"g.txt": "old\n"}, "base")
+                + _commit("stalemerge", "old merge", {"g.txt": "old\n"},
+                          "base", "oldhead")
+                + _commit("head", "new head", {"g.txt": "new\n"}, "oldhead")
+                + _commit("merge", "test merge", {"g.txt": "new\n"},
+                          "base", "head")
+            )
+            _git(repo, "init", "-q")
+            _git(repo, "fast-import", "--quiet", stdin=stream)
+            stale_merge, head, merge = _git(
+                repo, "rev-parse", "stalemerge", "head", "merge").split()
+            self.assertNotEqual(head, merge)
+
+            def verify(recorded, checkout, event="pull_request"):
+                self.write_evidence(artifacts, self.both(recorded))
+                _git(repo, "checkout", "-q", "--detach", checkout)
+                return bind.verify_checkout(
+                    artifacts, repo, run_head_sha=head, run_event=event)
+
+            # The live defect: evidence names the merge, run headSha the head.
+            self.assertEqual(verify(merge, merge), (merge, []))
+            # Checking out the dispatched PR branch instead fails closed.
+            self.assertTrue(verify(merge, head)[1])
+            # A stale merge (of an older PR head) is rejected, even when
+            # checked out consistently. (The bare-head, push-event and
+            # non-merge cases are the pure binding_errors tests above.)
+            errors = verify(stale_merge, stale_merge)[1]
+            self.assertTrue(any("stale" in e for e in errors), errors)
+            # A dirty tree fails closed.
+            _git(repo, "checkout", "-q", "--detach", merge)
+            (repo / "f.txt").write_text("edited\n", encoding="utf-8")
+            self.write_evidence(artifacts, self.both(merge))
+            _, errors = bind.verify_checkout(
+                artifacts, repo, run_head_sha=head, run_event="pull_request")
+            self.assertTrue(any("not clean" in e for e in errors), errors)
+
+    def test_cli_recorded_prints_the_single_revision(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.write_evidence(Path(tmp), self.both(self.MERGE))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                code = bind.main(["recorded", "--artifacts", tmp])
+            self.assertEqual(code, 0)
+            self.assertEqual(out.getvalue().strip(), self.MERGE)
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(
+                    bind.main(["recorded", "--artifacts",
+                               str(Path(tmp) / "missing")]), 1)
 
 
 if __name__ == "__main__":
