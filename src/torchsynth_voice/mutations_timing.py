@@ -1381,6 +1381,136 @@ def fault_matrix(root: Path) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
     return entries, case_records
 
 
+def _recorded_rows(rows: List[Dict[str, Any]],
+                   properties: Tuple[str, ...]) -> Dict[str, Dict[str, Any]]:
+    recorded = {}
+    for name in properties:
+        row = next(item for item in rows if item["property"] == name)
+        recorded[name] = {
+            "verdict": row["verdict"],
+            "observed": row["observed"],
+            "expected": row["expected"]["value"],
+            "tolerance": row["tolerance"]["value"],
+        }
+    return recorded
+
+
+CONTRACT_WRONG_PROPERTIES = ("framing_match", "exact_equal", "max_abs_error")
+
+
+def contract_wrong_paired_rows(expected: List[float], observed: List[float],
+                               case_id: str):
+    """Unaligned, unprepared exactness rows for the demonstration record.
+
+    The landed analytic exactness rubric limits are used unchanged
+    (framing_match 1/0, exact_equal 1/0); the same amplitude-exact
+    max_abs_error limit as the signal family (0, 1e-9) is added for this
+    record only. No alignment, trimming, level fitting or normalization
+    enters the comparison.
+    """
+    base = paired_metrics.analytic_exactness_rubric()
+    limits = dict(base.limits)
+    limits["max_abs_error"] = paired_metrics.Limit(
+        0, 1e-9, "1", "fixture declaration: directed binary64 exactness (#298)")
+    comparison = paired_metrics.compare_paired(
+        expected,
+        observed,
+        reference_rate_hz=AUDIO_RATE_HZ,
+        candidate_rate_hz=AUDIO_RATE_HZ,
+        unit="1",
+        window_samples=max(1, len(expected)),
+    )
+    rows, _ = paired_metrics.scorecard_rows(
+        comparison,
+        case_id=case_id,
+        partition="development",
+        trace=LANE_CONTROL_UPSAMPLE,
+        rubric=paired_metrics.Rubric(base.id, base.version, limits),
+    )
+    return _recorded_rows(rows, CONTRACT_WRONG_PROPERTIES)
+
+
+def contract_wrong_demonstrations(root: Path) -> List[Dict[str, Any]]:
+    """The one-audio-sample delay as a contract-wrong demonstration (#298).
+
+    Perceptual similarity is recorded ``not_run``; nothing here is a
+    listening, calibrated perceptual, actual-Voice, hardware or fidelity
+    claim.
+    """
+    root = Path(root)
+    register_family()
+    ups = TimingSignalHarness(root, "upsample-audio")
+    pristine = lane_samples(ups.document, LANE_CONTROL_UPSAMPLE)
+    plan = ups.fault("mti-audio-delay1", "timing.delay_audio_sample", 1,
+                     {"lane": LANE_CONTROL_UPSAMPLE})
+    attempt = ups.attempt(plan)
+    delayed = lane_samples(_attempt_document(attempt), LANE_CONTROL_UPSAMPLE)
+    control_rows = contract_wrong_paired_rows(
+        pristine, pristine, "directed:mutation-timing:audio-delay1/control")
+    fault_rows = contract_wrong_paired_rows(
+        pristine, delayed, "directed:mutation-timing:audio-delay1/fault")
+    event = attempt.events[0]
+    required = ("exact_equal", "max_abs_error")
+    detail = event["detail"]
+    _require(
+        event["status"] == "applied"
+        and detail.get("delayed_by_samples") == 1
+        and plan["mutations"][0]["magnitude"] == {"value": 1, "unit": "sample"}
+        and all(fault_rows[name]["verdict"] == "FAIL" for name in required)
+        and fault_rows["framing_match"]["verdict"] == "PASS"
+        and all(row["verdict"] == "PASS" for row in control_rows.values()),
+        "the one-audio-sample delay did not meet the stated mandatory-FAIL "
+        "outcome with passing clean controls",
+    )
+    return [{
+        "demonstration_id": "contract-wrong/timing.delay_audio_sample+1sample",
+        "kind": "contract-wrong-demonstration",
+        "family": "timing",
+        "operator": "timing.delay_audio_sample",
+        "owning_fault_row": "one-audio-sample-delay",
+        "magnitude": dict(plan["mutations"][0]["magnitude"]),
+        "magnitude_seconds": "1/44100",
+        "seam": FAMILY_SEAM,
+        "target": {"lane": LANE_CONTROL_UPSAMPLE},
+        "fixture_binding": dict(plan["source_binding"]),
+        "applied_event": {
+            "instance_id": event["instance_id"],
+            "seam": event["seam"],
+            "status": event["status"],
+            "order": event["order"],
+            "sham": event["sham"],
+            "detail": {
+                "lane": detail["lane"],
+                "delayed_by_samples": detail["delayed_by_samples"],
+            },
+        },
+        "comparison_preparation": (
+            "none (primary unaligned time-locked rows; no alignment, "
+            "trimming, level fitting or normalization; any supplementary "
+            "aligned result cannot override these rows)"
+        ),
+        "detector_relationship": (
+            "paired_metrics time-locked exactness property rows "
+            "(exact_equal, max_abs_error); not an identity/provenance detector"
+        ),
+        "required_failures": list(required),
+        "mandatory_rows": {"fault": fault_rows, "clean_control": control_rows},
+        "mandatory_outcome": "FAIL",
+        "optional_observation": None,
+        "optional_counts_as_contract_pass": False,
+        "perceptual_similarity": {
+            "status": "not_run",
+            "evidence_scope": "directed fixture",
+            "note": (
+                "no listening test, calibrated perceptual metric, "
+                "actual-Voice run, hardware playback or fidelity measurement "
+                "was executed; no perceptual verdict is manufactured"
+            ),
+        },
+        "evidence_scope": "directed fixture",
+    }]
+
+
 def sensitivity_floor(root: Path) -> List[Dict[str, Any]]:
     """Measured estimator sensitivity at the declared 0.02-sample resolution."""
     root = Path(root)
