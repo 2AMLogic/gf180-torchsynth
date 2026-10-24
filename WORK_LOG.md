@@ -2,6 +2,18 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-13
+
+- **PR #366**: Remove Renovate config: Dependabot takes over
+- **PR #365**: Dependabot: render dependabot.yml from the org policy
+- **PR #364**: chore(deps): update github-actions
+- **PR #363**: chore(deps): update dependency numpy to v2.5.3
+- **PR #340**: [Part of #300] Preregister actual-Voice family campaign contract (DR-0012)
+- **PR #293**: ci: schedule CI and TB sim on newest main (#284)
+- **PR #258**: fix: check the committed mutation publications before regenerating them
+- **Issue #333** (closed): [Part of #300] Freeze family campaign contract and unresolved seam decisions
+- **Issue #257** (closed): matrix-numerical CI job regenerates the mutation matrix publication before checking it, so committed-artifact drift can never fail CI
+
 ### 2026-10-11
 
 - **PR #360**: docs: re-verify corpus artifact audit at edaa94d (Part of #4)
