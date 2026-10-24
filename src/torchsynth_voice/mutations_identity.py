@@ -69,8 +69,8 @@ from .identity import SoundIdentity
 from .mutations import MutationError
 from .paired_metrics import Limit, Rubric, scorecard_rows
 
-FAMILY_SEAM = "apparatus.producer_call"
-PAYLOAD_PATH = "attempt/fixture.json"
+FAMILY_SEAM = mutation_runtime.FAMILY_SEAM
+PAYLOAD_PATH = mutation_runtime.PAYLOAD_PATH
 FIXTURE_SCHEMA = "torchsynth-mutation-identity-fixture-v1"
 AUDIO_RATE_HZ = float(directed.FIXTURE_PROTOCOL["sample_rate"])
 IDENTITY_BATCH_SIZE = directed.FIXTURE_PROTOCOL["qualification_batch_size"]
@@ -222,15 +222,11 @@ def build_fixture(case: str) -> Dict[str, Any]:
     }
 
 
-def encode_fixture(document: Dict[str, Any]) -> bytes:
-    return json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+encode_fixture = mutation_runtime.encode_fixture
 
 
 def decode_fixture(payload: bytes) -> Dict[str, Any]:
-    document = json.loads(payload)
-    _require(document.get("schema") == FIXTURE_SCHEMA,
-             "payload is not a mutation-identity fixture")
-    return document
+    return mutation_runtime.decode_fixture(payload, FIXTURE_SCHEMA, "mutation-identity")
 
 
 def noise_bytes(document: Dict[str, Any]) -> bytes:
@@ -539,94 +535,21 @@ def register_family() -> None:
         mutations.register_operator(operator_id, definition)
 
 
-class FamilySession(mutation_runtime.InjectionSession):
+class FamilySession(mutation_runtime.FamilySession):
     """Landed injection session with the #31 family applicators installed."""
 
-    def _apply(self, seam: str, instance: Dict[str, Any], value: Any) -> Any:
-        applicator = FAMILY_APPLICATORS.get(instance["operator"])
-        if applicator is None:
-            return super()._apply(seam, instance, value)
-        try:
-            replacement, detail = applicator(instance, decode_fixture(value))
-        except BaseException as error:
-            self._record(
-                instance,
-                seam,
-                "errored",
-                {"error": type(error).__name__, "message": str(error)},
-            )
-            raise
-        if replacement is None:
-            self._record(instance, seam, "ineffective", dict(detail))
-            return value
-        payload = encode_fixture(replacement)
-        if payload == value:
-            self._record(
-                instance,
-                seam,
-                "ineffective",
-                dict(detail, reason="replacement equals original"),
-            )
-            return value
-        self._record(instance, seam, "applied", detail)
-        return payload
+    applicators = FAMILY_APPLICATORS
+    decode = staticmethod(decode_fixture)
+    encode = staticmethod(encode_fixture)
 
 
-class IdentityFixtureHarness:
+class IdentityFixtureHarness(mutation_runtime.FamilyFixtureHarness):
     """Deterministic fixture producer over the landed seam contract."""
 
-    def __init__(self, root: Path, case: str):
-        self.root = Path(root)
-        self.case = case
-        self.catalog = mutations.load_seam_catalog(self.root / mutations.SEAM_CATALOG_PATH)
-        self.document = build_fixture(case)
-        self.payload = encode_fixture(self.document)
-
-    def binding(self) -> Dict[str, Any]:
-        return {
-            "case_id": "directed:mutation-identity:" + self.case,
-            "partition": "development",
-            "fixture_identity": mutation_runtime.sha256(self.payload),
-        }
-
-    def _produce(self) -> bytes:
-        return self.payload
-
-    def plain_attempt(self) -> mutation_runtime.AttemptResult:
-        result = mutation_runtime.AttemptResult()
-        result.store[PAYLOAD_PATH] = self.payload
-        return result
-
-    def attempt(self, plan: Dict[str, Any]) -> mutation_runtime.AttemptResult:
-        result = mutation_runtime.AttemptResult()
-        session = FamilySession(plan, {FAMILY_SEAM: self._produce})
-        try:
-            with session:
-                result.store[PAYLOAD_PATH] = session.targets[FAMILY_SEAM]()
-        except BaseException as error:
-            result.errored = type(error).__name__ + ": " + str(error)
-        result.events = session.events
-        result.events_summary = session.finish()
-        return result
-
-    def empty_plan(self) -> Dict[str, Any]:
-        return mutations.make_plan(self.binding(), [], self.catalog)
-
-    def sham_plan(self) -> Dict[str, Any]:
-        return mutations.make_plan(
-            self.binding(),
-            [mutation_runtime.instance("mii-sham", "noop.sham", FAMILY_SEAM)],
-            self.catalog,
-        )
-
-    def fault(self, instance_id: str, operator_id: str, magnitude: Any = None,
-              configuration: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        return mutations.make_plan(
-            self.binding(),
-            [mutation_runtime.instance(instance_id, operator_id, FAMILY_SEAM,
-                                       magnitude, configuration)],
-            self.catalog,
-        )
+    session_class = FamilySession
+    case_prefix = "directed:mutation-identity:"
+    sham_id = "mii-sham"
+    build_fixture = staticmethod(build_fixture)
 
 
 def _metric(value: Any, unit: str) -> Dict[str, Any]:
