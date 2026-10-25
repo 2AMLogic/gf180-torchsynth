@@ -10,15 +10,16 @@
     "plan_identity_tracks_magnitude_and_configuration": true,
     "sham_events_marked_and_ineffective": true,
     "sham_plan_identity_distinct": true,
-    "sibling_case_bytes_unchanged_by_faulted_case": true
+    "sibling_case_bytes_unchanged_by_faulted_case": true,
+    "wrong_then_right_no_contamination": true
   },
   "counts": {
-    "controls_passed": 11,
+    "controls_passed": 12,
     "coverage_cases": 6,
-    "envelopes": 5,
-    "faults": 13,
-    "floor_probes": 2,
-    "tripped": 13
+    "envelopes": 8,
+    "faults": 16,
+    "floor_probes": 14,
+    "tripped": 16
   },
   "coverage": {
     "envelope_and_high_rate": [
@@ -118,9 +119,10 @@
         "plan_identity_tracks_magnitude_and_configuration": true,
         "sham_events_marked_and_ineffective": true,
         "sham_plan_identity_distinct": true,
-        "sibling_case_bytes_unchanged_by_faulted_case": true
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
       },
-      "envelope_id": "mu1-e571d365b9e83da378d8006233946089d82274a6e3cd59316edbfef21759daa3",
+      "envelope_id": "mu1-52080903eb53b24672d3e9ee9e02027815f045a737e336a3f9ea5cd8e76ce2e1",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -162,6 +164,186 @@
       "artifacts": [
         {
           "path": "attempt/fixture.json",
+          "sha256": "0eecc31d05a3552b59844369cd37785453a01e9bf67b43ca13ac35956639827e",
+          "size_bytes": 2949
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
+      },
+      "envelope_id": "mu1-be2241fe7db9ebd3af3d85fe3ecdf43c4c5d980dfb0cdadb77107e73a12eb3d5",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_envelope + qualification_rows (decay_end)",
+          "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on decay_end only",
+          "fault": "decay-breakpoint-shift-plus2",
+          "observed_refusal": "decay_end measured near 54.0 against declared truth 52.0 (verdict FAIL)",
+          "operator": "envelope.breakpoint_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-2ef805507da50759d4a73ad462b2c42cb37302cc942a958b99ba883190d73076",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:adsr-control",
+        "fixture_identity": "265da1eb8b37ea9571212f4a83dc97f6bdedb0de380384e45509538be89be41c",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "232f465461838e2655965479b7731e8284a2cc8d8b197abd5a168ccab73f3e8d",
+          "size_bytes": 2949
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
+      },
+      "envelope_id": "mu1-e4746afb7b395a853d876ca4dc6679f6762899342a9b323a28505dfb48439867",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_envelope + qualification_rows (release_end)",
+          "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on release_end only",
+          "fault": "release-breakpoint-shift-plus2",
+          "observed_refusal": "release_end measured near 190.0 against declared truth 188.0 (verdict FAIL)",
+          "operator": "envelope.breakpoint_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-fdb31e686ef6ea554c9c56c36292a9bfba8270f7aeec0c4f7c28ae64339ac6ec",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:adsr-control",
+        "fixture_identity": "265da1eb8b37ea9571212f4a83dc97f6bdedb0de380384e45509538be89be41c",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
+          "sha256": "ca46f2dbe804ac2b77615433d081046cb63f074fd61cf4a42825a38bc3a7a785",
+          "size_bytes": 2949
+        }
+      ],
+      "controls": {
+        "cleanup_after_producer_crash": true,
+        "empty_plan_events_complete": true,
+        "global_rng_untouched_by_attempts": true,
+        "no_errored_events_in_controls": true,
+        "plain_rerun_deterministic": true,
+        "plain_vs_empty_plan_bytes_identical": true,
+        "plain_vs_sham_bytes_identical": true,
+        "plan_identity_tracks_magnitude_and_configuration": true,
+        "sham_events_marked_and_ineffective": true,
+        "sham_plan_identity_distinct": true,
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
+      },
+      "envelope_id": "mu1-63df4acde341d9b947df0110198d15756f14a191de3c269167e6c94193726a30",
+      "events_summary": {
+        "applied": 1,
+        "complete": true,
+        "errored": 0,
+        "expected": 1,
+        "ineffective": 0,
+        "observed": 1,
+        "refused": 0
+      },
+      "fault_matrix": [
+        {
+          "control_accepted": true,
+          "downstream": "envelope_estimators.estimate_envelope + qualification_rows (sustain_amplitude)",
+          "expected_refusal": "sustain amplitude FAIL beyond the 0.00002 absolute amplitude bound",
+          "fault": "sustain-amplitude-shift-plus0.1",
+          "observed_refusal": "sustain_amplitude measured near 0.85 against declared truth 0.75 (verdict FAIL)",
+          "operator": "envelope.sustain_shift",
+          "seam": "apparatus.producer_call",
+          "tripped": true
+        }
+      ],
+      "kind": "mutation-evidence-v1",
+      "not_run": [
+        "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",
+        "detector qualification of production traces (analytic apparatus domain only; no sound-fidelity claim)",
+        "holdout partitions (sealed; development-only constructed fixtures)",
+        "detector-family matrix publication (#34 consumes plans, events and raw evidence)"
+      ],
+      "plan_id": "mp1-94c3ad39a5e755e8fba54133682465948462858647b487052eb4a640632b353b",
+      "runtime_scope": "stdlib-apparatus-analytic-fixtures",
+      "schema_version": 1,
+      "source_binding": {
+        "case_id": "directed:mutation-timing:adsr-control",
+        "fixture_identity": "265da1eb8b37ea9571212f4a83dc97f6bdedb0de380384e45509538be89be41c",
+        "partition": "development"
+      }
+    },
+    {
+      "artifacts": [
+        {
+          "path": "attempt/fixture.json",
           "sha256": "1ceaffb463eecc2d2119ef1d1dfc1c71cdc3b5b4d205323e1df54aba20bd1945",
           "size_bytes": 19187
         }
@@ -177,9 +359,10 @@
         "plan_identity_tracks_magnitude_and_configuration": true,
         "sham_events_marked_and_ineffective": true,
         "sham_plan_identity_distinct": true,
-        "sibling_case_bytes_unchanged_by_faulted_case": true
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
       },
-      "envelope_id": "mu1-0caae910250aa990fcfdd4636475338311deec0a8cc96eb82d0ceccf077f8ee5",
+      "envelope_id": "mu1-e06d4fe921fb9ad7d93e8ce65cb67ecefde9b079b58583839c3c17b9f2e4ef88",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -236,9 +419,10 @@
         "plan_identity_tracks_magnitude_and_configuration": true,
         "sham_events_marked_and_ineffective": true,
         "sham_plan_identity_distinct": true,
-        "sibling_case_bytes_unchanged_by_faulted_case": true
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
       },
-      "envelope_id": "mu1-94dbba00d084b4c784ceaa78bd92dfa2d8cb5bd4d66a93adbde22d9651401cd5",
+      "envelope_id": "mu1-7152e6cafc6a483ca60be3bdd7de59459a6899e89e9723626a0f2aa66c57cc13",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -295,9 +479,10 @@
         "plan_identity_tracks_magnitude_and_configuration": true,
         "sham_events_marked_and_ineffective": true,
         "sham_plan_identity_distinct": true,
-        "sibling_case_bytes_unchanged_by_faulted_case": true
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
       },
-      "envelope_id": "mu1-56ddab3d3eba20621ac51ebc3e125486559d348dd73df0fce27682010b565540",
+      "envelope_id": "mu1-2705233bbee3e055859a622cb0d00797342d43647fd605fc7f1c81b912c8258f",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -374,9 +559,10 @@
         "plan_identity_tracks_magnitude_and_configuration": true,
         "sham_events_marked_and_ineffective": true,
         "sham_plan_identity_distinct": true,
-        "sibling_case_bytes_unchanged_by_faulted_case": true
+        "sibling_case_bytes_unchanged_by_faulted_case": true,
+        "wrong_then_right_no_contamination": true
       },
-      "envelope_id": "mu1-ef66a8fbac67b24513325b071a8042078bd487d2063db1cb6f4478d31398a2b3",
+      "envelope_id": "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574",
       "events_summary": {
         "applied": 1,
         "complete": true,
@@ -453,6 +639,36 @@
       "fault": "attack-breakpoint-shift-plus2",
       "observed_refusal": "attack_end measured near 10.0 against declared truth 8.0 (verdict FAIL)",
       "operator": "envelope.breakpoint_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_envelope + qualification_rows (decay_end)",
+      "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on decay_end only",
+      "fault": "decay-breakpoint-shift-plus2",
+      "observed_refusal": "decay_end measured near 54.0 against declared truth 52.0 (verdict FAIL)",
+      "operator": "envelope.breakpoint_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_envelope + qualification_rows (release_end)",
+      "expected_refusal": "breakpoint coordinate FAIL beyond the 0.02 control-sample bound on release_end only",
+      "fault": "release-breakpoint-shift-plus2",
+      "observed_refusal": "release_end measured near 190.0 against declared truth 188.0 (verdict FAIL)",
+      "operator": "envelope.breakpoint_shift",
+      "seam": "apparatus.producer_call",
+      "tripped": true
+    },
+    {
+      "control_accepted": true,
+      "downstream": "envelope_estimators.estimate_envelope + qualification_rows (sustain_amplitude)",
+      "expected_refusal": "sustain amplitude FAIL beyond the 0.00002 absolute amplitude bound",
+      "fault": "sustain-amplitude-shift-plus0.1",
+      "observed_refusal": "sustain_amplitude measured near 0.85 against declared truth 0.75 (verdict FAIL)",
+      "operator": "envelope.sustain_shift",
       "seam": "apparatus.producer_call",
       "tripped": true
     },
@@ -579,28 +795,264 @@
   ],
   "floor_probes": [
     {
+      "boundary": 0.02,
+      "boundary_unit": "control_sample",
       "declared_truth_control_samples": 8.0,
       "detected": true,
+      "error_relative_to_boundary": "above",
       "expected_detected": true,
+      "magnitude": 0.03,
       "magnitude_control_samples": 0.03,
+      "magnitude_unit": "control_sample",
       "measured_attack_end": 8.030000000000001,
       "measured_error": 0.030000000000001137,
       "operator": "envelope.breakpoint_shift",
       "probe": "attack-breakpoint-shift-0.03",
+      "property": "attack_end",
       "qualified_resolution_control_samples": 0.02,
-      "seam": "apparatus.producer_call"
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
     },
     {
+      "boundary": 0.02,
+      "boundary_unit": "control_sample",
       "declared_truth_control_samples": 8.0,
       "detected": false,
+      "error_relative_to_boundary": "below",
       "expected_detected": false,
+      "magnitude": 0.005,
       "magnitude_control_samples": 0.005,
+      "magnitude_unit": "control_sample",
       "measured_attack_end": 8.004999999999999,
       "measured_error": 0.004999999999999005,
       "operator": "envelope.breakpoint_shift",
       "probe": "attack-breakpoint-shift-0.005",
+      "property": "attack_end",
       "qualified_resolution_control_samples": 0.02,
-      "seam": "apparatus.producer_call"
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "control_sample",
+      "declared_truth": 52.0,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 0.005,
+      "magnitude_unit": "control_sample",
+      "measured": 52.00499999999998,
+      "measured_error": 0.004999999999981242,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "envelope.breakpoint_shift-decay-below-0.005",
+      "property": "decay_end",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "control_sample",
+      "declared_truth": 52.0,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 0.03,
+      "magnitude_unit": "control_sample",
+      "measured": 52.02999999999997,
+      "measured_error": 0.029999999999972715,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "envelope.breakpoint_shift-decay-above-0.03",
+      "property": "decay_end",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "control_sample",
+      "declared_truth": 188.0,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 0.005,
+      "magnitude_unit": "control_sample",
+      "measured": 188.005,
+      "measured_error": 0.0049999999999954525,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "envelope.breakpoint_shift-release-below-0.005",
+      "property": "release_end",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "control_sample",
+      "declared_truth": 188.0,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 0.03,
+      "magnitude_unit": "control_sample",
+      "measured": 188.02999999999997,
+      "measured_error": 0.029999999999972715,
+      "operator": "envelope.breakpoint_shift",
+      "probe": "envelope.breakpoint_shift-release-above-0.03",
+      "property": "release_end",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
+    },
+    {
+      "boundary": 2e-05,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "1",
+      "declared_truth": 0.75,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 5e-06,
+      "magnitude_unit": "amplitude",
+      "measured": 0.7500042414722158,
+      "measured_error": 4.241472215782416e-06,
+      "operator": "envelope.sustain_shift",
+      "probe": "envelope.sustain_shift-below-5e-06",
+      "property": "sustain_amplitude",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 2e-05,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md analytic limits: 0.02 control sample boundaries, 0.00002 absolute amplitude",
+      "boundary_unit": "1",
+      "declared_truth": 0.75,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 5e-05,
+      "magnitude_unit": "amplitude",
+      "measured": 0.7500492414267045,
+      "measured_error": 4.924142670448273e-05,
+      "operator": "envelope.sustain_shift",
+      "probe": "envelope.sustain_shift-above-5e-05",
+      "property": "sustain_amplitude",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/PERIODIC-ESTIMATORS.md mandatory mutation limits: 0.02 Hz rate, 0.01 native depth",
+      "boundary_unit": "hz",
+      "declared_truth": 4.37,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 0.005,
+      "magnitude_unit": "hz",
+      "operator": "modulation.lfo_rate_shift",
+      "probe": "modulation.lfo_rate_shift-below-0.005",
+      "property": "frequency_hz",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 0.02,
+      "boundary_source": "spec/PERIODIC-ESTIMATORS.md mandatory mutation limits: 0.02 Hz rate, 0.01 native depth",
+      "boundary_unit": "hz",
+      "declared_truth": 4.37,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 0.05,
+      "magnitude_unit": "hz",
+      "operator": "modulation.lfo_rate_shift",
+      "probe": "modulation.lfo_rate_shift-above-0.05",
+      "property": "frequency_hz",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
+    },
+    {
+      "boundary": 0.01,
+      "boundary_source": "spec/PERIODIC-ESTIMATORS.md mandatory mutation limits: 0.02 Hz rate, 0.01 native depth",
+      "boundary_unit": "native",
+      "declared_truth": 2.0,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 0.002,
+      "magnitude_unit": "native",
+      "operator": "modulation.lfo_depth_shift",
+      "probe": "modulation.lfo_depth_shift-below-0.002",
+      "property": "depth_peak_to_peak",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 0.01,
+      "boundary_source": "spec/PERIODIC-ESTIMATORS.md mandatory mutation limits: 0.02 Hz rate, 0.01 native depth",
+      "boundary_unit": "native",
+      "declared_truth": 2.0,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 0.03,
+      "magnitude_unit": "native",
+      "operator": "modulation.lfo_depth_shift",
+      "probe": "modulation.lfo_depth_shift-above-0.03",
+      "property": "depth_peak_to_peak",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
+    },
+    {
+      "boundary": 1e-08,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md isolated-route limit: 0.00000001 dimensionless gain",
+      "boundary_unit": "1",
+      "declared_truth": 1.0,
+      "detected": false,
+      "error_relative_to_boundary": "below",
+      "expected_detected": false,
+      "magnitude": 2e-09,
+      "magnitude_unit": "ratio",
+      "measured": 1.000000002,
+      "measured_error": 1.999999943436137e-09,
+      "operator": "modulation.route_depth_shift",
+      "probe": "modulation.route_depth_shift-below-2e-09",
+      "property": "gain.vco_1_amp",
+      "seam": "apparatus.producer_call",
+      "side": "below",
+      "verdict": "PASS"
+    },
+    {
+      "boundary": 1e-08,
+      "boundary_source": "spec/ENVELOPE-ESTIMATORS.md isolated-route limit: 0.00000001 dimensionless gain",
+      "boundary_unit": "1",
+      "declared_truth": 1.0,
+      "detected": true,
+      "error_relative_to_boundary": "above",
+      "expected_detected": true,
+      "magnitude": 5e-08,
+      "magnitude_unit": "ratio",
+      "measured": 1.00000005,
+      "measured_error": 4.9999999918171056e-08,
+      "operator": "modulation.route_depth_shift",
+      "probe": "modulation.route_depth_shift-above-5e-08",
+      "property": "gain.vco_1_amp",
+      "seam": "apparatus.producer_call",
+      "side": "above",
+      "verdict": "FAIL"
     }
   ],
   "inputs": {
@@ -613,7 +1065,7 @@
     "src/torchsynth_voice/envelope_estimators.py": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
-    "src/torchsynth_voice/mutations_timing.py": "fd74a0190d106f1dc62d9b48ff6393e380ba924c64df31ee7c42f423c2a9e5e0",
+    "src/torchsynth_voice/mutations_timing.py": "4815e6d6a848025dd9b824c0301260925c5e58d019e9af91d4aabce5fce68ab4",
     "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
     "src/torchsynth_voice/periodic_estimators.py": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
     "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
@@ -621,6 +1073,97 @@
     "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
   },
   "kind": "mutation-timing-v1",
+  "magnitude_applicability": [
+    {
+      "floor_probes": [
+        "attack-breakpoint-shift-0.005",
+        "attack-breakpoint-shift-0.03",
+        "envelope.breakpoint_shift-decay-above-0.03",
+        "envelope.breakpoint_shift-decay-below-0.005",
+        "envelope.breakpoint_shift-release-above-0.03",
+        "envelope.breakpoint_shift-release-below-0.005"
+      ],
+      "magnitude_unit": "control_sample",
+      "operator": "envelope.breakpoint_shift",
+      "second_magnitude": "recorded"
+    },
+    {
+      "floor_probes": [
+        "envelope.sustain_shift-above-5e-05",
+        "envelope.sustain_shift-below-5e-06"
+      ],
+      "magnitude_unit": "amplitude",
+      "operator": "envelope.sustain_shift",
+      "second_magnitude": "recorded"
+    },
+    {
+      "operator": "interp.off_endpoint",
+      "reason": "fixed/discrete operator: no magnitude",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "interp.zoh_control",
+      "reason": "fixed/discrete operator: no magnitude",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "floor_probes": [
+        "modulation.lfo_depth_shift-above-0.03",
+        "modulation.lfo_depth_shift-below-0.002"
+      ],
+      "magnitude_unit": "native",
+      "operator": "modulation.lfo_depth_shift",
+      "second_magnitude": "recorded"
+    },
+    {
+      "floor_probes": [
+        "modulation.lfo_rate_shift-above-0.05",
+        "modulation.lfo_rate_shift-below-0.005"
+      ],
+      "magnitude_unit": "hz",
+      "operator": "modulation.lfo_rate_shift",
+      "second_magnitude": "recorded"
+    },
+    {
+      "floor_probes": [
+        "modulation.route_depth_shift-above-5e-08",
+        "modulation.route_depth_shift-below-2e-09"
+      ],
+      "magnitude_unit": "ratio",
+      "operator": "modulation.route_depth_shift",
+      "second_magnitude": "recorded"
+    },
+    {
+      "operator": "modulation.route_sign_flip",
+      "reason": "fixed/discrete operator: no magnitude",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "modulation.route_swap",
+      "reason": "fixed/discrete operator: no magnitude",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "timing.delay_audio_sample",
+      "reason": "fixed/discrete operator: single-valued integer magnitude domain",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "timing.delay_control_sample",
+      "reason": "fixed/discrete operator: single-valued integer magnitude domain",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "timing.drop_sample",
+      "reason": "fixed/discrete operator: single-valued integer magnitude domain",
+      "second_magnitude": "not applicable"
+    },
+    {
+      "operator": "timing.duplicate_sample",
+      "reason": "fixed/discrete operator: single-valued integer magnitude domain",
+      "second_magnitude": "not applicable"
+    }
+  ],
   "mutation_contract": "mutation-v1",
   "not_run": [
     "actual-Voice runtime injection of family operators (DR-0006 gated host run; the landed voice-runtime bridge evidence is the #30 bridge.* test-only proofs, never family qualification)",

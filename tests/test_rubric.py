@@ -22,6 +22,7 @@ import validate_rubric  # noqa: E402
 
 RUBRIC_REL = "spec/reference/rubric-v0.json"
 RUBRIC_V1_REL = "spec/reference/rubric-v1.json"
+RUBRIC_V2_REL = "spec/reference/rubric-v2.json"
 RUBRIC_ID = "R-L2-MM-COVERAGE"
 
 
@@ -293,6 +294,62 @@ class TestRubricV1Ratification(unittest.TestCase):
             document["summary"]["rows_open"],
             sum(1 for r in rows if r["status"] == "open"),
         )
+
+
+class TestRubricV2MutationMatrix(unittest.TestCase):
+    """rubric-v2 (issue #297, DR-0014): the grown mutation-matrix row set;
+    v0/v1 and their pinned matrix artifact stay frozen."""
+
+    def load(self, rel: str) -> dict:
+        with (ROOT / rel).open(encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_committed_rubric_v2_validates(self) -> None:
+        self.assertEqual(validate_rubric.validate_rubric(ROOT, RUBRIC_V2_REL), [])
+
+    def test_identity(self) -> None:
+        document = self.load(RUBRIC_V2_REL)
+        self.assertEqual(document["semantic_version"], "rubric-v2")
+        self.assertEqual(document["status"], "frozen")
+
+    def test_v0_and_v1_keep_the_original_matrix_artifact(self) -> None:
+        matrix_paths = []
+        for rel in (RUBRIC_REL, RUBRIC_V1_REL):
+            sources = {s["id"]: s for s in self.load(rel)["sources"]}
+            self.assertEqual(
+                sources["mutation-matrix-v1"]["path"],
+                "sim/reference/mutation-matrix-v1.json",
+            )
+            matrix_paths.append(sources["mutation-matrix-v1"]["sha256"])
+        self.assertEqual(matrix_paths[0], matrix_paths[1])
+
+    def test_v2_pins_the_v2_matrix_with_grown_counts(self) -> None:
+        document = self.load(RUBRIC_V2_REL)
+        sources = {s["id"]: s for s in document["sources"]}
+        self.assertNotIn("mutation-matrix-v1", sources)
+        self.assertEqual(
+            sources["mutation-matrix-v2"]["path"],
+            "sim/reference/mutation-matrix-v2.json",
+        )
+        rows = {r["id"]: r for r in document["rows"]}
+        coverage = {
+            a["metric"]: a["value"] for a in rows["R-L2-MM-COVERAGE"]["assertions"]
+        }
+        self.assertIn(50, coverage.values())
+        self.assertIn(28, coverage.values())
+        self.assertIn(19, coverage.values())
+        subset = {
+            a["metric"]: a["value"] for a in rows["R-L2-MM-CI-SUBSET"]["assertions"]
+        }
+        self.assertEqual(subset["subset_rows"], 21)
+
+    def test_non_matrix_rows_match_v1(self) -> None:
+        v1 = {r["id"]: r for r in self.load(RUBRIC_V1_REL)["rows"]}
+        v2 = {r["id"]: r for r in self.load(RUBRIC_V2_REL)["rows"]}
+        self.assertEqual(set(v1), set(v2))
+        for row_id, row_ in v1.items():
+            if row_.get("family") != "mutation-matrix":
+                self.assertEqual(row_, v2[row_id], row_id)
 
 
 if __name__ == "__main__":

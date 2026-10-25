@@ -2,7 +2,7 @@
 
 Stdlib-only. Binds the timing slice of the committed DR-0012 campaign
 manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 1,
-frozen inventory digest ``1735e03e...``) to the declared ``voice.*`` seams of
+frozen inventory digest ``b632d7ee...``) to the declared ``voice.*`` seams of
 ``spec/reference/mutation-seams-v1.json``:
 
 * registers explicitly versioned runtime operators (``<fixture id>@voice-v1``)
@@ -11,7 +11,7 @@ frozen inventory digest ``1735e03e...``) to the declared ``voice.*`` seams of
   definitions and bridge operators are never relabeled;
 * requires the adapter dispositions to equal the manifest's timing
   dispositions exactly (9 runtime cells, 1 composition, 2 refusals,
-  1 deferred entry), so a manifest revision forces an explicit adapter update;
+  4 deferred entries), so a manifest revision forces an explicit adapter update;
 * builds ``mp1-`` plans bound to the manifest revision/digest and the
   resolved development case, and resolves them into
   ``mutation-voice-schedule-v1`` schedules carrying a campaign binding block
@@ -33,7 +33,8 @@ refusals on the plain and the faulted attempt of the same process (DR-0012
 D7): a refusal on either is ``refused_inadmissible_not_counted``, an admitted
 result is ``detected`` or ``not_detected`` (the latter leaves the case open),
 and a gated detector never counts as a kill by itself. A cell whose attempt
-produced no faulted trace keeps ``not_evaluated``. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8) and the
+produced no faulted trace keeps ``not_evaluated``. ``modulation.lfo_depth_shift`` stays deferred (DR-0012 D8), as do the
+revision-2 #297 additions (DR-0015), and the
 literal ``align_corners`` operator stays a proposed addition (D4, AQ-3).
 """
 
@@ -54,7 +55,7 @@ from .mutations import MutationError
 REQUEST_DOMAIN = b"torchsynth-timing-runtime-request-v1\n"
 FAMILY = ops.FAMILY
 
-# Exact adapter dispositions for the timing slice of manifest revision 1.
+# Exact adapter dispositions for the timing slice of manifest revision 2.
 ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "timing:attack-breakpoint-shift-plus2": "runtime_cell",
     "timing:one-control-sample-delay": "runtime_cell",
@@ -69,6 +70,9 @@ ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "timing:dropped-endpoint-coordinate": "runtime_cell",
     "timing:one-audio-sample-delay": "runtime_cell",
     "timing:composed-zoh-then-audio-delay": "composition",
+    "timing:decay-breakpoint-shift-plus2": "deferred_unmeasured",
+    "timing:release-breakpoint-shift-plus2": "deferred_unmeasured",
+    "timing:sustain-amplitude-shift-plus0.1": "deferred_unmeasured",
 }
 
 # Explicit realisation of every executable entry: (runtime operator, target

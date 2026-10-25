@@ -86,7 +86,7 @@ class InventoryBindingTests(unittest.TestCase):
         counts = tr.require_inventory_match(MANIFEST)
         self.assertEqual(
             counts,
-            {"runtime_cell": 9, "composition": 1, "refusal": 2, "deferred_unmeasured": 1},
+            {"runtime_cell": 9, "composition": 1, "refusal": 2, "deferred_unmeasured": 4},
         )
         manifest_counts = {}
         for entry in tr.timing_entries(MANIFEST):
@@ -111,7 +111,7 @@ class InventoryBindingTests(unittest.TestCase):
             tr.require_inventory_match(retargeted)
 
     def test_wrong_revision_or_digest_refuses(self):
-        for key, value in (("revision", 2), ("identity", "other")):
+        for key, value in (("revision", 3), ("identity", "other")):
             tampered = copy.deepcopy(MANIFEST)
             tampered[key] = value
             with self.assertRaises(ValueError):
@@ -564,7 +564,11 @@ class ReportValidationTests(unittest.TestCase):
         self.assertEqual([r["detail"]["observed_count"] for r in self.report["refusals"]], [1763, 1765])
         self.assertEqual({r["detail"]["landed_pair_status"] for r in self.report["refusals"]}, {"frame_mismatch"})
         self.assertFalse(any(r["counts_toward_runtime_total"] for r in self.report["refusals"]))
-        self.assertEqual(self.report["deferred_unmeasured"], ["timing:lfo-depth-shift-plus-0.1"])
+        self.assertEqual(
+            sorted(self.report["deferred_unmeasured"]),
+            sorted(["timing:lfo-depth-shift-plus-0.1", "timing:decay-breakpoint-shift-plus2",
+                    "timing:release-breakpoint-shift-plus2", "timing:sustain-amplitude-shift-plus0.1"]),
+        )
         for trace, verdicts in self.report["controls"].items():
             self.assertEqual(set(verdicts.values()), {"PASS"}, trace)
         self.assertEqual(self.report["campaign"]["frozen_inventory_sha256"], ops.MANIFEST_FROZEN_SHA256)

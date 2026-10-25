@@ -56,9 +56,9 @@ AUDIO_SAMPLES = 176400
 
 MANIFEST_PATH = "spec/reference/runtime-family-campaign-v1.json"
 MANIFEST_IDENTITY = "runtime-family-campaign-v1"
-MANIFEST_REVISION = 1
+MANIFEST_REVISION = 2
 MANIFEST_FROZEN_SHA256 = (
-    "1735e03ed40381895febf019da22a16a8af9f12c848c189b99726ddba55625c1"
+    "b632d7ee43e2da2f0319e6ea9612f9101ef30040211af290f8d3ef0a914f1cd9"
 )
 
 POST_MODULE = "voice.post_module"

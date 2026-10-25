@@ -2,7 +2,7 @@
 
 Stdlib-only. Binds the signal slice of the committed DR-0012 campaign
 manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 1,
-frozen inventory digest ``1735e03e...``) to the declared writable ``voice.*``
+frozen inventory digest ``b632d7ee...``) to the declared writable ``voice.*``
 seams of ``spec/reference/mutation-seams-v1.json``:
 
 * registers explicitly versioned runtime operators (``<fixture id>@voice-v1``)
@@ -11,7 +11,7 @@ seams of ``spec/reference/mutation-seams-v1.json``:
   operator is relabeled as a family operator;
 * requires the adapter dispositions to equal the manifest's signal
   dispositions exactly (9 runtime cells, 2 second detectors, 1 composition,
-  1 refusal, 4 deferred entries), so a manifest revision forces an explicit
+  1 refusal, 7 deferred entries), so a manifest revision forces an explicit
   adapter update;
 * builds ``mp1-`` plans bound to the manifest revision/digest and the resolved
   development case, and resolves them by *extending*
@@ -20,7 +20,8 @@ seams of ``spec/reference/mutation-seams-v1.json``:
   ``env/release-era/mutation_worker_signal.py``;
 * executes the normalization-decision replacement as the expected plan-time
   refusal (``mutations.validate_plan``), never at a voice seam, and refuses
-  the four deferred ``norm.*`` entries explicitly;
+  the four deferred ``norm.*`` entries and the three revision-2 #297
+  additions (DR-0015) explicitly;
 * validates one worker process report offline: attempt inventory, plan and
   schedule re-derivation, event order/status, frame/identity preflight before
   any metric, paired exactness detectors against the same process's plain
@@ -51,7 +52,7 @@ from .mutations import MutationError
 REQUEST_DOMAIN = b"torchsynth-signal-runtime-request-v1\n"
 FAMILY = ops.FAMILY
 
-# Exact adapter dispositions for the signal slice of manifest revision 1.
+# Exact adapter dispositions for the signal slice of manifest revision 2.
 ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "signal:gain.db": "runtime_cell",
     "signal:gain.polarity": "runtime_cell",
@@ -70,7 +71,18 @@ ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "signal:norm.wrong_reciprocal": "deferred_unmeasured",
     "signal:normalization-decision-replacement": "refusal",
     "signal:composed-round-then-saturate": "composition",
+    "signal:gain.db (minus 1 dB)": "deferred_unmeasured",
+    "signal:clip.truncate_step": "deferred_unmeasured",
+    "signal:clip.truncate_step vs clip.round_step (directed distinction)": "deferred_unmeasured",
 }
+
+# Deferred by manifest revision 2 (DR-0015): #297 publication faults with no
+# runtime cell; they are not normalization-decision entries.
+REVISION_2_DEFERRED = frozenset({
+    "signal:gain.db (minus 1 dB)",
+    "signal:clip.truncate_step",
+    "signal:clip.truncate_step vs clip.round_step (directed distinction)",
+})
 
 # Explicit realisation of every executable entry: (runtime operator, target
 # configuration). Each row is cross-checked against the manifest's runtime
@@ -301,6 +313,10 @@ def require_inventory_match(manifest: Dict[str, Any]) -> Dict[str, int]:
             _require(entry["runtime_truth"]["rule"] == "plan_time_refusal", "refusal rule differs: " + entry_id)
             _require(entry["counts_toward_runtime_total"] is False, "a refusal never counts: " + entry_id)
         else:
+            if entry_id in REVISION_2_DEFERRED:
+                _require(entry["obligation_open"] is True and entry["development_cases"] == [],
+                         "deferred entry must stay open with no cases: " + entry_id)
+                continue
             _require(all(op.startswith("norm.") for op in entry["operators"]),
                      "deferred entry is not a normalization operator: " + entry_id)
             _require(entry["obligation_open"] is True and entry["development_cases"] == []
@@ -401,6 +417,11 @@ def cell_plan(manifest: Dict[str, Any], entry_id: str, case_id: str,
             "it executes host-side as the expected plan-time refusal (producer handoff required)"
         )
     if disposition == "deferred_unmeasured":
+        if entry_id in REVISION_2_DEFERRED:
+            raise MutationError(
+                "refused: " + entry_id + " is deferred_unmeasured (DR-0015); no runtime cell "
+                "is preregistered for this #297 addition"
+            )
         raise MutationError(
             "refused: " + entry_id + " is deferred_unmeasured (DR-0012 D3, AQ-1); "
             + ops.NORMALIZATION_REFUSAL
