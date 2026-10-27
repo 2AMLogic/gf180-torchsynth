@@ -158,13 +158,13 @@
         "passed": true,
         "value": {
           "iverilog": "12.0",
-          "klt": "0.7.1.dev1743+g7ee09483b748"
+          "klt": "0.8.0"
         }
       }
     ]
   },
   "provenance": {
-    "klt_version": "0.7.1.dev1743+g7ee09483b748",
+    "klt_version": "0.8.0",
     "klayout_version": null,
     "pdk": null,
     "deck": null,
@@ -173,7 +173,7 @@
         "path": "evidence/item9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:d9360f0d4059a015c5b27773eb41a8769af664c01a479e75b15baeb4852634d8"
+      "content_hash": "sha256:5dc905d0825267a6df275ce3afcc7c561bc712b80292eb454c2faeaa22ab4983"
     }
   }
 }
