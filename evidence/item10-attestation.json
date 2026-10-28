@@ -24,7 +24,7 @@
         "role": "hygiene",
         "path": ".github/workflows/tb-sim.yml",
         "passed": true,
-        "content_hash": "sha256:93a037d72cd2f0a7de7609d62fc43500ecff44c4dff33388a8bf475a9465143a"
+        "content_hash": "sha256:89d9463f33e859498a4fd68df5d0a405a7be22c560a880553c6ceb9dbe01b8ce"
       },
       {
         "check": "present",
