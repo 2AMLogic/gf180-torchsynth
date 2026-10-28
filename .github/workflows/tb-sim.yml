@@ -36,8 +36,8 @@ jobs:
 
   sim-selftest:
     runs-on: ubuntu-24.04
-    # Step budgets sum to 65; measured job wall-clock ~30 s.
-    timeout-minutes: 75
+    # Step budgets sum to 70; measured job wall-clock ~30 s.
+    timeout-minutes: 85
     strategy:
       # Deliberately not fail-fast: a failure under one interpreter must not
       # cancel the others, so each version keeps its own attributable result
@@ -82,6 +82,26 @@ jobs:
           uvx --from "$KLT" klt --version
           uvx --from "$KLT" klt signoff --attest 9 --inventory evidence/item9-inventory.json --check evidence/item9-attestation.json
           uvx --from "$KLT" klt signoff --attest 10 --inventory evidence/item10-inventory.json --check evidence/item10-attestation.json
+      # T1 verdict of record (issue 421, tracker 386). The committed report
+      # is the rendered block grade; re-render it and fail on any diff.
+      # `klt signoff --manifest` exits 3 while any T1 item is unmet (valid
+      # JSON still on stdout); every other non-zero code is a real failure.
+      # Regenerate after a manifest or attestation change with:
+      #   uvx --from "klayout-tools==0.8.0" klt signoff \
+      #     --manifest manifests/gf180-torchsynth.signoff.json --format json \
+      #     > manifests/gf180-torchsynth.signoff-report.json   # exit 3 expected
+      - name: T1 signoff report drift check (klt, PDK-free)
+        timeout-minutes: 5
+        run: |
+          KLT="klayout-tools==0.8.0"
+          pip install uv
+          rc=0
+          uvx --from "$KLT" klt signoff --manifest manifests/gf180-torchsynth.signoff.json --format json > "$RUNNER_TEMP/signoff-report.json" || rc=$?
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
+            echo "klt signoff --manifest exited $rc (only 0 and 3 are accepted)" >&2
+            exit 1
+          fi
+          diff -u manifests/gf180-torchsynth.signoff-report.json "$RUNNER_TEMP/signoff-report.json"
 
   # The nine RTL golden-vector lanes (issue #187) used to share one
   # `sim-lanes` job whose 370-minute step sum and 400-minute cap exceeded

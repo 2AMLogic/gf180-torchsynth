@@ -8,7 +8,9 @@ the scratch-relative path of the file). The format is klayout-tools'
 `docs/cli/artifact.md`.
 
 This directory is unrelated to `manifests/gf180-torchsynth.signoff.json`, the
-`klt signoff` manifest.
+`klt signoff` manifest (input), and to
+`manifests/gf180-torchsynth.signoff-report.json`, the rendered T1 report of
+record that CI re-renders and diffs.
 
 Evidence bytes are private; manifests are public. Never write a bucket, account
 id, storage-bucket URI or broker URL here. Manifests are append-only: do not edit or
