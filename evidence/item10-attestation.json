@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 10,
-  "summary": "T1 item 10 (Repo hygiene): 6/6 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 10 (Repo hygiene): 7/7 attestation checks passed (klt signoff --attest)",
   "source": "evidence/item10-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 6,
-    "passed_count": 6,
+    "check_count": 7,
+    "passed_count": 7,
     "checks": [
       {
         "check": "present",
@@ -38,7 +38,7 @@
         "role": "hygiene",
         "path": "README.md",
         "passed": true,
-        "content_hash": "sha256:7da9bda7364b2eb12322c6f3a6cf4082bec4456f24297fc6a0cfb041fc49e71d"
+        "content_hash": "sha256:fd344f461ecc9cb3a12dc93c5fb3890e658c9f1c381bf5e7e422c618ec74e0a1"
       },
       {
         "check": "command",
@@ -65,6 +65,20 @@
         "cwd": ".",
         "exit_status": 0,
         "passed": true
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "readme-t1-sections",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "tests.test_readme_t1_sections"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
       }
     ]
   },
@@ -78,7 +92,7 @@
         "path": "evidence/item10-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:c0f0e25e550e5c28d1f387d0c918fe15ac9c47ab5b0b1815d9bf98adac231564"
+      "content_hash": "sha256:08aebe2df56d99c4fc709d9befd3384b5bc6507c3812d56554c7290575a13175"
     }
   }
 }
