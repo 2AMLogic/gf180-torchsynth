@@ -7,7 +7,7 @@ This snapshot records workflow state. Issue closure and Loom labels do not estab
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-_None._
+- **#419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)
 
 ## Very Important
 
@@ -20,26 +20,26 @@ _None._
 `loom:important`; taken before unlabelled work.
 
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once
+- **#274**: Provision access to the pinned AWS box (repo-remote) from the agent fleet
 
 ## Ready
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#9**: [Epic #1] Phase plan: negative-control mutation coverage
-- **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
-- **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate
-- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
-- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
-- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#334**: [Part of #300] Implement identity family actual-Voice runtime adapter
-- **#335**: [Part of #300] Implement timing family actual-Voice runtime adapter
-- **#336**: [Part of #300] Implement signal family actual-Voice runtime adapter
+- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
+- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
+- **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
 - **#80**: [Epic #2] Build and measure a resource-generous FPGA core
+- **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
+- **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
+- **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
+- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
+- **#418**: Install the two-key ratification path and ratify spec/T1-SPEC.md
 
 ## PRs Awaiting Review
 
@@ -51,7 +51,7 @@ _None._
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-_None._
+- **#419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)
 
 ## Proposed
 
@@ -59,23 +59,23 @@ Issues carrying `loom:curated`.
 
 - **#4**: [Epic #1] Phase plan: reproducible corpus artifacts *(curated)*
 - **#7**: [Epic #1] Phase plan: observable named Voice traces *(curated)*
-- **#9**: [Epic #1] Phase plan: negative-control mutation coverage *(curated)*
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
 - **#80**: [Epic #2] Build and measure a resource-generous FPGA core *(curated)*
+- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility *(curated)*
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate *(curated)*
-- **#274**: Provision access to the pinned AWS box (repo-remote, i-018841ef4169207ba) from the agent fleet *(curated)*
+- **#274**: Provision access to the pinned AWS box (repo-remote) from the agent fleet *(curated)*
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
-- **#297**: [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes *(curated)*
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
 - **#324**: Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue *(curated)*
 - **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2) *(curated)*
-- **#334**: [Part of #300] Implement identity family actual-Voice runtime adapter *(curated)*
-- **#335**: [Part of #300] Implement timing family actual-Voice runtime adapter *(curated)*
-- **#336**: [Part of #300] Implement signal family actual-Voice runtime adapter *(curated)*
+- **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half) *(curated)*
+- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
+- **#411**: fix: isolate historical pip from release-era downloads *(curated)*
+- **#418**: Install the two-key ratification path and ratify spec/T1-SPEC.md *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -90,24 +90,26 @@ Issues carrying `loom:curated`.
 - **#67**: [Epic #2] Demonstrate and archive the end-to-end hardware sound explorer *(architect)*
 - **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(architect)*
 - **#83**: [Epic #2] Measure gf180mcu floorplan, place, route, and timing feasibility *(architect)*
+- **#383**: Split 7,462-line tb/run_tb.py into per-lane modules *(hermit)*
 
 ## Epics
 
 - **#1**: Epic: Qualify TorchSynth Voice and freeze a numeric contract
 - **#2**: Epic: Implement and demonstrate the TorchSynth Voice sound explorer
+- **#386**: Track the gap to T1 (klayout-tools design-evidence-tiers.md)
 
 ## Backlog Balance
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Very important | 0 |
-| Important | 1 |
-| Ready (`loom:issue`) | 9 |
-| In Progress (`loom:building`) | 1 |
+| Important | 2 |
+| Ready (`loom:issue`) | 3 |
+| In Progress (`loom:building`) | 6 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 0 |
+| Approved PRs awaiting merge | 1 |
 | Curated | 19 |
-| Architect / Hermit proposals | 11 |
-| Active epics | 2 |
+| Architect / Hermit proposals | 12 |
+| Active epics | 3 |
 <!-- guide:plan-body:end -->

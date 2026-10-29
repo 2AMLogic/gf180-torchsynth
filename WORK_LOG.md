@@ -2,6 +2,82 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-29
+
+- **PR #426**: fix(evidence): re-pin T1 item 10 manifest hash and re-render signoff report
+- **Issue #425** (closed): main CI red: sim-selftest (3.11/3.12/3.13) failing
+
+### 2026-10-28
+
+- **PR #424**: docs: add T1 spec table and reproduction sections to README
+- **PR #423**: ci: commit rendered klt T1 signoff report and fail on drift
+- **Issue #422** (closed): T1 item 10 (repo hygiene): add the spec table and a reproduce-every-result section to README, then re-attest
+- **Issue #421** (closed): T1 grading: commit a rendered klt signoff report (klt v0.8.0) for manifests/gf180-torchsynth.signoff.json and re-render it in CI
+
+### 2026-10-27
+
+- **PR #417**: chore(deps): pin klayout-tools to PyPI 0.8.0 and regenerate item 9/10 evidence
+- **Issue #420** (closed): Probe: can klt sim --backend batch run whole-voice sims? (from 2am#6306)
+- **Issue #416** (closed): Bump klayout-tools pin 7ee09483b748 → 0.8.0
+
+### 2026-10-26
+
+- **PR #412**: chore(deps): bump the github-actions group across 1 directory with 3 updates
+
+### 2026-10-25
+
+- **PR #328**: [#297] Add missing family mutations: -1 dB gain, truncation, decay/sustain/release, second magnitudes
+- **Issue #379** (closed): Declare runtime-family campaign manifest revision for #297 mutation additions (blocks PR #328)
+- **Issue #297** (closed): [Part of #9] Add missing family mutations: -1 dB gain, truncation, ADSR decay/sustain/release breakpoints, second magnitude probes
+
+### 2026-10-23
+
+- **PR #410**: feat: add manifest-forward stored-evidence writer and manifest checker
+- **PR #408**: refactor: share has_iverilog probe across RTL test modules
+- **PR #406**: refactor: share signal/timing runtime helpers in mutation_family_runtime
+- **PR #404**: refactor: share golden-generator check, render and evidence helpers
+- **PR #401**: feat: evaluate timing gated detectors through estimator admissibility gates
+- **Issue #409** (closed): Adopt the common artifact store for sim evidence (manifests in git, bytes via klt artifact)
+- **Issue #407** (closed): Consolidate duplicated write_json/json_bytes/has_iverilog helpers (and check capture_float_sources newline)
+- **Issue #405** (closed): Dedupe signal/timing runtime helpers and repeated _require/sha256 in mutation modules
+- **Issue #403** (closed): Dedupe check_committed/render_fixed_vco/evidence_row across golden generators
+- **Issue #335** (closed): [Part of #300] Implement timing family actual-Voice runtime adapter
+
+### 2026-10-22
+
+- **PR #402**: test: share fake tensor backend between mutation runtime tests
+- **PR #372**: feat(mutations): add timing-family voice-runtime adapter bound to the DR-0012 manifest
+- **PR #371**: feat(mutations): identity-family runtime adapter for the family campaign (#334)
+- **PR #370**: docs(ci): record first live scheduled-dispatch evidence (#284)
+- **Issue #400** (closed): Consolidate duplicated FakeTorch test scaffolding in mutation runtime tests
+- **Issue #334** (closed): [Part of #300] Implement identity family actual-Voice runtime adapter
+
+### 2026-10-21
+
+- **PR #399**: fix: take the golden generator's corpus store from --store, default out/corpus-store
+- **PR #397**: refactor: share frozen-receipt helpers across golden generators
+- **Issue #398** (closed): Remove hard-coded /Users/joseph paths: build or resolve the corpus store in-repo
+- **Issue #396** (closed): Dedupe identical frozen-receipt helpers across tools/ golden generators
+
+### 2026-10-20
+
+- **PR #391**: feat(evidence): add T1 signoff manifest with klt-attested item 9 and 10 inventories
+- **PR #381**: ci: pin actions/checkout in ci-main-schedule to commit SHA
+- **PR #367**: chore(deps): bump actions/checkout from 4 to 7 in the github-actions group across 1 directory
+- **Issue #389** (closed): Add a T1 signoff manifest with klt-attested item 9 and 10 inventories, and fix the stale README layout
+- **Issue #380** (closed): Pin actions/checkout in ci-main-schedule.yml to a commit SHA like the other workflows
+
+### 2026-10-17
+
+- **PR #390**: docs(spec): add proposed T1 block spec table
+- **PR #384**: docs(asic): add whole-voice synthesis-feasibility plan pinned to the evidence record
+- **PR #378**: fix: regenerate mutation-matrix publication to bind current spec/MUTATIONS.md
+- **PR #376**: [Epic #2] gf180mcu synthesis-feasibility record: whole voice does not synthesize in bound (#82)
+- **PR #373**: feat(mutations): signal-family voice-runtime adapter bound to the DR-0012 manifest (#336)
+- **Issue #387** (closed): Draft the T1 spec table for the one-shot Voice core, with each row's statistical class
+- **Issue #336** (closed): [Part of #300] Implement signal family actual-Voice runtime adapter
+- **Issue #314** (closed): [Part of #9] Rebind drifted mutation-matrix publication (spec/MUTATIONS.md digest) and regenerate under check-first CI
+
 ### 2026-10-13
 
 - **PR #366**: Remove Renovate config: Dependabot takes over
