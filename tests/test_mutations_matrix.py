@@ -1,7 +1,7 @@
 """Bidirectional mutation-coverage matrix contract tests; stdlib-only.
 
 These tests bind the committed #34 matrix publication
-(``sim/reference/mutation-matrix-v1.json``) to the landed operator registry:
+(``sim/reference/mutation-matrix-v2.json``) to the landed operator registry:
 every faults-to-tests row must name registered operators of exactly one
 family with a matching declared seam topology, every mandatory detector must
 name at least one expected fault with wrong-then-right counts, the
@@ -32,7 +32,7 @@ from torchsynth_voice import mutations_identity  # noqa: E402
 from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
 
-MATRIX_PATH = ROOT / "sim/reference/mutation-matrix-v1.json"
+MATRIX_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
 CI_CATEGORIES = ("identity", "delay", "interpolation", "gain", "normalization")
 
 
@@ -54,7 +54,7 @@ def register_families():
 class MatrixPublicationTests(unittest.TestCase):
     def test_committed_matrix_is_present_and_passing(self):
         matrix = load_matrix()
-        self.assertEqual(matrix["kind"], "mutation-matrix-v1")
+        self.assertEqual(matrix["kind"], "mutation-matrix-v2")
         self.assertEqual(matrix["schema_version"], 1)
         self.assertEqual(matrix["status"], "PASS")
         self.assertEqual(matrix["mutation_contract"], "mutation-v1")
@@ -180,10 +180,7 @@ class MatrixPublicationTests(unittest.TestCase):
         self.assertTrue(below_floor)
         for probe in below_floor:
             self.assertEqual(probe["validity"], "sensitivity-NO VERDICT")
-            self.assertLess(
-                probe["magnitude_control_samples"],
-                probe["qualified_resolution_control_samples"],
-            )
+            self.assertLess(probe["magnitude"], probe["boundary"])
         self.assertEqual(matrix["counts"]["missed_faults"], 0)
 
     def test_composition_gate_proofs_record_wrong_then_right(self):
@@ -270,7 +267,7 @@ def load_runner():
 
 
 class CiSubsetSentinelTests(unittest.TestCase):
-    """The ``--ci-subset`` sentinel (issue #299): exactly 20 rows, fail-visible."""
+    """The ``--ci-subset`` sentinel (issue #299): exactly 21 rows, fail-visible."""
 
     def setUp(self):
         self.runner = load_runner()
@@ -294,12 +291,12 @@ class CiSubsetSentinelTests(unittest.TestCase):
         if families is not None:
             self.runner.FAMILY_PUBLICATIONS = families
 
-    def test_selects_exactly_the_published_20_rows(self):
+    def test_selects_exactly_the_published_21_rows(self):
         rows, code, _ = self.run_quiet()
         self.assertEqual(code, 0)
         committed = load_matrix()["ci_subset"]["rows"]
         self.assertEqual(len(rows), self.runner.EXPECTED_CI_SUBSET_ROWS)
-        self.assertEqual(self.runner.EXPECTED_CI_SUBSET_ROWS, 20)
+        self.assertEqual(self.runner.EXPECTED_CI_SUBSET_ROWS, 21)
         self.assertEqual(rows, committed)
 
     def test_cli_flag_prints_pass_and_rows(self):
@@ -310,7 +307,7 @@ class CiSubsetSentinelTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         report = json.loads(completed.stdout)
-        self.assertEqual(report["ci_subset_rows"], 20)
+        self.assertEqual(report["ci_subset_rows"], 21)
         self.assertEqual(report["rows"], load_matrix()["ci_subset"]["rows"])
 
     def test_committed_row_list_drift_fails_visibly(self):
@@ -321,7 +318,7 @@ class CiSubsetSentinelTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("ci_subset", out)
 
-    def test_row_count_other_than_20_fails_visibly(self):
+    def test_row_count_other_than_21_fails_visibly(self):
         matrix = load_matrix()
         matrix["faults_to_tests"] = [
             row for row in matrix["faults_to_tests"]
@@ -333,7 +330,7 @@ class CiSubsetSentinelTests(unittest.TestCase):
         self.point_at(matrix)
         _, code, out = self.run_quiet()
         self.assertEqual(code, 1)
-        self.assertIn("expected 20", out)
+        self.assertIn("expected 21", out)
 
     def test_untripped_family_row_fails_visibly(self):
         matrix = load_matrix()

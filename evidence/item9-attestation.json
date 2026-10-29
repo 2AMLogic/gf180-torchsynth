@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 9,
+  "summary": "T1 item 9 (Testbenches shipped): 20/20 attestation checks passed (klt signoff --attest)",
+  "source": "evidence/item9-inventory.json",
+  "attestation": {
+    "producer": "klt signoff --attest",
+    "inventory_schema_version": 1,
+    "hash_algorithm": "sha256-raw-bytes",
+    "check_count": 20,
+    "passed_count": 20,
+    "checks": [
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/run_oneshot.py",
+        "passed": true,
+        "content_hash": "sha256:35edfb335b0871958d7e9aa85745f180ef13f83411ee23e40916209d1337ad0e"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/run_tb.py",
+        "passed": true,
+        "content_hash": "sha256:1b432f219c4ed3f626acca614f06f80bedaaa06265624274a3b42e77412b3b67"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/run_voice.py",
+        "passed": true,
+        "content_hash": "sha256:11744dae8a40d8eed734d661d52074dc695e58112f8ebd19505d992dd15260b8"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_adsr_engine.sv",
+        "passed": true,
+        "content_hash": "sha256:89d9a8f1623f26fa8c4a736f6f598d00b3c0fa2a7ecf1ff6a261ea6787035717"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_audio_mix_engine.sv",
+        "passed": true,
+        "content_hash": "sha256:f1b6c4d62ea948dc2d0fba9663e5c4c9608a3f367cc48bb446bcce6179d6231d"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_lfo_vca_engine.sv",
+        "passed": true,
+        "content_hash": "sha256:f5aa3a1f0ce5753e138f68bfe5ed288dd08685e5d09421e4bf5fd6b26512063b"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_lut_sine_dut.sv",
+        "passed": true,
+        "content_hash": "sha256:e1af2f28011c7e259992723918df03a66e1ebca8f107e736de7ea9811e2a2d9d"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_mod_matrix_upsample.sv",
+        "passed": true,
+        "content_hash": "sha256:6c79cfb89daecaf4364f715d6ce39061392527f1fa056094c695bbbc15b65520"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_noise_stream_dut.sv",
+        "passed": true,
+        "content_hash": "sha256:02169cacfa0195b7ae36f9e8f65e02e17864eeddceed3e8bad062aa5f65412bc"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_normalization_replay_engine.sv",
+        "passed": true,
+        "content_hash": "sha256:b861e42f853cdbea367e784903234112c20ecf352a590f338ca66c5a5825c2f6"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_one_shot_tail.sv",
+        "passed": true,
+        "content_hash": "sha256:4619f70dff7d0e7065da75103eebe38efb33db6c888b8a56678d2a65d6d330ef"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_one_shot_voice.sv",
+        "passed": true,
+        "content_hash": "sha256:43fe1f3ad389ff35b4ea6b7ce2ebf02a4340c1591fe16c8d7928a7d01eaa4598"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_patch_control.sv",
+        "passed": true,
+        "content_hash": "sha256:51e343880f988b9c1178d157af081b1e1757f577781df2846dcc1645a83aa1b0"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_render_binding.sv",
+        "passed": true,
+        "content_hash": "sha256:ea3ac42582376a914ffb361660869338e00cb705d709807d006f0924bcd1990a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_sine_vco_engine.sv",
+        "passed": true,
+        "content_hash": "sha256:5294fab16f9ba033f5962163fc0487e041f3081e5001d589075186dac569c6bd"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_square_saw_vco.sv",
+        "passed": true,
+        "content_hash": "sha256:6deb0fc466d22e5d2d74972083a845c90ad4aca0f383decf78e8ca3e603961eb"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/sv/tb_synth_dut.sv",
+        "passed": true,
+        "content_hash": "sha256:2531a814397e2f9d60affa8895e242c9451fd37bd45d23a3d605278516f465a9"
+      },
+      {
+        "check": "command",
+        "role": "cold_start",
+        "argv": [
+          "python3",
+          "tb/run_tb.py",
+          "selftest"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      },
+      {
+        "check": "pin",
+        "role": "pdk",
+        "passed": true,
+        "value": {
+          "name": "gf180mcuD",
+          "revision": "f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+        }
+      },
+      {
+        "check": "pin",
+        "role": "tools",
+        "passed": true,
+        "value": {
+          "iverilog": "12.0",
+          "klt": "0.8.0"
+        }
+      }
+    ]
+  },
+  "provenance": {
+    "klt_version": "0.8.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
+    "input": {
+      "path": {
+        "path": "evidence/item9-inventory.json",
+        "scope": "repo"
+      },
+      "content_hash": "sha256:5dc905d0825267a6df275ce3afcc7c561bc712b80292eb454c2faeaa22ab4983"
+    }
+  }
+}

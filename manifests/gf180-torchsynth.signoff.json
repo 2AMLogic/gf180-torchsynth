@@ -1,0 +1,8 @@
+{
+  "block": "gf180-torchsynth",
+  "kind": "digital",
+  "evidence": {
+    "9": {"file": "evidence/item9-attestation.json", "content_hash": "sha256:5dc905d0825267a6df275ce3afcc7c561bc712b80292eb454c2faeaa22ab4983"},
+    "10": {"file": "evidence/item10-attestation.json", "content_hash": "sha256:a3581489dadedebf8dd62ee839606ab4eee58984b3b1d065b8626ba88ddfb5bf"}
+  }
+}

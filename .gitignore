@@ -31,6 +31,7 @@
 .loom/retry-state/
 .loom/exit-codes/
 .loom/sweep-checkpoint/
+.loom/private-jobs/
 .loom/sweep-run/
 .loom/targets/
 .loom/target*/
@@ -90,8 +91,10 @@ build/
 *.egg-info/
 out/
 artifacts/
+!manifests/artifacts/
 spec/reference/generated/
 sim/work/
+sim/stage/
 
 # Repo Skills guard-hook logs (machine-local; carry absolute paths)
 .claude/skills/repo/logs/

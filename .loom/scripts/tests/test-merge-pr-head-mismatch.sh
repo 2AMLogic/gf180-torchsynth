@@ -204,9 +204,8 @@ source "$SCRIPT_DIR/lib/require-daemon-bin.sh"
 loom_test_require_daemon_bin "$HELPERS_DIR" "merge-pr"
 
 CLASSIFIER_FILE="$(mktemp)"
-# `_classify_merge_response` is a single dense line (merge-pr.sh is
-# ratchet-frozen and `shell-budget --check` refuses any growth of the portable
-# pool), so it is captured by `print; next` rather than the brace-matching
+# `_classify_merge_response` is a single dense line in merge-pr.sh, so it is
+# captured by `print; next` rather than the brace-matching
 # error_head_moved needs — the same split test-merge-pr-head-sync-retry.sh makes
 # for _refresh_precondition_sha.
 awk '
@@ -455,17 +454,16 @@ else
     echo -e "  ${RED}FAIL${NC}: the merge-ancestry detection trap note or its link from champion-pr-merge.md is missing"
 fi
 
-# #8508's exit 4 shares exit 3's caller contract, so the same wiring must be
-# present: Champion has to branch on it instead of falling into the generic
-# failure path, and must pass the flag that can produce it in the first place.
+# #8508's exit 4 is retired (#12063 slice 1): Champion no longer passes the
+# flag that produced it, and keeps re-queueing a 4 only for mixed versions.
 TESTS_RUN=$((TESTS_RUN + 1))
 if [[ -f "$CHAMPION_MD" ]] && grep -q '"\$MERGE_RC" -eq 4' "$CHAMPION_MD" \
-   && grep -q -- '--redate-stale-checks' "$CHAMPION_MD"; then
+   && ! grep -q -- 'merge-pr.sh "\$PR_NUMBER" --auto --redate-stale-checks' "$CHAMPION_MD"; then
     TESTS_PASSED=$((TESTS_PASSED + 1))
-    echo -e "  ${GREEN}PASS${NC}: champion-pr-merge.md passes --redate-stale-checks and branches on exit 4 (#8508)"
+    echo -e "  ${GREEN}PASS${NC}: champion-pr-merge.md no longer passes --redate-stale-checks and still re-queues a stray exit 4"
 else
     TESTS_FAILED=$((TESTS_FAILED + 1))
-    echo -e "  ${RED}FAIL${NC}: champion-pr-merge.md does not wire merge-pr.sh's exit 4 (#8508)"
+    echo -e "  ${RED}FAIL${NC}: champion-pr-merge.md still passes --redate-stale-checks, or dropped the exit-4 re-queue"
 fi
 
 # #8896's exit 5 (--auto's settle-wait timed out) joins the same family: it must

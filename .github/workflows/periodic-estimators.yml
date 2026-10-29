@@ -28,14 +28,14 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: ${{ matrix.python }}
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '${{ matrix.python }}'
       - name: Run required numerical tests (missing NumPy fails)
         run: uv run --no-sync python tests/test_periodic_estimators.py --numerical
       - name: Execute the complete qualification and primary sentinels
         run: uv run --no-sync python tools/qualify_periodic_estimators.py --output periodic-ci.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: always()
         with:
           name: periodic-${{ matrix.python }}

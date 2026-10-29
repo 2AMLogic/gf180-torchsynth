@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 10,
+  "summary": "T1 item 10 (Repo hygiene): 7/7 attestation checks passed (klt signoff --attest)",
+  "source": "evidence/item10-inventory.json",
+  "attestation": {
+    "producer": "klt signoff --attest",
+    "inventory_schema_version": 1,
+    "hash_algorithm": "sha256-raw-bytes",
+    "check_count": 7,
+    "passed_count": 7,
+    "checks": [
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/ci.yml",
+        "passed": true,
+        "content_hash": "sha256:33249f34068a170467c30f3e562e0382cf116f308d73a21d7e12756c77d22701"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/tb-sim.yml",
+        "passed": true,
+        "content_hash": "sha256:89d9463f33e859498a4fd68df5d0a405a7be22c560a880553c6ceb9dbe01b8ce"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "LICENSE",
+        "passed": true,
+        "content_hash": "sha256:d47483eb3e7e0b8cdc6f5252d857935661943f6c10bcecf49ae4b8dfe8c26317"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "README.md",
+        "passed": true,
+        "content_hash": "sha256:fd344f461ecc9cb3a12dc93c5fb3890e658c9f1c381bf5e7e422c618ec74e0a1"
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "ci-lane-wiring",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "tests.test_ci_lane_wiring"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "contract",
+        "argv": [
+          "python3",
+          "tools/check_contract.py"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "readme-t1-sections",
+        "argv": [
+          "python3",
+          "-m",
+          "unittest",
+          "tests.test_readme_t1_sections"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      }
+    ]
+  },
+  "provenance": {
+    "klt_version": "0.8.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
+    "input": {
+      "path": {
+        "path": "evidence/item10-inventory.json",
+        "scope": "repo"
+      },
+      "content_hash": "sha256:08aebe2df56d99c4fc709d9befd3384b5bc6507c3812d56554c7290575a13175"
+    }
+  }
+}
