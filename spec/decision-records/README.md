@@ -21,3 +21,4 @@ questions and must not be represented as finished hardware decisions.
 | [0013](0013-versioned-historical-source-binding.md) | Accepted | Sealed rubrics bind archived historical sources via an explicit versioned table; no re-seal (PR #378) |
 | [0014](0014-rubric-v2-mutation-matrix.md) | Accepted | Rubric v2 for the grown mutation-matrix row set (issue #297) |
 | [0015](0015-runtime-family-campaign-revision-2.md) | Proposed | Runtime-family campaign manifest revision 2: #297 additions registered as deferred_unmeasured (issue #379) |
+| [0016](0016-ratify-t1-spec.md) | Proposed | Ratify the T1 block spec table (`spec/T1-SPEC.md`); pending rows stay pending, no clock selected (issue #418) |
