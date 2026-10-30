@@ -112,6 +112,90 @@ module tb_patch_control;
     integer cycle;
     reg stim_eof;
 
+`ifdef KLT_COCOTB
+    // klt functional-verification variant: no plusargs, several schedules per
+    // simulation. runs.txt holds the run count R; run r reads
+    // run<r>_stimulus.txt and writes run<r>_captured.txt / run<r>_final.txt.
+    // The DUT is reset before every run. klt_done rises only after the last
+    // output file is closed; every error path still calls $finish.
+    reg klt_done = 1'b0;
+    integer klt_runs, klt_r, klt_k, klt_s, klt_fd;
+
+    task klt_run(input integer run);
+        begin
+            $sformat(stim_path, "run%0d_stimulus.txt", run);
+            $sformat(cap_path, "run%0d_captured.txt", run);
+            $sformat(final_path, "run%0d_final.txt", run);
+            capf = $fopen(cap_path, "w");
+
+            rst = 1'b1;
+            repeat (4) @(negedge clk);
+            rst = 1'b0;
+
+            stimf = $fopen(stim_path, "r");
+            if (stimf == 0) begin
+                $display("ERROR: cannot open stimulus %0s", stim_path);
+                $finish;
+            end
+            cycle = 0;
+            stim_eof = 1'b0;
+            while (!$feof(stimf) && !stim_eof) begin
+                code = $fgets(line, stimf);
+                if (code == 0) begin
+                    stim_eof = 1'b1;
+                end else begin
+                    if (line[((code-1)*8) +: 8] == "B") begin
+                        $sscanf(line, "B %d", value);
+                        cmd_valid <= 1'b1;
+                        cmd_byte  <= value[7:0];
+                    end else begin
+                        cmd_valid <= 1'b0;
+                    end
+                    cycle = cycle + 1;
+                    @(negedge clk);
+                end
+            end
+            $fclose(stimf);
+            cmd_valid <= 1'b0;
+
+            repeat (30000) @(negedge clk);
+
+            finalf = $fopen(final_path, "w");
+            $fwrite(finalf, "%0d %0d %0d %0d %0d %0d %0d %0d\n",
+                    state_out, patch_active, kbd_midi_f0_word,
+                    kbd_duration_word, sound_identity_len, idle_out,
+                    bind_pulses, bind_max_run);
+            for (klt_k = 63; klt_k >= 0; klt_k = klt_k - 1)
+                $fwrite(finalf, "%02x", sound_identity[klt_k*8 +: 8]);
+            $fwrite(finalf, "\n");
+            for (klt_s = 0; klt_s < 78; klt_s = klt_s + 1) begin
+                probe_slot = klt_s[6:0];
+                #1;
+                $fwrite(finalf, "%0d\n", probe_value);
+            end
+            $fclose(finalf);
+            $fclose(capf);
+        end
+    endtask
+
+    initial begin
+        klt_fd = $fopen("runs.txt", "r");
+        if (klt_fd == 0) begin
+            $display("ERROR: cannot open runs.txt");
+            $finish;
+        end
+        code = $fscanf(klt_fd, "%d", klt_runs);
+        $fclose(klt_fd);
+        if (code != 1 || klt_runs < 1) begin
+            $display("ERROR: bad run count");
+            $finish;
+        end
+        for (klt_r = 0; klt_r < klt_runs; klt_r = klt_r + 1)
+            klt_run(klt_r);
+        $display("TB DONE (%0d runs)", klt_runs);
+        klt_done = 1'b1;
+    end
+`else
     initial begin
         if (!$value$plusargs("stim=%s", stim_path)) begin
             $display("ERROR: +stim=<path> required");
@@ -188,5 +272,6 @@ module tb_patch_control;
         $display("TB DONE (%0d stimulus cycles)", cycle);
         $finish;
     end
+`endif
 
 endmodule

@@ -778,6 +778,51 @@ buffer (`spec/decision-records/0010-one-shot-rtl-microarchitecture.md:
   Nothing here claims synthesis, layout, signoff, hardware playback, or
   sound fidelity.
 
+## Functional verification through `klt` (issue #388)
+
+`tb/klt/` re-runs ten of the lanes above (anchor, vco, vco2, adsr, patch,
+lfo, modmatrix, noise, mix, normreplay) under cocotb through
+`klt functional-verification`, so the sample-exact RTL-vs-golden verdict is
+readable by `klt` tooling (T1 item 5, functional half). It adds a second
+harness around the *same* benches and the *same* comparison code; it does not
+replace `tb/run_tb.py`, whose verdicts are unchanged.
+
+How a lane works: `tb/klt/<lane>.request.json` compiles the bench with
+`KLT_COCOTB=1`; `tb/klt/test_<lane>.py` writes the stimulus files into the
+simulator's working directory at import time, waits for the bench's
+`klt_done` flag (raised only after every capture file is closed), then
+compares the captures with `tb/run_tb.py`'s own helpers. Without the define,
+every bench still ends in `$finish` exactly as before. Every `TB-ERROR` path
+still calls `$finish`, which leaves the cocotb test unfinished and is reported
+as a failure.
+
+Cold start (no host tool is modified; cocotb lives in a throwaway venv):
+
+```bash
+python3 -m venv .venv-cocotb && .venv-cocotb/bin/pip install "cocotb==2.1.0"
+# klt runs cocotb inside its own interpreter, so put cocotb on its path:
+export PYTHONPATH=$PWD/.venv-cocotb/lib/python3.*/site-packages   # match klt's Python
+klt functional-verification tb/klt/adsr.request.json -o /tmp/klt-adsr --format json
+python3 tb/klt/run_lanes.py run --out /tmp/klt-fv --write sim/evidence/functional-verification-modules-v1.json
+python3 tb/klt/run_lanes.py negative-controls --out /tmp/klt-fv --merge sim/evidence/functional-verification-modules-v1.json
+python3 tb/klt/run_lanes.py check          # no simulation: record hashes vs the tree
+```
+
+(or `uvx --from "klayout-tools[functional-verification]" klt ...` when that
+release supports `-o`; CI pins a `klayout-tools` commit instead.)
+`klt` needs `iverilog` on `PATH`; missing cocotb, `klt` or `iverilog` refuses
+(non-zero) and never reads as a pass. The driver also refuses a report with zero
+tests, any skipped test, or a missing/empty `results.xml`.
+
+The committed record is `sim/evidence/functional-verification-modules-v1.json`.
+It carries per-lane RTL source, vector, request and test-module hashes, the
+tool versions (klt, cocotb, Icarus), the git identity of the run, the negative
+controls (one deliberate RTL fault per lane that must make its cocotb test
+fail), and the declared gaps: the whole-voice one-shot top, the one-shot tail
+chain and the render-binding bench are not covered here, nor are the mutation,
+replay and budget stages of `tb/run_tb.py`. It makes **no** synthesis, SDF,
+post-route, hardware or sound-fidelity claim; that is #82/#83's evidence.
+
 ## Gated, not in this increment
 
 Both audio-rate lanes DR-0010's module-ownership table splits

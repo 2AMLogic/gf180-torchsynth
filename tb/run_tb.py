@@ -4411,6 +4411,11 @@ def patch_simulate(workdir: Path, simulator: str, stim: Path,
         ],
         cwd=workdir,
     )
+    return patch_read_outputs(captured, final)
+
+
+def patch_read_outputs(captured: Path, final: Path) -> tuple:
+    """Parse the bench's capture + final files into (response bytes, obs)."""
     rsp = [
         int(line)
         for line in captured.read_text(encoding="utf-8").splitlines()
@@ -5063,13 +5068,16 @@ def render_negative_frames(model, words: dict, clip_bytes: int) -> list:
     return frames
 
 
-def patch(workdir: Path, simulator: str) -> int:
-    """Issue #69 flow: loader/identity/reset/keyboard vs its mirror."""
-    model = patch_build_model()
-    words, vector = patch_anchor_words()
+def patch_plan(model, words, vector):
+    """The #69/#211 scenario table: every scenario's mirror, schedule and check.
+
+    Shared by ``patch()`` and the klt/cocotb lane (``tb/klt``), so the verdict
+    logic for each scenario lives in exactly one place. Returns
+    ``(scenarios, render_scenarios, entries)``; each entry is
+    ``(label, key, run_model, schedule, checks)`` in ``patch()``'s run order.
+    """
     scenarios = build_scenarios(model, words, vector)
     names = list(model.names)
-    ok = True
 
     def check_s1(obs):
         good = True
@@ -5122,10 +5130,6 @@ def patch(workdir: Path, simulator: str) -> int:
         ("patch timeout + continuation refusal", "s5-timeout", None),
         ("bad-frame recovery + stale protocol version", "s6-badframe", None),
     ]
-    for label, key, checks in run_specs:
-        ok = compare_run(label, scenarios[key], workdir / key, simulator,
-                         model, PATCH_DUT_SV, checks) and ok
-
     # --- render lane (issue #211, spec/protocol/RENDER-TRIGGER.md) -------
     # The lifecycle battery runs against a scaled-down NOISE_CLIP_BYTES so
     # a clip can be opened and discarded a dozen times in one scenario; the
@@ -5161,6 +5165,11 @@ def patch(workdir: Path, simulator: str) -> int:
         ("render lifecycle: product-profile clip completion (%d B/pass)"
          % NOISE_CLIP_BYTES, "s9-render-full-clip"),
     ]
+
+    entries = [
+        (label, key, model, scenarios[key], checks)
+        for label, key, checks in run_specs
+    ]
     for label, key in render_specs:
         run_model, schedule, want_pulses = render_scenarios[key]
 
@@ -5178,8 +5187,20 @@ def patch(workdir: Path, simulator: str) -> int:
             )
             return True
 
+        entries.append((label, key, run_model, schedule, check_pulses))
+    return scenarios, render_scenarios, entries
+
+
+def patch(workdir: Path, simulator: str) -> int:
+    """Issue #69 flow: loader/identity/reset/keyboard vs its mirror."""
+    model = patch_build_model()
+    words, vector = patch_anchor_words()
+    scenarios, render_scenarios, entries = patch_plan(model, words, vector)
+    ok = True
+
+    for label, key, run_model, schedule, checks in entries:
         ok = compare_run(label, schedule, workdir / key, simulator,
-                         run_model, PATCH_DUT_SV, check_pulses) and ok
+                         run_model, PATCH_DUT_SV, checks) and ok
 
     # The product clip length is a bound constant, not a magic number: it is
     # SCHED_SAMPLES_PER_PASS x 4 from the emitted accepted-schedule register.
@@ -5323,7 +5344,7 @@ def patch(workdir: Path, simulator: str) -> int:
         "PATCH RUN PASSED (mirror-vs-RTL byte/cycle-exact on %d scenarios "
         "including the render lifecycle and one product-profile "
         "705,600-B/pass clip completion + %d mutations detected + keyboard "
-        "golden words)" % (len(run_specs) + len(render_specs),
+        "golden words)" % (len(entries),
                            len(mutation_specs))
     )
     return 0
