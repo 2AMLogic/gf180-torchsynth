@@ -179,6 +179,7 @@ module one_shot_voice_top (
     output wire                        vco1_valid,
     output wire [31:0] vco1_op_mults, vco1_op_adds, vco1_op_narrows,
     output wire [31:0] vco1_op_shadows, vco1_op_sats, vco1_op_clamps,
+    output wire signed [C4_WIDTH-1:0] vco1_midi_sum,
 
     // ---- vco_2 (square/saw) ---------------------------------------------
     input  wire signed [C4_WIDTH-1:0]  vco2_tuning_word,
@@ -447,6 +448,7 @@ module one_shot_voice_top (
         .vco_word           (vco1_word),
         .phase_out          (vco1_phase_out),
         .out_valid          (vco1_valid),
+        .midi_sum           (vco1_midi_sum),
         .op_mults           (vco1_op_mults),
         .op_adds            (vco1_op_adds),
         .op_narrows         (vco1_op_narrows),
