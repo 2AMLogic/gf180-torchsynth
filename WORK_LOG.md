@@ -2,6 +2,10 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-10-31
+
+- **Issue #324** (closed): Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue
+
 ### 2026-10-29
 
 - **PR #426**: fix(evidence): re-pin T1 item 10 manifest hash and re-render signoff report
