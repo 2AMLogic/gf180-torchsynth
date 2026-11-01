@@ -23,9 +23,11 @@ with the `profile` inside. The profiles of one lane are nested
 (`regression` < `directed` < `full`), so a stronger record supersedes a weaker
 one; that same suite refuses a stronger record that covers fewer cases or
 demonstrates fewer negative controls than the weaker one it claims to
-supersede. A `full`-profile record exists for the **tail-chain** lane only
-(`oneshot-tail-chain-full-v1.json`); the whole-voice lane has none, so no
-`full`-profile claim may be made for the integrated top. See
+supersede. A `full`-profile record exists for both the **tail-chain** lane
+(`oneshot-tail-chain-full-v1.json`) and the **whole-voice** lane
+(`oneshot-whole-voice-full-v1.json`); a `full`-profile claim for the integrated
+top rests on the latter and only on the cases and negative controls it
+records. See
 `spec/ONESHOT-E2E.md` for what each one does and does not establish, and for
 the structural reason a record can only be committed on an already-existing,
 clean, already-landed commit -- never inside the pull request that introduces

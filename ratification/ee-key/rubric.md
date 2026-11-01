@@ -57,7 +57,11 @@ What each class of row needs instead:
   a declared finite vector set; the claim is exactly what the record shows,
   no more. Equality on a finite set is not a claim about sound fidelity.
 - **Pending rows** (C1, T1, A1, PW1): `sound` as a pending claim when the
-  row names its blocking issue, selects no clock and invents no number.
+  row names its blocking issue, selects no clock and invents no number, and
+  its stated corner set and grading verb are physically consistent with the
+  quantity it will bound (for example, leakage-critical means fast process,
+  highest temperature, highest supply; `ff_n40C_5v50` is hold-critical, not
+  leakage-critical).
   `unsound` if a number, clock or verdict appears without the evidence record
   that establishes it. A whole-voice timing verdict that is `unverifiable`
   must never be read as `met`.

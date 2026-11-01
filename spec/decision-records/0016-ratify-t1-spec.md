@@ -31,7 +31,11 @@ a digital, deterministic, sample-exact block.
    commit touching that file before this PR): rows F1, F2, C1, T1, A1 and PW1
    with their bounds, corner sets, grading verbs/records, row classes and
    item-6 statements, together with the "Item-6 account", "What is not a row"
-   and "Pending items" sections.
+   and "Pending items" sections. One correction applies on top of that
+   commit, made in response to the EE key's review of this PR: PW1's
+   leakage-critical corner is `ff_125C_5v50` (fast process, 125 C, 5.50 V), not
+   `ff_n40C_5v50`, which is the hold-critical corner. What is ratified is the
+   table as it stands at the head of this PR.
 2. **Pending rows stay pending.** C1, T1, A1 and PW1 are ratified *as pending
    claims*: their bounds remain "pending #82/#83" and no value is filled in.
    Ratification does not select a clock; DR-0010 P1 candidates (25/50/100 MHz)
