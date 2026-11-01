@@ -66,6 +66,33 @@ class FamilyTests(unittest.TestCase):
         with self.assertRaisesRegex(Err, "schedule label mismatch: sham"):
             family.run_case_process(Harness(), bad, None, {}, [], "sha", validate, Attempt, Err)
 
+    def test_attempt_run_rejects_mismatched_schedule_binding(self):
+        class Err(ValueError):
+            pass
+
+        class Harness:
+            schedule_error = Err
+            case = {"id": "c"}
+            coordinates = {"slot": 0}
+            torch = None
+
+        class Attempt(family.FamilyAttempt):
+            pass
+
+        harness = Harness()
+        bound = {"campaign": {"case": harness.case, "attempt": "other"}}
+        foreign = {"campaign": {"case": {"id": "x"}, "attempt": "empty"}}
+        for schedule in (bound, foreign):
+            with self.assertRaisesRegex(Err, "not bound to its schedule case and label: empty"):
+                Attempt("empty", harness, schedule).run(None)
+        for worker, attempt_class, error in (
+            (signal_worker, signal_worker.SignalAttempt, signal_worker.SignalScheduleError),
+            (timing_worker, timing_worker.TimingAttempt, timing_worker.TimingScheduleError),
+        ):
+            harness.schedule_error = error
+            with self.assertRaises(error):
+                attempt_class("empty", harness, bound).run(None)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -58,11 +58,13 @@ class FamilyAttempt(base.Attempt):
         coordinates = harness.coordinates
         slot = coordinates["slot"]
         if self.schedule is not None:
-            _require(
+            if not (
                 self.schedule["campaign"]["case"] == harness.case
-                and self.schedule["campaign"]["attempt"] == self.name,
-                "attempt is not bound to its schedule case and label: " + self.name,
-            )
+                and self.schedule["campaign"]["attempt"] == self.name
+            ):
+                raise harness.schedule_error(
+                    "attempt is not bound to its schedule case and label: " + self.name
+                )
         voice = harness.make_voice()
         rng_before = harness.rng_state()
         parameters_before = harness.capture.named_parameters(voice, torch, slot)
