@@ -62,6 +62,7 @@ Issues carrying `loom:curated`.
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
 - **#80**: [Epic #2] Build and measure a resource-generous FPGA core *(curated)*
 - **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility *(curated)*
+- **#199**: Champion: Merge-Risk Hold Digest *(curated)*
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate *(curated)*
@@ -70,12 +71,12 @@ Issues carrying `loom:curated`.
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
-- **#324**: Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue *(curated)*
 - **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2) *(curated)*
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half) *(curated)*
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#418**: Install the two-key ratification path and ratify spec/T1-SPEC.md *(curated)*
+- **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -109,7 +110,7 @@ Issues carrying `loom:curated`.
 | In Progress (`loom:building`) | 6 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 19 |
+| Curated | 20 |
 | Architect / Hermit proposals | 12 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
