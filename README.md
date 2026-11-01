@@ -139,6 +139,51 @@ This is intentional: a normal checkout currently fails when Git LFS requests a
 missing documentation image. Runtime Voice files are still verified against
 the independent SHA-256 manifest before a render begins.
 
+## T1 spec table
+
+**Proposed / not ratified.** The normative block spec is
+[`spec/T1-SPEC.md`](spec/T1-SPEC.md); this is a summary, and the spec wins on
+any difference. Ratification is tracked in
+[#418](https://github.com/2AMLogic/gf180-torchsynth/issues/418) /
+[PR #419](https://github.com/2AMLogic/gf180-torchsynth/pull/419), and every
+verdict graded against the table is provisional until it lands. The rows are
+claims the block will make, not results: none is a synthesis, layout, signoff,
+playback or sound-fidelity claim.
+
+| id | metric | bound | status |
+| --- | --- | --- | --- |
+| F1 | Sample-exact RTL output vs the frozen fixed-point model | 0 differing samples over the declared vector set | recorded for the `full` profile; `klt functional-verification` mapping pending |
+| F2 | Mutation sensitivity of the F1 harness | 13 of 13 all-RTL mutations detected | recorded in the whole-voice `full` record |
+| C1 | Clip-render bound: cycles per sample | pending (clock not selected; DR-0010 P1) | pending #82/#83 |
+| T1 | Whole-voice setup and hold slack | pending (no whole-voice netlist) | pending #82; verdict is `unverifiable` |
+| A1 | Mapped standard-cell area of the whole voice | pending (no whole-voice netlist) | pending #82 |
+| PW1 | Power of the whole voice | pending (no power number) | pending #83 |
+
+## Reproducing the results
+
+Each command below is a runner that exists in this tree. Listing a command
+here does not mean it was run or passed; the record named beside it, not this
+README, is the evidence. Detail lives in [`tb/README.md`](tb/README.md) and
+[`asic/README.md`](asic/README.md).
+
+| Result | Command | Record |
+| --- | --- | --- |
+| Contract and identity | `python3 -m unittest discover -s tests -v`; `python3 tools/check_contract.py` | none (checks only) |
+| Capability views | `python3 tools/compile_capabilities.py --check` | `docs/capabilities.json` |
+| Generated RTL constants | `python3 tools/generate_rtl_constants.py --check` | none (checks only) |
+| Harness self-check, anchor (F1 apparatus) | `python3 tb/run_tb.py selftest`; `python3 tb/run_tb.py anchor` | none (checks only) |
+| Per-stage RTL vs model | `python3 tb/run_tb.py <lane>` (lanes listed in `tb/run_tb.py`) | `tb/README.md` |
+| Tail chain, F1 | `python3 tb/run_oneshot.py --profile regression\|full` | `sim/evidence/oneshot-tail-chain-full-v1.json` |
+| Whole voice, F1 and F2 | `python3 tb/run_voice.py --profile regression\|directed\|full` | `sim/evidence/oneshot-whole-voice-full-v1.json` |
+| Recorded evidence integrity | `python3 tools/verify_oneshot_evidence.py` | the two `sim/evidence` records above |
+| Synthesis feasibility (partial, no whole-voice netlist) | `python3 tools/synthesize_oneshot.py run`, then `record` | `asic/evidence/oneshot-synth-feasibility-v1.json` |
+| C1, T1, A1, PW1 | not yet run; no whole-voice netlist or power report exists | pending #82/#83 |
+| T1 item 10 attestation | `uvx --from "klayout-tools==0.8.0" klt signoff --attest 10 --inventory evidence/item10-inventory.json --check evidence/item10-attestation.json` | `evidence/item10-attestation.json` |
+
+Simulation needs Icarus Verilog; the synthesis flow needs the worker's pinned
+PDK tools. Without them the corresponding command cannot run, and its result
+is unverified rather than passed.
+
 ## Project sequencing
 
 The next gates are deliberately sound-first:
