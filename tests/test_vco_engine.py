@@ -543,8 +543,8 @@ class VcoCaptureIntegrityTest(unittest.TestCase):
             "%d\n" % walked, encoding="utf-8")
         (self.dir / ("run%d_ops.txt" % run)).write_text(ops, encoding="utf-8")
 
-    GOOD = "2093032 42852275\n2080690 85704550\n2060174 128556825\n" \
-           "2031426 171409100\n"
+    GOOD = "2093032 42852275 60\n2080690 85704550 60\n" \
+           "2060174 128556825 60\n2031426 171409100 60\n"
 
     def test_well_formed_capture_parses(self):
         self.write_run(self.GOOD)
@@ -553,20 +553,20 @@ class VcoCaptureIntegrityTest(unittest.TestCase):
         self.assertEqual(cap["ops"], [12, 28, 16, 4, 0, 0])
 
     def test_truncated_capture_row_is_integrity_error(self):
-        # A file cut mid-row: the last row carries one field, not two.
+        # A file cut mid-row: the last row carries two fields, not three.
         self.write_run(self.GOOD[:-10])
         with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
-                                    "CORRUPT.*1 fields, not 2"):
+                                    "CORRUPT.*2 fields, not 3"):
             self.rt.vco_read_captures(self.dir, 1, 4)
 
     def test_spliced_capture_row_is_integrity_error(self):
-        self.write_run("2093032 42852275\n2080690 8570 2060174 128556825\n")
+        self.write_run("2093032 42852275 60\n2080690 8570 60 2060174 1285 60\n")
         with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
                                     "CORRUPT"):
             self.rt.vco_read_captures(self.dir, 1, 4)
 
     def test_short_bench_walk_is_integrity_error(self):
-        self.write_run(self.GOOD[:34], walked=2)
+        self.write_run(self.GOOD[:40], walked=2)
         with self.assertRaisesRegex(self.rt.VcoCaptureIntegrityError,
                                     "walked 2 samples, not the requested 4"):
             self.rt.vco_read_captures(self.dir, 1, 4)
@@ -588,7 +588,7 @@ class VcoCaptureIntegrityTest(unittest.TestCase):
         # spec/ONESHOT-E2E.md scope limit: an x word with the right field
         # count and no harness fault is a genuine mismatch, not a reason to
         # hide behind INCONCLUSIVE.
-        self.write_run("x 42852275\n" + self.GOOD.split("\n", 1)[1],
+        self.write_run("x 42852275 60\n" + self.GOOD.split("\n", 1)[1],
                        ops="V 12 28 16 4 x 0\n")
         cap = self.rt.vco_read_captures(self.dir, 1, 4)[0]
         self.assertIsNone(cap["vco"][0])
@@ -636,7 +636,7 @@ class VcoCaptureIntegrityTest(unittest.TestCase):
         self.assertNotIn("SINE-VCO RUN FAILED", out)
 
     def test_main_maps_x_state_readmemh_capture_to_exit_4(self):
-        self.write_run("x 42852275\nx 85704550\nx 128556825\nx 171409100\n",
+        self.write_run("x 42852275 x\nx 85704550 x\nx 128556825 x\nx 171409100 x\n",
                        ops="V 12 28 16 4 x 0\n")
 
         def fake_vco(workdir, simulator):

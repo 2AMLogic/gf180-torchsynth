@@ -3489,8 +3489,8 @@ VCO_LUT_PLUSARG_CHARS = 128
 #: Any of them makes the run's captures meaningless in both directions.
 VCO_HARNESS_FAULT_MARKERS = ("$readmemh", "Unable to open", "TB-ERROR",
                              "DUT-ERROR")
-#: The vco bench's fixed capture column count ("vco phase").
-VCO_CAPTURE_FIELDS = 2
+#: The vco bench's fixed capture column count ("vco phase midi_sum").
+VCO_CAPTURE_FIELDS = 3
 #: The vco bench's fixed ops-row column count ("V" + 6 counters).
 VCO_OPS_FIELDS = 7
 
@@ -3593,6 +3593,7 @@ def vco_read_captures(workdir: Path, runs: int, expected_walk: int) -> list:
     for run in range(runs):
         vco_words = []
         phase_words = []
+        midi_words = []
         cap_path = workdir / ("run%d_captured.txt" % run)
         text = read(cap_path)
         for number, line in enumerate(text.splitlines(), start=1):
@@ -3602,13 +3603,15 @@ def vco_read_captures(workdir: Path, runs: int, expected_walk: int) -> list:
             if len(fields) != VCO_CAPTURE_FIELDS:
                 raise corrupt(cap_path, number, line, VCO_CAPTURE_FIELDS,
                               text)
-            v_word, p_word = fields
+            v_word, p_word, m_word = fields
             try:
                 vco_words.append(int(v_word))
                 phase_words.append(int(p_word))
+                midi_words.append(int(m_word))
             except ValueError:
                 vco_words.append(None)  # an x-state emission: a mismatch
                 phase_words.append(None)
+                midi_words.append(None)
         cycles_path = workdir / ("run%d_cycles.txt" % run)
         cycles_text = read(cycles_path).strip()
         try:
@@ -3644,7 +3647,8 @@ def vco_read_captures(workdir: Path, runs: int, expected_walk: int) -> list:
                 % ops_path
             )
         captures.append(
-            {"vco": vco_words, "phase": phase_words, "cycles": cycles,
+            {"vco": vco_words, "phase": phase_words, "midi": midi_words,
+             "cycles": cycles,
              "ops": ops}
         )
     return captures
@@ -3698,7 +3702,7 @@ def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
     inside the captured prefix is.
     """
 
-    for stream_name in ("vco", "phase"):
+    for stream_name in ("vco", "phase", "midi"):
         got = capture[stream_name]
         want = case["mirror"][stream_name]
         if prefix:
@@ -3709,8 +3713,8 @@ def vco_check_case(capture, case, case_id: str, prefix: bool = False) -> bool:
             if a != b:
                 print(
                     "SINE-VCO FAILED: %s differs (%s %s[%d]: expected %s "
-                    "got %s)" % (stream_name, case_id, "vco_1.raw"
-                                 if stream_name == "vco" else "phase",
+                    "got %s)" % (stream_name, case_id, {"vco": "vco_1.raw", "phase": "phase",
+                                  "midi": "vco_1.midi_sum"}[stream_name],
                                  index, b, a)
                 )
                 return False
