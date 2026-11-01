@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-01
+
+- **PR #430**: refactor: share signal/timing mutation worker glue in one family module
+- **Issue #429** (closed): Consolidate duplicated Attempt/Harness/run_case_process in signal and timing mutation workers
+
 ### 2026-10-31
 
 - **Issue #324** (closed): Turn off Renovate's Dependency Dashboard so the bot issue stays out of the Loom queue
