@@ -26,7 +26,6 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts
 - **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 
@@ -57,7 +56,6 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 Issues carrying `loom:curated`.
 
-- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts *(curated)*
 - **#7**: [Epic #1] Phase plan: observable named Voice traces *(curated)*
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
 - **#80**: [Epic #2] Build and measure a resource-generous FPGA core *(curated)*
@@ -106,11 +104,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 3 |
+| Ready (`loom:issue`) | 2 |
 | In Progress (`loom:building`) | 6 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 20 |
+| Curated | 19 |
 | Architect / Hermit proposals | 12 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
