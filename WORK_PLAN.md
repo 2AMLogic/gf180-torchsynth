@@ -7,7 +7,7 @@ This snapshot records workflow state. Issue closure and Loom labels do not estab
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-- **#419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)
+_None._
 
 ## Very Important
 
@@ -38,7 +38,6 @@ Issues currently being built (`loom:building`).
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
-- **#418**: Install the two-key ratification path and ratify spec/T1-SPEC.md
 
 ## PRs Awaiting Review
 
@@ -50,7 +49,7 @@ _None._
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-- **#419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)
+_None._
 
 ## Proposed
 
@@ -73,7 +72,6 @@ Issues carrying `loom:curated`.
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half) *(curated)*
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
-- **#418**: Install the two-key ratification path and ratify spec/T1-SPEC.md *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
 
 ## Proposed (Architect / Hermit)
@@ -101,14 +99,14 @@ Issues carrying `loom:curated`.
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 1 |
+| Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 2 |
 | Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 6 |
+| In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 1 |
-| Curated | 19 |
+| Approved PRs awaiting merge | 0 |
+| Curated | 18 |
 | Architect / Hermit proposals | 12 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
