@@ -55,6 +55,7 @@ _None._
 
 Issues carrying `loom:curated`.
 
+- **#4**: [Epic #1] Phase plan: reproducible corpus artifacts *(curated)*
 - **#7**: [Epic #1] Phase plan: observable named Voice traces *(curated)*
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
 - **#80**: [Epic #2] Build and measure a resource-generous FPGA core *(curated)*
@@ -106,7 +107,7 @@ Issues carrying `loom:curated`.
 | In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 18 |
+| Curated | 19 |
 | Architect / Hermit proposals | 12 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
