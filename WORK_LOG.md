@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-04
+
+- **PR #419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)
+- **Issue #418** (closed): Install the two-key ratification path and ratify spec/T1-SPEC.md
+
 ### 2026-11-01
 
 - **PR #430**: refactor: share signal/timing mutation worker glue in one family module
