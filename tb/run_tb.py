@@ -53,6 +53,7 @@ from tb_harness import (  # noqa: E402,F401  (re-exported for consumers)
     _run,
     mutate_sv,
     run_rtl_mutation,
+    simulate,
     write_lut_memh,
 )
 
@@ -383,28 +384,14 @@ def build_vector(values, registry, inventory) -> dict:
     return vector
 
 
-def simulate(workdir: Path, simulator: str) -> list:
-    stim = workdir / "stimulus.txt"
-    captured = workdir / "captured.txt"
-    stim.write_text("".join("%d\n" % v for v in STIMULUS), encoding="utf-8")
-    vvp = _compile_iverilog(
-        workdir, simulator, "synth_selftest.vvp", [DUT_SV, TB_SV]
-    )
-    _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    values = [
-        int(line)
-        for line in captured.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-    return values
-
-
 def selftest(workdir: Path, simulator: str) -> int:
     registry = gv.load_registry_document()
     inventory = gv.load_inventory_document()
     expected = [synth_model(v) for v in STIMULUS]
 
-    captured = simulate(workdir, simulator)
+    captured = simulate(
+        workdir, simulator, STIMULUS, [DUT_SV, TB_SV]
+    )
 
     ok = True
     if captured != expected:

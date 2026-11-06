@@ -1,7 +1,8 @@
-"""Shared PDK-free testbench harness helpers (issue #383, increment 1).
+"""Shared PDK-free testbench harness helpers (issue #383, increments 1-2).
 
-Moved verbatim from ``tb/run_tb.py``, which re-exports every name here so
-existing ``import run_tb`` / ``from run_tb import ...`` consumers keep working.
+Moved from ``tb/run_tb.py`` (``simulate`` is parameterized on stimulus and
+sources), which re-exports every name here so existing ``import run_tb`` /
+``from run_tb import ...`` consumers keep working.
 Nothing here makes a synthesis, layout, signoff, or hardware claim.
 """
 from __future__ import annotations
@@ -34,6 +35,26 @@ def _compile_iverilog(workdir: Path, simulator: str, executable: str,
         cwd=workdir,
     )
     return vvp
+
+
+def simulate(workdir: Path, simulator: str, stimulus: list,
+             sources: list) -> list:
+    """Compile ``sources`` (DUT then testbench), drive ``stimulus``, capture.
+
+    Writes ``stimulus.txt`` (one decimal value per line), runs the vvp, and
+    returns the integers the testbench wrote to ``captured.txt``. Callers pass
+    their own stimulus and source paths; nothing is read from module globals.
+    """
+    stim = workdir / "stimulus.txt"
+    captured = workdir / "captured.txt"
+    stim.write_text("".join("%d\n" % v for v in stimulus), encoding="utf-8")
+    vvp = _compile_iverilog(workdir, simulator, "synth_selftest.vvp", sources)
+    _run(["vvp", "-n", str(vvp)], cwd=workdir)
+    return [
+        int(line)
+        for line in captured.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
 
 
 def write_lut_memh(table, path: Path) -> None:
