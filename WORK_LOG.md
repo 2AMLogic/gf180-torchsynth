@@ -2,6 +2,12 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-06
+
+- **PR #439**: refactor(tb): parameterize simulate and move it into tb_harness
+- **PR #438**: refactor(tb): extract shared harness helpers into tb/tb_harness.py
+- **Issue #383** (closed): Split 7,462-line tb/run_tb.py into per-lane modules
+
 ### 2026-11-04
 
 - **PR #419**: docs(spec): install ratification keys and propose T1 spec ratification (DR-0016)

@@ -89,7 +89,6 @@ Issues carrying `loom:curated`.
 - **#67**: [Epic #2] Demonstrate and archive the end-to-end hardware sound explorer *(architect)*
 - **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(architect)*
 - **#83**: [Epic #2] Measure gf180mcu floorplan, place, route, and timing feasibility *(architect)*
-- **#383**: Split 7,462-line tb/run_tb.py into per-lane modules *(hermit)*
 
 ## Epics
 
@@ -109,6 +108,6 @@ Issues carrying `loom:curated`.
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 19 |
-| Architect / Hermit proposals | 12 |
+| Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
