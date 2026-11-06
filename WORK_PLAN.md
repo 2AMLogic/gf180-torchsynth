@@ -20,7 +20,8 @@ _None._
 `loom:important`; taken before unlabelled work.
 
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once
-- **#274**: Provision access to the pinned AWS box (repo-remote) from the agent fleet
+- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
+- **#274**: Provision access to the pinned AWS box (repo-remote, i-018841ef4169207ba) from the agent fleet
 
 ## Ready
 
@@ -64,7 +65,7 @@ Issues carrying `loom:curated`.
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate *(curated)*
-- **#274**: Provision access to the pinned AWS box (repo-remote) from the agent fleet *(curated)*
+- **#274**: Provision access to the pinned AWS box (repo-remote, i-018841ef4169207ba) from the agent fleet *(curated)*
 - **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
@@ -102,7 +103,7 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
-| Important | 2 |
+| Important | 3 |
 | Ready (`loom:issue`) | 2 |
 | In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 0 |
