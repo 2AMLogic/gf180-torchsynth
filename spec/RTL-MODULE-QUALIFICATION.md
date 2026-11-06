@@ -123,10 +123,29 @@ records the actual versions, so the lanes stay unbaselined), refuses to run
 against a failed/stale integrated lane, writes `provenance` (both tools'
 versions, command, revision, time) and an `integrated_lanes` registry, and
 preserves everything the run did not observe -- including the runtime waivers
-of lanes that did not run. The sanctioned generator is the manual
-`.github/workflows/rtl-lint-baseline.yml` (workflow_dispatch; Icarus 12.0 /
-Verilator 5.020), which uploads the regenerated ledger for a reviewer to check
-every added waiver reason and count; the enforcement job never regenerates.
+of lanes that did not run. When it runs inside GitHub Actions it also records
+`provenance.ci_run` (repository, workflow, job, run id and attempt, event,
+SHA, ref, runner image OS/version) so the exact producing run can be found.
+There are two sanctioned generators, both on CI's toolchain (Icarus 12.0 /
+Verilator 5.020), and neither commits anything:
+
+1. **The candidate step of `rtl-module-qualification`** (every tb-sim run).
+   *After* the aggregate gate has compared the revision against the committed
+   ledger, the same job re-runs `--lint --update-baseline --integrated all`
+   over the same producer artifacts with
+   `--baseline-output out/baseline-candidate/rtl-lint-baseline.json`, which
+   writes the candidate there instead of over `tb/rtl-lint-baseline.json` and
+   compares the run against the candidate (a code with no stated reason
+   therefore fails the step). The committed ledger is never modified, nothing
+   enforces against the candidate, and the step runs only if the gate passed.
+   The candidate ships in the job's `rtl-modules-evidence` artifact.
+2. **The manual `.github/workflows/rtl-lint-baseline.yml`**
+   (workflow_dispatch, for a maintainer with dispatch rights), described
+   below.
+
+Either way a reviewer checks every added or changed waiver reason and count
+before committing the candidate verbatim; the enforcement step never
+regenerates before it compares.
 
 **Generator revision binding.** The generator runs on the revision the
 producers actually ran on, not on its dispatched ref. A `pull_request` tb-sim
