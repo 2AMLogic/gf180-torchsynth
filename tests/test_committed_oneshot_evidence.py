@@ -71,6 +71,10 @@ from run_tb import EVIDENCE_TREE_SCOPE  # noqa: E402
 
 EVIDENCE_DIR = ROOT / "sim/evidence"
 
+#: Records under ``sim/evidence/`` that are not one-shot flow records; each is
+#: guarded by its own test (issue #388: tests/test_klt_functional_verification.py).
+OTHER_EVIDENCE_RECORDS = frozenset({"functional-verification-modules-v1.json"})
+
 #: How a stale record is made citeable again -- regenerate, never re-pin.
 #: Templated on the record's **own** ``profile`` rather than hardcoding
 #: ``regression``: the whole-voice flow now has three profiles, and a message
@@ -223,7 +227,7 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
         # A record added to sim/evidence/ without an entry here would pass
         # this suite silently -- refuse that instead.
         on_disk = {p.name for p in EVIDENCE_DIR.glob("*.json")}
-        self.assertEqual(on_disk, set(COMMITTED_RECORDS))
+        self.assertEqual(on_disk - OTHER_EVIDENCE_RECORDS, set(COMMITTED_RECORDS))
 
     def test_each_record_filename_names_the_profile_it_actually_ran(self):
         # The filename is what a reader greps and what spec/ONESHOT-E2E.md's
