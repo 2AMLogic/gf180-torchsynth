@@ -132,6 +132,7 @@ module tb;
     wire [5*32-1:0]       up_out_count, up_op_mults, up_op_adds, up_op_narrows,
                           up_op_frac_words, up_op_coord_steps, up_op_sats;
     wire signed [C1_WIDTH-1:0] vco1_word;
+    wire signed [C4_WIDTH-1:0] vco1_midi_sum;
     wire [C2_WIDTH-1:0]   vco1_phase_out;
     wire                  vco1_valid;
     wire [31:0]           vco1_op_mults, vco1_op_adds, vco1_op_narrows,
@@ -206,7 +207,7 @@ module tb;
         .vco1_init_phase_word(vco1_init_phase_word),
         .vco1_fq_word(vco1_fq_word),
         .vco1_word(vco1_word), .vco1_phase_out(vco1_phase_out),
-        .vco1_valid(vco1_valid),
+        .vco1_valid(vco1_valid), .vco1_midi_sum(vco1_midi_sum),
         .vco1_op_mults(vco1_op_mults), .vco1_op_adds(vco1_op_adds),
         .vco1_op_narrows(vco1_op_narrows), .vco1_op_shadows(vco1_op_shadows),
         .vco1_op_sats(vco1_op_sats), .vco1_op_clamps(vco1_op_clamps),
@@ -553,7 +554,7 @@ module tb;
                 if (mix_out_valid !== 1'b1)
                     fail("mixer out_valid low at the audio capture point");
                 $fwrite(audiocap_fd[run],
-                    "%0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d\n",
+                    "%0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d\n",
                     cyc, pass, pass_index,
                     $signed(up_word[0*C1_WIDTH +: C1_WIDTH]),
                     $signed(up_word[1*C1_WIDTH +: C1_WIDTH]),
@@ -561,7 +562,8 @@ module tb;
                     $signed(up_word[3*C1_WIDTH +: C1_WIDTH]),
                     $signed(up_word[4*C1_WIDTH +: C1_WIDTH]),
                     vco1_word, vco2_word, noise_sample_word,
-                    post_vca_1, post_vca_2, post_vca_n, mix_word);
+                    post_vca_1, post_vca_2, post_vca_n, mix_word,
+                    vco1_midi_sum);
                 @(negedge clk);
             end
             noise_byte_valid = 1'b0;
