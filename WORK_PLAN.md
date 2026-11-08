@@ -27,7 +27,6 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 
 ## In Progress
@@ -103,7 +102,7 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 3 |
-| Ready (`loom:issue`) | 2 |
+| Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
