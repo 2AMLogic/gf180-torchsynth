@@ -4,6 +4,7 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-10
 
+- **Issue #450** (closed): WORK_PLAN regeneration duplicates curated entries (#394/#411/#431)
 - **PR #446**: ci: retry apt toolchain install with bounded attempts
 - **Issue #445** (closed): ci flake: 'Install Icarus Verilog (PDK-free)' step times out in oneshot-whole-voice
 - **PR #442**: chore(deps): bump the github-actions group across 1 directory with 2 updates

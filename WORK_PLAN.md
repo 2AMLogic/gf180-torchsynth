@@ -75,10 +75,6 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
-- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
-- **#411**: fix: isolate historical pip from release-era downloads *(curated)*
-- **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
-- **#445**: ci flake: 'Install Icarus Verilog (PDK-free)' step times out in oneshot-whole-voice *(curated)*
 
 ## Proposed (Architect / Hermit)
 
