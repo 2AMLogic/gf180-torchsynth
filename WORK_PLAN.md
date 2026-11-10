@@ -7,7 +7,7 @@ This snapshot records workflow state. Issue closure and Loom labels do not estab
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
 
-_None._
+- **#442**: chore(deps): bump the github-actions group across 1 directory with 2 updates
 
 ## Very Important
 
@@ -49,7 +49,7 @@ _None._
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-_None._
+- **#442**: chore(deps): bump the github-actions group across 1 directory with 2 updates
 
 ## Proposed
 
@@ -99,13 +99,13 @@ Issues carrying `loom:curated`.
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 3 |
 | Ready (`loom:issue`) | 1 |
 | In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 0 |
+| Approved PRs awaiting merge | 1 |
 | Curated | 19 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
