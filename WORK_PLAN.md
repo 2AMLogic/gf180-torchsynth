@@ -27,6 +27,7 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
+- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 
 ## In Progress
@@ -38,13 +39,12 @@ Issues currently being built (`loom:building`).
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
-- **#445**: ci flake: 'Install Icarus Verilog (PDK-free)' step times out in oneshot-whole-voice
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#446**: ci: retry apt toolchain install with bounded attempts
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -72,6 +72,9 @@ Issues carrying `loom:curated`.
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
 - **#325**: Requalify DR-0006 canonical-runtime host scope for the current Apple host (macOS 27.0.1, Docker 29.8.2) *(curated)*
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half) *(curated)*
+- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
+- **#411**: fix: isolate historical pip from release-era downloads *(curated)*
+- **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
@@ -104,11 +107,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 3 |
-| Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 6 |
-| PRs awaiting review | 1 |
+| Ready (`loom:issue`) | 2 |
+| In Progress (`loom:building`) | 5 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 20 |
+| Curated | 19 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
