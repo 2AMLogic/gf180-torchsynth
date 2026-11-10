@@ -2,6 +2,10 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-10
+
+- **PR #442**: chore(deps): bump the github-actions group across 1 directory with 2 updates
+
 ### 2026-11-06
 
 - **PR #439**: refactor(tb): parameterize simulate and move it into tb_harness
