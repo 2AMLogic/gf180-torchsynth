@@ -54,7 +54,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: tools/ci_apt_install.sh iverilog
       - name: Compile source
         timeout-minutes: 5
         run: python -m compileall -q src tests tools
@@ -138,7 +138,7 @@ jobs:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: tools/ci_apt_install.sh iverilog
       - name: "Sine VCO engine lane (issue 73, iverilog, PDK-free)"
         timeout-minutes: 90
         run: python3 tb/run_tb.py vco
@@ -163,7 +163,7 @@ jobs:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: tools/ci_apt_install.sh iverilog
       - name: "ADSR envelope engine lane (issue 70, iverilog, PDK-free)"
         timeout-minutes: 10
         run: python3 tb/run_tb.py adsr
@@ -221,7 +221,7 @@ jobs:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: tools/ci_apt_install.sh iverilog
       - name: Make evidence output directory
         timeout-minutes: 1
         run: mkdir -p out/tail-chain
@@ -288,7 +288,7 @@ jobs:
           python-version: "3.12"
       - name: Install Icarus Verilog (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+        run: tools/ci_apt_install.sh iverilog
       - name: Make evidence output directory
         timeout-minutes: 1
         run: mkdir -p out/whole-voice
@@ -349,7 +349,7 @@ jobs:
           python-version: "3.12"
       - name: Install Icarus Verilog + Verilator (PDK-free)
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install -y iverilog verilator
+        run: tools/ci_apt_install.sh iverilog verilator
       - name: Registered evaluator (rtl-module-qualification-v1)
         timeout-minutes: 5
         run: python3 -m unittest discover -s tests -p test_rtl_module_qualification.py -v
