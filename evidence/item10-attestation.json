@@ -17,14 +17,14 @@
         "role": "hygiene",
         "path": ".github/workflows/ci.yml",
         "passed": true,
-        "content_hash": "sha256:33249f34068a170467c30f3e562e0382cf116f308d73a21d7e12756c77d22701"
+        "content_hash": "sha256:e854079e97e85b7ec0bc7512904406bf98b5b036ec18659b1be66d099fd2857a"
       },
       {
         "check": "present",
         "role": "hygiene",
         "path": ".github/workflows/tb-sim.yml",
         "passed": true,
-        "content_hash": "sha256:89d9463f33e859498a4fd68df5d0a405a7be22c560a880553c6ceb9dbe01b8ce"
+        "content_hash": "sha256:dc9b2b74a874a3ac2d572ce2bf1e3f2cdf429706de7c09a68dd9f57b86f3b23a"
       },
       {
         "check": "present",
