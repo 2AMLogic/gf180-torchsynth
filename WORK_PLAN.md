@@ -38,12 +38,13 @@ Issues currently being built (`loom:building`).
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
+- **#445**: ci flake: 'Install Icarus Verilog (PDK-free)' step times out in oneshot-whole-voice
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#446**: ci: retry apt toolchain install with bounded attempts
 
 ## Approved (Awaiting Merge)
 
@@ -74,6 +75,7 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
+- **#445**: ci flake: 'Install Icarus Verilog (PDK-free)' step times out in oneshot-whole-voice *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -103,10 +105,10 @@ Issues carrying `loom:curated`.
 | Very important | 0 |
 | Important | 3 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 5 |
-| PRs awaiting review | 0 |
+| In Progress (`loom:building`) | 6 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 19 |
+| Curated | 20 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
