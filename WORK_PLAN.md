@@ -27,18 +27,18 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
+- **#80**: [Epic #2] Build and measure a resource-generous FPGA core
 - **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
+- **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
+- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#80**: [Epic #2] Build and measure a resource-generous FPGA core
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
-- **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
 
 ## PRs Awaiting Review
 
@@ -103,8 +103,8 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 3 |
-| Ready (`loom:issue`) | 2 |
-| In Progress (`loom:building`) | 5 |
+| Ready (`loom:issue`) | 5 |
+| In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 19 |
