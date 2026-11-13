@@ -22,10 +22,13 @@ sound-fidelity claim.
 from __future__ import annotations
 
 import hashlib
-import json
-import struct
 from typing import Dict, List, Optional
 
+# The golden receipt's per-trace digest binding (the #54 trace-digest
+# convention over an integer word list). Shared with every other golden
+# module since #247; re-exported under this module's long-standing public
+# name so the tb harness and the tests keep one spelling.
+from .digest import digest_words as trace_digest  # noqa: F401
 from .float_sources import AUDIO_SAMPLES, NOISE_SEED, NOISE_STREAMS, NoiseSource
 
 #: C1 audio word (DR-0008 Section 2): 24-bit Q2.21, range [-4, +4).
@@ -39,7 +42,6 @@ C1_MAX = (1 << (C1_WIDTH - 1)) - 1
 EXPECTED_NOISE_BYTES = AUDIO_SAMPLES * 4
 
 #: Error codes exported by the RTL DUT's sticky error register.
-ERROR_NONE = 0
 ERROR_SLOT_IDENTITY = 1
 ERROR_BYTE_OVERRUN = 2
 ERROR_STREAM_TRUNCATED = 3
@@ -48,7 +50,24 @@ ERROR_STREAM_TRUNCATED = 3
 #: structurally, not by convention).
 ERROR_IDENTITY_CHANGED = 4
 
-_PACK_U32 = struct.Struct("<I")
+
+def _require_clip_bytes(noise_bytes: object) -> bytes:
+    """The shared fed-bytes type/length guard; returns the validated bytes.
+
+    Exactly one clip of little-endian binary32 samples (C8/C9 re-feed
+    obligation), checked identically by the pre-render gate, the convert
+    mirror, and the negative controls -- so a shape a caller rejects is a
+    shape every caller rejects.
+    """
+
+    if not isinstance(noise_bytes, (bytes, bytearray)):
+        raise ValueError("fed noise must be bytes")
+    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
+        raise ValueError(
+            "fed noise must contain exactly %d binary32 bytes; got %d"
+            % (EXPECTED_NOISE_BYTES, len(noise_bytes))
+        )
+    return bytes(noise_bytes)
 
 
 def canonical_slot(sound_index: int) -> int:
@@ -126,19 +145,13 @@ def check_fed_bytes(
     decision record, DR-0008 Sections 7/13).
     """
 
-    if not isinstance(noise_bytes, (bytes, bytearray)):
-        raise ValueError("fed noise must be bytes")
-    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
-        raise ValueError(
-            "fed noise must contain exactly %d binary32 bytes; got %d"
-            % (EXPECTED_NOISE_BYTES, len(noise_bytes))
-        )
+    fed = _require_clip_bytes(noise_bytes)
     if declared_slot != canonical_slot(sound_index):
         raise ValueError(
             "slot identity violation: declared slot %d != sound_index %d %% 32"
             % (declared_slot, sound_index)
         )
-    fed_sha = noise_bytes_sha256(bytes(noise_bytes))
+    fed_sha = noise_bytes_sha256(fed)
     if expected_sha256 is not None and fed_sha != expected_sha256:
         raise ValueError(
             "declared-digest mismatch: fed stream hashes to %s, declared %s"
@@ -164,16 +177,10 @@ def slip_stream(noise_bytes: bytes, sample_index: int) -> bytes:
     a mutation the DUT's length/framing checks structurally cannot catch.
     """
 
-    if not isinstance(noise_bytes, (bytes, bytearray)):
-        raise ValueError("fed noise must be bytes")
-    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
-        raise ValueError(
-            "slip control needs exactly %d fed bytes" % EXPECTED_NOISE_BYTES
-        )
+    raw = _require_clip_bytes(noise_bytes)
     samples = EXPECTED_NOISE_BYTES // 4
     if type(sample_index) is not int or not 1 <= sample_index < samples:
         raise ValueError("sample_index must be in [1, %d)" % samples)
-    raw = bytes(noise_bytes)
     cut = sample_index * 4
     previous = raw[cut - 4:cut]
     return raw[:cut] + previous + raw[cut + 4:]
@@ -267,16 +274,10 @@ def mirror_stream(noise_bytes: bytes) -> List[int]:
     then converts every little-endian binary32 sample.
     """
 
-    if not isinstance(noise_bytes, (bytes, bytearray)):
-        raise ValueError("fed noise must be bytes")
-    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
-        raise ValueError(
-            "fed noise must contain exactly %d binary32 bytes; got %d"
-            % (EXPECTED_NOISE_BYTES, len(noise_bytes))
-        )
+    raw = _require_clip_bytes(noise_bytes)
     out: List[int] = []
     for offset in range(0, EXPECTED_NOISE_BYTES, 4):
-        bits = int.from_bytes(noise_bytes[offset:offset + 4], "little")
+        bits = int.from_bytes(raw[offset:offset + 4], "little")
         out.append(narrow_f32_bits(bits))
     return out
 
@@ -284,28 +285,9 @@ def mirror_stream(noise_bytes: bytes) -> List[int]:
 def truncate_stream(noise_bytes: bytes) -> List[int]:
     """The truncation mutant over a full fed stream (mutation probe)."""
 
-    if not isinstance(noise_bytes, (bytes, bytearray)):
-        raise ValueError("fed noise must be bytes")
-    if len(noise_bytes) != EXPECTED_NOISE_BYTES:
-        raise ValueError(
-            "fed noise must contain exactly %d binary32 bytes; got %d"
-            % (EXPECTED_NOISE_BYTES, len(noise_bytes))
-        )
+    raw = _require_clip_bytes(noise_bytes)
     out: List[int] = []
     for offset in range(0, EXPECTED_NOISE_BYTES, 4):
-        bits = int.from_bytes(noise_bytes[offset:offset + 4], "little")
+        bits = int.from_bytes(raw[offset:offset + 4], "little")
         out.append(truncate_f32_bits(bits))
     return out
-
-
-def trace_digest(words: List[int]) -> str:
-    """The golden receipt's per-trace digest binding.
-
-    Must stay byte-identical to ``sha256_json`` in
-    ``tools/generate_fixed_voice_golden.py`` (``json.dumps`` with sorted
-    keys, compact separators, ASCII); the tests bind this against every
-    committed case's ``traces["noise.raw"]`` digest.
-    """
-
-    blob = json.dumps(words, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()

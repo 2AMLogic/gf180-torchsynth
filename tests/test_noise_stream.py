@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import noise_stream_golden as nsg  # noqa: E402
+from torchsynth_voice.digest import digest_words  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
     StickyCounters,
@@ -327,9 +328,17 @@ class TestMutationsFail(unittest.TestCase):
 
 
 class TestTraceDigestBinding(unittest.TestCase):
-    """trace_digest must match the receipt generator's serialization."""
+    """``trace_digest`` is the shared helper, and the tool agrees with it."""
+
+    def test_is_the_shared_digest_helper(self):
+        # #247 consolidation: this module must not carry its own copy of the
+        # trace-digest encoding. A private re-copy would pass the encoding
+        # test below while being free to drift, so bind the identity too.
+        self.assertIs(nsg.trace_digest, digest_words)
 
     def test_matches_tool_implementation(self):
+        # The receipt generator must still reach for the same encoding
+        # rather than reintroducing a private serialization of its own.
         sys.path.insert(0, str(ROOT / "tools"))
         try:
             from generate_fixed_voice_golden import sha256_json
