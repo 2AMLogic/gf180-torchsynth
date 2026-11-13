@@ -180,32 +180,21 @@ def build_vector(
             "mirror reproduced it exactly at generation time"
         )
 
-    vector = {
-        "schema": gv.VECTOR_SCHEMA,
-        "schema_version": gv.SCHEMA_VERSION,
-        "trace_registry_version": gv.load_registry_document()["semantic_version"],
-        "parameter_inventory_commit": gv.load_inventory_document()["source"]["commit"],
-        "clip": {
-            "profile": gv.CANONICAL_PROFILE,
-            "sample_rate_hz": gv.CANONICAL_SAMPLE_RATE_HZ,
-            "sample_count": gv.CANONICAL_SAMPLE_COUNT,
-            "control_rate_hz": gv.CANONICAL_CONTROL_RATE_HZ,
-            "control_count": gv.CANONICAL_CONTROL_COUNT,
-        },
-        "parameters": dict(physical),
-        "traces": [
-            {
-                "name": "keyboard.midi_f0",
-                "kind": "scalar",
-                "encoding": "synthetic-int",
-                "cycle_start": 0,
-                "values": [derivation["words"]["keyboard.midi_f0"]],
-            }
-        ],
-        "provenance": provenance,
-    }
-    vector["content_hash"] = gv.compute_content_hash(vector)
-    return vector
+    traces = [
+        {
+            "name": "keyboard.midi_f0",
+            "kind": "scalar",
+            "encoding": "synthetic-int",
+            "cycle_start": 0,
+            "values": [derivation["words"]["keyboard.midi_f0"]],
+        }
+    ]
+    # validate=False preserves this generator's behavior: the committed
+    # vectors are loader- and contract-checked by their consumers
+    # (tb/run_tb.py vco_load_vectors, tests/test_square_saw_vco_engine.py), not at assembly time.
+    return gv.build_vector_document(
+        dict(physical), traces, provenance, validate=False
+    )
 
 
 def build_all(formats: AcceptedFormats) -> dict:

@@ -31,10 +31,11 @@ register via its refusal gate (see
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 from .digest import digest_words, sha256_file
 
@@ -53,6 +54,11 @@ DR_0008_RECORD_PATH = ROOT / "spec/decision-records/0008-fixed-point-numeric-con
 
 VECTOR_SCHEMA = "gf180-torchsynth/golden-vector-v1"
 SCHEMA_VERSION = 1
+
+#: Provenance values every frozen-model case generator declares verbatim.
+#: Hand-typing them per generator is how one copy drifts silently.
+MODEL_IDENTITY = "fixed-voice-v1 (frozen composition control path, PR #156)"
+DR_0008_STATUS = "Accepted (reviewed merge; 2026-09-21)"
 
 #: Canonical one-shot clip profile (DR-0002 offline 4 s @ 44.1 kHz).
 CANONICAL_PROFILE = "canonical-default-nebula-4s"
@@ -175,6 +181,91 @@ def frozen_receipt_binding(
     }
 
 
+def canonical_clip() -> Dict[str, Any]:
+    """The five-key canonical clip block every committed vector carries."""
+
+    return {
+        "profile": CANONICAL_PROFILE,
+        "sample_rate_hz": CANONICAL_SAMPLE_RATE_HZ,
+        "sample_count": CANONICAL_SAMPLE_COUNT,
+        "control_rate_hz": CANONICAL_CONTROL_RATE_HZ,
+        "control_count": CANONICAL_CONTROL_COUNT,
+    }
+
+
+def frozen_provenance(
+    generator: str,
+    issue: int,
+    derivation: str,
+    case_id: str,
+    frozen_receipt: Optional[Dict[str, Any]] = None,
+    receipt_path: Path = RECEIPT_PATH,
+) -> Dict[str, Any]:
+    """Provenance for one case rendered through the frozen fixed model.
+
+    ``generator``, ``issue`` and ``derivation`` are the generator's own;
+    the model identity, the DR-0008 status string and the three accepted
+    contract digests are shared, so they are read from this module rather
+    than hand-typed per tool. A generator needing extra keys (audio
+    evidence rows, matrix counters) adds them to the returned dict.
+    """
+
+    provenance: Dict[str, Any] = {
+        "generator": generator,
+        "issue": issue,
+        "model_identity": MODEL_IDENTITY,
+        "dr_0008_status": DR_0008_STATUS,
+        "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE_PATH),
+        "choices_register_sha256": sha256_file(CHOICES_REGISTER_PATH),
+        "dr_0008_record_sha256": frozen_receipt_record_digest(receipt_path),
+        "derivation": derivation,
+        "case_id": case_id,
+    }
+    if frozen_receipt is not None:
+        provenance["frozen_receipt_binding"] = frozen_receipt
+    return provenance
+
+
+def build_vector_document(
+    parameters: Dict[str, Any],
+    traces: List[Dict[str, Any]],
+    provenance: Dict[str, Any],
+    *,
+    validate: bool,
+) -> Dict[str, Any]:
+    """Assemble one vector document around a generator's own content.
+
+    Everything outside ``parameters`` / ``traces`` / ``provenance`` is the
+    same in every committed vector: the schema pair, the live trace-registry
+    version and parameter-inventory commit, the canonical clip block, and
+    ``content_hash`` over the rest. ``validate`` additionally runs the
+    document through :func:`load_vector` and
+    :func:`verify_accepted_contract` at assembly time — what the control
+    path generators do. The VCO generators assemble without it (their
+    committed files are loader- and contract-checked by their consumers,
+    ``tb/run_tb.py``'s VCO lanes and the VCO test suites), so the flag
+    preserves each caller's behavior rather than changing it.
+    """
+
+    registry = load_registry_document()
+    inventory = load_inventory_document()
+    document: Dict[str, Any] = {
+        "schema": VECTOR_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "provenance": provenance,
+        "trace_registry_version": registry["semantic_version"],
+        "parameter_inventory_commit": inventory["source"]["commit"],
+        "clip": canonical_clip(),
+        "parameters": parameters,
+        "traces": traces,
+    }
+    document["content_hash"] = compute_content_hash(document)
+    if validate:
+        load_vector(document, registry=registry, inventory=inventory)
+        verify_accepted_contract(document)
+    return document
+
+
 def check_committed(documents: Dict[str, str], out_dir: Path, tool_name: str) -> int:
     """Byte-compare a fresh in-memory regeneration against the commits.
 
@@ -200,6 +291,111 @@ def check_committed(documents: Dict[str, str], out_dir: Path, tool_name: str) ->
         else:
             print("CHECK OK: %s" % path.name)
     return 0 if ok else 1
+
+
+def generate_case_documents(
+    *,
+    out_dir: Path,
+    directed_path: Path,
+    frozen_case_id: str,
+    case_table: Callable[[Dict[str, Any]], Sequence[Any]],
+    build_case_document: Callable[..., Dict[str, Any]],
+    frozen_receipt_document: Optional[Callable[..., Dict[str, Any]]] = None,
+    documents_out: Optional[Dict[str, str]] = None,
+) -> int:
+    """Render every case of a control-path generator to its JSON payload.
+
+    ``case_table(frozen_physical)`` yields ``(case_id, overrides,
+    is_frozen)`` rows; ``build_case_document(formats, fcp, physical,
+    case_id, frozen_receipt)`` assembles one document. With
+    ``documents_out`` the payloads are collected in memory (the ``check``
+    path) instead of written to ``out_dir``.
+    """
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from .fixed_voice import AcceptedFormats
+    from .format_sweep import FixedControlPath
+
+    formats = AcceptedFormats()
+    fcp = FixedControlPath(formats.control_spec)
+    frozen_physical = load_frozen_physical(directed_path, frozen_case_id)
+    for case_id, overrides, is_frozen in case_table(frozen_physical):
+        physical = apply_overrides(frozen_physical, overrides)
+        frozen_receipt = (
+            frozen_receipt_document(formats, fcp, physical, case_id)
+            if is_frozen and frozen_receipt_document is not None
+            else None
+        )
+        document = build_case_document(
+            formats, fcp, physical, case_id, frozen_receipt
+        )
+        payload = json.dumps(document, indent=1, sort_keys=True) + "\n"
+        if documents_out is not None:
+            documents_out[case_id] = payload
+            continue
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / (case_id + ".json")
+        path.write_text(payload, encoding="utf-8")
+        print(
+            "wrote %s (%d traces x %d values)"
+            % (path, len(document["traces"]), len(document["traces"][0]["values"]))
+        )
+    return 0
+
+
+def run_case_generator(
+    argv: Optional[Sequence[str]],
+    *,
+    description: Optional[str],
+    tool_name: str,
+    out_dir: Path,
+    directed_path: Path,
+    frozen_case_id: str,
+    case_table: Callable[[Dict[str, Any]], Sequence[Any]],
+    build_case_document: Callable[..., Dict[str, Any]],
+    frozen_receipt_document: Optional[Callable[..., Dict[str, Any]]] = None,
+) -> int:
+    """``generate`` / ``check`` entry point shared by the case generators.
+
+    ``generate`` (the default) rewrites the committed vector files;
+    ``check`` regenerates in memory and byte-compares against them. Either
+    way the accepted register must instantiate first: a refusal is reported
+    as ``GENERATION REFUSED`` and nothing is written.
+    """
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="generate",
+        choices=["generate", "check"],
+        help="'generate' (re)writes the committed vector files; "
+        "'check' byte-compares regeneration against them",
+    )
+    args = parser.parse_args(argv)
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from .fixed_voice import AcceptedFormats
+
+    try:
+        AcceptedFormats()
+    except Exception as error:  # noqa: BLE001 - refusal must be explicit
+        print("GENERATION REFUSED: accepted register refused: %s" % error)
+        return 1
+
+    cases = {
+        "out_dir": out_dir,
+        "directed_path": directed_path,
+        "frozen_case_id": frozen_case_id,
+        "case_table": case_table,
+        "build_case_document": build_case_document,
+        "frozen_receipt_document": frozen_receipt_document,
+    }
+    if args.command == "check":
+        documents: Dict[str, str] = {}
+        generate_case_documents(documents_out=documents, **cases)
+        return check_committed(documents, out_dir, tool_name)
+    return generate_case_documents(**cases)
 
 
 def render_fixed_trace(formats: Any, physical: Dict[str, Any], trace_name: str) -> List[int]:

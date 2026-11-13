@@ -330,59 +330,28 @@ def build_case_document(
                 raise SystemExit("sidecar custody digest mismatch: " + trace)
             audio_traces[trace]["sidecar"] = row
 
-    provenance = {
-        "generator": "tools/generate_mod_matrix_golden.py",
-        "issue": 72,
-        "model_identity": "fixed-voice-v1 (frozen composition control path, PR #156)",
-        "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
-        "dr_0008_constants_package_sha256": gv.sha256_file(
-            gv.CONSTANTS_PACKAGE_PATH
-        ),
-        "choices_register_sha256": gv.sha256_file(gv.CHOICES_REGISTER_PATH),
-        "dr_0008_record_sha256": gv.frozen_receipt_record_digest(RECEIPT_PATH),
-        "derivation": (
-            "FixedControlPath(accepted control_spec)._mod_matrix/._upsample "
-            "over quantize_params(S1) entries; the exact integer mirrors in "
-            "torchsynth_voice.mod_matrix_golden are asserted row-equal to "
-            "the model's own rows. Audio truth is digest-bound per route "
-            "(sha256 over the exact word list and over the packed f32le "
-            "bytes where a sidecar exists) with word-exact endpoint/jitter "
-            "samples inline; endpoints j=0 and j=176399 are exact copies of "
-            "control indices 0 and 1763 (align_corners=True, coordinates "
-            "j*1763/176399). No clamp exists at any matrix output."
-        ),
-        "case_id": case_id,
-        "audio_traces": audio_traces,
-        "matrix_counters": rendered["matrix_counters"],
-    }
-    if receipt is not None:
-        provenance["frozen_receipt_binding"] = receipt
+    provenance = gv.frozen_provenance(
+        "tools/generate_mod_matrix_golden.py",
+        72,
+        "FixedControlPath(accepted control_spec)._mod_matrix/._upsample "
+        "over quantize_params(S1) entries; the exact integer mirrors in "
+        "torchsynth_voice.mod_matrix_golden are asserted row-equal to "
+        "the model's own rows. Audio truth is digest-bound per route "
+        "(sha256 over the exact word list and over the packed f32le "
+        "bytes where a sidecar exists) with word-exact endpoint/jitter "
+        "samples inline; endpoints j=0 and j=176399 are exact copies of "
+        "control indices 0 and 1763 (align_corners=True, coordinates "
+        "j*1763/176399). No clamp exists at any matrix output.",
+        case_id,
+        receipt,
+        RECEIPT_PATH,
+    )
+    provenance["audio_traces"] = audio_traces
+    provenance["matrix_counters"] = rendered["matrix_counters"]
 
-    document = {
-        "schema": gv.VECTOR_SCHEMA,
-        "schema_version": gv.SCHEMA_VERSION,
-        "provenance": provenance,
-        "trace_registry_version": None,  # filled below
-        "parameter_inventory_commit": None,
-        "clip": {
-            "profile": gv.CANONICAL_PROFILE,
-            "sample_rate_hz": gv.CANONICAL_SAMPLE_RATE_HZ,
-            "sample_count": gv.CANONICAL_SAMPLE_COUNT,
-            "control_rate_hz": gv.CANONICAL_CONTROL_RATE_HZ,
-            "control_count": gv.CANONICAL_CONTROL_COUNT,
-        },
-        "parameters": case_parameters(physical),
-        "traces": traces,
-    }
-    registry = gv.load_registry_document()
-    inventory = gv.load_inventory_document()
-    document["trace_registry_version"] = registry["semantic_version"]
-    document["parameter_inventory_commit"] = inventory["source"]["commit"]
-    document["content_hash"] = gv.compute_content_hash(document)
-
-    gv.load_vector(document, registry=registry, inventory=inventory)
-    gv.verify_accepted_contract(document)
-    return document
+    return gv.build_vector_document(
+        case_parameters(physical), traces, provenance, validate=True
+    )
 
 
 def existing_sidecars() -> dict:

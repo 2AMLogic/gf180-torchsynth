@@ -22,8 +22,6 @@ against the committed files (determinism gate).
 
 from __future__ import annotations
 
-import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -98,52 +96,20 @@ def build_case_document(
         )
         formations[prefix]["shadow"] = shadow_rows
 
-    provenance = {
-        "generator": "tools/generate_adsr_golden.py",
-        "issue": 70,
-        "model_identity": "fixed-voice-v1 (frozen composition control path, PR #156)",
-        "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
-        "dr_0008_constants_package_sha256": gv.sha256_file(
-            gv.CONSTANTS_PACKAGE_PATH
-        ),
-        "choices_register_sha256": gv.sha256_file(gv.CHOICES_REGISTER_PATH),
-        "dr_0008_record_sha256": gv.frozen_receipt_record_digest(RECEIPT_PATH),
-        "derivation": (
-            "FixedControlPath(accepted control_spec)._adsr over "
-            "quantize_params(S1) entries; per-tick **alpha shadow words "
-            "replayed host-side via torchsynth_voice.adsr_golden.mirror_ramp "
-            "(asserted equal to the model's own _ramp rows)"
-        ),
-        "case_id": case_id,
-    }
-    if frozen_receipt is not None:
-        provenance["frozen_receipt_binding"] = frozen_receipt
-
-    document = {
-        "schema": gv.VECTOR_SCHEMA,
-        "schema_version": gv.SCHEMA_VERSION,
-        "provenance": provenance,
-        "trace_registry_version": None,  # filled below
-        "parameter_inventory_commit": None,
-        "clip": {
-            "profile": gv.CANONICAL_PROFILE,
-            "sample_rate_hz": gv.CANONICAL_SAMPLE_RATE_HZ,
-            "sample_count": gv.CANONICAL_SAMPLE_COUNT,
-            "control_rate_hz": gv.CANONICAL_CONTROL_RATE_HZ,
-            "control_count": gv.CANONICAL_CONTROL_COUNT,
-        },
-        "parameters": case_parameters(physical),
-        "traces": traces,
-    }
-    registry = gv.load_registry_document()
-    inventory = gv.load_inventory_document()
-    document["trace_registry_version"] = registry["semantic_version"]
-    document["parameter_inventory_commit"] = inventory["source"]["commit"]
-    document["content_hash"] = gv.compute_content_hash(document)
-
-    gv.load_vector(document, registry=registry, inventory=inventory)
-    gv.verify_accepted_contract(document)
-    return document
+    provenance = gv.frozen_provenance(
+        "tools/generate_adsr_golden.py",
+        70,
+        "FixedControlPath(accepted control_spec)._adsr over "
+        "quantize_params(S1) entries; per-tick **alpha shadow words "
+        "replayed host-side via torchsynth_voice.adsr_golden.mirror_ramp "
+        "(asserted equal to the model's own _ramp rows)",
+        case_id,
+        frozen_receipt,
+        RECEIPT_PATH,
+    )
+    return gv.build_vector_document(
+        case_parameters(physical), traces, provenance, validate=True
+    )
 
 
 def case_table(frozen_physical: dict) -> list:
@@ -265,36 +231,6 @@ def case_table(frozen_physical: dict) -> list:
     ]
 
 
-def build_all(documents_out: dict = None) -> int:
-    formats = AcceptedFormats()
-    fcp = FixedControlPath(formats.control_spec)
-    frozen_physical = gv.load_frozen_physical(DIRECTED_PATH, FROZEN_CASE_ID)
-    failures = 0
-    for case_id, stage_values, is_frozen in case_table(frozen_physical):
-        physical = gv.apply_overrides(frozen_physical, stage_values)
-        document = build_case_document(
-            formats,
-            fcp,
-            physical,
-            case_id,
-            frozen_receipt=frozen_receipt_binding_document(formats, fcp, physical, case_id)
-            if is_frozen
-            else None,
-        )
-        payload = json.dumps(document, indent=1, sort_keys=True) + "\n"
-        if documents_out is not None:
-            documents_out[case_id] = payload
-            continue
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-        path = OUT_DIR / (case_id + ".json")
-        path.write_text(payload, encoding="utf-8")
-        print(
-            "wrote %s (%d traces x %d values)"
-            % (path, len(document["traces"]), len(document["traces"][0]["values"]))
-        )
-    return failures
-
-
 def frozen_receipt_binding_document(
     formats: AcceptedFormats, fcp: FixedControlPath, physical: dict, case_id: str
 ) -> dict:
@@ -312,33 +248,18 @@ def frozen_receipt_binding_document(
     return gv.frozen_receipt_binding(document, FROZEN_CASE_ID, RECEIPT_PATH)
 
 
-def check_committed() -> int:
-    """Byte-compare a fresh in-memory regeneration against the commits."""
-
-    documents = {}
-    build_all(documents_out=documents)
-    return gv.check_committed(documents, OUT_DIR, "generate_adsr_golden.py")
-
-
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "command",
-        nargs="?",
-        default="generate",
-        choices=["generate", "check"],
-        help="'generate' (re)writes the committed vector files; "
-        "'check' byte-compares regeneration against them",
+    return gv.run_case_generator(
+        argv,
+        description=__doc__,
+        tool_name="generate_adsr_golden.py",
+        out_dir=OUT_DIR,
+        directed_path=DIRECTED_PATH,
+        frozen_case_id=FROZEN_CASE_ID,
+        case_table=case_table,
+        build_case_document=build_case_document,
+        frozen_receipt_document=frozen_receipt_binding_document,
     )
-    args = parser.parse_args(argv)
-    try:
-        AcceptedFormats()
-    except Exception as error:  # noqa: BLE001 - refusal must be explicit
-        print("GENERATION REFUSED: accepted register refused: %s" % error)
-        return 1
-    if args.command == "check":
-        return check_committed()
-    return build_all()
 
 
 if __name__ == "__main__":
