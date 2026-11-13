@@ -25,6 +25,15 @@
         "python3",
         "tools/check_contract.py"
       ]
+    },
+    {
+      "name": "readme-t1-sections",
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_readme_t1_sections"
+      ]
     }
   ]
 }

@@ -92,7 +92,7 @@ class InventoryBindingTests(unittest.TestCase):
     def test_adapter_dispositions_equal_the_manifest_exactly(self):
         counts = sr.require_inventory_match(MANIFEST)
         self.assertEqual(counts, {"runtime_cell": 9, "second_detector": 2, "composition": 1,
-                                  "refusal": 1, "deferred_unmeasured": 4})
+                                  "refusal": 1, "deferred_unmeasured": 7})
         from_manifest = {e["id"]: e["disposition"] for e in MANIFEST["inventory"] if e["family"] == "signal"}
         self.assertEqual(from_manifest, sr.ADAPTER_DISPOSITIONS)
 
@@ -118,7 +118,7 @@ class InventoryBindingTests(unittest.TestCase):
 
     def test_wrong_revision_or_digest_refuses(self):
         for mutate in (
-            lambda m: m.update(revision=2),
+            lambda m: m.update(revision=3),
             lambda m: m["frozen_inventory_digest"].update(sha256="0" * 64),
             lambda m: m["inventory"].pop(),
         ):
@@ -162,6 +162,10 @@ class PlanBindingTests(unittest.TestCase):
         for entry_id in ("signal:norm.always_on", "signal:norm.off", "signal:norm.wrong_peak",
                          "signal:norm.wrong_reciprocal"):
             with self.assertRaisesRegex(MutationError, "deferred_unmeasured.*AQ-1"):
+                sr.cell_plan(MANIFEST, entry_id, "global-0", CATALOG)
+        for entry_id in ("signal:gain.db (minus 1 dB)", "signal:clip.truncate_step",
+                         "signal:clip.truncate_step vs clip.round_step (directed distinction)"):
+            with self.assertRaisesRegex(MutationError, "deferred_unmeasured.*DR-0015"):
                 sr.cell_plan(MANIFEST, entry_id, "global-0", CATALOG)
         with self.assertRaisesRegex(MutationError, "second detector"):
             sr.cell_plan(MANIFEST, "signal:osc.tuning_shift (property)", "global-0", CATALOG)
@@ -610,9 +614,13 @@ class ReportValidationTests(unittest.TestCase):
         (refusal,) = self.report["refusals"]
         self.assertEqual((refusal["entry_id"], refusal["status"]),
                          ("signal:normalization-decision-replacement", "refused"))
-        self.assertEqual(self.report["deferred_unmeasured"],
-                         ["signal:norm.always_on", "signal:norm.off", "signal:norm.wrong_peak",
-                          "signal:norm.wrong_reciprocal"])
+        self.assertEqual(
+            sorted(self.report["deferred_unmeasured"]),
+            sorted(["signal:norm.always_on", "signal:norm.off", "signal:norm.wrong_peak",
+                    "signal:norm.wrong_reciprocal", "signal:gain.db (minus 1 dB)",
+                    "signal:clip.truncate_step",
+                    "signal:clip.truncate_step vs clip.round_step (directed distinction)"]),
+        )
         for trace, verdicts in self.report["controls"].items():
             self.assertEqual(set(verdicts.values()), {"PASS"}, trace)
         self.assertEqual(set(self.report["controls"]), {"mixer.pre_normalization", "vco_1.post_vca", "vco_2.post_vca"})

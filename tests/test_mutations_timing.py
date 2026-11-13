@@ -49,7 +49,7 @@ class RegistrationTests(unittest.TestCase):
             set(mt.FAMILY_OPERATORS) <= set(mutations.OPERATORS),
             True,
         )
-        self.assertEqual(len(mt.FAMILY_OPERATORS), 12)
+        self.assertEqual(len(mt.FAMILY_OPERATORS), 13)
         for operator_id, definition in mt.FAMILY_OPERATORS.items():
             with self.subTest(operator=operator_id):
                 self.assertEqual(mutations.OPERATORS[operator_id], definition)
@@ -75,6 +75,16 @@ class RegistrationTests(unittest.TestCase):
         self.assertEqual(
             mutations.OPERATORS["modulation.lfo_rate_shift"]["magnitude"]["unit"],
             "hz",
+        )
+        # sustain is a typed amplitude perturbation, never a control-sample
+        # breakpoint
+        self.assertEqual(
+            mutations.OPERATORS["envelope.sustain_shift"]["magnitude"],
+            {"type": "number", "unit": "amplitude", "minimum": -1, "maximum": 1},
+        )
+        self.assertNotIn(
+            "sustain",
+            mutations.OPERATORS["envelope.breakpoint_shift"]["configuration"]["breakpoint"],
         )
         self.assertEqual(
             mutations.OPERATORS["timing.drop_sample"]["magnitude"],
@@ -401,6 +411,10 @@ class FloorAndCoverageTests(unittest.TestCase):
         self.assertFalse(blind["detected"])
         self.assertLess(blind["measured_error"], mt.ENVELOPE_COORD_BOUND)
         for probe in probes:
+            if "unavailable_reason" in probe:
+                # unrun is never a PASS: the periodic detector is unavailable
+                self.assertFalse(probe["detected"])
+                continue
             self.assertEqual(probe["detected"], probe["expected_detected"])
 
     def test_degenerate_envelope_and_high_rate_coverage(self):
@@ -421,6 +435,166 @@ class FloorAndCoverageTests(unittest.TestCase):
             self.assertEqual(high_rate["reason"], "valid")
         self.assertEqual(
             by_case["one-audio-sample-delay-visibility"]["verdict"], "FAIL")
+
+
+class SelectorAndSustainTests(unittest.TestCase):
+    """Decay/release/sustain faults change exactly their matching property."""
+
+    PROPERTIES = ("attack_end", "decay_end", "release_end", "peak_amplitude",
+                  "sustain_amplitude")
+
+    def verdicts(self, plan_factory):
+        harness = make_harness()
+        attempt = harness.attempt(plan_factory(harness))
+        self.assertIsNone(attempt.errored)
+        self.assertEqual([event["status"] for event in attempt.events], ["applied"])
+        rows, _ = mt.envelope_rows(
+            mt.lane_samples(mt._attempt_document(attempt), mt.LANE_ADSR),
+            mt.CASES["adsr-control"], "directed:mutation-timing-test")
+        return {name: mt.verdict_of(rows, name) for name in self.PROPERTIES}
+
+    def test_clean_control_passes_every_target_property(self):
+        harness = make_harness()
+        rows, _ = mt.envelope_rows(
+            mt.lane_samples(harness.document, mt.LANE_ADSR),
+            mt.CASES["adsr-control"], "directed:mutation-timing-test")
+        for name in self.PROPERTIES:
+            self.assertEqual(mt.verdict_of(rows, name), "PASS", name)
+
+    def test_each_breakpoint_selector_fails_only_its_matching_coordinate(self):
+        for selector, target in (("decay", "decay_end"), ("release", "release_end")):
+            with self.subTest(selector=selector):
+                verdicts = self.verdicts(
+                    lambda h, s=selector: h.fault(
+                        "mti-t", "envelope.breakpoint_shift", 2.0, {"breakpoint": s}))
+                self.assertEqual(verdicts[target], "FAIL")
+                for name in self.PROPERTIES:
+                    if name != target:
+                        self.assertEqual(verdicts[name], "PASS", name)
+
+    def test_attack_selector_keeps_its_existing_attack_and_dependent_decay_failure(self):
+        verdicts = self.verdicts(
+            lambda h: h.fault("mti-t", "envelope.breakpoint_shift", 2.0,
+                              {"breakpoint": "attack"}))
+        self.assertEqual(verdicts["attack_end"], "FAIL")
+        self.assertEqual(verdicts["release_end"], "PASS")
+
+    def test_sustain_shift_fails_only_sustain_amplitude(self):
+        verdicts = self.verdicts(
+            lambda h: h.fault("mti-t", "envelope.sustain_shift", 0.1))
+        self.assertEqual(verdicts["sustain_amplitude"], "FAIL")
+        for name in self.PROPERTIES:
+            if name != "sustain_amplitude":
+                self.assertEqual(verdicts[name], "PASS", name)
+
+    def test_sustain_event_records_amplitude_construction_not_control_samples(self):
+        harness = make_harness()
+        attempt = harness.attempt(harness.fault("mti-t", "envelope.sustain_shift", 0.1))
+        detail = attempt.events[0]["detail"]
+        self.assertEqual(detail["property"], "sustain_amplitude")
+        self.assertEqual(detail["shift_amplitude"], 0.1)
+        self.assertEqual(detail["declared_truth"], {"sustain": 0.75})
+        self.assertNotIn("shift_control_samples", detail)
+
+    def test_sustain_magnitude_domain_and_range_refusals(self):
+        harness = make_harness()
+        with self.assertRaises(mutations.MutationError):
+            harness.fault("mti-t", "envelope.sustain_shift", 1.5)
+        with self.assertRaises(mutations.MutationError):
+            harness.fault("mti-t", "envelope.sustain_shift", True)
+        attempt = harness.attempt(harness.fault("mti-t", "envelope.sustain_shift", 0.5))
+        self.assertIn("MutationError", attempt.errored)
+        self.assertEqual([event["status"] for event in attempt.events], ["errored"])
+
+
+class BoundaryEvidenceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.probes = mt.sensitivity_floor(ROOT)
+
+    def test_every_numeric_operator_has_two_sided_evidence_at_its_declared_limit(self):
+        limits = {
+            "envelope.breakpoint_shift": mt.ENVELOPE_COORD_BOUND,
+            "envelope.sustain_shift": mt.ENVELOPE_AMPLITUDE_BOUND,
+            "modulation.lfo_rate_shift": mt.LFO_RATE_LIMIT,
+            "modulation.lfo_depth_shift": mt.LFO_DEPTH_LIMIT,
+            "modulation.route_depth_shift": mt.ROUTE_GAIN_BOUND,
+        }
+        self.assertEqual(set(limits), set(mt.NUMERIC_BOUNDARY_OPERATORS))
+        numpy_present = importlib.util.find_spec("numpy") is not None
+        for operator_id, limit in limits.items():
+            for probe_property in sorted({
+                    probe["property"] for probe in self.probes
+                    if probe["operator"] == operator_id}):
+                with self.subTest(operator=operator_id, property=probe_property):
+                    sides = {probe["side"]: probe for probe in self.probes
+                             if probe["operator"] == operator_id
+                             and probe["property"] == probe_property}
+                    self.assertEqual(set(sides), {"below", "above"})
+                    self.assertEqual(sides["below"]["boundary"], limit)
+                    self.assertEqual(sides["above"]["boundary"], limit)
+                    periodic = operator_id.startswith("modulation.lfo")
+                    if periodic and not numpy_present:
+                        # unrun is never a PASS: the detector is unavailable
+                        for probe in sides.values():
+                            self.assertIn("unavailable_reason", probe)
+                            self.assertFalse(probe["detected"])
+                        continue
+                    self.assertFalse(sides["below"]["detected"])
+                    self.assertNotEqual(sides["below"]["verdict"], "FAIL")
+                    self.assertEqual(
+                        sides["below"]["error_relative_to_boundary"], "below")
+                    self.assertTrue(sides["above"]["detected"])
+                    self.assertEqual(sides["above"]["verdict"], "FAIL")
+                    self.assertEqual(
+                        sides["above"]["error_relative_to_boundary"], "above")
+                    if not periodic:
+                        self.assertLess(sides["below"]["measured_error"], limit)
+                        self.assertGreater(sides["above"]["measured_error"], limit)
+                    self.assertLess(sides["below"]["magnitude"], sides["above"]["magnitude"])
+
+    def test_decay_release_and_sustain_selectors_each_have_probe_pairs(self):
+        names = {probe["probe"] for probe in self.probes}
+        for fragment in ("decay", "release"):
+            self.assertTrue(any(fragment in name and "below" in name for name in names))
+            self.assertTrue(any(fragment in name and "above" in name for name in names))
+
+    def test_applicability_records_cite_probes_or_mark_not_applicable(self):
+        records = {record["operator"]: record
+                   for record in mt.magnitude_applicability(self.probes)}
+        self.assertEqual(set(records), set(mt.FAMILY_OPERATORS))
+        for operator_id in mt.NUMERIC_BOUNDARY_OPERATORS:
+            self.assertEqual(records[operator_id]["second_magnitude"], "recorded")
+            self.assertGreaterEqual(len(records[operator_id]["floor_probes"]), 2)
+        for operator_id in ("timing.delay_control_sample", "timing.delay_audio_sample",
+                            "timing.drop_sample", "timing.duplicate_sample",
+                            "interp.zoh_control", "interp.off_endpoint",
+                            "modulation.route_sign_flip", "modulation.route_swap"):
+            self.assertEqual(records[operator_id]["second_magnitude"], "not applicable")
+
+
+class WrongThenRightTests(unittest.TestCase):
+    def test_refused_errored_and_failing_faults_do_not_contaminate_the_next_valid_attempt(self):
+        harness = make_harness()
+        valid = harness.fault("mti-wtr", "envelope.breakpoint_shift", 2.0,
+                              {"breakpoint": "release"})
+        fresh = harness.attempt(valid)
+        with self.assertRaises(mutations.MutationError):
+            harness.fault("mti-wtr-domain", "envelope.sustain_shift", 2.0)
+        errored = harness.attempt(harness.fault("mti-wtr-range", "envelope.sustain_shift", 0.5))
+        self.assertIsNotNone(errored.errored)
+        failing = harness.attempt(harness.fault("mti-wtr-fail", "envelope.sustain_shift", 0.1))
+        self.assertIsNone(failing.errored)
+        final = harness.attempt(valid)
+        self.assertEqual(final.store, fresh.store)
+        self.assertEqual(final.events, fresh.events)
+        self.assertEqual(final.events_summary, fresh.events_summary)
+        self.assertEqual(harness.plain_attempt().store,
+                         make_harness().plain_attempt().store)
+
+    def test_family_control_records_the_regression(self):
+        self.assertTrue(mt._wrong_then_right(ROOT))
+        self.assertTrue(mt.qualification_controls(ROOT)["wrong_then_right_no_contamination"])
 
 
 class MatrixAndEvidenceTests(unittest.TestCase):
@@ -446,6 +620,21 @@ class MatrixAndEvidenceTests(unittest.TestCase):
                     self.assertTrue(entry["control_accepted"], entry["fault"])
                     self.assertTrue(entry["tripped"], entry["fault"])
         self.assertLessEqual(unavailable, 2)
+
+    def test_new_selector_and_sustain_faults_are_published_and_trip(self):
+        by_fault = {entry["fault"]: entry for entry in self.matrix}
+        for fault, operator_id, fragment in (
+                ("decay-breakpoint-shift-plus2", "envelope.breakpoint_shift", "decay_end"),
+                ("release-breakpoint-shift-plus2", "envelope.breakpoint_shift", "release_end"),
+                ("sustain-amplitude-shift-plus0.1", "envelope.sustain_shift",
+                 "sustain_amplitude")):
+            with self.subTest(fault=fault):
+                entry = by_fault[fault]
+                self.assertEqual(entry["operator"], operator_id)
+                self.assertTrue(entry["control_accepted"])
+                self.assertTrue(entry["tripped"])
+                self.assertIn(fragment, entry["downstream"])
+                self.assertIn("FAIL", entry["observed_refusal"])
 
     def test_composed_plan_runs_in_declared_order(self):
         harness = make_harness("upsample-audio")

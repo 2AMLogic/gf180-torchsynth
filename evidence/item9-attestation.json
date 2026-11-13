@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 20/20 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 21/21 attestation checks passed (klt signoff --attest)",
   "source": "evidence/item9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 20,
-    "passed_count": 20,
+    "check_count": 21,
+    "passed_count": 21,
     "checks": [
       {
         "check": "present",
@@ -24,7 +24,7 @@
         "role": "testbench",
         "path": "tb/run_tb.py",
         "passed": true,
-        "content_hash": "sha256:d4ff736340dfc27b22dcc71f1e8f7a5e06e581062096aa6865b5145a1344fc96"
+        "content_hash": "sha256:49bf1c790831c1fbb0919e324c5e9b80634e6d1668f3b593fe67055fce8df16a"
       },
       {
         "check": "present",
@@ -132,6 +132,13 @@
         "content_hash": "sha256:2531a814397e2f9d60affa8895e242c9451fd37bd45d23a3d605278516f465a9"
       },
       {
+        "check": "present",
+        "role": "testbench",
+        "path": "tb/tb_harness.py",
+        "passed": true,
+        "content_hash": "sha256:ebdc6027fc1567b6dbb93df0f789ab8ab08d71fb8c03565b707fad05783fd65a"
+      },
+      {
         "check": "command",
         "role": "cold_start",
         "argv": [
@@ -158,13 +165,13 @@
         "passed": true,
         "value": {
           "iverilog": "12.0",
-          "klt": "0.7.1.dev1743+g7ee09483b748"
+          "klt": "0.8.0"
         }
       }
     ]
   },
   "provenance": {
-    "klt_version": "0.7.1.dev1743+g7ee09483b748",
+    "klt_version": "0.8.0",
     "klayout_version": null,
     "pdk": null,
     "deck": null,
@@ -173,7 +180,7 @@
         "path": "evidence/item9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:d9360f0d4059a015c5b27773eb41a8769af664c01a479e75b15baeb4852634d8"
+      "content_hash": "sha256:d1e1ab7ee7574db883a043266ff8320da3d01a772c5a6f154146ef3d65acb981"
     }
   }
 }

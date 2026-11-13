@@ -19,7 +19,8 @@ subclassing, never by editing it:
   in-band event with original/replacement digests, consumed replacement
   bytes are retained separately from the passive original capture, and all
   hooks/parameters are restored after success, errors and partial setup.
-* ``TimingHarness``/``TimingAttempt``/``run_case_process`` bind each attempt
+* ``TimingHarness``/``TimingAttempt``/``run_case_process`` (shared glue in
+  ``mutation_worker_family``) bind each attempt
   to the resolved development case (global index, batch block and slot) and
   run plain, empty, sham, faults in manifest order and a clean rerun in one
   process, retaining every captured trace for offline detectors.
@@ -36,13 +37,13 @@ import json
 from pathlib import Path
 import struct
 import sys
-import time
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 
 sys.path.insert(0, str(HERE))
 import mutation_worker as base  # noqa: E402
+import mutation_worker_family as family  # noqa: E402
 
 sha256 = base.sha256
 tensor_bytes = base.tensor_bytes
@@ -444,129 +445,20 @@ class TimingMutationSession(base.MutationSession):
         self._record(swap["instance_id"], ops.PARAMETER_VALUE, "applied", detail)
 
 
-class TimingHarness(base.Harness):
+class TimingHarness(family.FamilyHarness):
     """The shared deterministic harness, bound to one resolved development case."""
 
-    def __init__(self, capture, document, plan, torch, Voice, SynthConfig, normalize, case):
-        base.Harness.__init__(self, capture, document, plan, torch, Voice, SynthConfig, normalize)
-        coordinates = base.qualification.coordinates(case["global_sound_index"], BATCH_SIZE)
-        _require(
-            case["batch_size"] == BATCH_SIZE
-            and coordinates["batch"] == case["batch_block"]
-            and coordinates["slot"] == case["batch_slot"],
-            "case coordinates differ from the reproducible batch coordinates",
-        )
-        self.coordinates = coordinates
-        self.case = dict(case)
+    schedule_error = TimingScheduleError
 
 
-def _file_label(name):
-    return name.replace(":", "__")
-
-
-class TimingAttempt(base.Attempt):
-    """One bounded attempt bound to its case; retains traces and consumed replacements."""
-
-    def run(self, output):
-        harness = self.harness
-        torch = harness.torch
-        coordinates = harness.coordinates
-        slot = coordinates["slot"]
-        if self.schedule is not None:
-            _require(
-                self.schedule["campaign"]["case"] == harness.case
-                and self.schedule["campaign"]["attempt"] == self.name,
-                "attempt is not bound to its schedule case and label: " + self.name,
-            )
-        voice = harness.make_voice()
-        rng_before = harness.rng_state()
-        parameters_before = harness.capture.named_parameters(voice, torch, slot)
-        noise_before = tensor_bytes(voice.noise.noise[coordinates["noise_slot"]], torch)
-        session = None
-        capture = None
-        started = time.perf_counter()
-        errored = None
-        try:
-            with torch.inference_mode():
-                capture = harness.make_capture(voice)
-                if self.schedule is None:
-                    with capture:
-                        audio, forward, labels = voice(coordinates["batch"])
-                else:
-                    session = TimingMutationSession(self.schedule, voice, capture, torch)
-                    session.attach()
-                    try:
-                        audio, forward, labels = voice(coordinates["batch"])
-                    finally:
-                        if session._attached:
-                            session.detach(*sys.exc_info())
-        except BaseException as error:
-            errored = type(error).__name__ + ": " + str(error)
-        elapsed = time.perf_counter() - started
-        state_restored = self._state_restored(voice, parameters_before, noise_before)
-        label = _file_label(self.name)
-        common = {
-            "attempt": self.name,
-            "case": harness.case["id"],
-            "plan_id": None if self.schedule is None else self.schedule["plan_id"],
-            "events": session.events if session is not None else [],
-            "state_restored": state_restored,
-            "render_seconds": elapsed,
-        }
-        if errored is not None:
-            return dict(common, errored=errored)
-        rng_after = harness.rng_state()
-        audio_bytes = tensor_bytes(audio, torch)
-        raw = output / (label + ".audio.f32le")
-        raw.write_bytes(tensor_bytes(audio[slot], torch))
-        retained = {}
-        for name, value in capture.values.items():
-            path = output / (label + ".trace." + name + ".f32le")
-            path.write_bytes(tensor_bytes(value, torch))
-            retained[name] = path.name
-        consumed = []
-        for instance_id, trace, data in (session.consumed if session is not None else []):
-            path = output / (label + ".consumed." + instance_id + "." + trace + ".f32le")
-            path.write_bytes(data)
-            consumed.append(
-                {"instance_id": instance_id, "trace": trace, "slot": slot,
-                 "sha256": sha256(data), "file": path.name}
-            )
-        return dict(
-            common,
-            errored=None,
-            audio_slot_sha256=sha256(tensor_bytes(audio[slot], torch)),
-            batch_audio_sha256=sha256(audio_bytes),
-            slot_sha256=base.slot_digests(audio_bytes),
-            audio_slot_file=raw.name,
-            labels_all=bool(labels.all()),
-            shapes_ok=tuple(audio.shape) == (BATCH_SIZE, base.SAMPLES)
-            and tuple(forward.shape) == (BATCH_SIZE, 78)
-            and tuple(labels.shape) == (BATCH_SIZE,),
-            capture_inventory=[dict(item) for item in capture.inventory],
-            invocation_counts=dict(capture.tracker.counts),
-            parameters_before_sha256=parameters_before["normalized"]["batch_sha256_by_name"],
-            parameters_selected_sha256=parameters_before["normalized"]["selected_sha256_by_name"],
-            noise_sha256=sha256(noise_before),
-            rng_state=rng_after,
-            render_drew_randoms=rng_before != rng_after,
-            retained_traces=retained,
-            consumed_replacements=consumed,
-        )
+class TimingAttempt(family.FamilyAttempt):
+    session_class = TimingMutationSession
+    label_spaces = False
 
 
 def run_case_process(harness, schedules, output, document, parameter_names, manifest_sha256):
     """Plain, empty, sham, faults in manifest order, clean rerun; validation first."""
-    names = list(schedules)
-    _require(names[:2] == ["empty", "sham"], "controls must precede the faulted attempts")
-    for name in names:
-        validate_timing_schedule(
-            schedules[name], document, parameter_names, harness.case, manifest_sha256
-        )
-        _require(schedules[name]["campaign"]["attempt"] == name, "schedule label mismatch: " + name)
-    records = {}
-    for name, schedule in [("plain", None)] + [(n, schedules[n]) for n in names] + [
-        ("clean_rerun", None)
-    ]:
-        records[name] = TimingAttempt(name, harness, schedule).run(output)
-    return records
+    return family.run_case_process(
+        harness, schedules, output, document, parameter_names, manifest_sha256,
+        validate_timing_schedule, TimingAttempt, TimingScheduleError,
+    )
