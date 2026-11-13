@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-13
+
+- **PR #457**: refactor: share the trace digest and fed-bytes guard in noise_stream_golden
+- **Issue #455** (closed): Simplify noise_stream_golden.py: fold missed trace_digest copy into digest.py, drop dead names, dedupe guards
+
 ### 2026-11-10
 
 - **Issue #450** (closed): WORK_PLAN regeneration duplicates curated entries (#394/#411/#431)
