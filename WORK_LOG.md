@@ -2,8 +2,15 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-14
+
+- **PR #462**: refactor: give the f32le sidecar codec and trace digest one definition each
+- **Issue #461** (closed): Fold vco2_golden.py's duplicate voice_digest and f32le word-packing helpers into the shared modules
+
 ### 2026-11-13
 
+- **PR #460**: refactor: share the vector envelope and generate/check driver in golden_vectors
+- **Issue #459** (closed): Dedupe the vector-document envelope and generate/check driver across golden generators
 - **PR #457**: refactor: share the trace digest and fed-bytes guard in noise_stream_golden
 - **Issue #455** (closed): Simplify noise_stream_golden.py: fold missed trace_digest copy into digest.py, drop dead names, dedupe guards
 

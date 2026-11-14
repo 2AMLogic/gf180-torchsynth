@@ -18,6 +18,16 @@ their provenance (constants package, choice register, and — via the frozen
 release receipt — the DR-0008 record); :func:`verify_accepted_contract` is
 the tb flow's refusal check over that binding.
 
+Sidecar codec: :func:`pack_words_f32le` / :func:`unpack_words_f32le` are the
+``f32le`` encoding this schema names in :data:`ENCODINGS` -- Q-format words
+carried losslessly through division by ``2**frac_bits`` (every
+``word / 2**frac_bits`` with the signed word inside ``frac_bits + 23`` bits
+is exactly representable in binary32); unpacking refuses any value that does
+not round-trip to the exact word. They live here, beside the schema that
+names the encoding, rather than in any one engine's golden module: the
+per-issue mirrors (``mod_matrix_golden``, ``vco2_golden``) re-export them
+under their existing spellings via import aliases (issues #247/#455/#461).
+
 Comparison policy: the reporter compares with exact equality. Per AGENTS.md,
 fixed-point model to RTL is sample-exact; declared error metrics belong to
 the float-to-fixed model comparison, never here. No tolerance is applied and
@@ -34,6 +44,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import struct
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
@@ -443,6 +454,36 @@ def evidence_row(words: List[int]) -> Dict[str, Any]:
         "last_word": words[-1],
         "jitter": {str(j): w for j, w in sorted(pins.items())},
     }
+
+
+def pack_words_f32le(words: List[int], frac_bits: int = 21) -> bytes:
+    """Pack Q-format words as little-endian binary32 (the #54 convention).
+
+    ``word / 2**frac_bits`` is exactly representable whenever the signed
+    word fits in ``frac_bits + 23`` bits, so the packing is lossless; the
+    unpacker refuses any drift anyway.
+    """
+
+    scale = float(1 << frac_bits)
+    return struct.pack("<%df" % len(words), *[word / scale for word in words])
+
+
+def unpack_words_f32le(payload: bytes, frac_bits: int = 21) -> List[int]:
+    """Unpack binary32 payload back to exact words, refusing any drift."""
+
+    scale = 1 << frac_bits
+    values = struct.unpack("<%df" % (len(payload) // 4), payload)
+    words: List[int] = []
+    for value in values:
+        scaled = value * scale
+        rounded = int(round(scaled))
+        if scaled != rounded:
+            raise VectorError(
+                "f32le payload value %r is not an exact Q%d word multiple"
+                % (value, frac_bits)
+            )
+        words.append(rounded)
+    return words
 
 
 def format_mismatch(mismatch: Mismatch) -> str:
