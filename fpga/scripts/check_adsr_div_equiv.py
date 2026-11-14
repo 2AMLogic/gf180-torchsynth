@@ -19,8 +19,12 @@ This is a BOUNDED SIMULATION check, not a formal equivalence proof: it shows
 the two function bodies agree on every vector it runs, nothing more. It
 checks the function in isolation under Icarus, not the synthesized netlist.
 
-Usage: check_adsr_div_equiv.py [N_RANDOM]   (default 50000)
-Exit 0 only if the testbench ran and reported zero mismatches.
+Usage: check_adsr_div_equiv.py [--self-test] [N_RANDOM]   (default 50000)
+Exit 0 only if the testbench ran and reported zero mismatches. With
+--self-test, the checker additionally runs a negative control: the staged
+function with a deliberately wrong constant bound (105 instead of 106) must
+produce mismatches, demonstrating that the check is sensitive to the
+transform it claims to check.
 """
 import importlib.util
 import re
@@ -114,20 +118,27 @@ endmodule
 """
 
 
-def main() -> int:
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 50000
-    prep = load_prepare()
+def staged_variant(prep, wrong_bound=None):
     func = extract_function(SRC.read_text(encoding="utf-8"))
     if func.count(prep.ADSR_LOOP_OLD) != 1:
         raise SystemExit("loop header not found once in div_half_even")
+    new = prep.ADSR_LOOP_NEW
+    if wrong_bound is not None:
+        if new.count("for (i = 106;") != 1:
+            raise SystemExit("could not locate the constant bound in ADSR_LOOP_NEW")
+        new = new.replace("for (i = 106;", "for (i = %d;" % wrong_bound)
     orig = func.replace("div_half_even", "div_orig")
-    staged = func.replace(prep.ADSR_LOOP_OLD, prep.ADSR_LOOP_NEW) \
+    staged = func.replace(prep.ADSR_LOOP_OLD, new) \
                  .replace("div_half_even", "div_staged")
+    return orig, staged
+
+
+def run_case(orig: str, staged: str, n: int):
     iverilog = shutil.which("iverilog")
     vvp = shutil.which("vvp")
     if not (iverilog and vvp):
         print("NOT RUN: iverilog/vvp not on PATH")
-        return 2
+        raise SystemExit(2)
     with tempfile.TemporaryDirectory() as tmp:
         tb = Path(tmp) / "tb.sv"
         tb.write_text(TB % {"orig": orig, "staged": staged, "n": n,
@@ -139,16 +150,36 @@ def main() -> int:
     print(res.stdout, end="")
     if res.returncode != 0:
         print(res.stderr, end="")
-        print("FAIL: vvp exited %d" % res.returncode)
-        return 1
+        raise SystemExit("FAIL: vvp exited %d" % res.returncode)
     m = re.search(r"ADSR_DIV_EQUIV total=(\d+) mismatches=(\d+)", res.stdout)
     if not m:
-        print("FAIL: no summary line (testbench did not complete)")
-        return 1
-    if int(m.group(2)) != 0:
+        raise SystemExit("FAIL: no summary line (testbench did not complete)")
+    return int(m.group(1)), int(m.group(2))
+
+
+def main() -> int:
+    argv = sys.argv[1:]
+    self_test = "--self-test" in argv
+    positional = [a for a in argv if not a.startswith("--")]
+    n = int(positional[0]) if positional else 50000
+    prep = load_prepare()
+    orig, staged = staged_variant(prep)
+    total, mismatches = run_case(orig, staged, n)
+    if mismatches != 0:
         print("FAIL")
         return 1
-    print("PASS (bounded simulation, %s vectors; not a formal proof)" % m.group(1))
+    print("PASS (bounded simulation, %d vectors; not a formal proof)" % total)
+    if not self_test:
+        return 0
+    # Negative control (DR-0017 D3): a deliberately wrong constant bound
+    # (105 instead of 106) must be caught, or the checker proves nothing.
+    wrong_orig, wrong_staged = staged_variant(prep, wrong_bound=105)
+    w_total, w_mismatches = run_case(wrong_orig, wrong_staged, n)
+    if w_mismatches == 0:
+        print("FAIL: negative control not caught (wrong bound 105 passed)")
+        return 1
+    print("PASS: negative control caught (%d mismatching vectors with bound 105)"
+          % w_mismatches)
     return 0
 
 

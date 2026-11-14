@@ -46,6 +46,14 @@ published negative result, not a pass.
   108 `MULT18X18D`). Multipliers: the flat design needs 324 against 156
   available (ADSR 108, LFO 88, matrix 80, mixer 45, VCOs 33, upsample 20,
   replay 4; the standalone sum is 378, flat is 324).
+- What the synthesized default observes (`OBSERVE_ALL=0`): the signature pins
+  carry `audio_out` (CRC-folded), `error_code`, `noise_error`, `done` and
+  `error` only. The `obs_bit` enumeration (`rtl/fpga_oneshot_top.sv:281-287`)
+  folds into `ops_all`, which is held at zero when `OBSERVE_ALL==0`, so that
+  whole cone is pruned by synthesis and reaches no pin. The area its
+  observability cones would add is **not measured**; the pruning is
+  conservative for the does-not-fit conclusion (unobserved cones can only
+  make the total smaller).
 - Cycles per clip (shim schedule, confirmed by simulation, see below):
   **1,418,281** cycles from `start` (1,418,282 counting the `start` cycle, as simulated) (4 cycles/sample, 705,611 per audio pass,
   7,058 control-walk cycles). The second audio pass (the normalization
@@ -60,6 +68,10 @@ published negative result, not a pass.
   configuration and noise stream the shim reaches its final state in the
   predicted cycle count with the core's `done` set and no `error`. The
   stimulus is not the golden vector: **no numeric-correctness claim.**
+  With that all-zero stimulus the noise DUT accepts no bytes
+  (`reports/cycle_check.txt` reports `bytes=0`): `noise_byte_valid` is driven
+  throughout `S_PRIME`/`S_GROUP`, but the accept path itself is not
+  exercised — this check validates the shim schedule, not noise ingestion.
   The exact-sentinel simulation of the netlist is #374.
 
 ### DR-0010 assumptions vs the inferred mapping
@@ -90,10 +102,18 @@ published negative result, not a pass.
   reproducibility: #374. `build.sh` was run once in the working tree
   (dirty state recorded in the report); nondeterminism is **not** quantified.
 - The report's `git.head` (`4d650c1`) and `git.dirty: true` describe the tree
-  the build actually ran in. The PR branch was later rebased onto `ce1f577`,
-  which changed only `.loom/` tooling files (no `tb/sv`, `fpga/`, `spec/` or
-  `rtl/` input); the build was **not** re-run on the rebased head and the
-  report was not re-measured.
+  the build actually ran in; the build was **not** re-run on later branch
+  heads and the numbers were not re-measured. The report is bound to this
+  tree by its committed hash manifest, not by that stale `git.head`:
+  `reports/sources.json` records the SHA-256 of all 12 staged sources and
+  still matches `tb/sv/*.sv` at the current head, and the report's
+  `hashes_sha256` for the wrapper (`rtl/fpga_oneshot_top.sv`), `build.sh`,
+  `requirements.txt` and the golden vector still match the committed files.
+  The one input path that moved since the build — `write_lut_memh`, from
+  `tb/run_tb.py` to `tb/tb_harness.py` (re-exported; `scripts/gen_luts.py`
+  imports both helpers from `tb/run_tb.py`) — moved byte-identical, so the
+  ROM-generation path that produced the committed images is unchanged.
+  Re-verify those hashes before re-using any number in `reports/`.
 - Any board work, pin assignment (DR-0017 D1: none), programming, audio.
 - Any ABC9 result: `abc9` did not finish in 590 s, so `abc -lut 4:7` was used.
 - Whole-design `-noflatten` hierarchy: killed (4 GiB wasm limit); replaced by
@@ -121,8 +141,11 @@ fpga/build.sh            # all stages; needs uv and network for the first `env`
 fpga/build.sh synth      # flat synthesis only (~15 min, single job)
 ```
 
-Single-threaded by design (one tool at a time). Nothing is installed on the
-host; the toolchain lives in `fpga/build/venv`. The iverilog cycle check:
+Single-threaded by design (one tool at a time). The pinned toolchain installs
+only into the git-ignored `fpga/build/venv`; nothing lands in the provisioned
+host-tool paths. The first `env` stage may fetch a uv-managed CPython 3.14
+(cached under `~/.local/share/uv/python`, outside the repo) when no suitable
+interpreter is already present. The iverilog cycle check:
 
 ```
 cd fpga/build/src && iverilog -g2012 -o ../tbc -P tb_fpga_cycles.WALK=176400 \
