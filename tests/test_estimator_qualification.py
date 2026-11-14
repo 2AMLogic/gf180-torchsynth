@@ -4,6 +4,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -457,10 +458,15 @@ class SyntheticTreeTestCase(unittest.TestCase):
     def test_validate_ledger_rejects_malformed_documents(self):
         with self.assertRaises(eq.EstimatorQualificationError):
             eq.ledger_from_json("{\"schema_version\": 2}")
+        # Field-set and digest-shape refusals are now sourced from the committed
+        # schema, so these assert the schema's path-bearing reason rather than
+        # the former hand-written wording. Same inputs, same refusal, more
+        # specific message -- re-pointed deliberately, not loosened.
         ledger = copy.deepcopy(self.ledger)
         ledger["families"].pop("paired")
         with self.assertRaisesRegex(
-            eq.EstimatorQualificationError, "exactly"
+            eq.EstimatorQualificationError,
+            r"\$\.families: missing required field",
         ):
             eq.validate_ledger(ledger)
         ledger = copy.deepcopy(self.ledger)
@@ -472,9 +478,90 @@ class SyntheticTreeTestCase(unittest.TestCase):
         ledger = copy.deepcopy(self.ledger)
         ledger["families"]["spectral"]["estimator"]["module_sha256"] = "xyz"
         with self.assertRaisesRegex(
-            eq.EstimatorQualificationError, "64 hex digits"
+            eq.EstimatorQualificationError,
+            r"estimator\.module_sha256: invalid string",
         ):
             eq.validate_ledger(ledger)
+
+    def test_validate_ledger_loads_the_committed_schema(self):
+        """The schema is exercised, not merely present (issue #470)."""
+        self.assertEqual(
+            eq.LEDGER_SCHEMA_FILE, "estimator-qualification-v1.schema.json"
+        )
+        schema_path = (
+            ROOT / "spec/schemas" / eq.LEDGER_SCHEMA_FILE
+        )
+        self.assertTrue(schema_path.is_file())
+        # Every $ref the schema uses must resolve; a dangling pointer is the
+        # defect that kept this schema from ever running.
+        raw = schema_path.read_text(encoding="utf-8")
+        schema = json.loads(raw)
+        for ref in re.findall(r'"\$ref":\s*"#/\$defs/([A-Za-z_]+)"', raw):
+            self.assertIn(ref, schema["$defs"], f"dangling $ref #/$defs/{ref}")
+        # Structural validation genuinely runs: break the schema's contract in a
+        # way only the schema (never the remaining Python) can catch.
+        ledger = copy.deepcopy(self.ledger)
+        ledger["artifacts"]["periodic"] = "not-a-digest"
+        with self.assertRaisesRegex(
+            eq.EstimatorQualificationError,
+            r"rejected by estimator-qualification-v1\.schema\.json",
+        ):
+            eq.validate_ledger(ledger)
+
+    def test_schema_constants_match_the_python_constants(self):
+        """The schema now owns the constants; build_ledger still emits them."""
+        schema = json.loads(
+            (ROOT / "spec/schemas" / eq.LEDGER_SCHEMA_FILE).read_text(
+                encoding="utf-8"
+            )
+        )
+        properties = schema["properties"]
+        self.assertEqual(
+            properties["schema_version"]["const"], eq.LEDGER_SCHEMA_VERSION
+        )
+        self.assertEqual(properties["ledger"]["const"], eq.LEDGER_ID)
+        self.assertEqual(
+            properties["ledger_version"]["const"], eq.LEDGER_VERSION
+        )
+        self.assertEqual(
+            properties["source_target"]["const"], eq.SOURCE_TARGET
+        )
+        self.assertEqual(
+            set(properties["families"]["required"]), set(eq.FAMILIES)
+        )
+        self.assertEqual(
+            set(schema["$defs"]["family"]["required"]),
+            eq.FAMILY_ENTRY_FIELDS,
+        )
+        self.assertEqual(
+            set(schema["$defs"]["verdicts"]["required"]), set(eq.VERDICTS)
+        )
+
+    def test_malformed_preparation_block_is_refused(self):
+        """The repaired $defs/preparation is enforced (issue #470)."""
+        for label, mutate in (
+            ("unexpected field", lambda b: b.__setitem__("bogus", 1)),
+            ("missing field", lambda b: b.pop("declared")),
+            ("status outside enum", lambda b: b.__setitem__("status", "mismatch")),
+            (
+                "malformed digest",
+                lambda b: b.__setitem__("recomputed_sha256", "nope"),
+            ),
+            ("declared not an object", lambda b: b.__setitem__("declared", [])),
+        ):
+            with self.subTest(case=label):
+                ledger = copy.deepcopy(self.ledger)
+                mutate(ledger["preparation"])
+                with self.assertRaisesRegex(
+                    eq.EstimatorQualificationError, r"\$\.preparation"
+                ):
+                    eq.validate_ledger(ledger)
+
+    def test_nullable_spec_described_digest_is_accepted(self):
+        """build_ledger emits None when SIGNAL-PREPARATION.md has no marker."""
+        ledger = copy.deepcopy(self.ledger)
+        ledger["preparation"]["spec_described_sha256"] = None
+        eq.validate_ledger(ledger)
 
     def test_nonfinite_and_duplicate_json_refuse(self):
         with self.assertRaises(eq.EstimatorQualificationError):

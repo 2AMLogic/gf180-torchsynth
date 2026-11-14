@@ -61,6 +61,19 @@
   },
   "$defs": {
     "count": {"type": "integer", "minimum": 0},
+    "preparation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module", "recomputed_sha256", "declared", "spec_described_sha256", "status", "dependent_families"],
+      "properties": {
+        "module": {"type": "string", "minLength": 1},
+        "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "declared": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+        "spec_described_sha256": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]},
+        "status": {"enum": ["consistent", "inconsistent"]},
+        "dependent_families": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
     "verdicts": {
       "type": "object",
       "additionalProperties": false,

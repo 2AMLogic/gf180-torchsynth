@@ -21,6 +21,7 @@ _SCHEMA_FILES = (
     "render-artifact-v1.schema.json",
     "corpus-index-v1.schema.json",
     "favorite-v1.schema.json",
+    "estimator-qualification-v1.schema.json",
 )
 
 
