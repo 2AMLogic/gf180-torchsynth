@@ -303,6 +303,11 @@ class RealisationTests(unittest.TestCase):
         row = tr.paired_exactness(plain, faulted, 441, "adsr_1.output")
         self.assertEqual((row["verdict"], row["time_origin"], row["framing_match"]), ("FAIL", "index-zero", 1))
         self.assertGreater(row["max_abs_error"], 0)
+        # The row reports the signed mean error, as the signal family always
+        # has; omitting it here was unintentional drift, not a timing decision
+        # (#463). Cross-family row shape is locked in
+        # tests/test_mutation_family_runtime.py.
+        self.assertIsNotNone(row["mean_error"])
         aligned = tr.paired_exactness(plain[:-1], faulted[1:], 441, "adsr_1.output")
         self.assertEqual(aligned["verdict"], "PASS")  # alignment would mask the fault; the detector never aligns
 
