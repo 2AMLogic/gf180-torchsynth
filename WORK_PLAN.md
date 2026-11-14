@@ -21,6 +21,7 @@ _None._
 
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once
 - **#274**: Provision access to the pinned AWS box (repo-remote, i-018841ef4169207ba) from the agent fleet
+- **#468**: Check from the committed record whether divider depth explains the measured critical paths (feasibility plan C3)
 
 ## Ready
 
@@ -31,6 +32,8 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
+- **#468**: Check from the committed record whether divider depth explains the measured critical paths (feasibility plan C3)
+- **#473**: asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four
 
 ## In Progress
 
@@ -38,12 +41,19 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
+- **#463**: Finish the signal/timing runtime dedupe #405 started: 7 near-duplicate helper pairs an exact-match diff missed
+- **#465**: Add static sample-identity checks for the synthesis-view rewrites (feasibility plan C1, C2; part of #82)
+- **#470**: Make spec/schemas/estimator-qualification-v1.schema.json live or non-normative: it has a dangling $ref and nothing loads it
+- **#472**: Deduplicate per-lane scaffold in tb/run_tb.py into the landed tb_harness.py (#383 follow-on)
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
 - **#464**: docs: roadmap as of 2026-11-13
+- **#475**: refactor(tb): fold per-lane loader/ops/simulate/budget scaffold into tb_harness
+- **#477**: refactor: hoist seven near-duplicate signal/timing runtime helpers
+- **#479**: test: prove the four synthesis-view rewrites are value-preserving
 
 ## Approved (Awaiting Merge)
 
@@ -73,6 +83,9 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
+- **#465**: Add static sample-identity checks for the synthesis-view rewrites (feasibility plan C1, C2; part of #82) *(curated)*
+- **#468**: Check from the committed record whether divider depth explains the measured critical paths (feasibility plan C3) *(curated)*
+- **#473**: asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -88,7 +101,8 @@ Issues carrying `loom:curated`.
 - **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(architect)*
 - **#83**: [Epic #2] Measure gf180mcu floorplan, place, route, and timing feasibility *(architect)*
 - **#456**: Remove orphaned unratified example listening receipt (examples/listening): unreferenced, stale, superseded by session-01 manifest *(hermit)*
-- **#463**: Finish the signal/timing runtime dedupe #405 started: 7 near-duplicate helper pairs an exact-match diff missed *(hermit)*
+- **#476**: Split the self-contained ADSR lane out of tb/run_tb.py (the named-lane follow-on #383 invited) *(hermit)*
+- **#478**: Remove tools/render_reference.py: orphaned wrapper duplicating the documented render CLI *(hermit)*
 
 ## Epics
 
@@ -102,12 +116,12 @@ Issues carrying `loom:curated`.
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Very important | 1 |
-| Important | 2 |
-| Ready (`loom:issue`) | 5 |
-| In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 1 |
+| Important | 3 |
+| Ready (`loom:issue`) | 7 |
+| In Progress (`loom:building`) | 6 |
+| PRs awaiting review | 4 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 18 |
-| Architect / Hermit proposals | 13 |
+| Curated | 21 |
+| Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
