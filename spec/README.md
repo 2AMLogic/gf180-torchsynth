@@ -20,6 +20,9 @@ details are allowed to become the de facto product.
   discharge DR-0001's deferred runtime question, each acceptance criterion
   re-derived from the committed artifacts, and the divergences still open.
   `tools/check_reference_consolidation.py` re-runs the cross-check in CI.
+- [`T1-SPEC.md`](T1-SPEC.md) is the **proposed / not ratified** block-level
+  spec table (#387) that klayout-tools T1 items 5, 6, 8 and 10 grade against;
+  clock, area and power rows are pending #82/#83.
 - [`protocol/`](protocol/) specifies the core/host transport protocol subset
   that is independent of the pending numeric contract (#53).
 - [`decision-records/`](decision-records/) records choices and unresolved

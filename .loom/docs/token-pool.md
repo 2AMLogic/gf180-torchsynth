@@ -950,9 +950,9 @@ classify-error`** (`loom-daemon/src/classify_error.rs`): the error text on
 stdin (or `--stdout-tail`/`--stderr-tail` files) plus `--exit-code` and an
 optional `--provider` in, one category line out (`0` classified, `1` terminal
 for `--transient <CATEGORY>`, `2` usage error). The shell library delegates to
-it whenever a daemon binary resolves and keeps its in-file tables as the
-no-daemon fallback, byte-identical; both renderings are pinned equal by
-`test-classify-error.sh` on the shared
+it whenever a daemon binary resolves and carries no tables of its own
+(#11219): with no capable daemon it gives the fail-safe degraded answer
+(RECOVERABLE / retry). The native classifier is pinned by the shared
 `tests/fixtures/classify_error/vectors.tsv` fixture. Consumers that install
 the signed daemon (rather than vendoring the shell file) get the same
 classification through the binary alone.
@@ -1903,16 +1903,19 @@ of the cooldown fix — but confirming that required inspecting the host's
 installed binaries after the fact, which is exactly the forensics this log line
 removes.)
 
-**Auto-unpin** (`failure_counts`): the wrapper tracks consecutive
-`TOKEN_EXHAUSTED` failures per account in `.loom/tokens/.failure_counts` (JSON).
+**Auto-unpin** (`failure_counts`): the wrapper tracks a running
+total of `TOKEN_EXHAUSTED` marks per account (since its last reset — not strictly
+consecutive) in `.loom/tokens/.failure_counts` (JSON).
 When **every** account in the allowlist hits the threshold (default 5), the
 wrapper auto-clears `.allowlist` and `.failure_counts` with a loud stderr log
 line. Operators can re-pin afterwards. The threshold is `>= 5`, so a 6th failure
 does not silently exceed; it still triggers (idempotent at-or-above).
 
-Counters are reset on:
-- a successful spawn for that account, or
-- any operator allowlist mutation (`pin`, `unpin`, `add`, `remove`).
+A successful spawn does **not** reset the counter: `spawn-claude.sh` `exec`s
+`claude` and never regains control to attribute an outcome. Counters are reset on:
+- `loom-daemon tokens unblock <name>` (that account only),
+- any operator allowlist mutation (`pin`, `unpin`, `add`, `remove`), or
+- the auto-unpin itself (which clears `.failure_counts`).
 
 **Empty-pool guard**: if the selector finds the allowlist minus `.bad_tokens` is
 empty, `spawn-claude.sh` exits `78` (`EX_CONFIG`) with operator instructions. It

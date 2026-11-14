@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect the FPGA measurement evidence into fpga/reports/ (DR-0013).
+"""Collect the FPGA measurement evidence into fpga/reports/ (DR-0017).
 
 Usage: make_report.py ROOT OUT_DIR SRC_DIR REPORT_DIR FREQ_MHZ
 
@@ -82,7 +82,7 @@ def stat_summary(cells: dict):
 
 
 def main():
-    report = {"issue": 80, "decision_record": "DR-0013",
+    report = {"issue": 80, "decision_record": "DR-0017",
               "clock_constraint_mhz": FREQ,
               "device": "LFE5U-85F CABGA381 speed 6 (nextpnr --85k)"}
     report["git"] = provenance()

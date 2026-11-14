@@ -1,4 +1,4 @@
-// Cycle-count check for the measurement shim (issue #80, DR-0013).
+// Cycle-count check for the measurement shim (issue #80, DR-0017).
 // Counts clocks from start_pin until done_pin (or the shim's S_FIN state, to
 // also cover short WALK values where the core flags a truncated pass).
 // This checks the SHIM's schedule only; stimulus is all-zero config and

@@ -26,11 +26,11 @@
 .loom/claims/
 .loom/locks/
 .loom/signals/
-.loom/sweep-dispatch-tap/
 .loom/status/
 .loom/retry-state/
 .loom/exit-codes/
 .loom/sweep-checkpoint/
+.loom/private-jobs/
 .loom/sweep-run/
 .loom/targets/
 .loom/target*/
@@ -76,7 +76,7 @@
 .loom/gh-config-by-owner/
 .loom/gh-config-by-owner.*/
 .loom/gh-config-by-owner-*/
-.loom-local/
+/.loom-local/
 # <<< loom-managed <<<
 
 # Project-local development and generated evidence
@@ -90,8 +90,10 @@ build/
 *.egg-info/
 out/
 artifacts/
+!manifests/artifacts/
 spec/reference/generated/
 sim/work/
+sim/stage/
 
 # Repo Skills guard-hook logs (machine-local; carry absolute paths)
 .claude/skills/repo/logs/

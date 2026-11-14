@@ -1,0 +1,2205 @@
+{
+  "audit": {
+    "source_scan": {
+      "adsr_engine.sv": {
+        "always_blocks": 1,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "audio_mix_engine.sv": {
+        "always_blocks": 2,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "gf180_rtl_constants_pkg.sv": {
+        "always_blocks": 0,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "lfo_vca_engine.sv": {
+        "always_blocks": 1,
+        "simulation_only_constructs": [
+          "$display",
+          "$finish",
+          "$readmemh",
+          "$value$plusargs",
+          "initial"
+        ],
+        "x_literals_or_x_compares": 0
+      },
+      "mod_matrix_engine.sv": {
+        "always_blocks": 2,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "noise_stream_dut.sv": {
+        "always_blocks": 2,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "normalization_replay_engine.sv": {
+        "always_blocks": 1,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "one_shot_voice_top.sv": {
+        "always_blocks": 0,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "quarter_wave_lut.sv": {
+        "always_blocks": 0,
+        "simulation_only_constructs": [
+          "$display",
+          "$finish",
+          "$readmemh",
+          "$value$plusargs",
+          "initial"
+        ],
+        "x_literals_or_x_compares": 0
+      },
+      "sine_vco_engine.sv": {
+        "always_blocks": 2,
+        "simulation_only_constructs": [
+          "$display",
+          "$finish",
+          "$readmemh",
+          "$value$plusargs",
+          "initial"
+        ],
+        "x_literals_or_x_compares": 0
+      },
+      "square_saw_vco_engine.sv": {
+        "always_blocks": 1,
+        "simulation_only_constructs": [],
+        "x_literals_or_x_compares": 0
+      },
+      "upsample_engine.sv": {
+        "always_blocks": 1,
+        "simulation_only_constructs": [
+          "$value$plusargs",
+          "initial"
+        ],
+        "x_literals_or_x_compares": 0
+      }
+    },
+    "synthesis_view_rewrites": [
+      "constants package -> `define macros (klt read_verilog has no -sv)",
+      "ROM $value$plusargs/$readmemh initial blocks -> fixed $readmemh of the committed-hash ROM payload",
+      "upsample_engine +max_j plusarg -> constant 0 (the full walk)",
+      "adsr_engine/lfo_vca_engine division loop start 'den_msb + 60' -> constant start with guard 'if (i <= den_msb + 60)'"
+    ],
+    "verilator_lint_original_rtl": {
+      "command": "verilator --lint-only -Wall -Wno-fatal --top-module one_shot_voice_top <tb/sv RTL, compile order>",
+      "errors": 0,
+      "exit_code": 0,
+      "tool": "Verilator 5.050 2026-07-01 rev vUNKNOWN-built20260924",
+      "warning_categories": {
+        "BLKSEQ": 24,
+        "DECLFILENAME": 1,
+        "IMPORTSTAR": 11,
+        "PINCONNECTEMPTY": 1,
+        "SYNCASYNCNET": 1,
+        "TIMESCALEMOD": 1,
+        "UNUSEDPARAM": 37,
+        "UNUSEDSIGNAL": 30,
+        "WIDTHEXPAND": 51,
+        "WIDTHTRUNC": 15
+      },
+      "warnings_by_category_and_file": {
+        "BLKSEQ": {
+          "mod_matrix_engine.sv": 15,
+          "upsample_engine.sv": 9
+        },
+        "DECLFILENAME": {
+          "gf180_rtl_constants_pkg.sv": 1
+        },
+        "IMPORTSTAR": {
+          "adsr_engine.sv": 1,
+          "audio_mix_engine.sv": 1,
+          "lfo_vca_engine.sv": 1,
+          "mod_matrix_engine.sv": 1,
+          "noise_stream_dut.sv": 1,
+          "normalization_replay_engine.sv": 1,
+          "one_shot_voice_top.sv": 1,
+          "quarter_wave_lut.sv": 1,
+          "sine_vco_engine.sv": 1,
+          "square_saw_vco_engine.sv": 1,
+          "upsample_engine.sv": 1
+        },
+        "PINCONNECTEMPTY": {
+          "one_shot_voice_top.sv": 1
+        },
+        "SYNCASYNCNET": {
+          "one_shot_voice_top.sv": 1
+        },
+        "TIMESCALEMOD": {
+          "gf180_rtl_constants_pkg.sv": 1
+        },
+        "UNUSEDPARAM": {
+          "adsr_engine.sv": 1,
+          "gf180_rtl_constants_pkg.sv": 33,
+          "lfo_vca_engine.sv": 1,
+          "quarter_wave_lut.sv": 1,
+          "upsample_engine.sv": 1
+        },
+        "UNUSEDSIGNAL": {
+          "adsr_engine.sv": 9,
+          "audio_mix_engine.sv": 1,
+          "lfo_vca_engine.sv": 4,
+          "noise_stream_dut.sv": 2,
+          "normalization_replay_engine.sv": 3,
+          "quarter_wave_lut.sv": 2,
+          "sine_vco_engine.sv": 4,
+          "square_saw_vco_engine.sv": 5
+        },
+        "WIDTHEXPAND": {
+          "adsr_engine.sv": 5,
+          "lfo_vca_engine.sv": 12,
+          "noise_stream_dut.sv": 2,
+          "normalization_replay_engine.sv": 6,
+          "quarter_wave_lut.sv": 9,
+          "sine_vco_engine.sv": 14,
+          "square_saw_vco_engine.sv": 3
+        },
+        "WIDTHTRUNC": {
+          "adsr_engine.sv": 4,
+          "audio_mix_engine.sv": 1,
+          "gf180_rtl_constants_pkg.sv": 1,
+          "lfo_vca_engine.sv": 2,
+          "mod_matrix_engine.sv": 1,
+          "noise_stream_dut.sv": 2,
+          "quarter_wave_lut.sv": 1,
+          "sine_vco_engine.sv": 3
+        }
+      }
+    },
+    "yosys_frontend_whole_voice": {
+      "check_problem_counts_hier_then_flat": [
+        0,
+        0
+      ],
+      "check_problems_total": 0,
+      "coarse_cells_by_type": {
+        "$add": 385,
+        "$adff": 121,
+        "$and": 1,
+        "$dff": 8964,
+        "$div": 1,
+        "$eq": 35406,
+        "$ge": 476,
+        "$gt": 151,
+        "$le": 1,
+        "$logic_and": 36,
+        "$logic_not": 41,
+        "$logic_or": 27,
+        "$lt": 132,
+        "$meminit_v2": 5,
+        "$memrd": 20,
+        "$mod": 1,
+        "$mul": 93,
+        "$mux": 40522,
+        "$ne": 6,
+        "$neg": 87,
+        "$not": 3,
+        "$or": 238,
+        "$pmux": 24,
+        "$reduce_bool": 9,
+        "$reduce_or": 7,
+        "$shl": 2,
+        "$shr": 1,
+        "$sub": 504,
+        "$xor": 5
+      },
+      "command": "yosys -s <read_verilog synthesis view; hierarchy -check -top one_shot_voice_top; proc; opt_clean; check; write_json; flatten; opt_clean; check>",
+      "div_mod_operator_cells": 2,
+      "div_mod_operator_sites": [
+        "sine_vco_engine.sv:168.19 $div 96b/96b",
+        "sine_vco_engine.sv:169.19 $mod 96b/96b"
+      ],
+      "elapsed_s": 122.6,
+      "exit_code": 0,
+      "ff_bits_pre_mapping": 218002,
+      "latch_cells": 0,
+      "memory_init_cells_pre_mapping": 5,
+      "memory_read_ports_pre_mapping": 20,
+      "multiplier_operator_cells": 93,
+      "multiplier_widths_a_x_b_to_y": {
+        "48x48->48": 1,
+        "64x64->64": 4,
+        "96x32->96": 6,
+        "96x63->96": 6,
+        "96x96->96": 76
+      },
+      "note": "pre-mapping inventory. Yosys' default synth maps $mul via alumacc/maccmap adder trees; no multiplier was mapped to gf180 cells in this record except inside quarter_wave_lut (see targets). Division is not an operator here: restoring long division is unrolled shift/subtract logic.",
+      "yosys": "Yosys 0.67+post (git sha1 b8e7da6f40ae8f552c116bf6c359b07c6533e159, Release, GNU /usr/bin/c++ 13.3.0)",
+      "yosys_warnings": {
+        "Warning: Replacing memory <id> with list of registers.": 11
+      }
+    }
+  },
+  "claims": {
+    "hardware_playback": false,
+    "layout": false,
+    "signoff": false,
+    "silicon": false,
+    "sound_fidelity": false,
+    "synthesis_feasibility": true
+  },
+  "constraints": {
+    "abc_delay_target_ps": 40000.0,
+    "clock_basis": "DR-0010 bound clock (SCHED_BOUND_CLOCK_MHZ=25); candidate clocks 25/50/100 MHz, none selected",
+    "clock_mhz": 25.0,
+    "clock_period_ns": 40.0,
+    "clock_port": "clk",
+    "generated_clocks_and_enables": "ctl_*/audio phase enables are ordinary synchronous inputs sequenced by the host; no generated clock, clock gate or multicycle exception exists or is declared, so every path is timed single-cycle at the one clock. klt sta cannot express multicycle/false-path exceptions (friction F5).",
+    "input_delay_ns": 8.0,
+    "klt_yosys_timeout_s": 300.0,
+    "memory_treatment": "no memory macro / SRAM is instantiated or assumed: the quarter-wave ROMs are plain 'reg [..] rom [0:4096]' arrays initialised by $readmemh in the synthesis view and left to Yosys memory inference (memory_map to flip-flops/mux logic or constant folding); klt's memory_mapping evidence records what actually happened.",
+    "output_delay_ns": 8.0,
+    "reset_assumption": "rst is an asynchronous active-high input (posedge rst in every engine); it is constrained like any other non-clock input (input delay 8.0 ns), so recovery/removal against clk are timed; no reset synchronizer exists in this RTL and none is assumed.",
+    "wire_load": "none: klt sta verilog mode, liberty default, no placement/parasitics"
+  },
+  "derived_arithmetic_not_measured": {
+    "five_rom_copies_as_logic": {
+      "area_um2": 1118465.4,
+      "instances": 5,
+      "note": "2 quarter_wave_lut in square_saw_vco_engine + 1 inline in sine_vco_engine + 2 in lfo_vca_engine; the 24-bit and 25-bit ROM variants differ slightly, so this is approximate"
+    },
+    "five_upsample_column_instances": {
+      "area_um2": 27553228.4,
+      "flip_flop_cells": 213395,
+      "instances": 5
+    },
+    "note": "instance-count x measured-leaf arithmetic; NOT a synthesis or area measurement of the whole voice"
+  },
+  "identity": {
+    "git_head": "ce1f577eb5c48e976190197e65291e92192feafa",
+    "producer_note": "tools are introduced by the PR that adds this record; git_head is the base commit they were run on",
+    "producer_tools_sha256": {
+      "synth_view.py": "b848f24b3ef0aacb0fcab0789b0e5afbb7ccd101168dc54a2cee3018a34994da",
+      "synthesize_oneshot.py": "a36c339590aeba3d0d7fceb8141704d6688133818e6bc167bf18f5b94fb067c9"
+    },
+    "rom_payload_sha256": {
+      "quarter_wave_audio.memh": "8818e98fbfcbdb1e179bfabce25bcaab010efade4292abc4fdd6c952aecd25a5",
+      "quarter_wave_control.memh": "c4e8d2b852309dca659c724096ce383c8b9a5a752d0ff12e8f8cfcd26d7a6f7a"
+    },
+    "rtl_and_spec_inputs_match_git_head": true,
+    "rtl_sha256": {
+      "adsr_engine.sv": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+      "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+      "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+      "lfo_vca_engine.sv": "fdd347eba0150822bd485444e1209a686df6c9741a664c06fcc7357392ae7021",
+      "mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+      "noise_stream_dut.sv": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+      "normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+      "one_shot_voice_top.sv": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+      "quarter_wave_lut.sv": "ce933d1ba7f7d54342f9442054897e5023ccd4ff481358195d9b3f1499bea8a4",
+      "sine_vco_engine.sv": "a8eaa792a678b56b96a4cab03728ddd1da4c2333d191ad0dbedf93657ca9ffbd",
+      "square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+      "upsample_engine.sv": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679"
+    },
+    "synthesis_view_rewritten_files": [
+      "gf180_rtl_constants_pkg.sv",
+      "adsr_engine.sv",
+      "lfo_vca_engine.sv",
+      "mod_matrix_engine.sv",
+      "upsample_engine.sv",
+      "quarter_wave_lut.sv",
+      "sine_vco_engine.sv",
+      "square_saw_vco_engine.sv",
+      "noise_stream_dut.sv",
+      "audio_mix_engine.sv",
+      "normalization_replay_engine.sv",
+      "one_shot_voice_top.sv"
+    ],
+    "synthesis_view_sha256": {
+      "adsr_engine.sv": "792e0691e2014270b46b4876da4c730adffffd86e63038b376ea1945a263986e",
+      "audio_mix_engine.sv": "51389db1b777c4f337791c2efb5ea5857ec9a31154d617a153d03189d1b4d05e",
+      "gf180_rtl_constants_pkg.sv": "0d6d1818403a8a4c412e1c92f5718cfcc6d3186869bcea95de45f1fdace07620",
+      "lfo_vca_engine.sv": "1e1bd23b98c52146399780a2f07fcef54f55944bf319a66cdbcc507682a4de79",
+      "mod_matrix_engine.sv": "168d27a3201de4ca8b46f3d3e410deac09f6a70efca9150ee322810b7a1e0853",
+      "noise_stream_dut.sv": "26b9ef673e4258a782fae5ed6a8e08b5bc49247a1ce174f9c237e20bd96f2c3d",
+      "normalization_replay_engine.sv": "f0509c135b18b0a13497005d515cc9b2deb3414ae77043169282c53cc3cc65c7",
+      "one_shot_voice_top.sv": "c57ce0b76616db15979cf6eaf9a095abc72c4a65a5212dfe984c129086119c4d",
+      "quarter_wave_lut.sv": "aabdb23d5fbb3c973cfc8f354ef4c234d594672f7e5a5f73ed44dc5452d6293f",
+      "sine_vco_engine.sv": "f0fb2c7355adc428531083f690f015b556d4d0aa76125c9ecfa9ba983dce3e4c",
+      "square_saw_vco_engine.sv": "4cefd08448cffea3ff011b2dd48d823e897e3528c5afaab4c8801ed09c42aa41",
+      "upsample_engine.sv": "7b0236a7d720eadb25ef200639dd77a5c653488cd72784b16bca060d6c8c2ac2"
+    }
+  },
+  "label": "synthesis feasibility",
+  "library": {
+    "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+    "liberty_file": "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00.lib",
+    "liberty_sha256": "330aa9439255e3870ad7adfb987cd4d7bcfa7b6f9fb0cd0a712400e9bd80e38a",
+    "open_pdks_version": "open_pdks f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7",
+    "pdk_variant": "gf180mcuD",
+    "sta_corners": [
+      "tt_025C_5v00",
+      "ss_125C_4v50",
+      "ff_n40C_5v50"
+    ],
+    "synthesis_corner": "tt_025C_5v00"
+  },
+  "overall": {
+    "modules_not_completed": [
+      "adsr_engine",
+      "audio_mix_engine",
+      "lfo_vca_engine",
+      "mod_matrix_engine",
+      "one_shot_voice_top",
+      "sine_vco_engine",
+      "square_saw_vco_engine"
+    ],
+    "modules_synthesized": [
+      "noise_stream_dut",
+      "normalization_replay_engine",
+      "quarter_wave_lut",
+      "upsample_engine"
+    ],
+    "whole_voice_synthesis": "timeout",
+    "whole_voice_timing_verdict": "unverifiable"
+  },
+  "sample_schedule": {
+    "achieved": null,
+    "achieved_reason": "no timing-verified fmax exists for the whole voice: see overall.whole_voice_synthesis / whole_voice_timing_verdict",
+    "audio_cycles": 1411200,
+    "control_cycles": 7056,
+    "cycles_per_clip": 1418256,
+    "dr0010_serialized_candidate": {
+      "clip_sample_slots": 352800,
+      "counted_cycles_per_sample": 145,
+      "cycles_per_clip_at_T0": 51156000,
+      "note": "NOT implemented by this RTL (DR-0010 schedule-candidate)"
+    },
+    "min_clock_mhz_for_1x_realtime_4s": 0.3546,
+    "source": "tb/sv/one_shot_voice_top.sv phase contract (derived arithmetic; not a simulation-measured count)"
+  },
+  "schema": "gf180-torchsynth/synthesis-feasibility-evidence-v1",
+  "scope": "gf180mcu synthesis feasibility of the issue-#79 whole-voice one-shot RTL (tb/sv/one_shot_voice_top.sv and its engines) through klt (Yosys+ABC, OpenSTA at declared constraints), on a derived synthesis view of that RTL. No layout, signoff, silicon, hardware playback or sound-fidelity claim.",
+  "targets": {
+    "adsr_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "adsr_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792015096-adsrengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/adsr_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_adsr_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.4,
+        "exit_code": 1,
+        "last_stage": "4.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 2462,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792015096-adsrengine/synth_adsr_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "516b6ab187cdcf6fb209fb9ebceaa93c94c4601ac784e4144803145698bb8492",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "adsr_engine"
+    },
+    "audio_mix_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "audio_mix_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792017022-audiomixengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/audio_mix_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_audio_mix_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.4,
+        "exit_code": 1,
+        "last_stage": "4.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 1129,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792017022-audiomixengine/synth_audio_mix_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "79cfa67ebe236411bd70503d65f98c6c087163a36dd4fa56f96c7bd0f3090a3f",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "audio_mix_engine"
+    },
+    "lfo_vca_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "lfo_vca_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792015396-lfovcaengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/lfo_vca_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_lfo_vca_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.5,
+        "exit_code": 1,
+        "last_stage": "4.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 40461,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792015396-lfovcaengine/synth_lfo_vca_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "fe1658e48c4292d3d9fdee1cfc03d496e808a26951e56f49e91db294daae2f76",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "lfo_vca_engine"
+    },
+    "mod_matrix_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "mod_matrix_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792023589-modmatrixengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/mod_matrix_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt-interpreter -I -c 'S._run_yosys.__kwdefaults__[\"timeout_s\"]=2700; klayout_tools.cli.main([\"synthesize\", ...])' asic/build/req/synth_mod_matrix_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 2700.4,
+        "exit_code": 1,
+        "last_stage": "4.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 2116,
+        "message": "yosys did not complete within 2700.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792023589-modmatrixengine/synth_mod_matrix_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "85e56796ec6071e123387f73d3a595f12dcd4a49177bc444240e8cce4d1dae44",
+        "status": "timeout",
+        "yosys_timeout_s": 2700.0
+      },
+      "target": "mod_matrix_engine"
+    },
+    "noise_stream_dut": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "noise_stream_dut",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792015086-noisestreamdut",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/noise_stream_dut.sv"
+        ]
+      },
+      "sta": {
+        "command": "klt sta asic/build/req/sta_noise_stream_dut.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "corners": {
+          "ff_n40C_5v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 51.0278,
+            "hold_violation_count": 0,
+            "setup_violation_count": 0,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": 0,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2587_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.47981,
+              "startpoint": "_2587_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.47981,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2609_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": 20.40283,
+              "startpoint": "byte_in[2]",
+              "status": "ok"
+            },
+            "worst_slack_ns": 20.4028
+          },
+          "ss_125C_4v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 22.0346,
+            "hold_violation_count": 0,
+            "setup_violation_count": 24,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -109.104,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2587_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 1.4709,
+              "startpoint": "_2587_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 1.4709,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2609_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": -5.38319,
+              "startpoint": "byte_in[2]",
+              "status": "ok"
+            },
+            "worst_slack_ns": -5.38319
+          },
+          "tt_025C_5v00": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 36.499,
+            "hold_violation_count": 0,
+            "setup_violation_count": 0,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": 0,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2587_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.78312,
+              "startpoint": "_2587_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.78312,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_2609_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": 12.60201,
+              "startpoint": "byte_in[2]",
+              "status": "ok"
+            },
+            "worst_slack_ns": 12.602
+          }
+        },
+        "elapsed_s": 4.6,
+        "engine_version": "26Q3-1510-g6cb3f2b704",
+        "exit_code": 0,
+        "klt_version": "0.7.1.dev429+g435837f5c237",
+        "netlist_sha256": "sha256:15ed4d8857e586bb5d72f6602ba42b6fd43d9e85a64ce19ed06b5fa76056e925",
+        "request": {
+          "constraints": {
+            "clock_period_ns": 40.0,
+            "clock_port": "clk",
+            "input_delay_ns": 8.0,
+            "output_delay_ns": 8.0
+          },
+          "hdl_toplevel": "noise_stream_dut",
+          "pdk": {
+            "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+            "corners": [
+              "tt_025C_5v00",
+              "ss_125C_4v50",
+              "ff_n40C_5v50"
+            ]
+          },
+          "schema": "klt.sta.request/1",
+          "verilog": ".klt/synthesize/r1792015086-noisestreamdut/noise_stream_dut_synth.v"
+        },
+        "status": "ok",
+        "verdict": {
+          "reasons": [
+            "ss_125C_4v50: negative setup slack -5.383 ns",
+            "ss_125C_4v50: setup_violation_count=24"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "not_met"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_noise_stream_dut.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 1.8,
+        "exit_code": 0,
+        "hierarchy": [
+          {
+            "area_um2": 31564.7808,
+            "cells": 1489,
+            "module": "noise_stream_dut"
+          }
+        ],
+        "multiplier_mapping_from_yosys_log": {
+          "booth_pass_runs": 0,
+          "macc_models_created": 10,
+          "maccmap_extmapper_uses": 0,
+          "note": "default Yosys synth: $mul -> alumacc $macc -> maccmap adder trees; no Booth recoding"
+        },
+        "reaped_orphan_abc": 0,
+        "script_sha256": "4f72aa9f2e005c29f6f8cfd376ca5028a734d01506f77f5d33f00dc7552e1174",
+        "status": "ok",
+        "summary": {
+          "area_um2": 31564.7808,
+          "blackbox_modules": [],
+          "cell_exclusions": {
+            "effective": [],
+            "engine_supports_dont_use": null,
+            "library_defaults": [],
+            "mode": "additive",
+            "requested": [],
+            "validated": null
+          },
+          "engine_version": "0.67+post",
+          "instance_count": 1489,
+          "instance_counts_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 70,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_1": 19,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 40,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 98,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_1": 35,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 80,
+            "gf180mcu_fd_sc_mcu7t5v0__dffq_1": 168,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_1": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 174,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 38,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 16,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 138,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 23,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 20,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 16,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_1": 105,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__oai222_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__oai22_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_1": 11,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_1": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_1": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_1": 8,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_1": 13,
+            "gf180mcu_fd_sc_mcu7t5v0__tiel": 198,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_1": 14,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 38
+          },
+          "leakage_power_nw": null,
+          "memory_mapping": {
+            "modules": [],
+            "reason": null,
+            "status": "none_detected"
+          },
+          "netlist_sha256": "15ed4d8857e586bb5d72f6602ba42b6fd43d9e85a64ce19ed06b5fa76056e925",
+          "provenance": {
+            "deck": {
+              "content_hash": "sha256:330aa9439255e3870ad7adfb987cd4d7bcfa7b6f9fb0cd0a712400e9bd80e38a",
+              "name": "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00",
+              "released": false
+            },
+            "input": {
+              "content_hash": "sha256:238c7818f9ff124764c86e78ed0ca42d2f39af944758d1ae06f3ea3bab7b244c",
+              "role": "source"
+            },
+            "klayout_version": "0.30.12",
+            "klt_version": "0.7.1.dev429+g435837f5c237",
+            "pdk": {
+              "name": "gf180mcuD",
+              "source": "--pdk-root flag",
+              "version": "open_pdks f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+            }
+          },
+          "sequential_area_um2": 10695.0144,
+          "sta": null,
+          "sta_unavailable_reason": "the optional klt_statime_native extension is not installed, so no gate-level static timing analysis was attempted -- from a repo checkout, run `uv sync --group statime` (or `maturin develop --release` inside native/statime/) and re-run to populate `sta`",
+          "structural": {
+            "comb_loops": 0,
+            "expected_latches": 0,
+            "has_critical": false,
+            "latches": 0,
+            "multi_driven": 0,
+            "unexpected_latches": 0
+          },
+          "timing": {
+            "critical_path_ps": 19789.36,
+            "delay_target_ps": 40000,
+            "source": "abc_stime",
+            "wire_load": null
+          },
+          "warnings": {
+            "by_category": {},
+            "representatives": [],
+            "total": 0
+          }
+        },
+        "yosys_timeout_s": 300.0
+      },
+      "target": "noise_stream_dut"
+    },
+    "normalization_replay_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "normalization_replay_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792022529-normalizationreplaye",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/normalization_replay_engine.sv"
+        ]
+      },
+      "sta": {
+        "command": "klt sta asic/build/req/sta_normalization_replay_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "corners": {
+          "ff_n40C_5v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 7.7528,
+            "hold_violation_count": 0,
+            "setup_violation_count": 56,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -2080.76,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_21226_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.47981,
+              "startpoint": "_21226_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.47981,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_21297_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": -88.98586,
+              "startpoint": "_21274_/Q",
+              "status": "ok"
+            },
+            "worst_slack_ns": -88.9859
+          },
+          "ss_125C_4v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 2.5105,
+            "hold_violation_count": 0,
+            "setup_violation_count": 112,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -12112.6,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_21226_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 1.4709,
+              "startpoint": "_21226_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 1.4709,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": false,
+              "endpoint": "_21297_/D",
+              "engine_check_role": "setup",
+              "reason": "worst path slack -358.32386 ns differs from the aggregate WNS -358.324",
+              "slack_ns": -358.32386,
+              "startpoint": "_21255_/Q",
+              "status": "inconsistent"
+            },
+            "worst_slack_ns": -358.324
+          },
+          "tt_025C_5v00": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 4.7553,
+            "hold_violation_count": 0,
+            "setup_violation_count": 64,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -4807.97,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_21226_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.78312,
+              "startpoint": "_21226_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.78312,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": false,
+              "endpoint": "_21297_/D",
+              "engine_check_role": "setup",
+              "reason": "worst path slack -170.29362 ns differs from the aggregate WNS -170.294",
+              "slack_ns": -170.29362,
+              "startpoint": "_21274_/Q",
+              "status": "inconsistent"
+            },
+            "worst_slack_ns": -170.294
+          }
+        },
+        "elapsed_s": 7.7,
+        "engine_version": "26Q3-1510-g6cb3f2b704",
+        "exit_code": 0,
+        "klt_version": "0.7.1.dev429+g435837f5c237",
+        "netlist_sha256": "sha256:cfda3cb8be0888292ab55cfb3f310c47c688baf9c47b3181f94f0f63775e7472",
+        "request": {
+          "constraints": {
+            "clock_period_ns": 40.0,
+            "clock_port": "clk",
+            "input_delay_ns": 8.0,
+            "output_delay_ns": 8.0
+          },
+          "hdl_toplevel": "normalization_replay_engine",
+          "pdk": {
+            "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+            "corners": [
+              "tt_025C_5v00",
+              "ss_125C_4v50",
+              "ff_n40C_5v50"
+            ]
+          },
+          "schema": "klt.sta.request/1",
+          "verilog": ".klt/synthesize/r1792022529-normalizationreplaye/normalization_replay_engine_synth.v"
+        },
+        "status": "ok",
+        "verdict": {
+          "reasons": [
+            "tt_025C_5v00: negative setup slack -170.294 ns",
+            "tt_025C_5v00: setup_violation_count=64",
+            "ss_125C_4v50: negative setup slack -358.324 ns",
+            "ss_125C_4v50: setup_violation_count=112",
+            "ff_n40C_5v50: negative setup slack -88.986 ns",
+            "ff_n40C_5v50: setup_violation_count=56"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "not_met"
+        }
+      },
+      "synthesize": {
+        "command": "klt-interpreter -I -c 'S._run_yosys.__kwdefaults__[\"timeout_s\"]=2700; klayout_tools.cli.main([\"synthesize\", ...])' asic/build/req/synth_normalization_replay_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 1052.2,
+        "exit_code": 0,
+        "hierarchy": [
+          {
+            "area_um2": 258392.6016,
+            "cells": 11050,
+            "module": "normalization_replay_engine"
+          }
+        ],
+        "multiplier_mapping_from_yosys_log": {
+          "booth_pass_runs": 0,
+          "macc_models_created": 78,
+          "maccmap_extmapper_uses": 1,
+          "note": "default Yosys synth: $mul -> alumacc $macc -> maccmap adder trees; no Booth recoding"
+        },
+        "reaped_orphan_abc": 0,
+        "script_sha256": "57e2908772e83bc86f7e8d22646c49aa93034714ee704630901504570b205e07",
+        "status": "ok",
+        "summary": {
+          "area_um2": 258392.6016,
+          "blackbox_modules": [],
+          "cell_exclusions": {
+            "effective": [],
+            "engine_supports_dont_use": null,
+            "library_defaults": [],
+            "mode": "additive",
+            "requested": [],
+            "validated": null
+          },
+          "engine_version": "0.67+post",
+          "instance_count": 11050,
+          "instance_counts_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 549,
+            "gf180mcu_fd_sc_mcu7t5v0__and2_2": 17,
+            "gf180mcu_fd_sc_mcu7t5v0__and2_4": 18,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_1": 45,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_2": 17,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_4": 61,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 12,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_2": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_4": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 49,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_2": 19,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_4": 13,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 570,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_2": 71,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_4": 72,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_1": 12,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_2": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_4": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi222_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 42,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_2": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_4": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 141,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_12": 23,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_16": 20,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_2": 82,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_20": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_3": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_4": 48,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_8": 31,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_1": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_2": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_3": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_4": 88,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 493,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_12": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_2": 18,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_20": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_3": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_4": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_8": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__dffq_1": 290,
+            "gf180mcu_fd_sc_mcu7t5v0__dlya_2": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__dlya_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_1": 46,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_12": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_2": 19,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_3": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_4": 14,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_8": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_1": 264,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_2": 143,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_4": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 1931,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_2": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_4": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 138,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_2": 11,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_4": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 29,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_2": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_4": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 1397,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_2": 66,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_4": 29,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 104,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_2": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 13,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_2": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_4": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 58,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_2": 57,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_4": 36,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_1": 671,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_2": 35,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_4": 71,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_1": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_2": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_4": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__oai222_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__oai22_1": 22,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_1": 28,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_2": 32,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_4": 89,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_1": 30,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_2": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_4": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_1": 432,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_2": 35,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_4": 8,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_1": 39,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_2": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_1": 11,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_2": 8,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__tieh": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__tiel": 318,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_1": 399,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_2": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_4": 56,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor3_1": 95,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 580,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_2": 140,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_4": 295,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_1": 99,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_2": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_4": 136
+          },
+          "leakage_power_nw": null,
+          "memory_mapping": {
+            "modules": [],
+            "reason": null,
+            "status": "none_detected"
+          },
+          "netlist_sha256": "cfda3cb8be0888292ab55cfb3f310c47c688baf9c47b3181f94f0f63775e7472",
+          "provenance": {
+            "deck": {
+              "content_hash": "sha256:330aa9439255e3870ad7adfb987cd4d7bcfa7b6f9fb0cd0a712400e9bd80e38a",
+              "name": "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00",
+              "released": false
+            },
+            "input": {
+              "content_hash": "sha256:7429841cfa5ded09f267511afa04803bd4d6c74749b55b6f1cebd925fed80a6c",
+              "role": "source"
+            },
+            "klayout_version": "0.30.12",
+            "klt_version": "0.7.1.dev429+g435837f5c237",
+            "pdk": {
+              "name": "gf180mcuD",
+              "source": "--pdk-root flag",
+              "version": "open_pdks f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+            }
+          },
+          "sequential_area_um2": 18461.632,
+          "sta": null,
+          "sta_unavailable_reason": "the optional klt_statime_native extension is not installed, so no gate-level static timing analysis was attempted -- from a repo checkout, run `uv sync --group statime` (or `maturin develop --release` inside native/statime/) and re-run to populate `sta`",
+          "structural": {
+            "comb_loops": 0,
+            "expected_latches": 0,
+            "has_critical": false,
+            "latches": 0,
+            "multi_driven": 0,
+            "unexpected_latches": 0
+          },
+          "timing": {
+            "critical_path_ps": 208475.97,
+            "delay_target_ps": 40000,
+            "source": "abc_stime",
+            "wire_load": null
+          },
+          "warnings": {
+            "by_category": {},
+            "representatives": [],
+            "total": 0
+          }
+        },
+        "yosys_timeout_s": 2700.0
+      },
+      "target": "normalization_replay_engine"
+    },
+    "one_shot_voice_top": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "one_shot_voice_top",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792017623-oneshotvoicetop",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/adsr_engine.sv",
+          "../src/lfo_vca_engine.sv",
+          "../src/mod_matrix_engine.sv",
+          "../src/upsample_engine.sv",
+          "../src/quarter_wave_lut.sv",
+          "../src/sine_vco_engine.sv",
+          "../src/square_saw_vco_engine.sv",
+          "../src/noise_stream_dut.sv",
+          "../src/audio_mix_engine.sv",
+          "../src/normalization_replay_engine.sv",
+          "../src/one_shot_voice_top.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_one_shot_voice_top.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.5,
+        "exit_code": 1,
+        "last_stage": "14.6.3. Executing OPT_MUXTREE pass (detect dead branches in mux trees).",
+        "log_lines": 41673,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792017623-oneshotvoicetop/synth_one_shot_voice_top.run.ys') -- process killed",
+        "reaped_orphan_abc": 0,
+        "script_sha256": "c01ae1eef5315670269f5b5e783590ae80e2030bce7739c94d750963f70fb70d",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "one_shot_voice_top"
+    },
+    "quarter_wave_lut": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "quarter_wave_lut",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792016298-quarterwavelut",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/quarter_wave_lut.sv"
+        ]
+      },
+      "sta": {
+        "command": "klt sta asic/build/req/sta_quarter_wave_lut.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "corners": {
+          "ff_n40C_5v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 26.4461,
+            "hold_violation_count": 0,
+            "setup_violation_count": 0,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": 0,
+            "worst_hold_path": {
+              "check_type": "output_hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[23]",
+              "engine_check_role": "output hold",
+              "reason": null,
+              "slack_ns": 16.19636,
+              "startpoint": "phase[29]",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 16.1964,
+            "worst_setup_path": {
+              "check_type": "output_setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[21]",
+              "engine_check_role": "output setup",
+              "reason": null,
+              "slack_ns": 2.18727,
+              "startpoint": "phase[3]",
+              "status": "ok"
+            },
+            "worst_slack_ns": 2.18727
+          },
+          "ss_125C_4v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 11.9692,
+            "hold_violation_count": 0,
+            "setup_violation_count": 24,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -897.327,
+            "worst_hold_path": {
+              "check_type": "output_hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[23]",
+              "engine_check_role": "output hold",
+              "reason": null,
+              "slack_ns": 16.56814,
+              "startpoint": "phase[29]",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 16.5681,
+            "worst_setup_path": {
+              "check_type": "output_setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[21]",
+              "engine_check_role": "output setup",
+              "reason": null,
+              "slack_ns": -43.54775,
+              "startpoint": "phase[3]",
+              "status": "ok"
+            },
+            "worst_slack_ns": -43.5477
+          },
+          "tt_025C_5v00": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 19.3541,
+            "hold_violation_count": 0,
+            "setup_violation_count": 24,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -202.525,
+            "worst_hold_path": {
+              "check_type": "output_hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[23]",
+              "engine_check_role": "output hold",
+              "reason": null,
+              "slack_ns": 16.31013,
+              "startpoint": "phase[29]",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 16.3101,
+            "worst_setup_path": {
+              "check_type": "output_setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "entry_word[21]",
+              "engine_check_role": "output setup",
+              "reason": null,
+              "slack_ns": -11.66876,
+              "startpoint": "phase[3]",
+              "status": "ok"
+            },
+            "worst_slack_ns": -11.6688
+          }
+        },
+        "elapsed_s": 10.5,
+        "engine_version": "26Q3-1510-g6cb3f2b704",
+        "exit_code": 0,
+        "klt_version": "0.7.1.dev429+g435837f5c237",
+        "netlist_sha256": "sha256:8156977aff05273770aefbdbe0a304d1cb69ea118d8bb2f7936d245778ed8e93",
+        "request": {
+          "constraints": {
+            "clock_period_ns": 40.0,
+            "clock_port": "clk",
+            "input_delay_ns": 8.0,
+            "output_delay_ns": 8.0
+          },
+          "hdl_toplevel": "quarter_wave_lut",
+          "pdk": {
+            "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+            "corners": [
+              "tt_025C_5v00",
+              "ss_125C_4v50",
+              "ff_n40C_5v50"
+            ]
+          },
+          "schema": "klt.sta.request/1",
+          "verilog": ".klt/synthesize/r1792016298-quarterwavelut/quarter_wave_lut_synth.v"
+        },
+        "status": "ok",
+        "verdict": {
+          "reasons": [
+            "tt_025C_5v00: negative setup slack -11.669 ns",
+            "tt_025C_5v00: setup_violation_count=24",
+            "ss_125C_4v50: negative setup slack -43.548 ns",
+            "ss_125C_4v50: setup_violation_count=24"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "not_met"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_quarter_wave_lut.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 112.6,
+        "exit_code": 0,
+        "hierarchy": [
+          {
+            "area_um2": 223693.0752,
+            "cells": 13245,
+            "module": "quarter_wave_lut"
+          }
+        ],
+        "multiplier_mapping_from_yosys_log": {
+          "booth_pass_runs": 0,
+          "macc_models_created": 8,
+          "maccmap_extmapper_uses": 1,
+          "note": "default Yosys synth: $mul -> alumacc $macc -> maccmap adder trees; no Booth recoding"
+        },
+        "reaped_orphan_abc": 0,
+        "script_sha256": "8f8eae0e6f6856d63affb66fd40c49d16889414c2c583c75afe7572539d4ac75",
+        "status": "ok",
+        "summary": {
+          "area_um2": 223693.0752,
+          "blackbox_modules": [],
+          "cell_exclusions": {
+            "effective": [],
+            "engine_supports_dont_use": null,
+            "library_defaults": [],
+            "mode": "additive",
+            "requested": [],
+            "validated": null
+          },
+          "engine_version": "0.67+post",
+          "instance_count": 13245,
+          "instance_counts_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 168,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_1": 73,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 33,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 334,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 1165,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_1": 570,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi222_1": 32,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 420,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 1311,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 140,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_1": 30,
+            "gf180mcu_fd_sc_mcu7t5v0__mux4_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 2474,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 1049,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 233,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 1321,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 276,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 74,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 574,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_1": 1042,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_1": 217,
+            "gf180mcu_fd_sc_mcu7t5v0__oai222_1": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__oai22_1": 171,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_1": 202,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_1": 161,
+            "gf180mcu_fd_sc_mcu7t5v0__oai33_1": 17,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_1": 103,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_1": 36,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_1": 18,
+            "gf180mcu_fd_sc_mcu7t5v0__tiel": 362,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_1": 179,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor3_1": 26,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 333,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_1": 85
+          },
+          "leakage_power_nw": null,
+          "memory_mapping": {
+            "modules": [
+              {
+                "elaborated_memories": 1,
+                "elaborated_memory_bits": 98328,
+                "final_memories": 0,
+                "module": "quarter_wave_lut",
+                "pre_lowering_memories": 1,
+                "status": "lowered_to_logic"
+              }
+            ],
+            "reason": null,
+            "status": "lowered_to_logic"
+          },
+          "netlist_sha256": "8156977aff05273770aefbdbe0a304d1cb69ea118d8bb2f7936d245778ed8e93",
+          "provenance": {
+            "deck": {
+              "content_hash": "sha256:330aa9439255e3870ad7adfb987cd4d7bcfa7b6f9fb0cd0a712400e9bd80e38a",
+              "name": "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00",
+              "released": false
+            },
+            "input": {
+              "content_hash": "sha256:9dc6e487b158531a244a575e50ca57838202b63baf574f76d3c255e62fc0bee7",
+              "role": "source"
+            },
+            "klayout_version": "0.30.12",
+            "klt_version": "0.7.1.dev429+g435837f5c237",
+            "pdk": {
+              "name": "gf180mcuD",
+              "source": "--pdk-root flag",
+              "version": "open_pdks f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+            }
+          },
+          "sequential_area_um2": 0.0,
+          "sta": null,
+          "sta_unavailable_reason": "the optional klt_statime_native extension is not installed, so no gate-level static timing analysis was attempted -- from a repo checkout, run `uv sync --group statime` (or `maturin develop --release` inside native/statime/) and re-run to populate `sta`",
+          "structural": {
+            "comb_loops": 0,
+            "expected_latches": 0,
+            "has_critical": false,
+            "latches": 0,
+            "multi_driven": 0,
+            "unexpected_latches": 0
+          },
+          "timing": {
+            "critical_path_ps": 36856.59,
+            "delay_target_ps": 40000,
+            "source": "abc_stime",
+            "wire_load": null
+          },
+          "warnings": {
+            "by_category": {},
+            "representatives": [],
+            "total": 0
+          }
+        },
+        "yosys_timeout_s": 300.0
+      },
+      "target": "quarter_wave_lut"
+    },
+    "sine_vco_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "sine_vco_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792016421-sinevcoengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/sine_vco_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_sine_vco_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.6,
+        "exit_code": 1,
+        "last_stage": "4.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 41549,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792016421-sinevcoengine/synth_sine_vco_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "ffbc1203d03d22a7eff67eec41deaa40e9524f7dbb207fe0a264154c5e707566",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "sine_vco_engine"
+    },
+    "square_saw_vco_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "square_saw_vco_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792016721-squaresawvcoengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/quarter_wave_lut.sv",
+          "../src/square_saw_vco_engine.sv"
+        ]
+      },
+      "sta": {
+        "reason": "no netlist: klt synthesize status=timeout",
+        "status": "not_run",
+        "verdict": {
+          "reasons": [
+            "no mapped netlist to time"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "unverifiable"
+        }
+      },
+      "synthesize": {
+        "command": "klt synthesize asic/build/req/synth_square_saw_vco_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 300.7,
+        "exit_code": 1,
+        "last_stage": "5.22. Executing ABC pass (technology mapping using ABC).",
+        "log_lines": 40071,
+        "message": "yosys did not complete within 300.0s (script '<repo>/asic/build/req/.klt/synthesize/r1792016721-squaresawvcoengine/synth_square_saw_vco_engine.run.ys') -- process killed",
+        "reaped_orphan_abc": 1,
+        "script_sha256": "12b5cafc0e0f3ffe80ff96d08da216e7f9c319de8421921309e44d07c8b57839",
+        "status": "timeout",
+        "yosys_timeout_s": 300.0
+      },
+      "target": "square_saw_vco_engine"
+    },
+    "upsample_engine": {
+      "request": {
+        "constraints": {
+          "clock_period_ns": 40.0
+        },
+        "engine": "yosys",
+        "hdl_toplevel": "upsample_engine",
+        "pdk": {
+          "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+          "corner": "tt_025C_5v00"
+        },
+        "run_id": "r1792019735-upsampleengine",
+        "schema": "klt.synthesize.request/1",
+        "sources": [
+          "../src/gf180_rtl_constants_pkg.sv",
+          "../src/upsample_engine.sv"
+        ]
+      },
+      "sta": {
+        "command": "klt sta asic/build/req/sta_upsample_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "corners": {
+          "ff_n40C_5v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 14.911,
+            "hold_violation_count": 0,
+            "setup_violation_count": 56,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -1494.32,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_258887_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.46676,
+              "startpoint": "_258887_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.46675,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_258582_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": -27.06439,
+              "startpoint": "_258386_/Q",
+              "status": "ok"
+            },
+            "worst_slack_ns": -27.0644
+          },
+          "ss_125C_4v50": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 4.8294,
+            "hold_violation_count": 0,
+            "setup_violation_count": 56,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -9288.02,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_258887_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 1.41502,
+              "startpoint": "_258887_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 1.41502,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": false,
+              "endpoint": "_258582_/D",
+              "engine_check_role": "setup",
+              "reason": "worst path slack -167.06383 ns differs from the aggregate WNS -167.064",
+              "slack_ns": -167.06383,
+              "startpoint": "_258386_/Q",
+              "status": "inconsistent"
+            },
+            "worst_slack_ns": -167.064
+          },
+          "tt_025C_5v00": {
+            "constraint_completeness": {
+              "sample_limit": 20,
+              "status": "complete",
+              "unclocked_registers": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              },
+              "unconstrained_endpoints": {
+                "count": 0,
+                "reason": null,
+                "sample": [],
+                "status": "ok",
+                "truncated": false
+              }
+            },
+            "fmax_mhz": 9.1442,
+            "hold_violation_count": 0,
+            "setup_violation_count": 56,
+            "timing_status": "constrained",
+            "total_negative_hold_slack_ns": 0,
+            "total_negative_slack_ns": -3848.6,
+            "worst_hold_path": {
+              "check_type": "hold",
+              "consistent_with_aggregate": true,
+              "endpoint": "_258887_/D",
+              "engine_check_role": "hold",
+              "reason": null,
+              "slack_ns": 0.75362,
+              "startpoint": "_258887_/Q",
+              "status": "ok"
+            },
+            "worst_hold_slack_ns": 0.75362,
+            "worst_setup_path": {
+              "check_type": "setup",
+              "consistent_with_aggregate": true,
+              "endpoint": "_258582_/D",
+              "engine_check_role": "setup",
+              "reason": null,
+              "slack_ns": -69.35888,
+              "startpoint": "_258386_/Q",
+              "status": "ok"
+            },
+            "worst_slack_ns": -69.3589
+          }
+        },
+        "elapsed_s": 968.2,
+        "engine_version": "26Q3-1510-g6cb3f2b704",
+        "exit_code": 0,
+        "klt_version": "0.7.1.dev429+g435837f5c237",
+        "netlist_sha256": "sha256:b9b524b83c7bf61e3670e9462d4ba26a840a042ef83055f4ed62be782d072b14",
+        "request": {
+          "constraints": {
+            "clock_period_ns": 40.0,
+            "clock_port": "clk",
+            "input_delay_ns": 8.0,
+            "output_delay_ns": 8.0
+          },
+          "hdl_toplevel": "upsample_engine",
+          "pdk": {
+            "cell_library": "gf180mcu_fd_sc_mcu7t5v0",
+            "corners": [
+              "tt_025C_5v00",
+              "ss_125C_4v50",
+              "ff_n40C_5v50"
+            ]
+          },
+          "schema": "klt.sta.request/1",
+          "verilog": ".klt/synthesize/r1792019735-upsampleengine/upsample_engine_synth.v"
+        },
+        "status": "ok",
+        "verdict": {
+          "reasons": [
+            "tt_025C_5v00: negative setup slack -69.359 ns",
+            "tt_025C_5v00: setup_violation_count=56",
+            "ss_125C_4v50: negative setup slack -167.064 ns",
+            "ss_125C_4v50: setup_violation_count=56",
+            "ff_n40C_5v50: negative setup slack -27.064 ns",
+            "ff_n40C_5v50: setup_violation_count=56"
+          ],
+          "required_corners": [
+            "tt_025C_5v00",
+            "ss_125C_4v50",
+            "ff_n40C_5v50"
+          ],
+          "verdict": "not_met"
+        }
+      },
+      "synthesize": {
+        "command": "klt-interpreter -I -c 'S._run_yosys.__kwdefaults__[\"timeout_s\"]=2700; klayout_tools.cli.main([\"synthesize\", ...])' asic/build/req/synth_upsample_engine.json --pdk gf180mcuD --pdk-root <ciel store> --format json",
+        "elapsed_s": 1802.4,
+        "exit_code": 0,
+        "hierarchy": [
+          {
+            "area_um2": 5510645.683196,
+            "cells": 165732,
+            "module": "upsample_engine"
+          }
+        ],
+        "multiplier_mapping_from_yosys_log": {
+          "booth_pass_runs": 0,
+          "macc_models_created": 68,
+          "maccmap_extmapper_uses": 1,
+          "note": "default Yosys synth: $mul -> alumacc $macc -> maccmap adder trees; no Booth recoding"
+        },
+        "reaped_orphan_abc": 0,
+        "script_sha256": "28fcca9f73044bfa27fcd1c179d0d3c71cc87afa86df9e0b34bfda0c45432f72",
+        "status": "ok",
+        "summary": {
+          "area_um2": 5510645.683196,
+          "blackbox_modules": [],
+          "cell_exclusions": {
+            "effective": [],
+            "engine_supports_dont_use": null,
+            "library_defaults": [],
+            "mode": "additive",
+            "requested": [],
+            "validated": null
+          },
+          "engine_version": "0.67+post",
+          "instance_count": 165732,
+          "instance_counts_by_type": {
+            "gf180mcu_fd_sc_mcu7t5v0__and2_1": 410,
+            "gf180mcu_fd_sc_mcu7t5v0__and2_2": 19,
+            "gf180mcu_fd_sc_mcu7t5v0__and2_4": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_1": 280,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_2": 20,
+            "gf180mcu_fd_sc_mcu7t5v0__and3_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_1": 620,
+            "gf180mcu_fd_sc_mcu7t5v0__and4_2": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_1": 248,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_2": 17,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi211_4": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_1": 585,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_2": 37,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi21_4": 31,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_1": 1631,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_2": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi221_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi222_1": 14381,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_1": 18504,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_2": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__aoi22_4": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_1": 13468,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_12": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_16": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_2": 23,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_3": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_4": 14,
+            "gf180mcu_fd_sc_mcu7t5v0__buf_8": 16,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_1": 4224,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_4": 12,
+            "gf180mcu_fd_sc_mcu7t5v0__clkbuf_8": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_1": 1429,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_12": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_2": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__clkinv_4": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__dffq_1": 42336,
+            "gf180mcu_fd_sc_mcu7t5v0__dffrnq_1": 343,
+            "gf180mcu_fd_sc_mcu7t5v0__dlya_2": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__dlya_4": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_1": 51,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_16": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_2": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_3": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__inv_4": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__mux2_1": 42382,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_1": 5406,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_2": 30,
+            "gf180mcu_fd_sc_mcu7t5v0__nand2_4": 8,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_1": 2293,
+            "gf180mcu_fd_sc_mcu7t5v0__nand3_2": 6,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_1": 6542,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_2": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__nand4_4": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_1": 4291,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_2": 52,
+            "gf180mcu_fd_sc_mcu7t5v0__nor2_4": 33,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_1": 561,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_2": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__nor3_4": 9,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_1": 2262,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_2": 5,
+            "gf180mcu_fd_sc_mcu7t5v0__nor4_4": 13,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_1": 56,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_2": 10,
+            "gf180mcu_fd_sc_mcu7t5v0__oai211_4": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_1": 478,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_2": 74,
+            "gf180mcu_fd_sc_mcu7t5v0__oai21_4": 23,
+            "gf180mcu_fd_sc_mcu7t5v0__oai221_1": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__oai22_1": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__oai22_2": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_1": 54,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_2": 12,
+            "gf180mcu_fd_sc_mcu7t5v0__oai31_4": 7,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_1": 80,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_2": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__oai32_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__oai33_1": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__oai33_2": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_1": 195,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_2": 18,
+            "gf180mcu_fd_sc_mcu7t5v0__or2_4": 15,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_1": 82,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_2": 22,
+            "gf180mcu_fd_sc_mcu7t5v0__or3_4": 2,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_1": 84,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_2": 3,
+            "gf180mcu_fd_sc_mcu7t5v0__or4_4": 1,
+            "gf180mcu_fd_sc_mcu7t5v0__tiel": 32,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_1": 423,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_2": 29,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor2_4": 78,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor3_1": 34,
+            "gf180mcu_fd_sc_mcu7t5v0__xnor3_2": 4,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_1": 689,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_2": 224,
+            "gf180mcu_fd_sc_mcu7t5v0__xor2_4": 156,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_1": 63,
+            "gf180mcu_fd_sc_mcu7t5v0__xor3_2": 22
+          },
+          "leakage_power_nw": null,
+          "memory_mapping": {
+            "modules": [],
+            "reason": null,
+            "status": "none_detected"
+          },
+          "netlist_sha256": "b9b524b83c7bf61e3670e9462d4ba26a840a042ef83055f4ed62be782d072b14",
+          "provenance": {
+            "deck": {
+              "content_hash": "sha256:330aa9439255e3870ad7adfb987cd4d7bcfa7b6f9fb0cd0a712400e9bd80e38a",
+              "name": "gf180mcu_fd_sc_mcu7t5v0__tt_025C_5v00",
+              "released": false
+            },
+            "input": {
+              "content_hash": "sha256:3c6b9234f18939c6678f19160fb2eba00574c92bdbd8bfd63f31ee78747a917c",
+              "role": "source"
+            },
+            "klayout_version": "0.30.12",
+            "klt_version": "0.7.1.dev429+g435837f5c237",
+            "pdk": {
+              "name": "gf180mcuD",
+              "source": "--pdk-root flag",
+              "version": "open_pdks f6eeac7dad085ffcc829ccfd721f7b4ce39edcf7"
+            }
+          },
+          "sequential_area_um2": 2720744.051201,
+          "sta": null,
+          "sta_unavailable_reason": "the optional klt_statime_native extension is not installed, so no gate-level static timing analysis was attempted -- from a repo checkout, run `uv sync --group statime` (or `maturin develop --release` inside native/statime/) and re-run to populate `sta`",
+          "structural": {
+            "comb_loops": 0,
+            "expected_latches": 0,
+            "has_critical": false,
+            "latches": 0,
+            "multi_driven": 0,
+            "unexpected_latches": 0
+          },
+          "timing": {
+            "critical_path_ps": 107886.14,
+            "delay_target_ps": 40000,
+            "source": "abc_stime",
+            "wire_load": null
+          },
+          "warnings": {
+            "by_category": {
+              "other": 1
+            },
+            "representatives": [
+              {
+                "category": "other",
+                "count": 1,
+                "text": "Replacing memory \\mem with list of registers. See asic/build/src/upsample_engine.sv:208"
+              }
+            ],
+            "total": 1
+          }
+        },
+        "yosys_timeout_s": 2700.0
+      },
+      "target": "upsample_engine"
+    }
+  },
+  "tools": {
+    "environment_provenance": {
+      "host_id": "host-193c7c64",
+      "klayout_version": "0.30.12",
+      "klt_version": "0.7.1.dev429+g435837f5c237",
+      "os": {
+        "machine": "x86_64",
+        "release": "7.0.0-1014-aws",
+        "system": "Linux"
+      },
+      "paths": {},
+      "python_version": "3.14.6",
+      "schema_version": 1
+    },
+    "klt": "klt 0.7.1.dev429+g435837f5c237",
+    "openroad": "26Q3-1510-g6cb3f2b704",
+    "verilator": "Verilator 5.050 2026-07-01 rev vUNKNOWN-built20260924",
+    "yosys": "Yosys 0.67+post (git sha1 b8e7da6f40ae8f552c116bf6c359b07c6533e159, Release, GNU /usr/bin/c++ 13.3.0)"
+  }
+}

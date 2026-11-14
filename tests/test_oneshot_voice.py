@@ -36,16 +36,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tb"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 import run_voice as rv  # noqa: E402
 
 RECEIPT = ROOT / "sim/reference/fixed-voice-golden-v1.json"
 CONTROL_TICKS = 1764
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 def synthetic_expected(n=8, full=False):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded differential check of the DR-0013 D3 edit 4 (adsr_engine loop).
+"""Bounded differential check of the DR-0017 D3 edit 4 (adsr_engine loop).
 
 `prepare_sources.py` rewrites the restoring-divide loop header of
 `div_half_even` in the *staged copy* of tb/sv/adsr_engine.sv. This script

@@ -8,7 +8,6 @@ host; an unrun check is never reported as a pass).
 
 import hashlib
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
@@ -46,10 +48,6 @@ EXPECTED_CASES = {
 }
 
 EXPECTED_TRACE_NAMES = ["mod_matrix." + route for route in MOD_MATRIX_OUTPUTS]
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 def words_digest(values) -> str:
@@ -279,6 +277,19 @@ class TestRtlFlow(unittest.TestCase):
             result.returncode, 0, result.stdout[-4000:] + "\n" + result.stderr[-2000:]
         )
         self.assertIn("MOD-MATRIX RUN PASSED", result.stdout)
+
+
+class TestSharedHelperBinding(unittest.TestCase):
+    """``mod_matrix_golden`` re-exports the shared sidecar codec (#461)."""
+
+    def test_word_packing_is_the_shared_sidecar_codec(self):
+        # One definition of the #54 f32le convention, in golden_vectors
+        # beside the schema that names the encoding; this module keeps the
+        # names importable so existing mm.* call sites are untouched.
+        self.assertIs(mm.pack_words_f32le, gv.pack_words_f32le)
+        self.assertIs(mm.unpack_words_f32le, gv.unpack_words_f32le)
+        for name in ("pack_words_f32le", "unpack_words_f32le"):
+            self.assertIn(name, mm.__all__)
 
 
 if __name__ == "__main__":

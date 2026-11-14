@@ -1,4 +1,4 @@
-# FPGA target (issue #80, DR-0013)
+# FPGA target (issue #80, DR-0017)
 
 A resource-generous **feasibility measurement** of the passing one-shot RTL
 (`tb/sv/one_shot_voice_top.sv`, #79) on one Lattice ECP5 device with the open
@@ -6,8 +6,16 @@ flow. It is evidence about that device, front end, tool version and stimulus
 only. It is **not** evidence of gf180mcu feasibility, hardware playback or
 sound fidelity, and it does not change the arithmetic profile.
 
-Decision record: [`spec/decision-records/0013-fpga-measurement-target.md`](../spec/decision-records/0013-fpga-measurement-target.md)
+Decision record: [`spec/decision-records/0017-fpga-measurement-target.md`](../spec/decision-records/0017-fpga-measurement-target.md)
 (Proposed until a reviewed merge ratifies it).
+
+> **Numbering note.** This record was DR-0013 until it was renumbered to
+> DR-0017 on rebase (`main` landed a different 0013 first). The committed
+> evidence in `reports/` — and `build.sh`, `requirements.txt` and
+> `rtl/fpga_oneshot_top.sv`, whose SHA-256 that evidence binds — still read
+> `DR-0013` and are deliberately left byte-identical, so the recorded hashes
+> stay valid. `DR-0013` in those files means this record. See the DR's
+> "Renumbering note".
 
 ## Result (summary; details in `reports/fpga-build-report.json`)
 
@@ -69,7 +77,7 @@ published negative result, not a pass.
   several 18x18 DSPs); the DR-0010 schedule candidate is not what was built.
 - **A1-A4, A6-A9** are untouched: no arithmetic, width, rounding or clip-timing
   change. One loop header in `adsr_engine.sv` is rewritten to a constant-bound
-  guarded loop in the *staged copy* only (DR-0013 D3); `tb/sv` is unchanged.
+  guarded loop in the *staged copy* only (DR-0017 D3); `tb/sv` is unchanged.
   Equivalence of that rewrite is checked by bounded simulation only
   (`python3 fpga/scripts/check_adsr_div_equiv.py`: function-level, Icarus,
   100,290 directed + fixed-seed random vectors, 0 mismatches); it is not a
@@ -86,7 +94,7 @@ published negative result, not a pass.
   which changed only `.loom/` tooling files (no `tb/sv`, `fpga/`, `spec/` or
   `rtl/` input); the build was **not** re-run on the rebased head and the
   report was not re-measured.
-- Any board work, pin assignment (DR-0013 D1: none), programming, audio.
+- Any board work, pin assignment (DR-0017 D1: none), programming, audio.
 - Any ABC9 result: `abc9` did not finish in 590 s, so `abc -lut 4:7` was used.
 - Whole-design `-noflatten` hierarchy: killed (4 GiB wasm limit); replaced by
   the standalone per-engine runs.
@@ -96,7 +104,7 @@ published negative result, not a pass.
 | Path | Role |
 | --- | --- |
 | `rtl/fpga_oneshot_top.sv` | Measurement shim (sequencer + serial config + LFSR stimulus + CRC observer) around the unmodified core |
-| `scripts/prepare_sources.py` | Stages `tb/sv` into `build/src` with five asserted synthesis-only edits (DR-0013 D3) |
+| `scripts/prepare_sources.py` | Stages `tb/sv` into `build/src` with five asserted synthesis-only edits (DR-0017 D3) |
 | `scripts/gen_luts.py` | Emits the two `$readmemh` images (same gate as `tb/run_voice.py`) |
 | `scripts/yowasp_bigstack.py` | Runs YoWASP tools with a bigger wasm stack (workaround, see friction) |
 | `scripts/make_report.py` | Parses build outputs into `reports/` |

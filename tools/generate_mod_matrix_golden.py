@@ -87,29 +87,10 @@ JITTER_INDICES = (
 LFO_SIDES = ("lfo_1.", "lfo_2.")
 
 
-def load_frozen_physical() -> dict:
-    """The frozen receipt case's public physical map (all consumed names)."""
-
-    directed = json.loads(DIRECTED_PATH.read_text(encoding="utf-8"))
-    base = {name: entry["physical"] for name, entry in directed["base"].items()}
-    by_id = {case["id"]: case for case in directed["cases"]}
-    case = by_id[FROZEN_CASE_ID]
-    physical = dict(base)
-    for name, override in case["overrides"].items():
-        physical[name] = override["physical"]
-    return physical
-
-
 def case_parameters(physical: dict) -> dict:
     """Exactly the consumed parameter names, in fixed order."""
 
     return {name: physical[name] for name in consumed_parameter_names()}
-
-
-def apply_overrides(physical: dict, overrides: dict) -> dict:
-    merged = dict(physical)
-    merged.update(overrides)
-    return merged
 
 
 def depth_overrides(values) -> dict:
@@ -179,7 +160,7 @@ def case_table(frozen_physical: dict) -> list:
         ),
         (
             "shape-sweep-columns",
-            apply_overrides(
+            gv.apply_overrides(
                 {name: frozen_depths[name] for name in frozen_depths},
                 {
                     "lfo_1.saw": 0.6, "lfo_1.rsaw": 0.4,
@@ -313,11 +294,6 @@ def frozen_receipt_binding(rendered: dict) -> dict:
     }
 
 
-def frozen_receipt_record_digest() -> str:
-    receipt = json.loads(RECEIPT_PATH.read_text(encoding="utf-8"))
-    return receipt["bindings"]["dr_0008_record_sha256"]
-
-
 def build_case_document(
     formats: AcceptedFormats,
     fcp: FixedControlPath,
@@ -354,59 +330,28 @@ def build_case_document(
                 raise SystemExit("sidecar custody digest mismatch: " + trace)
             audio_traces[trace]["sidecar"] = row
 
-    provenance = {
-        "generator": "tools/generate_mod_matrix_golden.py",
-        "issue": 72,
-        "model_identity": "fixed-voice-v1 (frozen composition control path, PR #156)",
-        "dr_0008_status": "Accepted (reviewed merge; 2026-09-21)",
-        "dr_0008_constants_package_sha256": gv.sha256_file(
-            gv.CONSTANTS_PACKAGE_PATH
-        ),
-        "choices_register_sha256": gv.sha256_file(gv.CHOICES_REGISTER_PATH),
-        "dr_0008_record_sha256": frozen_receipt_record_digest(),
-        "derivation": (
-            "FixedControlPath(accepted control_spec)._mod_matrix/._upsample "
-            "over quantize_params(S1) entries; the exact integer mirrors in "
-            "torchsynth_voice.mod_matrix_golden are asserted row-equal to "
-            "the model's own rows. Audio truth is digest-bound per route "
-            "(sha256 over the exact word list and over the packed f32le "
-            "bytes where a sidecar exists) with word-exact endpoint/jitter "
-            "samples inline; endpoints j=0 and j=176399 are exact copies of "
-            "control indices 0 and 1763 (align_corners=True, coordinates "
-            "j*1763/176399). No clamp exists at any matrix output."
-        ),
-        "case_id": case_id,
-        "audio_traces": audio_traces,
-        "matrix_counters": rendered["matrix_counters"],
-    }
-    if receipt is not None:
-        provenance["frozen_receipt_binding"] = receipt
+    provenance = gv.frozen_provenance(
+        "tools/generate_mod_matrix_golden.py",
+        72,
+        "FixedControlPath(accepted control_spec)._mod_matrix/._upsample "
+        "over quantize_params(S1) entries; the exact integer mirrors in "
+        "torchsynth_voice.mod_matrix_golden are asserted row-equal to "
+        "the model's own rows. Audio truth is digest-bound per route "
+        "(sha256 over the exact word list and over the packed f32le "
+        "bytes where a sidecar exists) with word-exact endpoint/jitter "
+        "samples inline; endpoints j=0 and j=176399 are exact copies of "
+        "control indices 0 and 1763 (align_corners=True, coordinates "
+        "j*1763/176399). No clamp exists at any matrix output.",
+        case_id,
+        receipt,
+        RECEIPT_PATH,
+    )
+    provenance["audio_traces"] = audio_traces
+    provenance["matrix_counters"] = rendered["matrix_counters"]
 
-    document = {
-        "schema": gv.VECTOR_SCHEMA,
-        "schema_version": gv.SCHEMA_VERSION,
-        "provenance": provenance,
-        "trace_registry_version": None,  # filled below
-        "parameter_inventory_commit": None,
-        "clip": {
-            "profile": gv.CANONICAL_PROFILE,
-            "sample_rate_hz": gv.CANONICAL_SAMPLE_RATE_HZ,
-            "sample_count": gv.CANONICAL_SAMPLE_COUNT,
-            "control_rate_hz": gv.CANONICAL_CONTROL_RATE_HZ,
-            "control_count": gv.CANONICAL_CONTROL_COUNT,
-        },
-        "parameters": case_parameters(physical),
-        "traces": traces,
-    }
-    registry = gv.load_registry_document()
-    inventory = gv.load_inventory_document()
-    document["trace_registry_version"] = registry["semantic_version"]
-    document["parameter_inventory_commit"] = inventory["source"]["commit"]
-    document["content_hash"] = gv.compute_content_hash(document)
-
-    gv.load_vector(document, registry=registry, inventory=inventory)
-    gv.verify_accepted_contract(document)
-    return document
+    return gv.build_vector_document(
+        case_parameters(physical), traces, provenance, validate=True
+    )
 
 
 def existing_sidecars() -> dict:
@@ -424,13 +369,13 @@ def build_all(emit_sidecars: bool = False) -> dict:
 
     formats = AcceptedFormats()
     fcp = FixedControlPath(formats.control_spec)
-    frozen_physical = load_frozen_physical()
+    frozen_physical = gv.load_frozen_physical(DIRECTED_PATH, FROZEN_CASE_ID)
     sidecar_existing = existing_sidecars()
 
     documents = {}
     rendered_map = {}
     for case_id, overrides, binds_receipt in case_table(frozen_physical):
-        physical = apply_overrides(frozen_physical, overrides)
+        physical = gv.apply_overrides(frozen_physical, overrides)
         rendered = render_case(fcp, formats, physical)
         rendered_map[case_id] = rendered
         receipt = None

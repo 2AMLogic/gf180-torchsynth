@@ -31,6 +31,7 @@ roles with no `runtimeRequirements`.
 - [The seven contract points](#the-seven-contract-points)
 - [Phase 1: the `spawn-worker.sh` runtime-dispatch seam](#phase-1-the-spawn-workersh-runtime-dispatch-seam)
 - [Session containers (pointer only)](#session-containers-pointer-only)
+- [Hook settings ownership](#hook-settings-ownership)
 - [Fork mapping table](#fork-mapping-table)
 - [Non-goals](#non-goals)
 - [Related](#related)
@@ -77,7 +78,7 @@ them but does not decide them.
 | Amp, oh-my-pi (omp), … | — | — | — | — | Not started (tier-2 candidates; still need a parity doc + CI leg). |
 | Pi, OpenCode, Kimi Code CLI | native Rust, `loom-daemon/src/worker_spawn/harness.rs` | **2** | [`guardrail-parity-native.md`](guardrail-parity-native.md) (Pi/OpenCode only — Kimi is not covered) | none dedicated (`worker_spawn.rs`/`worker_spawn_kimi.rs` integration tests) | Setup, model profiles and live-canary evidence live in [`runtime-model-trials.md`](runtime-model-trials.md), not here. Kimi (#8561) declares every `defaults/runtimes/kimi.json` capability `"no"` — no guarded `loom_*` tool binding exists yet (#8562) — so it is admitted only for roles with no `runtimeRequirements` (Curator, Guide, Auditor); Pi/OpenCode's `worktreeIsolation`/`loomControl` are `"yes"`. |
 | Aider ([aider.chat](https://aider.chat)) | `defaults/scripts/spawn-aider.sh` (exec stub → `spawn-generic-launch.sh` → `spawn-generic.sh`) | **3** (generic passthrough, unverified) | n/a — tier-3 does not require one | none (no CI leg is required for tier-3; the checker assertion below is a plain `test-*.sh`, not an adapter-admission gate) | **Worked example** for issues #4780 / #8671 — proves the tier-3 mechanism end-to-end, not a vetted integration. Capability manifest `defaults/runtimes/aider.json` declares every capability `"no"`, including `worktreeIsolation: "no"` EXPLICITLY (not `"partial"`), and now carries aider's whole launch shape in its `launch` object. |
-| Gemini CLI ([gemini-cli](https://github.com/google-gemini/gemini-cli)) | `defaults/scripts/spawn-gemini.sh` (thin wrapper over `defaults/scripts/spawn-generic.sh`) | **3** (generic passthrough, unverified) | n/a — tier-3 does not require one | none (as Aider — tier-3 requires no CI leg) | Same instantiation shape as the Aider worked example; intended as a [`runtimes.preference`](#ordered-runtime-preference-with-fall-through-issue-8436) fall-through tap (e.g. `["claude", "gemini"]`) for roles with no `runtimeRequirements`, so an exhausted Claude pool does not strand them. Manifest `defaults/runtimes/gemini.json` declares every capability `"no"`, including `worktreeIsolation: "no"` EXPLICITLY — Builder, Doctor and Judge stay refused by construction. |
+| Gemini CLI ([gemini-cli](https://github.com/google-gemini/gemini-cli)) | `defaults/scripts/spawn-gemini.sh` (exec stub → `spawn-generic-launch.sh` → `spawn-generic.sh`) | **3** (generic passthrough, unverified) | n/a — tier-3 does not require one | none (as Aider — tier-3 requires no CI leg) | Same instantiation shape as the Aider worked example; intended as a [`runtimes.preference`](#ordered-runtime-preference-with-fall-through-issue-8436) fall-through tap (e.g. `["claude", "gemini"]`) for roles with no `runtimeRequirements`, so an exhausted Claude pool does not strand them. Manifest `defaults/runtimes/gemini.json` declares every capability `"no"`, including `worktreeIsolation: "no"` EXPLICITLY — Builder, Doctor and Judge stay refused by construction. |
 
 ### Tier 3: generic passthrough
 
@@ -92,7 +93,7 @@ tier-1/tier-2:
   transcript, and no account/usage-pool integration (points 2 and 4 are
   skipped outright). Point 3 (Error classification) is satisfied by the
   **generic-transient fallthrough only**: a tier-3 runtime gets no bespoke
-  pattern table in `classify-error.sh`. Passing its name as the
+  pattern table in the native classifier (`loom-daemon classify-error`). Passing its name as the
   `classify_error` provider argument is safe by construction — an
   unregistered provider matches no table and resolves through the shared
   engine's exit-code-first ordering and generic transients, exactly like any
@@ -844,8 +845,6 @@ tick is refused as `RoleTickOutcome::ModelRuntimeMismatch` before any spawn:
 - A distinct outcome, deliberately never folded into the generic `Failure`
   tally — same argument as `NoTokenPool` (#4642): this is a permanent config
   conflict detected pre-spawn, not a transient invocation failure.
-- Its own `MODEL_RUNTIME_MISMATCH_SKIP_COUNT` counter
-  (`model_runtime_mismatch_skip_count()`).
 - A one-line operator-facing `detail()` — `"model/runtime mismatch: … (model
   source=…); set autonomous.roleRunner.roleModels.<role> …"` — that
   `record_role_tick` stores on the health ring, which `assess_roles` in
@@ -1205,39 +1204,6 @@ The config read tolerates a missing config file, a missing `runtimes` block, and
 a missing `jq` — all of these degrade silently to the built-in `claude` default,
 so a bare install with no `runtimes` config sees no behavior change.
 
-### Per-dispatch runtime override (`runtime` / `modelProfile`, #11284)
-
-`loom-daemon dispatch <N> --runtime opencode --model-profile zai-flash`, the
-MCP `dispatch_sweep` tool (`runtime`, `model_profile`) and the daemon's
-`DispatchSweep` request all accept an optional explicit tap for **one sweep**.
-It is an operator pin: it wins over `rolePreference`/`preference` and
-**disables fall-through**.
-
-- **Scope.** Only the coding phases, **Builder and Doctor**, launch on the
-  tap (`worker run --role builder|doctor`). Curator, Judge and the
-  orchestrator keep their role policy, and `excludedRoles` of a profile
-  still applies.
-- **Refusal, never fallback.** At dispatch the daemon admits the tap for
-  Builder and checks its credential pool. A malformed request (a
-  `modelProfile` without a `runtime`, an invalid identifier), an unadmitted
-  runtime/profile, or one with no spawnable seat right now is refused with
-  the reason (`RuntimeRejected`, selected by `explicit`); no sweep starts and
-  the preference list is not consulted. A Doctor launch re-checks the same
-  tap when it runs and fails the same way if the seat has gone away.
-  PR-set sweeps cannot carry a tap (they have no issue to key it on).
-- **Compatibility.** Both fields are `#[serde(default)]`; a request without
-  them behaves exactly as before.
-- **Persistence.** The accepted tap is recorded in
-  `.loom/sweep-dispatch-tap/issue-<N>.json` (runtime, profile, timestamp; no
-  credentials). The phase runner reads it by issue (`--issue`, or the
-  daemon-exported `LOOM_SWEEP_CLAIM_OWNED` for a Doctor), so a resumed sweep
-  or a Doctor retry keeps the override. A record expires after 7 days, and a
-  later `dispatch` of the same issue without a tap clears it; automatic
-  re-dispatch (work finder, watchdog, crash resume) leaves it in place.
-- **Reporting.** The launch is stamped `source=explicit` with the tap
-  (`opencode:zai-flash`), so `sweep-outcomes summary --group-by tap` groups
-  it with the same taps chosen by preference.
-
 Seat-aware work-finder concurrency and free-seat status are a later slice.
 
 ### The `runtimes` config block
@@ -1333,7 +1299,7 @@ through", matching `runtimes.roles.<role>: ""`.
 | Guarantee | Meaning |
 |---|---|
 | **Absent key ⇒ no behaviour change** | With no `preference`/`rolePreference`, resolution is byte-identical to the static chain above, and no credential pool is read at all. |
-| **An operator pin wins outright** | `LOOM_RUNTIME`, `LOOM_RUNTIME_<ROLE>`, or an explicit per-dispatch runtime short-circuits to static resolution and **disables fall-through**. A pin is a deliberate act; routing around it would make it useless for the debugging it exists for. |
+| **An operator pin wins outright** | `LOOM_RUNTIME`, `LOOM_RUNTIME_<ROLE>` short-circuits to static resolution and **disables fall-through**. A pin is a deliberate act; routing around it would make it useless for the debugging it exists for. |
 | **Preference is never an admission override** | A runtime the role cannot be admitted onto is skipped, never forced. |
 | **Fail-closed stays fail-closed** | When *every* listed tap is skipped the caller holds/skips exactly as before; the #7708 hold becomes "hold when the whole list is exhausted". |
 | **Malformed config fails closed** | A non-array value, an unknown `rolePreference` role key, a malformed entry, or a duplicated tap is an error (surfaced by `loom-daemon validate`), not a silently different order. |
@@ -1347,6 +1313,16 @@ entry is recorded as skipped with reason `not-admitted(worktreeIsolation)`, whic
 is materially different from "Codex had no credential" and should be read that
 way.
 
+**Model-profile resolution and the unknown-profile failure (#11638).** A launch
+resolves its profile name from, in order: an explicit request (`--profile`, or a
+preference tap's `modelProfile`), `LOOM_MODEL_PROFILE`, `runtimes.defaultModelProfile`,
+then the built-in `zai-flash` fallback. The name is then looked up in
+`runtimes.modelProfiles` (which shadows) and the bundled set. A name found in
+neither is a **hard exit 78**, never a fallback to `zai-flash`: the message names
+the profile looked up, where the name came from, and the sorted known profile
+names (names only, never credential values). `loom-daemon worker profile-check
+<name>` reproduces it.
+
 **Model-profile role exclusion (`excludedRoles`, #11400).** A model profile may
 list roles it must never run, e.g. `"excludedRoles": ["judge", "curator"]` on the
 shipped `zai-flash` profile (review and triage stay off GLM). Admission enforces
@@ -1359,7 +1335,7 @@ actually use — a tap's `modelProfile`, else `LOOM_MODEL_PROFILE`, else
 - a preference entry is skipped as `not-admitted(excludedRole)`, like
   `not-admitted(worktreeIsolation)` above, and the walk continues;
 - a `runtimes.roles` binding, `LOOM_RUNTIME_<ROLE>` / `LOOM_RUNTIME` with
-  `LOOM_MODEL_PROFILE`, or an explicit per-dispatch runtime is **refused** with
+  `LOOM_MODEL_PROFILE` is **refused** with
   the reason (exit 78) — a pin is never re-routed;
 - a native sweep runs Judge and Curator in its own session, so a sweep on an
   excluding profile is refused through its review phase;
@@ -1371,7 +1347,7 @@ profile declares a provider for that harness. `loom-daemon validate` rejects an
 `excludedRoles` entry that is not a known role name.
 
 **GLM-first Builder and Doctor (fleet policy, tier 1).** The routing comes
-from fleet-gitops `config.defaults`, rendered into each host's machine tier
+from the fleet state store `config.defaults`, rendered into each host's machine tier
 (`~/.local/share/loom/config/defaults.json`), not from this repo's
 `.loom/config.json`, which carries no fleet keys (#11450, #11441). It sets
 `defaultModelProfile: "zai-flash"`, `rolePreference.builder` to
@@ -2498,6 +2474,16 @@ mounts follow the same [`MOUNT-CONTRACT.md`](https://github.com/rjwalters/loom/b
 mirror the per-sweep `--cpus`/`--memory` shape above. Migrating the
 docker-requiring callers (build-gate, sim/build wrappers) onto the seam is
 issue #7854; elastic executor *placement* stays with #3979.
+
+## Hook settings ownership
+
+Loom does not write a consumer repo's `.claude/settings.json` on resync. Loom
+hooks reach a Claude session through launch-time `--settings` (daemon-dispatched
+sessions, never persisted) and user-scope `~/.claude/settings.json` entries; the
+project file stays repo-owned, and resync only reports hooks it does not wire
+(`report_unwired_hooks`). A hook that no non-mutating surface can carry is not
+delivered. Conflict, uninstall, malformed-file and upgrade behaviour are in
+[ADR-0026](https://github.com/rjwalters/loom/blob/main/docs/adr/0026-consumer-hook-settings-ownership.md).
 
 ## Fork mapping table
 

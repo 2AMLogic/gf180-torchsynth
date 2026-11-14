@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "t1-attestation-inventory",
+  "t1_item": 10,
+  "description": "Repo hygiene: README, LICENSE and the CI workflows that keep the harness valid; audits are PDK-free.",
+  "hygiene": [
+    "README.md",
+    "LICENSE",
+    ".github/workflows/ci.yml",
+    ".github/workflows/tb-sim.yml"
+  ],
+  "checks": [
+    {
+      "name": "ci-lane-wiring",
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_ci_lane_wiring"
+      ]
+    },
+    {
+      "name": "contract",
+      "argv": [
+        "python3",
+        "tools/check_contract.py"
+      ]
+    },
+    {
+      "name": "readme-t1-sections",
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "tests.test_readme_t1_sections"
+      ]
+    }
+  ]
+}

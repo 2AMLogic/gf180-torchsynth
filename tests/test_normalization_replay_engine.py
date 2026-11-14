@@ -15,7 +15,6 @@ below when available) reproduces the mirror sample-exactly.
 """
 
 import json
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -24,6 +23,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
+
+from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import normalization_replay as nr  # noqa: E402
 from torchsynth_voice import normalization_replay_golden as nrg  # noqa: E402
@@ -32,10 +34,6 @@ from torchsynth_voice.fixedpoint.counters import StickyCounters  # noqa: E402
 
 TB = ROOT / "tb" / "run_tb.py"
 RECEIPT_PATH = ROOT / "sim/reference/fixed-voice-golden-v1.json"
-
-
-def has_iverilog() -> bool:
-    return shutil.which("iverilog") is not None
 
 
 class MirrorIsNormalizeWords(unittest.TestCase):

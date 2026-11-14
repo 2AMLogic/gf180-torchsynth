@@ -18,6 +18,16 @@ their provenance (constants package, choice register, and — via the frozen
 release receipt — the DR-0008 record); :func:`verify_accepted_contract` is
 the tb flow's refusal check over that binding.
 
+Sidecar codec: :func:`pack_words_f32le` / :func:`unpack_words_f32le` are the
+``f32le`` encoding this schema names in :data:`ENCODINGS` -- Q-format words
+carried losslessly through division by ``2**frac_bits`` (every
+``word / 2**frac_bits`` with the signed word inside ``frac_bits + 23`` bits
+is exactly representable in binary32); unpacking refuses any value that does
+not round-trip to the exact word. They live here, beside the schema that
+names the encoding, rather than in any one engine's golden module: the
+per-issue mirrors (``mod_matrix_golden``, ``vco2_golden``) re-export them
+under their existing spellings via import aliases (issues #247/#455/#461).
+
 Comparison policy: the reporter compares with exact equality. Per AGENTS.md,
 fixed-point model to RTL is sample-exact; declared error metrics belong to
 the float-to-fixed model comparison, never here. No tolerance is applied and
@@ -31,12 +41,14 @@ register via its refusal gate (see
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import struct
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
-from .digest import sha256_file
+from .digest import digest_words, sha256_file
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "spec/reference/trace-registry-v1.json"
@@ -53,6 +65,11 @@ DR_0008_RECORD_PATH = ROOT / "spec/decision-records/0008-fixed-point-numeric-con
 
 VECTOR_SCHEMA = "gf180-torchsynth/golden-vector-v1"
 SCHEMA_VERSION = 1
+
+#: Provenance values every frozen-model case generator declares verbatim.
+#: Hand-typing them per generator is how one copy drifts silently.
+MODEL_IDENTITY = "fixed-voice-v1 (frozen composition control path, PR #156)"
+DR_0008_STATUS = "Accepted (reviewed merge; 2026-09-21)"
 
 #: Canonical one-shot clip profile (DR-0002 offline 4 s @ 44.1 kHz).
 CANONICAL_PROFILE = "canonical-default-nebula-4s"
@@ -118,6 +135,355 @@ class Mismatch:
             self.expected,
             self.actual,
         )
+
+
+def load_frozen_physical(directed_path: Path, case_id: str) -> Dict[str, Any]:
+    """The frozen receipt case's public physical map (all consumed names)."""
+
+    directed = json.loads(directed_path.read_text(encoding="utf-8"))
+    base = {name: entry["physical"] for name, entry in directed["base"].items()}
+    by_id = {case["id"]: case for case in directed["cases"]}
+    case = by_id[case_id]
+    physical = dict(base)
+    for name, override in case["overrides"].items():
+        physical[name] = override["physical"]
+    return physical
+
+
+def apply_overrides(physical: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(physical)
+    merged.update(overrides)
+    return merged
+
+
+def frozen_receipt_record_digest(receipt_path: Path = RECEIPT_PATH) -> str:
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    return receipt["bindings"]["dr_0008_record_sha256"]
+
+
+def frozen_receipt_binding(
+    document: Dict[str, Any], case_id: str, receipt_path: Path = RECEIPT_PATH
+) -> Dict[str, Any]:
+    """Re-derive the frozen receipt's trace digests for one document."""
+
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    case = next(c for c in receipt["cases"] if c["id"] == case_id)
+    digests = {}
+    for trace in document["traces"]:
+        name = trace["name"]
+        declared = case["traces"][name]
+        blob = json.dumps(
+            trace["values"], sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
+        actual = hashlib.sha256(blob).hexdigest()
+        if actual != declared:
+            raise SystemExit(
+                "FROZEN RECEIPT DRIFT: %s digests to %s but the frozen "
+                "receipt (#54, PR #156) declares %s — the model or its "
+                "inputs moved; regenerate, do not overwrite the binding"
+                % (name, actual, declared)
+            )
+        digests[name] = declared
+    return {
+        "receipt": "sim/reference/fixed-voice-golden-v1.json",
+        "case_id": case_id,
+        "trace_digests": digests,
+        "verified": True,
+    }
+
+
+def canonical_clip() -> Dict[str, Any]:
+    """The five-key canonical clip block every committed vector carries."""
+
+    return {
+        "profile": CANONICAL_PROFILE,
+        "sample_rate_hz": CANONICAL_SAMPLE_RATE_HZ,
+        "sample_count": CANONICAL_SAMPLE_COUNT,
+        "control_rate_hz": CANONICAL_CONTROL_RATE_HZ,
+        "control_count": CANONICAL_CONTROL_COUNT,
+    }
+
+
+def frozen_provenance(
+    generator: str,
+    issue: int,
+    derivation: str,
+    case_id: str,
+    frozen_receipt: Optional[Dict[str, Any]] = None,
+    receipt_path: Path = RECEIPT_PATH,
+) -> Dict[str, Any]:
+    """Provenance for one case rendered through the frozen fixed model.
+
+    ``generator``, ``issue`` and ``derivation`` are the generator's own;
+    the model identity, the DR-0008 status string and the three accepted
+    contract digests are shared, so they are read from this module rather
+    than hand-typed per tool. A generator needing extra keys (audio
+    evidence rows, matrix counters) adds them to the returned dict.
+    """
+
+    provenance: Dict[str, Any] = {
+        "generator": generator,
+        "issue": issue,
+        "model_identity": MODEL_IDENTITY,
+        "dr_0008_status": DR_0008_STATUS,
+        "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE_PATH),
+        "choices_register_sha256": sha256_file(CHOICES_REGISTER_PATH),
+        "dr_0008_record_sha256": frozen_receipt_record_digest(receipt_path),
+        "derivation": derivation,
+        "case_id": case_id,
+    }
+    if frozen_receipt is not None:
+        provenance["frozen_receipt_binding"] = frozen_receipt
+    return provenance
+
+
+def build_vector_document(
+    parameters: Dict[str, Any],
+    traces: List[Dict[str, Any]],
+    provenance: Dict[str, Any],
+    *,
+    validate: bool,
+) -> Dict[str, Any]:
+    """Assemble one vector document around a generator's own content.
+
+    Everything outside ``parameters`` / ``traces`` / ``provenance`` is the
+    same in every committed vector: the schema pair, the live trace-registry
+    version and parameter-inventory commit, the canonical clip block, and
+    ``content_hash`` over the rest. ``validate`` additionally runs the
+    document through :func:`load_vector` and
+    :func:`verify_accepted_contract` at assembly time — what the control
+    path generators do. The VCO generators assemble without it (their
+    committed files are loader- and contract-checked by their consumers,
+    ``tb/run_tb.py``'s VCO lanes and the VCO test suites), so the flag
+    preserves each caller's behavior rather than changing it.
+    """
+
+    registry = load_registry_document()
+    inventory = load_inventory_document()
+    document: Dict[str, Any] = {
+        "schema": VECTOR_SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "provenance": provenance,
+        "trace_registry_version": registry["semantic_version"],
+        "parameter_inventory_commit": inventory["source"]["commit"],
+        "clip": canonical_clip(),
+        "parameters": parameters,
+        "traces": traces,
+    }
+    document["content_hash"] = compute_content_hash(document)
+    if validate:
+        load_vector(document, registry=registry, inventory=inventory)
+        verify_accepted_contract(document)
+    return document
+
+
+def check_committed(documents: Dict[str, str], out_dir: Path, tool_name: str) -> int:
+    """Byte-compare a fresh in-memory regeneration against the commits.
+
+    ``documents`` maps case id to the freshly generated JSON payload;
+    ``tool_name`` names the generator in the "rerun" message.
+    """
+
+    ok = True
+    for case_id, payload in sorted(documents.items()):
+        path = out_dir / (case_id + ".json")
+        if not path.exists():
+            print("CHECK FAIL: missing %s" % path)
+            ok = False
+            continue
+        committed = json.loads(path.read_text(encoding="utf-8"))
+        fresh = json.loads(payload)
+        if compute_content_hash(committed) != compute_content_hash(fresh):
+            print(
+                "CHECK FAIL: %s does not match regeneration; rerun "
+                "tools/%s and commit" % (path, tool_name)
+            )
+            ok = False
+        else:
+            print("CHECK OK: %s" % path.name)
+    return 0 if ok else 1
+
+
+def generate_case_documents(
+    *,
+    out_dir: Path,
+    directed_path: Path,
+    frozen_case_id: str,
+    case_table: Callable[[Dict[str, Any]], Sequence[Any]],
+    build_case_document: Callable[..., Dict[str, Any]],
+    frozen_receipt_document: Optional[Callable[..., Dict[str, Any]]] = None,
+    documents_out: Optional[Dict[str, str]] = None,
+) -> int:
+    """Render every case of a control-path generator to its JSON payload.
+
+    ``case_table(frozen_physical)`` yields ``(case_id, overrides,
+    is_frozen)`` rows; ``build_case_document(formats, fcp, physical,
+    case_id, frozen_receipt)`` assembles one document. With
+    ``documents_out`` the payloads are collected in memory (the ``check``
+    path) instead of written to ``out_dir``.
+    """
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from .fixed_voice import AcceptedFormats
+    from .format_sweep import FixedControlPath
+
+    formats = AcceptedFormats()
+    fcp = FixedControlPath(formats.control_spec)
+    frozen_physical = load_frozen_physical(directed_path, frozen_case_id)
+    for case_id, overrides, is_frozen in case_table(frozen_physical):
+        physical = apply_overrides(frozen_physical, overrides)
+        frozen_receipt = (
+            frozen_receipt_document(formats, fcp, physical, case_id)
+            if is_frozen and frozen_receipt_document is not None
+            else None
+        )
+        document = build_case_document(
+            formats, fcp, physical, case_id, frozen_receipt
+        )
+        payload = json.dumps(document, indent=1, sort_keys=True) + "\n"
+        if documents_out is not None:
+            documents_out[case_id] = payload
+            continue
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / (case_id + ".json")
+        path.write_text(payload, encoding="utf-8")
+        print(
+            "wrote %s (%d traces x %d values)"
+            % (path, len(document["traces"]), len(document["traces"][0]["values"]))
+        )
+    return 0
+
+
+def run_case_generator(
+    argv: Optional[Sequence[str]],
+    *,
+    description: Optional[str],
+    tool_name: str,
+    out_dir: Path,
+    directed_path: Path,
+    frozen_case_id: str,
+    case_table: Callable[[Dict[str, Any]], Sequence[Any]],
+    build_case_document: Callable[..., Dict[str, Any]],
+    frozen_receipt_document: Optional[Callable[..., Dict[str, Any]]] = None,
+) -> int:
+    """``generate`` / ``check`` entry point shared by the case generators.
+
+    ``generate`` (the default) rewrites the committed vector files;
+    ``check`` regenerates in memory and byte-compares against them. Either
+    way the accepted register must instantiate first: a refusal is reported
+    as ``GENERATION REFUSED`` and nothing is written.
+    """
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="generate",
+        choices=["generate", "check"],
+        help="'generate' (re)writes the committed vector files; "
+        "'check' byte-compares regeneration against them",
+    )
+    args = parser.parse_args(argv)
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from .fixed_voice import AcceptedFormats
+
+    try:
+        AcceptedFormats()
+    except Exception as error:  # noqa: BLE001 - refusal must be explicit
+        print("GENERATION REFUSED: accepted register refused: %s" % error)
+        return 1
+
+    cases = {
+        "out_dir": out_dir,
+        "directed_path": directed_path,
+        "frozen_case_id": frozen_case_id,
+        "case_table": case_table,
+        "build_case_document": build_case_document,
+        "frozen_receipt_document": frozen_receipt_document,
+    }
+    if args.command == "check":
+        documents: Dict[str, str] = {}
+        generate_case_documents(documents_out=documents, **cases)
+        return check_committed(documents, out_dir, tool_name)
+    return generate_case_documents(**cases)
+
+
+def render_fixed_trace(formats: Any, physical: Dict[str, Any], trace_name: str) -> List[int]:
+    """Render one case through the frozen whole-voice fixed model.
+
+    The normalized entries are placeholders: the fixed model consumes the
+    physical map only (the normalized map is the float-side seam), and the
+    committed evidence is the fixed model's own ``trace_name`` words.
+    """
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from . import float_interfaces as fi
+    from . import float_sources as fs
+    from .fixed_voice import FixedVoiceModel
+
+    noise_bytes = fs.NoiseSource.resolve(0)
+    request = fi.ResolvedRequest(
+        0,
+        {name: 0.0 for name in physical},
+        {
+            "seed": 13,
+            "slot": 0,
+            "sample_count": 176400,
+            "sha256": hashlib.sha256(noise_bytes).hexdigest(),
+            "samples": noise_bytes,
+        },
+        physical=dict(physical),
+        execution_status="canonical-batched",
+    )
+    model = FixedVoiceModel(request, formats)
+    fixed, _diagnostics = model.render()
+    return fixed[trace_name]
+
+
+def evidence_row(words: List[int]) -> Dict[str, Any]:
+    """The committed evidence row for one raw word stream."""
+
+    pins = {0: words[0], 1: words[1], 2: words[2]}
+    for j in (99, 441, 1764, 17640, 88200, 105840, 176397, 176398, 176399):
+        pins[j] = words[j]
+    return {
+        "sample_count": len(words),
+        "words_sha256": digest_words(words),
+        "first_word": words[0],
+        "last_word": words[-1],
+        "jitter": {str(j): w for j, w in sorted(pins.items())},
+    }
+
+
+def pack_words_f32le(words: List[int], frac_bits: int = 21) -> bytes:
+    """Pack Q-format words as little-endian binary32 (the #54 convention).
+
+    ``word / 2**frac_bits`` is exactly representable whenever the signed
+    word fits in ``frac_bits + 23`` bits, so the packing is lossless; the
+    unpacker refuses any drift anyway.
+    """
+
+    scale = float(1 << frac_bits)
+    return struct.pack("<%df" % len(words), *[word / scale for word in words])
+
+
+def unpack_words_f32le(payload: bytes, frac_bits: int = 21) -> List[int]:
+    """Unpack binary32 payload back to exact words, refusing any drift."""
+
+    scale = 1 << frac_bits
+    values = struct.unpack("<%df" % (len(payload) // 4), payload)
+    words: List[int] = []
+    for value in values:
+        scaled = value * scale
+        rounded = int(round(scaled))
+        if scaled != rounded:
+            raise VectorError(
+                "f32le payload value %r is not an exact Q%d word multiple"
+                % (value, frac_bits)
+            )
+        words.append(rounded)
+    return words
 
 
 def format_mismatch(mismatch: Mismatch) -> str:

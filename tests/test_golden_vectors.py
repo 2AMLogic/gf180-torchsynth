@@ -354,5 +354,150 @@ class TestAcceptedContractBinding(unittest.TestCase):
             self.assertIn("dr_0008_record_sha256", str(caught.exception))
 
 
+def scalar_trace(value: int = 69) -> list:
+    """The one-value scalar trace the VCO generators carry."""
+
+    return [
+        {
+            "name": "keyboard.midi_f0",
+            "kind": "scalar",
+            "encoding": "synthetic-int",
+            "cycle_start": 0,
+            "values": [value],
+        }
+    ]
+
+
+class TestSharedVectorAssembly(unittest.TestCase):
+    """The envelope/provenance helpers the case generators share (#459).
+
+    Five generators used to hand-build the same envelope and the same
+    seven provenance fields. These assert the single shared copy still
+    produces exactly what the committed vectors declare, so a change to
+    it cannot silently apply to one generator and not the others.
+    """
+
+    def test_canonical_clip_is_the_five_key_canonical_block(self):
+        clip = gv.canonical_clip()
+        self.assertEqual(
+            clip,
+            {
+                "profile": gv.CANONICAL_PROFILE,
+                "sample_rate_hz": gv.CANONICAL_SAMPLE_RATE_HZ,
+                "sample_count": gv.CANONICAL_SAMPLE_COUNT,
+                "control_rate_hz": gv.CANONICAL_CONTROL_RATE_HZ,
+                "control_count": gv.CANONICAL_CONTROL_COUNT,
+            },
+        )
+
+    def test_canonical_clip_returns_an_independent_dict(self):
+        first = gv.canonical_clip()
+        first["sample_count"] = 1
+        self.assertEqual(
+            gv.canonical_clip()["sample_count"], gv.CANONICAL_SAMPLE_COUNT
+        )
+
+    def test_frozen_provenance_carries_the_shared_fields(self):
+        provenance = gv.frozen_provenance(
+            "tools/generate_adsr_golden.py", 70, "derivation text", "case:1"
+        )
+        self.assertEqual(provenance["generator"], "tools/generate_adsr_golden.py")
+        self.assertEqual(provenance["issue"], 70)
+        self.assertEqual(provenance["derivation"], "derivation text")
+        self.assertEqual(provenance["case_id"], "case:1")
+        self.assertEqual(provenance["model_identity"], gv.MODEL_IDENTITY)
+        self.assertEqual(provenance["dr_0008_status"], gv.DR_0008_STATUS)
+        self.assertEqual(
+            provenance["dr_0008_constants_package_sha256"],
+            gv.sha256_file(gv.CONSTANTS_PACKAGE_PATH),
+        )
+        self.assertEqual(
+            provenance["choices_register_sha256"],
+            gv.sha256_file(gv.CHOICES_REGISTER_PATH),
+        )
+        self.assertEqual(
+            provenance["dr_0008_record_sha256"],
+            gv.frozen_receipt_record_digest(),
+        )
+        self.assertNotIn("frozen_receipt_binding", provenance)
+
+    def test_frozen_provenance_declares_the_accepted_dr_0008_status(self):
+        """The status string is what verify_accepted_contract gates on."""
+
+        self.assertTrue(gv.DR_0008_STATUS.startswith("Accepted"))
+
+    def test_frozen_provenance_attaches_a_receipt_binding_when_given(self):
+        binding = {"receipt": "r", "case_id": "c", "verified": True}
+        provenance = gv.frozen_provenance(
+            "tools/generate_lfo_vca_golden.py", 71, "d", "case:1", binding
+        )
+        self.assertEqual(provenance["frozen_receipt_binding"], binding)
+
+    def test_build_vector_document_assembles_the_whole_envelope(self):
+        provenance = gv.frozen_provenance("tools/x.py", 70, "d", "case:1")
+        document = gv.build_vector_document(
+            {"adsr_1.alpha": 0.5}, scalar_trace(), provenance, validate=False
+        )
+        self.assertEqual(document["schema"], gv.VECTOR_SCHEMA)
+        self.assertEqual(document["schema_version"], gv.SCHEMA_VERSION)
+        self.assertEqual(
+            document["trace_registry_version"], REGISTRY["semantic_version"]
+        )
+        self.assertEqual(
+            document["parameter_inventory_commit"], INVENTORY["source"]["commit"]
+        )
+        self.assertEqual(document["clip"], gv.canonical_clip())
+        self.assertEqual(document["parameters"], {"adsr_1.alpha": 0.5})
+        self.assertEqual(document["provenance"], provenance)
+        self.assertEqual(
+            document["content_hash"], gv.compute_content_hash(document)
+        )
+
+    def test_built_document_loads_and_binds_the_live_contract(self):
+        provenance = gv.frozen_provenance("tools/x.py", 70, "d", "case:1")
+        document = gv.build_vector_document(
+            {"adsr_1.alpha": 0.5}, scalar_trace(), provenance, validate=True
+        )
+        gv.load_vector(document, registry=REGISTRY, inventory=INVENTORY)
+        self.assertEqual(
+            gv.verify_accepted_contract(document)["constants_package_sha256"],
+            gv.sha256_file(gv.CONSTANTS_PACKAGE_PATH),
+        )
+
+    def test_validate_refuses_an_unknown_trace_name(self):
+        traces = scalar_trace()
+        traces[0]["name"] = "not.a.registered.trace"
+        with self.assertRaises(gv.VectorError):
+            gv.build_vector_document(
+                {"adsr_1.alpha": 0.5},
+                traces,
+                gv.frozen_provenance("tools/x.py", 70, "d", "case:1"),
+                validate=True,
+            )
+
+    def test_validate_refuses_a_non_accepted_contract_status(self):
+        provenance = gv.frozen_provenance("tools/x.py", 70, "d", "case:1")
+        provenance["dr_0008_status"] = "Proposed"
+        with self.assertRaises(gv.VectorError):
+            gv.build_vector_document(
+                {"adsr_1.alpha": 0.5}, scalar_trace(), provenance, validate=True
+            )
+
+    def test_validate_false_skips_both_checks(self):
+        """The VCO generators assemble unvalidated; the flag must honor that."""
+
+        traces = scalar_trace()
+        traces[0]["name"] = "not.a.registered.trace"
+        document = gv.build_vector_document(
+            {"adsr_1.alpha": 0.5},
+            traces,
+            {"dr_0008_status": "Proposed"},
+            validate=False,
+        )
+        self.assertEqual(
+            document["traces"][0]["name"], "not.a.registered.trace"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

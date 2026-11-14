@@ -401,7 +401,6 @@ forge_update_branch() {
 # Returns JSON with .state, .merged, .head.ref, .title, .mergeable
 # On failure stderr carries the forge's own error (#9192) -- silence it at the
 # call site (`2>/dev/null`) if unwanted; the helper no longer discards it.
-# (Compacted to offset forge_fetch_error_cause on the shell-budget ratchet.)
 forge_get_pr() {
   local nwo="$1" pr_number="$2" gh_cmd="${3:-gh}"
   if [[ "$FORGE_TYPE" == "gitea" ]]; then forge_split_nwo "$nwo"; gitea_api GET "repos/$FORGE_OWNER/$FORGE_REPO/pulls/$pr_number"; else "$gh_cmd" api "repos/$nwo/pulls/$pr_number"; fi; }
@@ -524,9 +523,7 @@ forge_check_auto_delete() {
 #
 # jq (a hard dependency of this lib already) rather than a bash character loop:
 # `@uri` is exactly the RFC 3986 encoder and handles multi-byte input without
-# locale juggling. Written as a one-liner because `defaults/scripts/lib/` is
-# inside the portable pool `loom-daemon shell-budget --check` ratchets, where
-# comments are free and code lines are not.
+# locale juggling.
 url_encode_path_segment() { printf '%s' "${1:-}" | jq -sRr 'split("/") | map(@uri) | join("/")'; }
 
 # Delete a remote branch.
@@ -535,9 +532,7 @@ url_encode_path_segment() { printf '%s' "${1:-}" | jq -sRr 'split("/") | map(@ur
 # Gitea: DELETE /repos/{owner}/{repo}/branches/{branch}
 forge_delete_branch() {
   # Declaration and assignment are separate statements sharing one physical
-  # line: the encode call is net-new code in the portable pool
-  # `loom-daemon shell-budget --check` ratchets, and packing it against the
-  # `local` is what pays for it there.
+  # line.
   local nwo="$1" branch; branch="$(url_encode_path_segment "$2")"
 
   if [[ "$FORGE_TYPE" == "gitea" ]]; then
@@ -1400,43 +1395,25 @@ forge_gh_repo_safe() {
   return "$rc"
 }
 
-# Post a comment on an issue OR a pull request via `gh issue comment`, falling
-# back to the REST comments endpoint on a GraphQL rate-limit rejection. The
-# REST endpoint (`repos/{nwo}/issues/{n}/comments`) is shared by issues and
-# PRs on GitHub (a PR IS an issue for labels/comments/state), so one function
-# safely serves both `gh issue comment` and `gh pr comment` call sites.
-# Usage: forge_gh_comment_rl_safe NWO NUMBER BODY
-# Returns 0 on success (either path), 1 on failure (message on stderr).
+# Post a comment on an issue OR a pull request through the daemon's comment
+# chokepoint (`loom-daemon forge comment`, #9818), which owns the posting
+# semantics and the dashboard footer (#9774). There is no gh fallback (#9865):
+# a comment posted without the daemon would ship unfootered, which is exactly
+# what #9774 exists to prevent, so a missing binary is a loud failure.
+# Usage: forge_gh_comment_rl_safe NWO NUMBER BODY [IS_PR]
+# Returns 0 on success, 1 on failure (daemon stderr or the minimum-version
+# message on stderr).
 forge_gh_comment_rl_safe() {
   local nwo="$1" number="$2" body="$3" is_pr="${4:-0}"
-  local out; nwo="$(loom_write_repo "$nwo")" || return 1  # #9548
-  # #9774: the daemon's comment chokepoint (forge comment, #9818) is the
-  # poster whenever a binary resolves — one posting path, dashboard footer
-  # included. The gh paths below are the binary-absent fallback (an
-  # unfootered comment on a host with no loom-daemon at all; the fleet
-  # premise is that every host has one).
+  nwo="$(loom_write_repo "$nwo")" || return 1  # #9548
   local self_bin="${LOOM_DAEMON_SELF_BIN:-$(loom_resolve_self_daemon_bin "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" 2>/dev/null || true)}"
-  if [[ -n "$self_bin" ]]; then
-    local daemon_args=(forge comment "$number" --repo "$nwo" --body "$body")
-    [[ "$is_pr" == "1" ]] && daemon_args+=(--pr)
-    if "$self_bin" "${daemon_args[@]}" >/dev/null 2>&1; then
-      return 0
-    fi
-    # The daemon could not post (absent verb, stale binary, forge refusal):
-    # fall through to the gh ladder rather than swallowing the comment.
-  fi
-  if out=$(forge_gh_perm_safe issue comment "$number" --repo "$nwo" --body "$body" 2>&1); then
-    return 0
-  fi
-  if is_rate_limit_error "$out"; then
-    if gh api "repos/$nwo/issues/$number/comments" -f "body=$body" >/dev/null 2>&1; then
-      return 0
-    fi
-    echo "gh issue comment rate-limited on #$number, and the REST fallback also failed: $out" >&2
+  if [[ -z "$self_bin" ]]; then
+    echo "comment posting requires loom-daemon >= 0.19.598 (#9865)" >&2
     return 1
   fi
-  echo "$out" >&2
-  return 1
+  local daemon_args=(forge comment "$number" --repo "$nwo" --body "$body")
+  [[ "$is_pr" == "1" ]] && daemon_args+=(--pr)
+  "$self_bin" "${daemon_args[@]}" >/dev/null || return 1
 }
 
 # Reopen a closed issue via `gh issue reopen`, falling back to a REST PATCH
@@ -2028,10 +2005,7 @@ forge_get_required_status_check_contexts() {
   forge_split_nwo "$nwo"
 
   # Both queries are written as single lines rather than backslash-continued
-  # blocks: `defaults/scripts/lib/` is `contract` in scripts/shell-allowlist.txt,
-  # i.e. inside the portable pool `loom-daemon shell-budget --check` ratchets,
-  # and a continuation line is a code line there. Comments are free, so the
-  # explanation lives here instead of in the invocation.
+  # blocks, so the explanation lives here instead of in the invocation.
   #
   # `--jq` yielding nothing is not an error in either query: `.[]?` over an
   # empty rules array and a `null` branchProtectionRule both mean "this source
