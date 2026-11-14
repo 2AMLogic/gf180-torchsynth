@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import synth_view  # noqa: E402
 import synthesize_oneshot as so  # noqa: E402
+import check_divider_depth as cdd  # noqa: E402
 
 RECORD = ROOT / "asic" / "evidence" / "oneshot-synth-feasibility-v1.json"
 CORNERS = so.STA_CORNERS
@@ -389,6 +390,65 @@ class TestWholeVoicePlan(unittest.TestCase):
     def test_readme_links_the_plan_and_record_still_claims_nothing_more(self):
         self.assertIn("whole-voice-feasibility-plan.md", README.read_text(encoding="utf-8"))
         self.assertEqual(check_record(self.record), [])
+
+
+@unittest.skipUnless(RECORD.exists() and PLAN.exists(), "no record or plan")
+class TestDividerDepthCheck(unittest.TestCase):
+    """Plan check C3: divider-depth proportionality, arithmetic on the record.
+
+    The tool derives everything from the committed record; the plan's
+    ``c3-divider-depth`` block is the *recorded outcome* this suite pins.
+    The test asserts the recorded outcome, never that the two per-stage
+    rates agree: a test asserting agreement would have to be tuned to pass.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.record = json.loads(RECORD.read_text(encoding="utf-8"))
+        cls.plan = PLAN.read_text(encoding="utf-8")
+
+    def test_c3_verdict_is_disagree_outside_the_declared_tolerance(self):
+        result = cdd.analyze(self.record)
+        self.assertEqual(result["verdict"], "disagree")
+        self.assertGreater(result["relative_difference"], cdd.AGREEMENT_TOLERANCE)
+        self.assertEqual(result["tolerance"], cdd.AGREEMENT_TOLERANCE)
+
+    def test_derived_figures_match_the_recorded_outcome(self):
+        result = cdd.analyze(self.record)
+        b1, b2 = result["rows"][0], result["rows"][1]
+        self.assertEqual(b1["name"], "normalization_replay_engine")
+        self.assertEqual(b1["stages"], 64)
+        self.assertEqual(round(b1["ps_per_stage"], 2), 3257.44)
+        self.assertEqual(b2["name"], "upsample_engine")
+        self.assertEqual(b2["stages"], 49)
+        self.assertEqual(round(b2["ps_per_stage"], 2), 2201.76)
+        for row in result["rows"][2:]:
+            self.assertIsNone(row["ps_per_stage"], row["name"])
+        self.assertEqual(round(result["relative_difference"], 3), 0.387)
+        self.assertEqual(round(result["intercept_ps"], 2), -220707.30)
+
+    def test_plan_c3_block_matches_the_record_derived_figures(self):
+        self.assertEqual(cdd.check_plan(self.record, self.plan), [])
+
+    def test_an_altered_c3_block_is_refused(self):
+        for old, new in (("verdict = disagree", "verdict = agree"),
+                         ("ps_per_stage = 3257.44", "ps_per_stage = 1")):
+            with self.subTest(block_line=old):
+                bad = self.plan.replace(old, new)
+                self.assertNotEqual(bad, self.plan)
+                self.assertTrue(cdd.check_plan(self.record, bad))
+
+    def test_zero_stage_controls_are_reported_not_divided(self):
+        result = cdd.analyze(self.record)
+        names = [row["name"] for row in result["rows"]]
+        self.assertEqual(names, ["normalization_replay_engine", "upsample_engine",
+                                 "quarter_wave_lut", "noise_stream_dut"])
+        for row in result["rows"]:
+            if row["stages"] == 0:
+                self.assertIsNone(row["ps_per_stage"], row["name"])
+            else:
+                self.assertAlmostEqual(
+                    row["critical_path_ps"] / row["stages"], row["ps_per_stage"])
 
 
 if __name__ == "__main__":
