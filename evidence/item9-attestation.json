@@ -24,7 +24,7 @@
         "role": "testbench",
         "path": "tb/run_tb.py",
         "passed": true,
-        "content_hash": "sha256:9750b54111348ce984bcfb78096a5497a5a4df87bd1dd5f46039bac0e0a7462f"
+        "content_hash": "sha256:0d564e439df67667eaf1ae1a18651854d93f4c86152efe4d3e5e8eb0c675c5e3"
       },
       {
         "check": "present",
@@ -136,7 +136,7 @@
         "role": "testbench",
         "path": "tb/tb_harness.py",
         "passed": true,
-        "content_hash": "sha256:ebdc6027fc1567b6dbb93df0f789ab8ab08d71fb8c03565b707fad05783fd65a"
+        "content_hash": "sha256:1b78e07d187be7a83923a97b9b9a1a062d0f14ed170b47e1f4e6eed24ca0c625"
       },
       {
         "check": "command",

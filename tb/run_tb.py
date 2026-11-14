@@ -51,9 +51,13 @@ sys.path.insert(0, str(TB_ROOT))
 from tb_harness import (  # noqa: E402,F401  (re-exported for consumers)
     _compile_iverilog,
     _run,
+    check_owner_row_budget,
+    load_golden_vectors,
     mutate_sv,
+    read_ops_rows,
     run_rtl_mutation,
     simulate,
+    simulate_runs,
     write_lut_memh,
 )
 
@@ -710,14 +714,7 @@ def check_clip_budget(measured_cycles: int, sample_count: int) -> bool:
 def adsr_load_vectors():
     """Load and contract-verify every committed ADSR golden vector."""
 
-    vectors = {}
-    for path in sorted(ADSR_VECTOR_DIR.glob("*.json")):
-        vector = gv.load_vector(path)
-        gv.verify_accepted_contract(vector)
-        vectors[path.stem] = vector
-    if not vectors:
-        raise SystemExit("no ADSR golden vectors found in %s" % ADSR_VECTOR_DIR)
-    return vectors
+    return load_golden_vectors(ADSR_VECTOR_DIR, "ADSR")
 
 
 def adsr_derive_case(fcp, formats, vector):
@@ -861,18 +858,6 @@ def adsr_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> lis
     return captures
 
 
-def adsr_ops(workdir: Path, runs: int):
-    """Per-run per-instance op counter totals from the tb's ops files."""
-
-    rows = []
-    for run in range(runs):
-        path = workdir / ("run%d_ops.txt" % run)
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                rows.append([int(v) for v in line.split()])
-    return rows
-
-
 def check_adsr_budget(schedule) -> bool:
     """Op-count conformance to the DR-0010 #70 owner row + emission check.
 
@@ -887,29 +872,15 @@ def check_adsr_budget(schedule) -> bool:
     lanes; this is an op-count check, not a PPA/fit claim.
     """
 
-    ok = True
     per_tick = {
         "multiply-class ops": (24, 30),
         "declared narrowings": (12, 30),
         "`**alpha` shadow words": (18, 18),
         "ramp divisions (declared extra)": (18, None),
     }
-    for name, (actual, limit) in per_tick.items():
-        verdict = "n/a (reported)"
-        if limit is not None:
-            verdict = "OK" if actual <= limit else "FAIL"
-            ok = ok and actual <= limit
-        print(
-            "  budget: %d %s per control tick vs DR-0010 owner-row cap %s -> %s"
-            % (actual, name, limit, verdict)
-        )
-    try:
-        matches = _emitted_constants_match(schedule)
-        ok = ok and matches
-    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
-        print("  budget constants: emission failed -> %s" % error)
-        return False
-    return ok
+    return check_owner_row_budget(
+        schedule, per_tick, "DR-0010", _emitted_constants_match
+    )
 
 
 def adsr_detects(captures_run, cases, vector):
@@ -1014,7 +985,7 @@ def adsr(workdir: Path, simulator: str) -> int:
     ok = ok and replay_ok
 
     # 3. Budget: exported op counters per instance-run + emission check.
-    ops = adsr_ops(replay_dir, 2)
+    ops = read_ops_rows(replay_dir, 2)
     expected_totals = [4 * 1764, 2 * 1764, 3 * 1764, 3 * 1764]
     counters_ok = all(row == expected_totals for row in ops)
     print(
@@ -1110,14 +1081,7 @@ def adsr(workdir: Path, simulator: str) -> int:
 def lfo_load_vectors():
     """Load and contract-verify every committed LFO/VCA golden vector."""
 
-    vectors = {}
-    for path in sorted(LFO_VECTOR_DIR.glob("*.json")):
-        vector = gv.load_vector(path)
-        gv.verify_accepted_contract(vector)
-        vectors[path.stem] = vector
-    if not vectors:
-        raise SystemExit("no LFO golden vectors found in %s" % LFO_VECTOR_DIR)
-    return vectors
+    return load_golden_vectors(LFO_VECTOR_DIR, "LFO")
 
 
 def lfo_derive_case(fcp, formats, vector):
@@ -1241,18 +1205,6 @@ def lfo_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path) -> list
     return captures
 
 
-def lfo_ops(workdir: Path, runs: int):
-    """Per-run per-instance op counter totals from the tb's ops files."""
-
-    rows = []
-    for run in range(runs):
-        path = workdir / ("run%d_ops.txt" % run)
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                rows.append([int(v) for v in line.split()])
-    return rows
-
-
 def check_lfo_budget(schedule) -> bool:
     """Op-count conformance to the DR-0010 #71 owner row + emission check.
 
@@ -1268,29 +1220,15 @@ def check_lfo_budget(schedule) -> bool:
     claim.
     """
 
-    ok = True
     per_tick = {
         "multiply-class ops": (12, 14),
         "declared narrowings": (20, None),
         "C5-class LUT interps": (2, 2),
         "phase steps": (2, 2),
     }
-    for name, (actual, limit) in per_tick.items():
-        verdict = "n/a (reported)"
-        if limit is not None:
-            verdict = "OK" if actual <= limit else "FAIL"
-            ok = ok and actual <= limit
-        print(
-            "  budget: %d %s per control tick vs DR-0010 #71 owner-row cap %s -> %s"
-            % (actual, name, limit, verdict)
-        )
-    try:
-        matches = _emitted_constants_match(schedule)
-        ok = ok and matches
-    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
-        print("  budget constants: emission failed -> %s" % error)
-        return False
-    return ok
+    return check_owner_row_budget(
+        schedule, per_tick, "DR-0010 #71", _emitted_constants_match
+    )
 
 
 def lfo_detects(captures_run, cases, vector):
@@ -1454,7 +1392,7 @@ def lfo(workdir: Path, simulator: str) -> int:
     ok = ok and replay_ok
 
     # 3. Budget: exported op counters per instance-run + emission check.
-    ops = lfo_ops(replay_dir, 2)
+    ops = read_ops_rows(replay_dir, 2)
     expected_static = [6 * 1764, 10 * 1764, 1764]
     counters_ok = True
     for run_index, run_cases in enumerate((cases_first, cases_second)):
@@ -1562,14 +1500,7 @@ def lfo(workdir: Path, simulator: str) -> int:
 def mm_load_vectors():
     """Load and contract-verify every committed mod-matrix golden vector."""
 
-    vectors = {}
-    for path in sorted(MM_VECTOR_DIR.glob("*.json")):
-        vector = gv.load_vector(path)
-        gv.verify_accepted_contract(vector)
-        vectors[path.stem] = vector
-    if not vectors:
-        raise SystemExit("no mod-matrix golden vectors found in %s" % MM_VECTOR_DIR)
-    return vectors
+    return load_golden_vectors(MM_VECTOR_DIR, "mod-matrix")
 
 
 def mm_depth_words(vector, words):
@@ -2299,16 +2230,7 @@ def modmatrix(workdir: Path, simulator: str) -> int:
 def vco_load_vectors():
     """Load and contract-verify every committed square/saw VCO vector."""
 
-    vectors = {}
-    for path in sorted(VCO_VECTOR_DIR.glob("*.json")):
-        vector = gv.load_vector(path)
-        gv.verify_accepted_contract(vector)
-        vectors[path.stem] = vector
-    if not vectors:
-        raise SystemExit(
-            "no square/saw VCO golden vectors found in %s" % VCO_VECTOR_DIR
-        )
-    return vectors
+    return load_golden_vectors(VCO_VECTOR_DIR, "square/saw VCO")
 
 
 def vco2_derive_case(formats, vector):
@@ -3071,17 +2993,10 @@ def sine_load_vectors():
     "regenerate, don't recompile" rather than silently recompiling.
     """
 
-    vectors = {}
-    for path in sorted(SINE_VECTOR_DIR.glob("*.json")):
-        vector = gv.load_vector(path)
-        gv.verify_accepted_contract(vector)
-        vectors[path.stem] = vector
-    if not vectors:
-        raise SystemExit(
-            "no directed sine VCO golden vectors found in %s; run "
-            "tools/generate_sine_vco_golden.py" % SINE_VECTOR_DIR
-        )
-    return vectors
+    return load_golden_vectors(
+        SINE_VECTOR_DIR, "directed sine VCO",
+        "; run tools/generate_sine_vco_golden.py",
+    )
 
 
 def sine_check_matrix(vectors) -> bool:
@@ -5253,31 +5168,10 @@ def noise_simulate(workdir: Path, simulator: str, runs: int,
                    dut_sv: Path):
     """Compile + run the noise TB; return (captures, statuses) per run."""
 
-    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    vvp = _compile_iverilog(
-        workdir, simulator, "noise_stream.vvp",
+    return simulate_runs(
+        workdir, simulator, runs, "noise_stream.vvp",
         [CONSTANTS_PKG_SV, dut_sv, NOISE_TB_SV],
     )
-    _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    captures = []
-    statuses = []
-    for r in range(runs):
-        captured = [
-            int(line)
-            for line in (
-                workdir / ("run%d_captured.txt" % r)
-            ).read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        status = [
-            int(v)
-            for v in (
-                workdir / ("run%d_status.txt" % r)
-            ).read_text(encoding="utf-8").split()
-        ]
-        captures.append(captured)
-        statuses.append(status)
-    return captures, statuses
 
 
 def noise(workdir: Path, simulator: str) -> int:
@@ -6539,31 +6433,10 @@ def normreplay_write_run(
 def normreplay_simulate(workdir: Path, simulator: str, runs: int, dut_sv: Path):
     """Compile + run the normreplay TB; return (captures, statuses) per run."""
 
-    (workdir / "runs.txt").write_text("%d\n" % runs, encoding="utf-8")
-    vvp = _compile_iverilog(
-        workdir, simulator, "normreplay.vvp",
+    return simulate_runs(
+        workdir, simulator, runs, "normreplay.vvp",
         [CONSTANTS_PKG_SV, dut_sv, NORMREPLAY_TB_SV],
     )
-    _run(["vvp", "-n", str(vvp)], cwd=workdir)
-    captures = []
-    statuses = []
-    for r in range(runs):
-        captured = [
-            int(line)
-            for line in (
-                workdir / ("run%d_captured.txt" % r)
-            ).read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
-        status = [
-            int(v)
-            for v in (
-                workdir / ("run%d_status.txt" % r)
-            ).read_text(encoding="utf-8").split()
-        ]
-        captures.append(captured)
-        statuses.append(status)
-    return captures, statuses
 
 
 def normreplay_expected_status(diag: dict) -> list:
