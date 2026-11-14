@@ -356,10 +356,17 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
     def test_each_record_cites_a_commit_reachable_on_the_default_branch(self):
         # The last hole a record's own fields cannot close. Every check
         # above is satisfied by a pristine record produced on a
-        # *pull-request branch* commit -- and this repository squash-merges,
-        # so a branch's commits never reach `main`. Such a record cites a
-        # SHA that resolves for nobody, and until this check existed
-        # spec/ONESHOT-E2E.md could only ask a reader to verify it by hand.
+        # *pull-request branch* commit, which would cite a SHA that resolves
+        # for nobody if that commit never reached `main`.
+        #
+        # Reachability is measured from HEAD, not from origin/main, because
+        # every 2AMLogic repo merges by merge commit only (no squash;
+        # `allow_squash_merge=false`). A record produced on a PR branch
+        # therefore becomes reachable from `main` when the PR merges: on a
+        # PR (checked out at the merge ref) HEAD already contains the branch
+        # commits that merging will land, and on `main` HEAD *is* the default
+        # branch, so the two checks coincide there. A commit absent from
+        # HEAD's history is still rejected.
         #
         # This needs real history, so .github/workflows/ci.yml checks out at
         # fetch-depth: 0. If that is ever reverted the check reports that it
@@ -376,13 +383,25 @@ class CommittedOneshotEvidenceTest(unittest.TestCase):
         for name in COMMITTED_RECORDS:
             with self.subTest(record=name):
                 record = json.loads((EVIDENCE_DIR / name).read_text())
-                status, errors = voe.reachability_status(record, ROOT)
+                status, errors = voe.reachability_status(
+                    record, ROOT, ref="HEAD")
                 self.assertEqual(
                     status, voe.REACHABLE,
                     "%s does not cite a resolvable commit (status=%s): %s"
                     % (name, status, errors),
                 )
                 self.assertEqual(errors, [])
+
+    def test_the_head_reachability_gate_rejects_a_commit_outside_head(self):
+        # Non-vacuity for the HEAD-relative gate above: a syntactically valid
+        # SHA no clone has is rejected, not waved through.
+        record = json.loads(
+            (EVIDENCE_DIR / "oneshot-whole-voice-regression-v1.json").read_text()
+        )
+        record["identity"] = {**record["identity"], "git_head": "b" * 40}
+        status, errors = voe.reachability_status(record, ROOT, ref="HEAD")
+        self.assertNotEqual(status, voe.REACHABLE)
+        self.assertTrue(errors)
 
     def test_the_reachability_gate_rejects_a_branch_only_commit(self):
         # Proof the gate above is not vacuous, in this suite's style: a real

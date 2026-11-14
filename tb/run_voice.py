@@ -293,16 +293,14 @@ VOICE_TOP_MUTATIONS = {
         "  // MUTANT: the two pitch route words land in each other's column",
     ),
     # Genuine RTL route fault one stage later: vco_1's pitch *wire* is driven
-    # by the vco_2 pitch column. This one is NOT observable on any compared
-    # sample trace, and that is a property of the ratified architecture, not
-    # of this bench: the frequency both VCOs integrate is the host-replayed
-    # exp2 shadow word (DR-0010's 2026-09-22 amendment), so ``up_pitch``'s
-    # only consumer inside the engine is the C4 MIDI sum, which is not an
-    # output. It is still caught -- by the engine's own declared op-count
-    # conformance surface, where the wrong column changes the measured MIDI
-    # clamp count (``ops.V1.*[5]``). Closing the trace-level gap would need
-    # the #73 engine to export its MIDI sum, which is an RTL change to a
-    # qualified module and therefore out of this verification issue's scope.
+    # by the vco_2 pitch column. The frequency both VCOs integrate is the
+    # host-replayed exp2 shadow word (DR-0010's 2026-09-22 amendment), so
+    # ``up_pitch``'s only consumer inside the engine is the C4 MIDI sum. The
+    # engine exports that sum (``midi_sum``, #263), so the fault has TWO
+    # independent kills: the ``vco_1.midi_sum`` sample trace (localized by
+    # trace/cycle/sample) and the engine's own op-count conformance surface,
+    # where the wrong column changes the measured MIDI clamp count
+    # (``ops.V1.*[5]``).
     "vco-pitch-wire-swap": (
         "    wire signed [C1_WIDTH-1:0] up_pitch_vco_1 = up_arr[0];",
         "    wire signed [C1_WIDTH-1:0] up_pitch_vco_1 = up_arr[2];"
@@ -355,6 +353,15 @@ VOICE_AUDIO_TRACES = (
        "vco_1.post_vca", "vco_2.post_vca", "noise.post_vca",
        "mixer.pre_normalization")
 )
+#: Engine-internal traces compared in addition to the declared model
+#: checkpoints (#263). They are NOT ``float_voice.voice_checkpoints()``
+#: entries -- the checkpoint set is normative and unchanged -- but integer
+#: mirror words (``vco_golden.mirror_sine_lane``) the RTL exports. Each sits
+#: in the audiocap column after the last VOICE_AUDIO_TRACES column.
+VOICE_AUX_AUDIO_TRACES = ("vco_1.midi_sum",)
+#: The two independent kills vco-pitch-wire-swap must have (#263): the
+#: exported MIDI-sum sample trace, and the engine's MIDI-clamp op counter.
+VOICE_PITCH_WIRE_KILLS = ("vco_1.midi_sum[pass1]", "ops.V1.1[5]")
 VOICE_STATUS_NAMES = (
     "error", "error_code", "norm.peak", "norm.gain", "branch", "done",
     "pass_index", "norm.compares", "norm.selects", "norm.recip_divs",
@@ -552,9 +559,9 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
     # Prefix-exact saturation/clamp tallies for the declared capped walks.
     # Without them a capped walk leaves the two VCO engines' sticky
     # saturation and MIDI-clamp counters unchecked -- and that op-count
-    # conformance surface is the ONLY place the vco-pitch-wire-swap control
-    # is observable, because the frequency the engines integrate is the
-    # host-replayed exp2 shadow word. Re-running each mirror over the first
+    # conformance surface is one of the two kills of the vco-pitch-wire-swap
+    # control (the other is the exported ``midi_sum`` trace), because the
+    # frequency the engines integrate is the host-replayed exp2 shadow word. Re-running each mirror over the first
     # ``cap`` pitch words is exact, not an estimate: both are strictly
     # sequential per-sample walks.
     prefix_aux = {}
@@ -651,6 +658,7 @@ def voice_derive_case(formats, fcp, case_id: str, physical: dict,
         "square_q": vco2_streams["square_q"],
         "left_q": vco2_streams["left_q"],
         "sine_aux": sine_aux,
+        "sine_midi_sum": sine_streams["midi"],
         "prefix_aux": prefix_aux,
         "vco2_sats": vco2_streams["counters"]["total_saturation"],
         "mix_truth": {"streams": mix_streams, "aux": mix_aux},
@@ -845,7 +853,7 @@ def voice_simulate(workdir: Path, runs: int, sources: dict = None) -> list:
             )
 
         ctl = rows("ctlcap", 16)
-        audio = rows("audiocap", 15)
+        audio = rows("audiocap", 16)
         link = rows("linkcap", 3)
         capture = {
             "ctl": ctl,
@@ -925,6 +933,7 @@ def voice_expected(case: dict, walk: int) -> dict:
     # compares 27 named traces x 176,400 samples).
     ctl = {name: traces[name] for name in VOICE_CTL_TRACES}
     audio = {name: traces[name][:n] for name in VOICE_AUDIO_TRACES}
+    audio["vco_1.midi_sum"] = case["sine_midi_sum"][:n]
     out = traces["mixer.output"] if full else None
     status = [
         0, 0, diag["peak_word"], diag["gain_word"],
@@ -1037,6 +1046,11 @@ def voice_rows(capture: dict, expected: dict) -> list:
         for col, name in enumerate(VOICE_AUDIO_TRACES):
             seq("%s[pass%d]" % (name, pas), capture[key],
                 expected["audio"][name], 0, col + 3)
+        # Engine-internal mirror traces (not model checkpoints).
+        for aux_col, name in enumerate(VOICE_AUX_AUDIO_TRACES):
+            seq("%s[pass%d]" % (name, pas), capture[key],
+                expected["audio"][name], 0,
+                3 + len(VOICE_AUDIO_TRACES) + aux_col)
         # What the replay controller actually consumed at the link seam.
         seq("link.replay_input[pass%d]" % pas, capture[link],
             expected["audio"]["mixer.pre_normalization"], 0, 2)
@@ -1383,7 +1397,7 @@ def voice(workdir: Path) -> int:
     mutants = []
 
     def sim_mutant(label, case, target, anchor, replacement, localize=None,
-                   walk=VOICE_MUTATION_WALK_CAP):
+                   walk=VOICE_MUTATION_WALK_CAP, require=()):
         mut_dir = workdir / ("mut-" + label)
         mut_dir.mkdir(parents=True, exist_ok=True)
         path = mut_dir / ("mutant_" + target.name)
@@ -1397,6 +1411,13 @@ def voice(workdir: Path) -> int:
         rows = voice_rows(capture, expectation(case, walk))
         detected = bool(rows)
         first_row = rows[0] if rows else None
+        # ``require``: independent kills that must ALL fire (each a trace
+        # name prefix among the mismatch rows), not merely the first one.
+        for needed in require:
+            if not any(row[0].startswith(needed) for row in rows):
+                print("VOICE FAILED: mutation %s not killed by %s"
+                      % (label, needed))
+                detected = False
         if localize is not None and detected:
             located = (first_row[0], first_row[2]) == localize
             if not located:
@@ -1416,13 +1437,15 @@ def voice(workdir: Path) -> int:
     mut_ok = True
     # Binding faults: demonstrated on the binding case, whose stimulus
     # distinguishes every source column, envelope role and route. Each bites
-    # inside the declared prefix cap -- five on a named sample trace, and
-    # vco-pitch-wire-swap on the vco_1 engine's MIDI-clamp op counter (the
-    # host-replayed exp2 shadow hides it from every sample trace).
+    # inside the declared prefix cap on a named sample trace;
+    # vco-pitch-wire-swap additionally keeps its MIDI-clamp op-counter kill.
     for label in VOICE_BINDING_CONTROLS:
         anchor, replacement = VOICE_TOP_MUTATIONS[label]
-        mut_ok = sim_mutant(label, binding, VOICE_TOP_SV, anchor,
-                            replacement) and mut_ok
+        mut_ok = sim_mutant(
+            label, binding, VOICE_TOP_SV, anchor, replacement,
+            require=VOICE_PITCH_WIRE_KILLS
+            if label == "vco-pitch-wire-swap" else (),
+        ) and mut_ok
     anchor, replacement = VOICE_TOP_MUTATIONS["missing-sample"]
     mut_ok = sim_mutant(
         "missing-sample", divide, VOICE_TOP_SV, anchor, replacement,
@@ -1463,6 +1486,7 @@ def voice(workdir: Path) -> int:
             list(VOICE_CTL_TRACES) + list(VOICE_AUDIO_TRACES)
             + ["mixer.output", "mixer.peak", "mixer.gain"]
         ),
+        "engine_internal_traces_compared": list(VOICE_AUX_AUDIO_TRACES),
         "host_fed_checkpoints": ["keyboard.midi_f0", "keyboard.duration"],
         "float_tolerance": None,
         "branch_coverage": {"divide": divide_seen, "bypass": bypass_seen},
