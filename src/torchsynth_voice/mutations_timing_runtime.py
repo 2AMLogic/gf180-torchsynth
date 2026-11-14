@@ -49,7 +49,6 @@ from . import mutations
 from . import paired_metrics
 from . import periodic_estimators
 from . import timing_voice_ops as ops
-from .artifacts import canonical_bytes
 from .mutations import MutationError
 
 REQUEST_DOMAIN = b"torchsynth-timing-runtime-request-v1\n"
@@ -270,14 +269,8 @@ def case_record(manifest: Dict[str, Any], case_id: str) -> Dict[str, Any]:
 
 def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
     """Domain-separated identity of the resolved development request."""
-    core = {
-        "campaign": ops.MANIFEST_IDENTITY,
-        "revision": ops.MANIFEST_REVISION,
-        "frozen_inventory_sha256": ops.MANIFEST_FROZEN_SHA256,
-        "case": case,
-        "profile": manifest["target"]["runtime_profile"],
-    }
-    return "trq1-" + sha256(REQUEST_DOMAIN + canonical_bytes(core))
+    return family.request_identity(
+        manifest, case, ops, prefix="trq1-", domain=REQUEST_DOMAIN)
 
 
 # --------------------------------------------------------------------------
@@ -285,38 +278,19 @@ def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
 # --------------------------------------------------------------------------
 
 
+def _configure_trace_seam(operator_id: str, spec: Dict[str, Any],
+                          configuration: Dict[str, Any]) -> None:
+    """Timing-only trace-seam rows: the control lane, and the route-swap partner."""
+    if "control_traces" in spec:
+        configuration["control_trace"] = list(spec["control_traces"])
+    if operator_id == ops.ROUTE_SWAP:
+        configuration["partner"] = list(ops.ROUTE_TRACES)
+
+
 def runtime_definitions() -> Dict[str, Dict[str, Any]]:
-    definitions: Dict[str, Dict[str, Any]] = {}
-    slot = {"type": "integer", "minimum": 0}
-    for operator_id, spec in ops.RUNTIME_OPERATORS.items():
-        if spec["seam"] == ops.PARAMETER_VALUE:
-            configuration: Dict[str, Any] = {"parameter": list(spec["parameters"]), "slot": slot}
-        else:
-            configuration = {"trace": list(spec["traces"]), "slot": slot}
-            if "control_traces" in spec:
-                configuration["control_trace"] = list(spec["control_traces"])
-            if operator_id == ops.ROUTE_SWAP:
-                configuration["partner"] = list(ops.ROUTE_TRACES)
-        composes = [right for left, right in ops.COMPOSITIONS if left == operator_id]
-        composes += [left for left, right in ops.COMPOSITIONS if right == operator_id]
-        definitions[operator_id] = {
-            "version": 1,
-            "seam": spec["seam"],
-            "sham": operator_id == ops.SHAM,
-            "magnitude": dict(spec["magnitude"]),
-            "configuration": configuration,
-            "composes_with": composes,
-            "summary": (
-                "timing-family voice-runtime sham: traverse the family dispatch and return the original slot"
-                if operator_id == ops.SHAM
-                else "timing-family voice-runtime realisation of "
-                + spec["realises"]
-                + " at "
-                + spec["seam"]
-                + " (timing_voice_ops); bound to runtime-family-campaign-v1 revision 1"
-            ),
-        }
-    return definitions
+    return family.runtime_definitions(
+        ops, family_label="timing", provenance="timing_voice_ops",
+        configure=_configure_trace_seam)
 
 
 def register_runtime_operators() -> None:
@@ -386,13 +360,14 @@ def control_plan(manifest: Dict[str, Any], case_id: str, kind: str,
 
 
 def expected_attempts(manifest: Dict[str, Any], case_id: str) -> List[str]:
-    """Per (case, repeat) process order: controls, entries in manifest order, clean rerun."""
-    names = list(CONTROL_ATTEMPTS)
-    for entry in timing_entries(manifest):
-        if entry["disposition"] in ("runtime_cell", "composition") and case_id in entry["development_cases"]:
-            names.append(entry["id"])
-    names.append("clean_rerun")
-    return names
+    """Per (case, repeat) process order: controls, entries in manifest order, clean rerun.
+
+    No ``precheck``: unlike signal this family does not resolve the case first,
+    so an unknown case id yields the controls plus ``clean_rerun`` rather than
+    a refusal. Pre-existing behaviour, preserved explicitly (#463).
+    """
+    return family.expected_attempts(
+        manifest, case_id, entries=timing_entries, control_attempts=CONTROL_ATTEMPTS)
 
 
 # --------------------------------------------------------------------------
@@ -524,15 +499,9 @@ def process_schedules(manifest: Dict[str, Any], manifest_sha256: str, case_id: s
                       document: Dict[str, Any], inventory: Dict[str, Any],
                       catalog: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """Every schedule one fresh (case, repeat) worker process executes, in order."""
-    schedules: Dict[str, Dict[str, Any]] = {}
-    for attempt in expected_attempts(manifest, case_id):
-        if attempt in ("plain", "clean_rerun"):
-            continue
-        plan = (control_plan(manifest, case_id, attempt, catalog) if attempt in ("empty", "sham")
-                else cell_plan(manifest, attempt, case_id, catalog))
-        schedules[attempt] = resolve_schedule(plan, manifest, manifest_sha256, attempt, case_id,
-                                              repeat, document, inventory, catalog)
-    return schedules
+    return family.process_schedules(
+        manifest, manifest_sha256, case_id, repeat, document, inventory, catalog,
+        attempts=expected_attempts, plan_for=_plan_for, resolve=resolve_schedule)
 
 
 # --------------------------------------------------------------------------
@@ -546,26 +515,11 @@ def downstream(trace: str) -> List[str]:
 
 def blast_radius(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
     """Traces a realisation may change; the replaced seam itself keeps its original."""
-    allowed: List[str] = []
-    for _, target in realised:
-        if "parameter" in target:
-            root = PARAMETER_ROOTS[target["parameter"]]
-            names = [root] + downstream(root)
-        else:
-            names = downstream(target["trace"])
-            if "partner" in target:
-                names += downstream(target["partner"])
-        allowed.extend(name for name in names if name not in allowed)
-    return sorted(allowed)
+    return family.blast_radius(realised, DATAFLOW, PARAMETER_ROOTS)
 
 
 def seam_traces(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
-    names: List[str] = []
-    for _, target in realised:
-        for key in ("trace", "partner"):
-            if key in target and target[key] not in names:
-                names.append(target[key])
-    return names
+    return family.seam_traces(realised)
 
 
 def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_digest: str) -> List[float]:
@@ -574,24 +528,13 @@ def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_
 
 
 def paired_exactness(reference: List[float], candidate: List[float], rate_hz: float, trace: str) -> Dict[str, Any]:
-    """Time-locked paired exactness row; index zero is the time origin, no alignment."""
-    comparison = paired_metrics.compare_paired(
-        reference, candidate, reference_rate_hz=rate_hz, candidate_rate_hz=rate_hz,
-        unit="1", window_samples=max(1, len(reference)),
-    )
-    metrics = comparison["metrics"]
-    exact = metrics["exact_equal"]["value"]
-    max_abs = metrics["max_abs_error"]["value"]
-    return {
-        "trace": trace,
-        "pair_status": comparison["pair_status"],
-        "time_origin": comparison["settings"]["time_origin"],
-        "framing_match": metrics["framing_match"]["value"],
-        "exact_equal": exact,
-        "max_abs_error": max_abs,
-        "first_divergence_index": metrics["first_divergence_index"]["value"],
-        "verdict": "PASS" if comparison["pair_status"] == "measured" and exact == 1 else "FAIL",
-    }
+    """Time-locked paired exactness row; index zero is the time origin, no alignment.
+
+    Reports ``mean_error`` as the signal family always has; the omission here
+    was unintentional, not a timing decision (#463, and the shared helper's
+    docstring records the evidence).
+    """
+    return family.paired_exactness(reference, candidate, rate_hz, trace)
 
 
 def frame_refusal(manifest: Dict[str, Any], document: Dict[str, Any], entry_id: str, case_id: str,
