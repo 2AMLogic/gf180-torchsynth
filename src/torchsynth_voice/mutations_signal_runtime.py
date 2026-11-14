@@ -44,9 +44,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from . import mutation_runtime
 from . import mutation_family_runtime as family
 from . import mutations
-from . import paired_metrics
 from . import signal_voice_ops as ops
-from .artifacts import canonical_bytes
 from .mutations import MutationError
 
 REQUEST_DOMAIN = b"torchsynth-signal-runtime-request-v1\n"
@@ -334,16 +332,9 @@ def case_record(manifest: Dict[str, Any], case_id: str) -> Dict[str, Any]:
 
 def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
     """Domain-separated identity of the resolved development request."""
-    core = {
-        "campaign": ops.MANIFEST_IDENTITY,
-        "revision": ops.MANIFEST_REVISION,
-        "frozen_inventory_sha256": ops.MANIFEST_FROZEN_SHA256,
-        "family": FAMILY,
-        "realisation": ops.REALISATION,
-        "case": case,
-        "profile": manifest["target"]["runtime_profile"],
-    }
-    return "srq1-" + sha256(REQUEST_DOMAIN + canonical_bytes(core))
+    return family.request_identity(
+        manifest, case, ops, prefix="srq1-", domain=REQUEST_DOMAIN,
+        extra={"family": FAMILY, "realisation": ops.REALISATION})
 
 
 # --------------------------------------------------------------------------
@@ -352,35 +343,9 @@ def request_identity(manifest: Dict[str, Any], case: Dict[str, Any]) -> str:
 
 
 def runtime_definitions() -> Dict[str, Dict[str, Any]]:
-    definitions: Dict[str, Dict[str, Any]] = {}
-    slot = {"type": "integer", "minimum": 0}
-    for operator_id, spec in ops.RUNTIME_OPERATORS.items():
-        if spec["seam"] == ops.PARAMETER_VALUE:
-            configuration: Dict[str, Any] = {"parameter": list(spec["parameters"]), "slot": slot}
-        else:
-            configuration = {"trace": list(spec["traces"]), "slot": slot}
-        composes = [right for left, right in ops.COMPOSITIONS if left == operator_id]
-        composes += [left for left, right in ops.COMPOSITIONS if right == operator_id]
-        definitions[operator_id] = {
-            "version": 1,
-            "seam": spec["seam"],
-            "sham": operator_id == ops.SHAM,
-            "magnitude": dict(spec["magnitude"]),
-            "configuration": configuration,
-            "composes_with": composes,
-            "summary": (
-                "signal-family voice-runtime sham: traverse the family dispatch and return the original slot"
-                if operator_id == ops.SHAM
-                else "signal-family voice-runtime realisation of "
-                + spec["realises"]
-                + " at "
-                + spec["seam"]
-                + " (signal_voice_ops, "
-                + ops.REALISATION
-                + "); bound to runtime-family-campaign-v1 revision 1"
-            ),
-        }
-    return definitions
+    """The signal family declares no trace-seam configuration beyond trace/slot."""
+    return family.runtime_definitions(
+        ops, family_label="signal", provenance="signal_voice_ops, " + ops.REALISATION)
 
 
 def register_runtime_operators() -> None:
@@ -461,13 +426,9 @@ def control_plan(manifest: Dict[str, Any], case_id: str, kind: str,
 
 def expected_attempts(manifest: Dict[str, Any], case_id: str) -> List[str]:
     """Per (case, repeat) process order: controls, entries in manifest order, clean rerun."""
-    case_record(manifest, case_id)
-    names = list(CONTROL_ATTEMPTS)
-    for entry in signal_entries(manifest):
-        if entry["disposition"] in ("runtime_cell", "composition") and case_id in entry["development_cases"]:
-            names.append(entry["id"])
-    names.append("clean_rerun")
-    return names
+    return family.expected_attempts(
+        manifest, case_id, entries=signal_entries, control_attempts=CONTROL_ATTEMPTS,
+        precheck=case_record)
 
 
 # --------------------------------------------------------------------------
@@ -565,14 +526,9 @@ def process_schedules(manifest: Dict[str, Any], manifest_sha256: str, case_id: s
                       document: Dict[str, Any], inventory: Dict[str, Any],
                       catalog: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """Every schedule one fresh (case, repeat) worker process executes, in order."""
-    schedules: Dict[str, Dict[str, Any]] = {}
-    for attempt in expected_attempts(manifest, case_id):
-        if attempt in ("plain", "clean_rerun"):
-            continue
-        plan = _plan_for(manifest, attempt, case_id, catalog)
-        schedules[attempt] = resolve_schedule(plan, manifest, manifest_sha256, attempt, case_id,
-                                              repeat, document, inventory, catalog)
-    return schedules
+    return family.process_schedules(
+        manifest, manifest_sha256, case_id, repeat, document, inventory, catalog,
+        attempts=expected_attempts, plan_for=_plan_for, resolve=resolve_schedule)
 
 
 def _plan_for(manifest: Dict[str, Any], attempt: str, case_id: str, catalog: Dict[str, Any]) -> Dict[str, Any]:
@@ -635,23 +591,11 @@ def downstream(trace: str) -> List[str]:
 
 def blast_radius(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
     """Traces a realisation may change; a replaced seam itself keeps its original."""
-    allowed: List[str] = []
-    for _, target in realised:
-        if "parameter" in target:
-            root = PARAMETER_ROOTS[target["parameter"]]
-            names = [root] + downstream(root)
-        else:
-            names = downstream(target["trace"])
-        allowed.extend(name for name in names if name not in allowed)
-    return sorted(allowed)
+    return family.blast_radius(realised, DATAFLOW, PARAMETER_ROOTS)
 
 
 def seam_traces(realised: List[Tuple[str, Dict[str, str]]]) -> List[str]:
-    names: List[str] = []
-    for _, target in realised:
-        if "trace" in target and target["trace"] not in names:
-            names.append(target["trace"])
-    return names
+    return family.seam_traces(realised)
 
 
 def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_digest: str) -> List[float]:
@@ -661,23 +605,7 @@ def trace_preflight(document: Dict[str, Any], name: str, data: bytes, inventory_
 
 def paired_exactness(reference: List[float], candidate: List[float], rate_hz: float, trace: str) -> Dict[str, Any]:
     """Paired exactness contract row (det-signal-01/09); no preparation, no alignment."""
-    comparison = paired_metrics.compare_paired(
-        reference, candidate, reference_rate_hz=rate_hz, candidate_rate_hz=rate_hz,
-        unit="1", window_samples=max(1, len(reference)),
-    )
-    metrics = comparison["metrics"]
-    exact = metrics["exact_equal"]["value"]
-    return {
-        "trace": trace,
-        "pair_status": comparison["pair_status"],
-        "time_origin": comparison["settings"]["time_origin"],
-        "framing_match": metrics["framing_match"]["value"],
-        "exact_equal": exact,
-        "max_abs_error": metrics["max_abs_error"]["value"],
-        "mean_error": metrics["mean_error"]["value"],
-        "first_divergence_index": metrics["first_divergence_index"]["value"],
-        "verdict": "PASS" if comparison["pair_status"] == "measured" and exact == 1 else "FAIL",
-    }
+    return family.paired_exactness(reference, candidate, rate_hz, trace)
 
 
 def _constant(samples: List[float]) -> bool:
