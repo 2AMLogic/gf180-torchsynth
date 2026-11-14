@@ -1,0 +1,74 @@
+[
+  {
+    "file": "gf180_rtl_constants_pkg.sv",
+    "source_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+    "staged_sha256": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+    "edited": false
+  },
+  {
+    "file": "adsr_engine.sv",
+    "source_sha256": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+    "staged_sha256": "2003d437c37cd23320c0b79728a7f2fc1036142491d711a0bc65055be45e1585",
+    "edited": true
+  },
+  {
+    "file": "lfo_vca_engine.sv",
+    "source_sha256": "fdd347eba0150822bd485444e1209a686df6c9741a664c06fcc7357392ae7021",
+    "staged_sha256": "c83f377007c5bea3c7a6da9787536066be28e045a5290eeb5e2bf59eb0b6ed95",
+    "edited": true
+  },
+  {
+    "file": "mod_matrix_engine.sv",
+    "source_sha256": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+    "staged_sha256": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+    "edited": false
+  },
+  {
+    "file": "upsample_engine.sv",
+    "source_sha256": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679",
+    "staged_sha256": "d0103bb2e11cfed42f815c17a4e1c854302753d5d84a5aa2dc007ea6c74de8a0",
+    "edited": true
+  },
+  {
+    "file": "quarter_wave_lut.sv",
+    "source_sha256": "ce933d1ba7f7d54342f9442054897e5023ccd4ff481358195d9b3f1499bea8a4",
+    "staged_sha256": "b319602cc68e14a99e6390882e5c6efdc75c5120e036f88571b015cdfa40e2ee",
+    "edited": true
+  },
+  {
+    "file": "sine_vco_engine.sv",
+    "source_sha256": "a8eaa792a678b56b96a4cab03728ddd1da4c2333d191ad0dbedf93657ca9ffbd",
+    "staged_sha256": "047d22b29065dc753a80578892ec6412cdcef7c1cc1b99e8b432f1a42f73818f",
+    "edited": true
+  },
+  {
+    "file": "square_saw_vco_engine.sv",
+    "source_sha256": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+    "staged_sha256": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+    "edited": false
+  },
+  {
+    "file": "noise_stream_dut.sv",
+    "source_sha256": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+    "staged_sha256": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+    "edited": false
+  },
+  {
+    "file": "audio_mix_engine.sv",
+    "source_sha256": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+    "staged_sha256": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+    "edited": false
+  },
+  {
+    "file": "normalization_replay_engine.sv",
+    "source_sha256": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+    "staged_sha256": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+    "edited": false
+  },
+  {
+    "file": "one_shot_voice_top.sv",
+    "source_sha256": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+    "staged_sha256": "cba7aa50592dd8ce7215471744528a782add4b4579f225ed81bec606b30b1e95",
+    "edited": false
+  }
+]
