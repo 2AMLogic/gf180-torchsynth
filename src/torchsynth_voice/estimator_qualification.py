@@ -20,9 +20,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .artifacts import ValidationError, _structure, loads
+from .contract import repository_root
 from .digest import sha256_file
 from .scorecard import ScorecardError, validate_row
 
+#: The committed structural authority for this ledger (spec/ESTIMATOR-QUALIFICATION.md).
+LEDGER_SCHEMA_FILE = "estimator-qualification-v1.schema.json"
 LEDGER_SCHEMA_VERSION = 1
 LEDGER_ID = "estimator-qualification"
 LEDGER_VERSION = "1"
@@ -49,18 +53,6 @@ FAMILY_MODULES = {
 # apparatus is an invalid judge).
 PREPARATION_DEPENDENT = ("periodic", "envelope", "spectral")
 
-LEDGER_FIELDS = {
-    "schema_version",
-    "ledger",
-    "ledger_version",
-    "scope",
-    "source_target",
-    "preparation",
-    "families",
-    "totals",
-    "artifacts",
-    "provenance",
-}
 FAMILY_ENTRY_FIELDS = {
     "estimator",
     "artifact",
@@ -75,7 +67,6 @@ FAMILY_ENTRY_FIELDS = {
     "limitations",
     "preparation_dependent",
 }
-COVERAGE_FIELDS = ("requested", "present", "qualified", "refused", "missing")
 
 _SCOPE = (
     "analytic development qualification of estimator validity, floors, and "
@@ -749,95 +740,56 @@ def _preparation_digest_from_spec(path: Path) -> str | None:
     return None
 
 
+def _validate_structure(ledger: dict[str, Any]) -> None:
+    """Delegate the structural layer to the committed schema (single authority)."""
+    schema = loads(
+        (repository_root() / "spec/schemas" / LEDGER_SCHEMA_FILE).read_bytes()
+    )
+    try:
+        _structure(ledger, schema, LEDGER_SCHEMA_FILE)
+    except ValidationError as error:
+        raise EstimatorQualificationError(
+            f"ledger structure rejected by {LEDGER_SCHEMA_FILE}: {error}"
+        ) from error
+
+
 def validate_ledger(ledger: dict[str, Any]) -> None:
-    """Structural and arithmetic validation of a ledger document."""
-    if not isinstance(ledger, dict) or set(ledger) != LEDGER_FIELDS:
-        raise EstimatorQualificationError(
-            f"ledger requires exactly these fields: {', '.join(sorted(LEDGER_FIELDS))}"
-        )
-    if ledger["schema_version"] != LEDGER_SCHEMA_VERSION:
-        raise EstimatorQualificationError("unsupported ledger schema_version")
-    if ledger["ledger"] != LEDGER_ID:
-        raise EstimatorQualificationError("unknown ledger identity")
-    if ledger["ledger_version"] != LEDGER_VERSION:
-        raise EstimatorQualificationError("unknown ledger version")
-    if not isinstance(ledger["scope"], str) or not ledger["scope"].strip():
+    """Structural and arithmetic validation of a ledger document.
+
+    Structure — field sets, constants, enums, digest shapes, count domains —
+    is owned by ``spec/schemas/estimator-qualification-v1.schema.json`` and
+    enforced by :func:`_validate_structure`. What remains here is exactly the
+    relationships JSON Schema cannot express: nonblank text, estimator
+    identity, verdict/coverage reconciliation, preparation bindings, and the
+    recomputed totals.
+    """
+    if not isinstance(ledger, dict):
+        raise EstimatorQualificationError("ledger must be a JSON object")
+    _validate_structure(ledger)
+    if not ledger["scope"].strip():
         raise EstimatorQualificationError("scope must be nonblank text")
-    if ledger["source_target"] != SOURCE_TARGET:
-        raise EstimatorQualificationError("unexpected source target")
-    if set(ledger["families"]) != set(FAMILIES):
-        raise EstimatorQualificationError(
-            f"families must be exactly {FAMILIES}"
-        )
     for name, entry in ledger["families"].items():
-        if set(entry) != FAMILY_ENTRY_FIELDS:
-            raise EstimatorQualificationError(
-                f"family {name} requires exactly {sorted(FAMILY_ENTRY_FIELDS)}"
-            )
         estimator = entry["estimator"]
-        if set(estimator) != {
-            "name",
-            "module",
-            "module_sha256",
-            "algorithm_version",
-        }:
-            raise EstimatorQualificationError(
-                f"family {name} estimator identity malformed"
-            )
         if estimator["name"] != name:
             raise EstimatorQualificationError(
                 f"family {name} carries estimator name {estimator['name']}"
             )
-        digest = estimator["module_sha256"]
-        if (
-            not isinstance(digest, str)
-            or len(digest) != 64
-            or any(c not in "0123456789abcdef" for c in digest)
-        ):
-            raise EstimatorQualificationError(
-                f"family {name} module_sha256 must be 64 hex digits"
-            )
         coverage = entry["coverage"]
-        if set(coverage) != set(COVERAGE_FIELDS):
-            raise EstimatorQualificationError(
-                f"family {name} coverage requires {COVERAGE_FIELDS}"
-            )
-        if any(type(v) is not int or v < 0 for v in coverage.values()):
-            raise EstimatorQualificationError(
-                f"family {name} coverage counts must be nonnegative integers"
-            )
         verdicts = entry["verdicts"]
-        if set(verdicts) != set(VERDICTS):
-            raise EstimatorQualificationError(
-                f"family {name} verdicts require exactly {VERDICTS}"
-            )
-        if any(type(v) is not int or v < 0 for v in verdicts.values()):
-            raise EstimatorQualificationError(
-                f"family {name} verdict counts must be nonnegative integers"
-            )
         rows = sum(verdicts.values())
         if rows != coverage["present"]:
             raise EstimatorQualificationError(
                 f"family {name} verdict total {rows} != present {coverage['present']}"
             )
-        if not entry["limitations"] or not all(
-            isinstance(item, str) and item.strip()
-            for item in entry["limitations"]
-        ):
+        if not all(item.strip() for item in entry["limitations"]):
             raise EstimatorQualificationError(
                 f"family {name} limitations must be nonempty text list"
-            )
-        if type(entry["floor_limited"]) is not int or entry["floor_limited"] < 0:
-            raise EstimatorQualificationError(
-                f"family {name} floor_limited must be a nonnegative integer"
             )
         if entry["preparation_dependent"] != (name in PREPARATION_DEPENDENT):
             raise EstimatorQualificationError(
                 f"family {name} preparation_dependent misdeclared"
             )
     totals = ledger["totals"]
-    if set(totals) != {"rows", "verdicts", "floor_limited"}:
-        raise EstimatorQualificationError("totals fields malformed")
     expected = {
         verdict: sum(f["verdicts"][verdict] for f in ledger["families"].values())
         for verdict in VERDICTS
@@ -848,21 +800,6 @@ def validate_ledger(ledger: dict[str, Any]) -> None:
         sum(expected.values()),
         "totals.rows",
     )
-    preparation = ledger["preparation"]
-    if set(preparation) != {
-        "module",
-        "recomputed_sha256",
-        "declared",
-        "spec_described_sha256",
-        "status",
-        "dependent_families",
-    }:
-        raise EstimatorQualificationError("preparation block malformed")
-    if preparation["status"] not in ("consistent", "inconsistent"):
-        raise EstimatorQualificationError("preparation status must be consistent/inconsistent")
-    provenance = ledger["provenance"]
-    if set(provenance) != {"shared_preparation"}:
-        raise EstimatorQualificationError("provenance block malformed")
 
 
 def ledger_to_json(ledger: dict[str, Any]) -> str:

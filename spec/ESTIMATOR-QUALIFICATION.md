@@ -39,6 +39,22 @@ to pass a comparison; floor-limited comparisons refuse.
 
 ## Validity, coverage, and refusals
 
+The ledger's structure is owned by one committed schema,
+[`schemas/estimator-qualification-v1.schema.json`](schemas/estimator-qualification-v1.schema.json),
+which governs `sim/qualification/estimators-v1.json`. It fixes the exact
+top-level and per-family field sets, the `schema_version` / `ledger` /
+`ledger_version` / `source_target` constants, the mandatory family set, the
+64-hex digest shapes, the nonnegative count domains, and the
+`preparation.status` enum. `estimator_qualification.validate_ledger` loads it
+on every read and write, so a document that violates it refuses as an
+`EstimatorQualificationError` naming the offending path.
+
+What the schema cannot express stays in `validate_ledger` and is checked after
+it: nonblank text, estimator-name identity, per-family verdict totals against
+`coverage.present`, the `preparation_dependent` bindings, the digest pins, and
+the recomputed `totals`. JSON Schema states the shape; the Python re-derives
+the relationships.
+
 `src/torchsynth_voice/estimator_qualification.py` recomputes each family's
 census from validated raw evidence and refuses on any gap:
 
