@@ -428,7 +428,7 @@ def compare_case(selected, formats):
     retained = RETAINED_TRACES.get(selected["id"], ())
     sidecars = {}
     for trace in retained:
-        payload = struct_pack_f32le(fixed[trace])
+        payload = gv.pack_words_f32le(fixed[trace])
         file_name = "%s.%s.f32le" % (selected["id"], trace)
         sidecars[trace] = {"file": file_name, "sha256": sha256_bytes(payload)}
         if not TRACES_OUT.exists():
@@ -437,13 +437,6 @@ def compare_case(selected, formats):
     if sidecars:
         manifest["retained_traces"] = sidecars
     return manifest
-
-
-def struct_pack_f32le(words):
-    import struct
-
-    audio_scale = float(1 << 21)
-    return struct.pack("<%df" % len(words), *[word / audio_scale for word in words])
 
 
 def build_sentinel(manifest, formats, request):

@@ -7,6 +7,7 @@ host; an unrun check is never reported as a pass).
 
 import hashlib
 import json
+import struct
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,7 @@ from hw_tools import has_iverilog  # noqa: E402
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import vco2_golden as vc  # noqa: E402
+from torchsynth_voice.digest import digest_words  # noqa: E402
 from torchsynth_voice.fixed_voice import AcceptedFormats  # noqa: E402
 
 TOOLS_DIR = ROOT / "tools"
@@ -191,6 +193,38 @@ class TestRtlFlow(unittest.TestCase):
             result.returncode, 0, result.stdout[-4000:] + "\n" + result.stderr[-2000:]
         )
         self.assertIn("SQUARE-SAW VCO RUN PASSED", result.stdout)
+
+
+class TestSharedHelperBinding(unittest.TestCase):
+    """``vco2_golden`` reaches for the shared helpers, not private copies."""
+
+    def test_voice_digest_is_the_shared_digest_helper(self):
+        # #247/#455/#461 consolidation: this module must not carry its own
+        # copy of the trace-digest encoding. A private re-copy would pass an
+        # encoding test while being free to drift, so bind the identity too.
+        self.assertIs(vc.voice_digest, digest_words)
+
+    def test_word_packing_is_the_shared_sidecar_codec(self):
+        # Same argument for the #54 f32le sidecar codec, whose one definition
+        # lives beside the schema that names the encoding.
+        self.assertIs(vc.pack_words_f32le, gv.pack_words_f32le)
+        self.assertIs(vc.unpack_words_f32le, gv.unpack_words_f32le)
+
+    def test_public_names_stay_importable(self):
+        # tb/run_tb.py (content-pinned by evidence/item9-attestation.json) and
+        # the generator/tests reach these through ``vco2_golden``, so the
+        # aliases must keep every advertised name resolvable.
+        for name in ("voice_digest", "pack_words_f32le", "unpack_words_f32le"):
+            self.assertIn(name, vc.__all__)
+            self.assertTrue(callable(getattr(vc, name)))
+
+    def test_sidecar_codec_round_trips_and_refuses_drift(self):
+        words = [0, 1, -1, 2**22, -(2**22), 123456]
+        self.assertEqual(vc.unpack_words_f32le(vc.pack_words_f32le(words)), words)
+        # 2**-22 is exact in binary32 but is half an LSB in Q21, so the
+        # unpacker must refuse it rather than silently round.
+        with self.assertRaises(ValueError):
+            vc.unpack_words_f32le(struct.pack("<1f", 2.0**-22))
 
 
 if __name__ == "__main__":
