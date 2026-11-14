@@ -29,9 +29,20 @@ import gf180_rtl_constants::*;
 
 module tb;
 
+`ifdef KLT_COCOTB
+    // Set only after every capture file is closed; a cocotb test waits on it.
+    // Every error path still calls $finish, which fails the cocotb test.
+    reg klt_done = 1'b0;
+`endif
+
     localparam integer N_INST = 2;
     localparam integer CONTROL_SAMPLES = 1764;
+`ifdef KLT_COCOTB
+    // One sim carries every committed vector (13 > the default 8).
+    localparam integer MAX_RUNS = 16;
+`else
     localparam integer MAX_RUNS = 8;
+`endif
 
     reg clk = 1'b0;
     reg rst = 1'b1;
@@ -227,7 +238,11 @@ module tb;
                 $fclose(cap[r*N_INST + i]);
 
         $display("TB-DONE %0d", RUNS);
+`ifdef KLT_COCOTB
+        klt_done = 1'b1;
+`else
         $finish;
+`endif
     end
 
 endmodule

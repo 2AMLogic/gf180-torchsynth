@@ -224,8 +224,14 @@ module lfo_vca_engine #(
     initial begin
         if (!$value$plusargs("ctl_lut=%s", lut_file)) begin
             if (!$value$plusargs("lut=%s", lut_file)) begin
+`ifdef KLT_COCOTB
+                // klt functional-verification cannot pass plusargs; the
+                // cocotb lane writes the table to the simulator cwd.
+                lut_file = "lut.memh";
+`else
                 $display("DUT-ERROR inst %0d missing +ctl_lut= (or +lut=) memh plusarg", INST_ID);
                 $finish;
+`endif
             end
         end
         $readmemh(lut_file, rom);
