@@ -13,14 +13,13 @@ _None._
 
 `loom:very-important` (one counts per workspace); every stage takes these first.
 
-_None._
+- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 
 ## Important
 
 `loom:important`; taken before unlabelled work.
 
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once
-- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#274**: Provision access to the pinned AWS box (repo-remote, i-018841ef4169207ba) from the agent fleet
 
 ## Ready
@@ -44,7 +43,7 @@ Issues currently being built (`loom:building`).
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#464**: docs: roadmap as of 2026-11-13
 
 ## Approved (Awaiting Merge)
 
@@ -89,6 +88,7 @@ Issues carrying `loom:curated`.
 - **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(architect)*
 - **#83**: [Epic #2] Measure gf180mcu floorplan, place, route, and timing feasibility *(architect)*
 - **#456**: Remove orphaned unratified example listening receipt (examples/listening): unreferenced, stale, superseded by session-01 manifest *(hermit)*
+- **#463**: Finish the signal/timing runtime dedupe #405 started: 7 near-duplicate helper pairs an exact-match diff missed *(hermit)*
 
 ## Epics
 
@@ -101,13 +101,13 @@ Issues carrying `loom:curated`.
 | Bucket | Count |
 |------|-------|
 | Operator merge-risk holds | 0 |
-| Very important | 0 |
-| Important | 3 |
+| Very important | 1 |
+| Important | 2 |
 | Ready (`loom:issue`) | 5 |
 | In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 0 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 18 |
-| Architect / Hermit proposals | 12 |
+| Architect / Hermit proposals | 13 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
