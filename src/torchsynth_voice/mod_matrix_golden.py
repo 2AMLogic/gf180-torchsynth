@@ -23,10 +23,13 @@ implementation. This module adds only:
   numerator ``left*(2^31 - frac) + right*frac`` with one declared
   half-even narrowing, C7 saturation, exact endpoint copies) asserted
   row-equal to the model's own ``_upsample`` rows.
-- :func:`pack_words_f32le` / :func:`unpack_words_f32le` — the #54 sidecar
-  convention: Q2.21 words carried losslessly through division by 2^21
-  (every word/2^21 with |word| < 2^23 is exactly representable in binary32);
-  unpacking refuses any value that does not round-trip to the exact word.
+- :func:`pack_words_f32le` / :func:`unpack_words_f32le` — re-exported from
+  :mod:`torchsynth_voice.golden_vectors`, which owns the one definition of
+  the #54 sidecar convention: Q2.21 words carried losslessly through
+  division by 2^21 (every word/2^21 with |word| < 2^23 is exactly
+  representable in binary32); unpacking refuses any value that does not
+  round-trip to the exact word. The names stay importable from here so
+  existing ``mm.pack_words_f32le`` call sites are untouched (issue #461).
 
 Both mirrors are pure integer replays of declared-exact sites — #72 has NO
 declared binary64 shadow — so the RTL consumes formed words plus the four
@@ -40,7 +43,6 @@ No RTL claim of any kind is made here.
 
 from __future__ import annotations
 
-import struct
 from typing import Dict, List, Tuple
 
 from .float_interfaces import AUDIO_SAMPLES, CONTROL_SAMPLES
@@ -52,6 +54,7 @@ from .format_sweep import (
     apply_saturation,
     up_coordinate_table,
 )
+from .golden_vectors import pack_words_f32le, unpack_words_f32le  # noqa: F401
 from .fixedpoint.counters import ROUNDING, StickyCounters
 from .fixedpoint.formats import FixedFormat
 from .fixedpoint.rounding import div_round_reported
@@ -191,33 +194,3 @@ def mirror_upsample(
                     " mirror %d model %d" % (route, index, mine, theirs)
                 )
     return output, counters.as_json()
-
-
-def pack_words_f32le(words: List[int], frac_bits: int = 21) -> bytes:
-    """Pack Q-format words as little-endian binary32 (the #54 convention).
-
-    ``word / 2**frac_bits`` is exactly representable whenever the signed
-    word fits in ``frac_bits + 23`` bits, so the packing is lossless; the
-    unpacker refuses any drift anyway.
-    """
-
-    scale = float(1 << frac_bits)
-    return struct.pack("<%df" % len(words), *[word / scale for word in words])
-
-
-def unpack_words_f32le(payload: bytes, frac_bits: int = 21) -> List[int]:
-    """Unpack binary32 payload back to exact words, refusing any drift."""
-
-    scale = 1 << frac_bits
-    values = struct.unpack("<%df" % (len(payload) // 4), payload)
-    words: List[int] = []
-    for value in values:
-        scaled = value * scale
-        rounded = int(round(scaled))
-        if scaled != rounded:
-            raise ModMatrixGoldenError(
-                "f32le payload value %r is not an exact Q%d word multiple"
-                % (value, frac_bits)
-            )
-        words.append(rounded)
-    return words

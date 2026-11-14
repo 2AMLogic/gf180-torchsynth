@@ -42,13 +42,11 @@ hardware playback, or sound fidelity.
 
 from __future__ import annotations
 
-import hashlib
-import json
 import math
-import struct
 from fractions import Fraction
 from typing import Any, Dict, List, NamedTuple, Tuple
 
+from .digest import digest_words as voice_digest  # noqa: F401
 from .fixed_voice import (
     MIDI_A440,
     MIDI_CLAMP_MAX,
@@ -66,6 +64,7 @@ from .fixedpoint.rounding import div_round
 from .float_interfaces import AUDIO_RATE_HZ
 from .float_sources import PI_F32
 from .format_sweep import FixedControlPath
+from .golden_vectors import pack_words_f32le, unpack_words_f32le  # noqa: F401
 
 __all__ = [
     "SHADOW_EXP2",
@@ -99,45 +98,6 @@ class PartialsConstant(NamedTuple):
     """The per-clip partials word (the declared shadow's quantized output)."""
 
     word: int
-
-
-def voice_digest(words: List[int]) -> str:
-    """The #54 trace-digest convention over an integer word list."""
-
-    blob = json.dumps(
-        list(words), sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    ).encode("utf-8")
-    return hashlib.sha256(blob).hexdigest()
-
-
-def pack_words_f32le(words: List[int], frac_bits: int = 21) -> bytes:
-    """Pack Q-format words as little-endian binary32 (the #54 convention).
-
-    ``word / 2**frac_bits`` is exactly representable whenever the signed
-    word fits in ``frac_bits + 23`` bits, so the packing is lossless; the
-    unpacker refuses any drift anyway.
-    """
-
-    scale = float(1 << frac_bits)
-    return struct.pack("<%df" % len(words), *[word / scale for word in words])
-
-
-def unpack_words_f32le(payload: bytes, frac_bits: int = 21) -> List[int]:
-    """Unpack binary32 payload back to exact words, refusing any drift."""
-
-    scale = 1 << frac_bits
-    values = struct.unpack("<%df" % (len(payload) // 4), payload)
-    words: List[int] = []
-    for value in values:
-        scaled = value * scale
-        rounded = int(round(scaled))
-        if scaled != rounded:
-            raise VcoGoldenError(
-                "f32le payload value %r is not an exact Q%d word multiple"
-                % (value, frac_bits)
-            )
-        words.append(rounded)
-    return words
 
 
 def initial_phase_word(formats: AcceptedFormats, physical: Any) -> int:

@@ -279,5 +279,18 @@ class TestRtlFlow(unittest.TestCase):
         self.assertIn("MOD-MATRIX RUN PASSED", result.stdout)
 
 
+class TestSharedHelperBinding(unittest.TestCase):
+    """``mod_matrix_golden`` re-exports the shared sidecar codec (#461)."""
+
+    def test_word_packing_is_the_shared_sidecar_codec(self):
+        # One definition of the #54 f32le convention, in golden_vectors
+        # beside the schema that names the encoding; this module keeps the
+        # names importable so existing mm.* call sites are untouched.
+        self.assertIs(mm.pack_words_f32le, gv.pack_words_f32le)
+        self.assertIs(mm.unpack_words_f32le, gv.unpack_words_f32le)
+        for name in ("pack_words_f32le", "unpack_words_f32le"):
+            self.assertIn(name, mm.__all__)
+
+
 if __name__ == "__main__":
     unittest.main()
