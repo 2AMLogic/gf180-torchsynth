@@ -8,6 +8,8 @@ This document explains the gates and says what can move. It is not a claim sourc
 
 *Changed 2026-11-13:* added the status, Now / Next / Later and blocked sections; the milestone text below is condensed from the earlier version, with its order and exits unchanged.
 
+*Updated 2026-11-14:* the four drafted Now follow-ups are filed as #465, #466, #467 and #468; Now items 2 (#466) and 7 (#461) have since merged. The evidence claims under "Where it stands" are still as of `b511430`.
+
 ## Where it stands
 
 - **Capability graph:** 1 READY (`contract`), 1 NOT RUN (`apparatus`), 16 BLOCKED, 0 PASS ([`docs/CAPABILITIES.md`](CAPABILITIES.md)). Most nodes have only a planned, unregistered check, so the work recorded below has not yet been turned into graph evidence.
@@ -29,15 +31,15 @@ This document explains the gates and says what can move. It is not a claim sourc
 
 ## Now
 
-Can start today, one PR each. The four without an issue number have drafts ready to file.
+Can start today, one PR each. The four drafted follow-ups are filed as #465, #466, #467 and #468. Items 2 and 7 have since landed and are kept here for the record.
 
-1. **Static sample-identity checks for the synthesis view** (part of #82; no issue yet). Checks C1 and C2 of the feasibility plan, plus the `+max_j` reading for rewrite class 3. Done when a test proves every `` `define `` in the derived view equals its package `localparam`, the ROM payload hash equals what `tb/run_voice.py` writes, and both division-loop forms give equal quotients and remainders over the full `den_msb` range; and the plan's sample-identity table cites the test. No tool run, no RTL edit.
-2. **Re-check `klt` friction F1 to F12 against a current release** (no issue yet). [`asic/klt-friction.md`](../asic/klt-friction.md) was observed on `klt 0.7.1.dev` and says "Not yet filed upstream". Done when each item carries a dated status line (still present, changed, or fixed, with the command that shows it) and a paste-ready upstream title.
-3. **Bump the `klayout-tools` pin from 0.8.0** (no issue yet; precedent #416). Done when `.github/workflows/tb-sim.yml` pins the newer PyPI release, the item 9 and 10 attestations and the signoff report are regenerated with it, and the report drift check is green.
-4. **Rank the measured bottlenecks from the committed record** (check C3 of the plan; no issue yet). Done when a test or script compares ABC critical path to divider stage count for the completed modules and the plan records whether the divider is the dominant term. No tool run.
+1. **Static sample-identity checks for the synthesis view** (#465; part of #82). Checks C1 and C2 of the feasibility plan, plus the `+max_j` reading for rewrite class 3. Done when a test proves every `` `define `` in the derived view equals its package `localparam`, the ROM payload hash equals what `tb/run_voice.py` writes, and both division-loop forms give equal quotients and remainders over the full `den_msb` range; and the plan's sample-identity table cites the test. No tool run, no RTL edit.
+2. **Re-check `klt` friction F1 to F12 against a current release** (#466; **landed** in PR #471, merged 2026-11-14). [`asic/klt-friction.md`](../asic/klt-friction.md) now carries a dated status line per item against `klt 0.9.2.dev`, plus paste-ready upstream titles for what remains: F1 and F2 fixed, F5 changed, the other nine still present.
+3. **Bump the `klayout-tools` pin from 0.8.0** (#467; precedent #416). Done when `.github/workflows/tb-sim.yml` pins the newer PyPI release, the item 9 and 10 attestations and the signoff report are regenerated with it, and the report drift check is green.
+4. **Rank the measured bottlenecks from the committed record** (#468; check C3 of the plan). Done when a test or script compares ABC critical path to divider stage count for the completed modules and the plan records whether the divider is the dominant term. No tool run.
 5. **Repair PR #375 (FPGA negative result, #80).** Its cited blocker #378 closed on 2026-10-17, but the branch now conflicts with `main`, and its `0013-fpga-measurement-target.md` collides with the DR-0013 already on `main`. Done when the PR is renumbered to the next free record, merges cleanly and is green.
 6. **Finish the CI-scheduling record (#284).** Done when `docs/CI-SCHEDULING.md` replaces its two PENDING sections with the seven-day measurement and the observed (or explicitly not observed) no-op and main-advancement cases. Curated, not yet promoted.
-7. **In flight:** #461 / PR #462 (one definition each for the f32le codec and trace digest).
+7. **Landed:** #461 / PR #462 (one definition each for the f32le codec and trace digest), merged 2026-11-14 in `ead68f4`.
 
 ## Next
 
@@ -58,7 +60,7 @@ Can start today, one PR each. The four without an issue number have drafts ready
 
 ## Blocked and waiting
 
-**No `loom:issue` item is dispatchable today.** Each of #80, #82, #382, #388 and #394 either has an open PR parked on a blocker or is limited by the #82 hold resolution to bounded investigation. The first four Now items are the dispatchable supply once filed.
+**No `loom:issue` item is dispatchable today.** Each of #80, #82, #382, #388 and #394 either has an open PR parked on a blocker or is limited by the #82 hold resolution to bounded investigation. Now items 1, 3 and 4 are the dispatchable supply.
 
 - **Long-running execution substrate** (#454, operator decision; #274): regenerating the three whole-voice evidence records takes hours of Icarus simulation and no fleet-reachable host may run it. Holds PRs #275 and #392 (issues #263, #388) and the holdout run #55.
 - **DR-0006 measured host** (#325): `mutation-runtime-v1.json` can be regenerated only on the recorded host scope. Holds PR #385 (#382).
