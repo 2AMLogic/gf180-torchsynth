@@ -120,51 +120,13 @@ REFUSALS: Dict[str, str] = {
 CONTROL_ATTEMPTS = ("plain", "empty", "sham")
 SHAM_TARGET = "adsr_1.output"
 
-# Trace-level dataflow of the pinned Voice.output (torchsynth/synth.py at
-# 2b0964d4, lines 475-510): producer trace -> consumer traces. Used only to
-# derive the declared blast radius; every other trace must stay invariant.
-_ROUTES = list(ops.ROUTE_TRACES)
-DATAFLOW: Dict[str, List[str]] = {
-    "keyboard.midi_f0": ["vco_1.raw", "vco_2.raw"],
-    "keyboard.duration": [
-        "lfo_1_rate_adsr.output",
-        "lfo_2_rate_adsr.output",
-        "lfo_1_amp_adsr.output",
-        "lfo_2_amp_adsr.output",
-        "adsr_1.output",
-        "adsr_2.output",
-    ],
-    "lfo_1_rate_adsr.output": ["lfo_1.raw"],
-    "lfo_2_rate_adsr.output": ["lfo_2.raw"],
-    "lfo_1.raw": ["lfo_1.post_control_vca"],
-    "lfo_1_amp_adsr.output": ["lfo_1.post_control_vca"],
-    "lfo_2.raw": ["lfo_2.post_control_vca"],
-    "lfo_2_amp_adsr.output": ["lfo_2.post_control_vca"],
-    "adsr_1.output": _ROUTES,
-    "adsr_2.output": _ROUTES,
-    "lfo_1.post_control_vca": _ROUTES,
-    "lfo_2.post_control_vca": _ROUTES,
-    "mod_matrix.vco_1_pitch": ["control_upsample.vco_1_pitch"],
-    "mod_matrix.vco_1_amp": ["control_upsample.vco_1_amp"],
-    "mod_matrix.vco_2_pitch": ["control_upsample.vco_2_pitch"],
-    "mod_matrix.vco_2_amp": ["control_upsample.vco_2_amp"],
-    "mod_matrix.noise_amp": ["control_upsample.noise_amp"],
-    "control_upsample.vco_1_pitch": ["vco_1.raw"],
-    "vco_1.raw": ["vco_1.post_vca"],
-    "control_upsample.vco_1_amp": ["vco_1.post_vca"],
-    "control_upsample.vco_2_pitch": ["vco_2.raw"],
-    "vco_2.raw": ["vco_2.post_vca"],
-    "control_upsample.vco_2_amp": ["vco_2.post_vca"],
-    "noise.raw": ["noise.post_vca"],
-    "control_upsample.noise_amp": ["noise.post_vca"],
-    "vco_1.post_vca": ["mixer.pre_normalization"],
-    "vco_2.post_vca": ["mixer.pre_normalization"],
-    "noise.post_vca": ["mixer.pre_normalization"],
-    "mixer.pre_normalization": ["mixer.peak", "mixer.output"],
-    "mixer.peak": ["mixer.gain"],
-    "mixer.gain": ["mixer.output"],
-    "mixer.output": [],
-}
+# The pinned Voice's trace-level dataflow lives once, in the shared family
+# module (#481); both adapters alias it. ``_ROUTES`` keeps the module-level
+# name the table's route entries are written against. The route operator
+# rows below still read ``ops.ROUTE_TRACES`` directly; a test asserts that
+# tuple equals ``family.VOICE_ROUTE_TRACES``.
+_ROUTES = list(family.VOICE_ROUTE_TRACES)
+DATAFLOW = family.VOICE_DATAFLOW
 PARAMETER_ROOTS = {"adsr_1.attack": "adsr_1.output", "lfo_1.frequency": "lfo_1.raw"}
 
 

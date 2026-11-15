@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import mutation_family_runtime as family  # noqa: E402
 from torchsynth_voice import mutations_signal_runtime as sr  # noqa: E402
 from torchsynth_voice import mutations_timing_runtime as tr  # noqa: E402
+from torchsynth_voice import timing_voice_ops as tops  # noqa: E402
 from torchsynth_voice.mutations import MutationError  # noqa: E402
 
 REFERENCE = [0.0, 0.25, -0.5, 1.0, 0.125, -0.125, 0.0, 0.75]
@@ -39,6 +40,37 @@ ROW_KEYS = (
     "first_divergence_index",
     "verdict",
 )
+
+
+class SharedVoiceDataflowTests(unittest.TestCase):
+    """One pinned-Voice dataflow table and route tuple for both adapters (#481).
+
+    The two adapters used to carry hand-maintained copies of the 32-entry
+    ``DATAFLOW`` table, and the signal adapter a hardcoded route-name literal;
+    both ``test_dataflow_covers_the_registry`` tests compare only the trace
+    *names*, so a divergence inside a value list -- exactly what the route
+    literal feeds -- stayed green with the drift in place. The table and the
+    tuple now live once in the shared family module and the adapters alias
+    them; these tests are the guards that keep it that way.
+    """
+
+    def test_adapters_share_one_dataflow_object(self):
+        # Identity, not equality: a reintroduced literal copy in either
+        # adapter fails here even while the copy is still byte-identical.
+        self.assertIs(sr.DATAFLOW, tr.DATAFLOW)
+        self.assertIs(sr.DATAFLOW, family.VOICE_DATAFLOW)
+
+    def test_timing_ops_route_traces_match_the_shared_tuple(self):
+        # ``timing_voice_ops`` keeps its own operator-facing ROUTE_TRACES (the
+        # release-era worker loads that module by file path, so it cannot
+        # import the family module); this equality is what keeps it aligned.
+        self.assertEqual(tops.ROUTE_TRACES, family.VOICE_ROUTE_TRACES)
+
+    def test_dataflow_route_values_come_from_the_shared_tuple(self):
+        routes = list(family.VOICE_ROUTE_TRACES)
+        for producer in ("adsr_1.output", "adsr_2.output",
+                         "lfo_1.post_control_vca", "lfo_2.post_control_vca"):
+            self.assertEqual(family.VOICE_DATAFLOW[producer], routes)
 
 
 class PairedExactnessRowTests(unittest.TestCase):
