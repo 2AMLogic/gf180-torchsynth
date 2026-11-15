@@ -26,6 +26,7 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 
 Human-approved issues ready for implementation (`loom:issue`).
 
+- **#80**: [Epic #2] Build and measure a resource-generous FPGA core
 - **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
@@ -111,7 +112,7 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 2 |
-| Ready (`loom:issue`) | 5 |
+| Ready (`loom:issue`) | 6 |
 | In Progress (`loom:building`) | 5 |
 | PRs awaiting review | 2 |
 | Approved PRs awaiting merge | 1 |
