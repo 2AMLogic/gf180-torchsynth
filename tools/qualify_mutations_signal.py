@@ -44,6 +44,7 @@ from torchsynth_voice import paired_metrics as pm  # noqa: E402
 from torchsynth_voice import periodic_estimators as pe  # noqa: E402
 from torchsynth_voice import spectral_estimators as se  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
+from torchsynth_voice.mutation_publication import check_committed_publication  # noqa: E402
 
 family.register_family()
 
@@ -1102,15 +1103,7 @@ def _envelope_declared(committed, fresh) -> bool:
     )
 
 
-def check_publication():
-    if not PUBLICATION_PATH.exists():
-        print(
-            "publication: ABSENT — requires tools/qualify_mutations_signal.py; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
-    committed = json.loads(PUBLICATION_PATH.read_bytes())
-    fresh = build_publication()
+def _differing_fields(committed, fresh):
     failures = []
     for field in COMPARABLE_FIELDS:
         if field == "fault_matrix":
@@ -1126,20 +1119,25 @@ def check_publication():
                 failures.append(field)
         elif committed.get(field) != fresh[field]:
             failures.append(field)
-    if failures:
-        print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
-        raise SystemExit(1)
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "operators": fresh["counts"]["operators"],
-                "faults": fresh["counts"]["faults"],
-                "tripped": fresh["counts"]["tripped"],
-                "envelope_id": fresh["envelope"]["envelope_id"],
-            }
-        )
+    return failures
+
+
+def _summary_fields(fresh):
+    return {
+        "operators": fresh["counts"]["operators"],
+        "faults": fresh["counts"]["faults"],
+        "tripped": fresh["counts"]["tripped"],
+        "envelope_id": fresh["envelope"]["envelope_id"],
+    }
+
+
+def check_publication():
+    check_committed_publication(
+        PUBLICATION_PATH,
+        "tools/qualify_mutations_signal.py",
+        build_publication,
+        _differing_fields,
+        _summary_fields,
     )
 
 

@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import mutations, mutations_timing  # noqa: E402
+from torchsynth_voice.mutation_publication import check_committed_publication  # noqa: E402
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-timing-v1.json"
 
@@ -248,15 +249,7 @@ def build_publication():
     }
 
 
-def check_publication():
-    if not PUBLICATION_PATH.exists():
-        print(
-            "publication: ABSENT — requires tools/qualify_mutations_timing.py; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
-    committed = json.loads(PUBLICATION_PATH.read_bytes())
-    fresh = build_publication()
+def _differing_fields(committed, fresh):
     failures = []
     for field in COMPARABLE_FIELDS:
         if field == "envelopes":
@@ -264,20 +257,25 @@ def check_publication():
                 failures.append(field)
         elif committed.get(field) != fresh[field]:
             failures.append(field)
-    if failures:
-        print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
-        raise SystemExit(1)
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "faults": fresh["counts"]["faults"],
-                "envelope_ids": [
-                    envelope["envelope_id"] for envelope in fresh["envelopes"]
-                ],
-            }
-        )
+    return failures
+
+
+def _summary_fields(fresh):
+    return {
+        "faults": fresh["counts"]["faults"],
+        "envelope_ids": [
+            envelope["envelope_id"] for envelope in fresh["envelopes"]
+        ],
+    }
+
+
+def check_publication():
+    check_committed_publication(
+        PUBLICATION_PATH,
+        "tools/qualify_mutations_timing.py",
+        build_publication,
+        _differing_fields,
+        _summary_fields,
     )
 
 

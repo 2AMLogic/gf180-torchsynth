@@ -31,6 +31,10 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice import mutations, mutation_runtime  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
 from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
+from torchsynth_voice.mutation_publication import (  # noqa: E402
+    check_committed_publication,
+    plain_differing_fields,
+)
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-framework-v1.json"
 
@@ -109,31 +113,34 @@ def build_publication():
     }
 
 
+COMPARABLE_FIELDS = (
+    "kind",
+    "status",
+    "mutation_contract",
+    "controls",
+    "fault_matrix",
+    "envelope",
+    "counts",
+    "not_run",
+    "inputs",
+    "trace_registry_sha256",
+)
+
+
+def _summary_fields(fresh):
+    return {
+        "faults": fresh["counts"]["faults"],
+        "envelope_id": fresh["envelope"]["envelope_id"],
+    }
+
+
 def check_publication():
-    if not PUBLICATION_PATH.exists():
-        print(
-            "publication: ABSENT — requires tools/qualify_mutations.py; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
-    committed = json.loads(PUBLICATION_PATH.read_bytes())
-    fresh = build_publication()
-    failures = []
-    for field in ("kind", "status", "mutation_contract", "controls", "fault_matrix", "envelope", "counts", "not_run", "inputs", "trace_registry_sha256"):
-        if committed.get(field) != fresh[field]:
-            failures.append(field)
-    if failures:
-        print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
-        raise SystemExit(1)
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "faults": fresh["counts"]["faults"],
-                "envelope_id": fresh["envelope"]["envelope_id"],
-            }
-        )
+    check_committed_publication(
+        PUBLICATION_PATH,
+        "tools/qualify_mutations.py",
+        build_publication,
+        plain_differing_fields(COMPARABLE_FIELDS),
+        _summary_fields,
     )
 
 
