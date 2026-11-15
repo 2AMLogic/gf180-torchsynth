@@ -483,6 +483,23 @@ class SyntheticTreeTestCase(unittest.TestCase):
         ):
             eq.validate_ledger(ledger)
 
+    def test_blank_module_values_refuse(self):
+        """Schema minLength: 1 is enforced end to end (issue #496)."""
+        ledger = copy.deepcopy(self.ledger)
+        ledger["families"]["paired"]["estimator"]["module"] = ""
+        with self.assertRaisesRegex(
+            eq.EstimatorQualificationError,
+            r"families\.paired\.estimator\.module: too short",
+        ):
+            eq.validate_ledger(ledger)
+        ledger = copy.deepcopy(self.ledger)
+        ledger["preparation"]["module"] = ""
+        with self.assertRaisesRegex(
+            eq.EstimatorQualificationError,
+            r"preparation\.module: too short",
+        ):
+            eq.validate_ledger(ledger)
+
     def test_validate_ledger_loads_the_committed_schema(self):
         """The schema is exercised, not merely present (issue #470)."""
         self.assertEqual(

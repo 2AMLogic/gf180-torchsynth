@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice.artifacts import (  # noqa: E402
+    _SCHEMA_FILES,
     ValidationError,
+    _structure,
     canonical_bytes,
     content_id,
     loads,
@@ -228,6 +230,7 @@ class ArtifactTests(unittest.TestCase):
             "items",
             "uniqueItems",
             "minItems",
+            "minLength",
             "minProperties",
             "minimum",
             "maximum",
@@ -246,11 +249,24 @@ class ArtifactTests(unittest.TestCase):
             for child in node.get("oneOf", []):
                 check(child)
 
-        for filename in (
-            "render-artifact-v1.schema.json",
-            "corpus-index-v1.schema.json",
-        ):
+        for filename in _SCHEMA_FILES:
             check(loads((ROOT / "spec/schemas" / filename).read_bytes()))
+
+    def test_string_min_length_is_enforced(self):
+        """minLength is implemented, not just allowlisted (issue #496)."""
+        schema = {"type": "string", "minLength": 1}
+        with self.assertRaisesRegex(ValidationError, "too short"):
+            _structure("", schema, "estimator-qualification-v1")
+        # minLength absent defaults to 0: the empty string passes.
+        _structure("", {"type": "string"}, "estimator-qualification-v1")
+        # minLength and pattern on the same field are both enforced; neither
+        # shadows the other.
+        both = {"type": "string", "minLength": 1, "pattern": "^[0-9a-f]{64}$"}
+        with self.assertRaisesRegex(ValidationError, "too short"):
+            _structure("", both, "estimator-qualification-v1")
+        with self.assertRaisesRegex(ValidationError, "invalid string"):
+            _structure("short", both, "estimator-qualification-v1")
+        _structure("a" * 64, both, "estimator-qualification-v1")
 
     def test_scalar_execution_retains_batched_fixture_identity(self):
         record = artifact()

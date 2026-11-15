@@ -1975,7 +1975,7 @@
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6",
     "spec/schemas/parameter-inventory-v1.schema.json": "4eae278e03f0470888e3cf3708b635e95f562a56e1fd732df42bdcbc767b793a",
-    "src/torchsynth_voice/artifacts.py": "63a286e91b67a0773c01482a1d7d027971aea00a1a0c830023014fa6ee5818ef",
+    "src/torchsynth_voice/artifacts.py": "4acfa339f5709ebb426a025ed97a35e7115d5663c9633912749ae7fcf6565314",
     "src/torchsynth_voice/directed.py": "13f614db4b89c47fbc349e77779238854381426fbbbbb1c1df1d93cd5bae0bc7",
     "src/torchsynth_voice/float_interfaces.py": "eb391c1748742e3f368e1f843b6b9d77c454a5cfcf87e6732f8aabb36252a236",
     "src/torchsynth_voice/float_sources.py": "dc40f8826043a3ccddbf60d6faf83e0c8e768a3313f2b49bf456184047edea4e",

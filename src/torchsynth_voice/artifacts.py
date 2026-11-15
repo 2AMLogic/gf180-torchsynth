@@ -141,7 +141,8 @@ def _schema_document(filename: str) -> dict[str, Any]:
 def _structure(
     value: Any, schema: dict[str, Any], filename: str, path: str = "$"
 ) -> None:
-    """The deliberately small Draft 2020-12 subset used by our two schemas."""
+    """The deliberately small Draft 2020-12 subset used by the committed
+    schemas in `_SCHEMA_FILES`."""
     if "$ref" in schema:
         target_file, pointer = schema["$ref"].split("#", 1)
         target_file = target_file or filename
@@ -212,11 +213,13 @@ def _structure(
             )
         for child in value:
             _structure(child, schema.get("items", {}), filename, path + "[]")
-    if type(value) is str and "pattern" in schema:
-        _require(
-            re.fullmatch(schema["pattern"], value) is not None,
-            f"{path}: invalid string",
-        )
+    if type(value) is str:
+        _require(len(value) >= schema.get("minLength", 0), f"{path}: too short")
+        if "pattern" in schema:
+            _require(
+                re.fullmatch(schema["pattern"], value) is not None,
+                f"{path}: invalid string",
+            )
     if type(value) in (int, float):
         if "minimum" in schema:
             _require(value >= schema["minimum"], f"{path}: below minimum")
