@@ -46,6 +46,9 @@ SEMANTIC_VERSION = "rubric-v0"  # default; the expected version is derived per f
 HISTORICAL_SOURCE_BINDINGS = {
     ("rubric-v0", "mutation-matrix-v1"): "sim/reference/history/mutation-matrix-v1-7c87809d.json",
     ("rubric-v1", "mutation-matrix-v1"): "sim/reference/history/mutation-matrix-v1-7c87809d.json",
+    ("rubric-v0", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
+    ("rubric-v1", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
+    ("rubric-v2", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
 }
 
 
