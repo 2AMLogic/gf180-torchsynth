@@ -217,7 +217,7 @@
     {
       "id": "estimator-qualification-spec",
       "path": "spec/ESTIMATOR-QUALIFICATION.md",
-      "sha256": "bf299fbf667d44448fc610f01d7c4cff467baef5078638fe36703a7e23d2401c",
+      "sha256": "0205c7314dd285765fe1d3edd3693fd778e40aee3cf50146582f280728bc93ea",
       "role": "estimator ledger semantics; preparation gate; publication view"
     },
     {
