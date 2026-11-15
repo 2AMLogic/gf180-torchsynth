@@ -102,18 +102,27 @@ def analyze(record: dict) -> dict:
 
 
 def block_figures(result: dict) -> dict:
-    """The recorded-outcome figures, at the precision the plan states them."""
-    figures = {"tolerance_relative": round(result["tolerance"], 2)}
+    """The recorded-outcome figures as canonical strings.
+
+    Each float figure is stated at the precision this tool declares for it;
+    ``check_plan`` compares the plan's stated string against these exactly,
+    so the comparison precision comes from this tool, never from the plan.
+    ``*.stages`` stays exact integer text -- never ``64.00`` -- and
+    ``verdict`` is compared as-is.
+    """
+    figures = {"tolerance_relative": format(result["tolerance"], ".2f")}
     for row in result["rows"]:
-        figures[row["name"] + ".stages"] = row["stages"]
-        figures[row["name"] + ".critical_path_ps"] = round(row["critical_path_ps"], 2)
-        figures[row["name"] + ".tt_slack_ns"] = round(row["tt_slack_ns"], 2)
+        figures[row["name"] + ".stages"] = str(row["stages"])
+        figures[row["name"] + ".critical_path_ps"] = format(
+            row["critical_path_ps"], ".2f")
+        figures[row["name"] + ".tt_slack_ns"] = format(row["tt_slack_ns"], ".2f")
         if row["ps_per_stage"] is not None:
-            figures[row["name"] + ".ps_per_stage"] = round(row["ps_per_stage"], 2)
-    figures["ratio_b1_over_b2"] = round(result["ratio_b1_over_b2"], 4)
-    figures["relative_difference"] = round(result["relative_difference"], 3)
-    figures["slope_ps_per_stage"] = round(result["slope_ps_per_stage"], 2)
-    figures["intercept_ps"] = round(result["intercept_ps"], 2)
+            figures[row["name"] + ".ps_per_stage"] = format(
+                row["ps_per_stage"], ".2f")
+    figures["ratio_b1_over_b2"] = format(result["ratio_b1_over_b2"], ".4f")
+    figures["relative_difference"] = format(result["relative_difference"], ".3f")
+    figures["slope_ps_per_stage"] = format(result["slope_ps_per_stage"], ".2f")
+    figures["intercept_ps"] = format(result["intercept_ps"], ".2f")
     figures["verdict"] = result["verdict"]
     return figures
 
@@ -143,19 +152,12 @@ def check_plan(record: dict, plan_text: str) -> list:
             problems.append("%s: not a figure this tool derives" % key)
             continue
         want, got = expected[key], stated[key]
-        if isinstance(want, str):
-            if got != want:
-                problems.append("%s: plan %s != derived %s" % (key, got, want))
-            continue
-        try:
-            gotf = float(got)
-        except ValueError:
-            problems.append("%s: block value %r is not a number" % (key, got))
-            continue
-        decimals = len(got.partition(".")[2])
-        if round(want, decimals) != round(gotf, decimals):
-            problems.append("%s: plan %s != derived %s"
-                            % (key, got, format(round(want, decimals), "." + str(decimals) + "f")))
+        # Canonical-string equality: the comparison precision comes from
+        # this tool's declared precision, never from the plan string, so a
+        # figure restated with fewer or more decimals is refused rather
+        # than silently matching at the plan's own precision.
+        if got != want:
+            problems.append("%s: plan %s != derived %s" % (key, got, want))
     return problems
 
 
