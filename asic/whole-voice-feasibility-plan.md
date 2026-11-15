@@ -65,10 +65,10 @@ rewrite classes, and whether each could change a sample:
 
 | Rewrite class | Could it change a sample? | Argument | Cheapest falsifiable check |
 |---|---|---|---|
-| 1. Constants package -> `` `define `` macros | Not by value; **by width or sign it could** | Same integer values by construction, but a macro is untyped text where a `localparam` is not. `synth_view.py` also leaves constants outside the 32-bit range undefined (`C2_UNITS_PER_TURN`), so a future use fails loudly rather than silently truncating | Diff the expanded view against the package: assert every macro value equals the `localparam` value (static, no simulator) |
-| 2. `$value$plusargs`/`$readmemh` ROM load -> fixed `$readmemh` | Not if the file is the same bytes | The record hashes the payload (`rom_payload_sha256`); identity needs the simulation lane to have loaded the same hash | Assert the payload hash equals the one the #79 lane writes (`write_lut_memh` in `tb/run_voice.py:829-830`): static hash comparison |
-| 3. `+max_j` plusarg -> constant 0 | No for the committed top | `max_j == 0` means the full walk (`upsample_engine.sv:178-179`); the cap term `max_j != 0 && ...` at line 256 is then constant false. The caveat: this is only identity with a #79 run that did not pass `+max_j` | Grep the #79 lane's invocations for `max_j`; none should set it |
-| 4. Division loop start `den_msb + 60` -> constant start with an `if (i <= den_msb + 60)` guard | No, provided the constant start is at least `den_msb_max + 60` | Iterations above `den_msb + 60` are skipped by the guard, so the executed iteration set is identical. The constants are 91 (LFO, 32-bit denominator, `den_msb <= 31`) and 106 (ADSR, 47-bit denominator, `den_msb <= 46`) in `tools/synth_view.py:144,151`, matching the loop bound arithmetic | An exhaustive or randomized comparison of the two loop forms over the denominator range in a software model, plus the replace-exactly-once guard already tested |
+| 1. Constants package -> `` `define `` macros | Not by value; **by width or sign it could** | Same integer values by construction, but a macro is untyped text where a `localparam` is not. `synth_view.py` also leaves constants outside the 32-bit range undefined (`C2_UNITS_PER_TURN`), so a future use fails loudly rather than silently truncating | Diff the expanded view against the package: assert every macro value equals the `localparam` value, and that the constants the view leaves undefined are named by none of the 12 derived sources (static, no simulator) -- `tests/test_synth_view_identity.py` `TestClass1MacroValuesMatchThePackage` |
+| 2. `$value$plusargs`/`$readmemh` ROM load -> fixed `$readmemh` | Not if the file is the same bytes | The record hashes the payload (`rom_payload_sha256`); identity needs the simulation lane to have loaded the same hash | Assert the payload hash equals the one the #79 lane writes (`write_lut_memh` in `tb/run_voice.py:829-830`): static hash comparison, a regression lock against drift between the two call sites rather than two independent producers -- `tests/test_synth_view_identity.py` `TestClass2RomPayloadMatchesTheLaneProducer` |
+| 3. `+max_j` plusarg -> constant 0 | No for the committed top | `max_j == 0` means the full walk (`upsample_engine.sv:178-179`); the cap term `max_j != 0 && ...` at line 256 is then constant false. The caveat: this is only identity with a #79 run that did not pass `+max_j` | Grep the #79 lane's invocations for `max_j`; none should set it (measured stronger: the lane names it nowhere, and the only producer under `tb/` is `tb/run_tb.py`'s mutation path) -- `tests/test_synth_view_identity.py` `TestClass3LaneNeverPassesMaxJ` |
+| 4. Division loop start `den_msb + 60` -> constant start with an `if (i <= den_msb + 60)` guard | No, provided the constant start is at least `den_msb_max + 60` | Iterations above `den_msb + 60` are skipped by the guard, so the executed iteration set is identical. The constants are 91 (LFO, 32-bit denominator, `den_msb <= 31`) and 106 (ADSR, 47-bit denominator, `den_msb <= 46`) in `tools/synth_view.py:144,151`, matching the loop bound arithmetic | An exhaustive or randomized comparison of the two loop forms over the denominator range in a software model, plus the static bound `start >= den_msb_max + 60` and the replace-exactly-once guard already tested -- `tests/test_synth_view_identity.py` `TestClass4DivisionLoopGuardIsIdentity` |
 
 Not one of the four classes, and **unchecked**: Yosys' native `read_verilog`
 (without `-sv`) and `iverilog -g2012` can differ on signedness, `integer`
@@ -86,7 +86,7 @@ and is out of scope here.
 | C0 | "A longer Yosys bound would change the whole-voice verdict" | none (reasoning from the record, below) | falsified if a completed top-level component met 25 MHz; none did | the committed record |
 | C1 | Rewrite classes 1-2 are value-preserving | Python comparing the view's macro values to the package, and the payload hash to the lane's | pass: zero differences; fail: any differing value or hash | local CPU, seconds |
 | C2 | Rewrite class 4 is identity | software model of both loop forms over `den_msb` in 0..46 | pass: equal quotients and remainders for all tested denominators | local CPU, seconds |
-| C3 | The B-row ordering (which construct dominates the path) | record per-engine ABC critical paths for the engines that do complete, and compare to depth proportional to stage count | pass: B1 (64 stages) and B2 (49 stages) paths scale with stage count; fail: they do not, and the divider is not the dominant term | the committed record; no run |
+| C3 | The B-row ordering (which construct dominates the path) | `python3 tools/check_divider_depth.py` — arithmetic on the committed record; no run (default `--check` re-verifies the recorded block in "C3: divider-depth proportionality" below) | pass: B1 (64 stages) and B2 (49 stages) per-stage gate-delay rates agree within the tool's declared tolerance; fail: they do not — proportionality falsified, monotonic ordering still reported, dominance attribution left to C4 | the committed record; no run |
 | C4 | The unmeasured rows B4-B7 cost what B1 suggests | one Yosys `synth -run :fine` plus `abc -D` per engine with a *scoped* script, or a Yosys `ltp`/`stat` of the unmapped design (single engine, one process) | pass: a path-depth number appears inside minutes for the engines that timed out; fail: still no result | one `yosys` process, local, minutes; **not run here**, needs operator sign-off because it is a new tool run on the shared worker |
 | C5 | The derived view computes the same samples | the #79 lane against the view, after a source-directory override exists | pass: sample-exact on every case; fail: first mismatch localized by the lane | simulator CPU; **not run**; harness change plus a campaign, so needs its own issue |
 | C6 | A restructured divider (iterative or serialized) would close 25 MHz | a DR-governed experiment on one engine (`normalization_replay_engine`, once per clip) | pass: TT setup slack >= 0 with `complete` constraints; fail: still negative | `klt synthesize` plus `klt sta` on one engine; needs a decision record first |
@@ -109,6 +109,77 @@ and is out of scope here.
   completed-module verdicts around.
 * `mod_matrix_engine` not finishing at 2,700 s shows time is not a monotone
   fix: more minutes did not produce a result for it.
+
+### C3: divider-depth proportionality, arithmetic on the record
+
+Recorded 2026-11-14 by `python3 tools/check_divider_depth.py` (stdlib-only).
+This is **arithmetic on the committed record, not a new measurement**: no
+`klt`, Yosys or OpenSTA run, and
+`asic/evidence/oneshot-synth-feasibility-v1.json` is unchanged. The tool's
+default `--check` mode re-derives every figure below from the record and
+refuses drift against the fenced block at the end of this section. Stage
+counts are the committed RTL loop bounds
+(`normalization_replay_engine.sv:181` → 64,
+`upsample_engine.sv:155` → 49); the two zero-stage modules have no restoring
+divider and serve as controls, not missing data. All four timings share one
+provenance (`source: abc_stime`, no wire-load model), so the per-stage figure
+is a **gate-delay rate, not a post-route one**.
+
+| module | stages | ABC critical path (ps) | TT setup slack (ns) | per-stage (ps/stage) |
+|---|---|---|---|---|
+| normalization_replay_engine (B1) | 64 | 208,475.97 | -170.29 | 3,257.44 |
+| upsample_engine (B2) | 49 | 107,886.14 | -69.36 | 2,201.76 |
+| quarter_wave_lut | 0 | 36,856.59 | -11.67 | n/a |
+| noise_stream_dut | 0 | 19,789.36 | +12.60 | n/a |
+
+Outcome, in three parts:
+
+1. **Proportionality is falsified.** The two per-stage rates differ by 38.7%
+   of their mean (ratio 1.4795), far outside the ±10% agreement band the tool
+   declares; a two-point affine fit of path against stage count gives slope
+   6,705.99 ps/stage with a non-physical −220,707.30 ps intercept, directly
+   contradicted by the two zero-stage controls, whose paths are strictly
+   positive (36,856.59 and 19,789.36 ps).
+2. **Monotonic ordering is preserved.** The deeper divider carries the longer
+   path (208,476 ps > 107,886 ps), and both divider modules sit far above
+   both zero-stage controls.
+3. **Dominance is neither confirmed nor refuted by the record.** The B2 row
+   above states that the divider's share of the upsample path is **inferred,
+   not measured** — the record does not establish that that path traverses
+   the 49-stage divider at all (it may run through the B3 column-memory read
+   mux), so a per-stage rate computed from it is conditional. C4 (scoped
+   per-engine runs) is the check that could settle attribution.
+
+The B1-over-B2 ordering therefore stands on the measured 208,476 ps vs
+107,886 ps paths, not on a depth model.
+
+```c3-divider-depth
+# Recorded outcome of tools/check_divider_depth.py (check C3). The tool's
+# default --check mode re-derives every figure below from
+# asic/evidence/oneshot-synth-feasibility-v1.json and refuses drift.
+# Derived-arithmetic figures, not record pins: the record numbers quoted
+# above are pinned in "Pinned figures".
+tolerance_relative = 0.10
+normalization_replay_engine.stages = 64
+normalization_replay_engine.critical_path_ps = 208475.97
+normalization_replay_engine.tt_slack_ns = -170.29
+normalization_replay_engine.ps_per_stage = 3257.44
+upsample_engine.stages = 49
+upsample_engine.critical_path_ps = 107886.14
+upsample_engine.tt_slack_ns = -69.36
+upsample_engine.ps_per_stage = 2201.76
+quarter_wave_lut.stages = 0
+quarter_wave_lut.critical_path_ps = 36856.59
+quarter_wave_lut.tt_slack_ns = -11.67
+noise_stream_dut.stages = 0
+noise_stream_dut.critical_path_ps = 19789.36
+noise_stream_dut.tt_slack_ns = 12.60
+ratio_b1_over_b2 = 1.4795
+relative_difference = 0.387
+slope_ps_per_stage = 6705.99
+intercept_ps = -220707.30
+verdict = disagree
+```
 
 ## Decision records that must change before any structural edit
 
@@ -149,6 +220,10 @@ targets.upsample_engine.sta.corners.tt_025C_5v00.worst_slack_ns = -69.36
 targets.quarter_wave_lut.sta.corners.tt_025C_5v00.worst_slack_ns = -11.67
 targets.noise_stream_dut.sta.corners.tt_025C_5v00.worst_slack_ns = 12.60
 targets.noise_stream_dut.sta.corners.ss_125C_4v50.worst_slack_ns = -5.38
+targets.normalization_replay_engine.synthesize.summary.timing.critical_path_ps = 208475.97
+targets.upsample_engine.synthesize.summary.timing.critical_path_ps = 107886.14
+targets.quarter_wave_lut.synthesize.summary.timing.critical_path_ps = 36856.59
+targets.noise_stream_dut.synthesize.summary.timing.critical_path_ps = 19789.36
 targets.normalization_replay_engine.synthesize.hierarchy.0.cells = 11050
 targets.upsample_engine.synthesize.hierarchy.0.cells = 165732
 targets.upsample_engine.synthesize.hierarchy.0.area_um2 = 5510646
@@ -169,6 +244,7 @@ derived_arithmetic_not_measured.five_upsample_column_instances.flip_flop_cells =
 
 Not pinned (they are plan-side readings, not record numbers): line ranges
 into `tb/sv`, stage counts (49, 64, 92, 107), instance counts, and the
-cycle-budget remark in B8. The test pins the files they cite by hash through
-the record's `rtl_sha256` check, so an RTL edit already forces a refresh of
-the record and this plan.
+cycle-budget remark in B8. The C3 block above repeats the two divider stage
+counts as tool constants, not record pins. The test pins the files they cite
+by hash through the record's `rtl_sha256` check, so an RTL edit already
+forces a refresh of the record and this plan.
