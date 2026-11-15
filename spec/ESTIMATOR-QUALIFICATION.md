@@ -40,7 +40,7 @@ to pass a comparison; floor-limited comparisons refuse.
 ## Schema
 
 The ledger's structure is owned by one committed schema,
-[`spec/schemas/estimator-qualification-v1.schema.json`](spec/schemas/estimator-qualification-v1.schema.json),
+[`spec/schemas/estimator-qualification-v1.schema.json`](schemas/estimator-qualification-v1.schema.json),
 which governs `sim/qualification/estimators-v1.json`. It fixes the exact
 top-level and per-family field sets, the `schema_version` / `ledger` /
 `ledger_version` / `source_target` constants, the mandatory family set, the
