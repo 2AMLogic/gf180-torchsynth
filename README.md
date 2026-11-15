@@ -178,7 +178,7 @@ README, is the evidence. Detail lives in [`tb/README.md`](tb/README.md) and
 | Recorded evidence integrity | `python3 tools/verify_oneshot_evidence.py` | the two `sim/evidence` records above |
 | Synthesis feasibility (partial, no whole-voice netlist) | `python3 tools/synthesize_oneshot.py run`, then `record` | `asic/evidence/oneshot-synth-feasibility-v1.json` |
 | C1, T1, A1, PW1 | not yet run; no whole-voice netlist or power report exists | pending #82/#83 |
-| T1 item 10 attestation | `uvx --from "klayout-tools==0.8.0" klt signoff --attest 10 --inventory evidence/item10-inventory.json --check evidence/item10-attestation.json` | `evidence/item10-attestation.json` |
+| T1 item 10 attestation | `uvx --from "klayout-tools==0.9.2" klt signoff --attest 10 --inventory evidence/item10-inventory.json --check evidence/item10-attestation.json` | `evidence/item10-attestation.json` |
 
 Simulation needs Icarus Verilog; the synthesis flow needs the worker's pinned
 PDK tools. Without them the corresponding command cannot run, and its result
