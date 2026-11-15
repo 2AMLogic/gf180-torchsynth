@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from torchsynth_voice.artifacts import (  # noqa: E402
     _SCHEMA_FILES,
     ValidationError,
+    _schema_document,
     _structure,
     canonical_bytes,
     content_id,
@@ -164,6 +165,7 @@ class ArtifactTests(unittest.TestCase):
         # fullmatch. Exercise every pattern without adding a runtime dependency.
         examples = (
             "ra1-" + "a" * 64,
+            "fv1-" + "a" * 64,
             "a" * 64,
             "b" * 40,
             "portable-id",
@@ -193,11 +195,19 @@ class ArtifactTests(unittest.TestCase):
                 for child in node:
                     check(child)
 
-        for filename in (
-            "render-artifact-v1.schema.json",
-            "corpus-index-v1.schema.json",
-        ):
+        for filename in _SCHEMA_FILES:
             check(loads((ROOT / "spec/schemas" / filename).read_bytes()))
+
+    def test_schema_document_cache_is_sized_to_the_allowlist(self):
+        _schema_document.cache_clear()
+        for _ in range(2):
+            for filename in _SCHEMA_FILES:
+                _schema_document(filename)
+        info = _schema_document.cache_info()
+        self.assertGreaterEqual(info.maxsize, len(_SCHEMA_FILES))
+        # A second round-robin pass must be served from cache; a cache sized
+        # below the allowlist evicts every entry within one pass (0 hits).
+        self.assertEqual(info.hits, len(_SCHEMA_FILES))
 
     def test_complete_synthetic_artifact_and_index(self):
         record = artifact()

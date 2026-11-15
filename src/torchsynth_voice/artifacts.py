@@ -1,8 +1,9 @@
 """Portable artifact contracts: stdlib-only, offline, no renderer imports.
 
-The two repository schemas provide structural validation. The public validators
-add identity/count/provenance semantics described in spec/ARTIFACT-CONTRACT.md.
-ValidationError is raised on the first violation; success returns None.
+The repository schemas in `_SCHEMA_FILES` provide structural validation. The
+public validators add identity/count/provenance semantics described in
+spec/ARTIFACT-CONTRACT.md. ValidationError is raised on the first violation;
+success returns None.
 """
 
 from __future__ import annotations
@@ -130,7 +131,7 @@ def verify_sha256(data: bytes, expected: str) -> None:
     _require(hashlib.sha256(data).hexdigest() == expected, "file SHA-256 mismatch")
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=len(_SCHEMA_FILES))
 def _schema_document(filename: str) -> dict[str, Any]:
     # Never resolve URLs or document-supplied paths.
     _require(filename in _SCHEMA_FILES, "unsupported schema reference")

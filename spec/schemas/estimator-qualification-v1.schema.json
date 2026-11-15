@@ -37,7 +37,7 @@
     },
     "artifacts": {
       "type": "object",
-      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
       "required": ["periodic", "envelope", "spectral", "preparation"]
     },
     "provenance": {
@@ -50,9 +50,9 @@
           "additionalProperties": false,
           "required": ["recomputed_sha256", "status", "historical_snapshot_sha256", "note"],
           "properties": {
-            "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
             "status": {"enum": ["consistent", "mismatch"]},
-            "historical_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "historical_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
             "note": {"type": "string", "minLength": 1}
           }
         }
@@ -67,9 +67,9 @@
       "required": ["module", "recomputed_sha256", "declared", "spec_described_sha256", "status", "dependent_families"],
       "properties": {
         "module": {"type": "string", "minLength": 1},
-        "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "declared": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
-        "spec_described_sha256": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}$"}, {"type": "null"}]},
+        "recomputed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
+        "declared": {"type": "object", "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"}},
+        "spec_described_sha256": {"oneOf": [{"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"}, {"type": "null"}]},
         "status": {"enum": ["consistent", "inconsistent"]},
         "dependent_families": {"type": "array", "items": {"type": "string", "minLength": 1}}
       }
@@ -104,7 +104,7 @@
       "properties": {
         "name": {"type": "string", "minLength": 1},
         "module": {"type": "string", "minLength": 1},
-        "module_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "module_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
         "algorithm_version": {"type": "string", "minLength": 1}
       }
     },
@@ -115,7 +115,7 @@
       "properties": {
         "estimator": {"$ref": "#/$defs/estimator"},
         "artifact": {"type": "string", "minLength": 1},
-        "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
         "validity_predicate": {"type": "string", "minLength": 1},
         "grid": {"type": "object", "minProperties": 1},
         "coverage": {"$ref": "#/$defs/coverage"},
