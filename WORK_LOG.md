@@ -4,6 +4,15 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-15
 
+- **PR #505**: refactor: extract require_publication primitive for the ABSENT publication line
+- **PR #503**: fix: rebind T1 item 9 evidence klt pin 0.8.0 -> 0.9.2 (inventory, attestation, manifest, report)
+- **PR #499**: fix(artifacts): implement schema minLength and police the full _SCHEMA_FILES allowlist
+- **PR #498**: spec: land the estimator-qualification schema link via the DR-0013 archive mechanism
+- **Issue #500** (closed): Shared check_publication flow sits outside publication inputs digest coverage after the #484 hoist
+- **Issue #497** (closed): Residual ABSENT-block copy in select_ci_subset() after the #484 hoist
+- **Issue #496** (closed): artifacts._structure silently ignores minLength: 10 declared constraints in estimator-qualification-v1.schema.json never run
+- **Issue #493** (closed): T1 item 9 inventory still declares klt 0.8.0 after the CI pin moved to 0.9.2
+- **Issue #492** (closed): Land the estimator-qualification schema link in spec/ESTIMATOR-QUALIFICATION.md together with an explicit holdout re-seal decision
 - **PR #494**: fix: derive plan-figure comparison precision from the tool, not the plan string
 - **PR #491**: chore: bump klt CI pin 0.8.0 -> 0.9.2 and regenerate T1 attestations
 - **PR #490**: test: restore run_voice._LUT_TABLES after synth view identity class 2
