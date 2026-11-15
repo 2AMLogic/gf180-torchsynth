@@ -31,9 +31,16 @@ from torchsynth_voice import mutations  # noqa: E402
 from torchsynth_voice import mutations_identity  # noqa: E402
 from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
+from torchsynth_voice.mutation_publication import (  # noqa: E402
+    check_committed_publication,
+)
 
 MATRIX_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
 CI_CATEGORIES = ("identity", "delay", "interpolation", "gain", "normalization")
+ABSENT_LINE = (
+    "publication: ABSENT — requires tools/qualify_mutations_matrix.py; "
+    "absence is never reported as a pass\n"
+)
 
 
 def load_matrix():
@@ -349,11 +356,68 @@ class CiSubsetSentinelTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("gain.db", out)
 
+    def run_caller(self, caller):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            try:
+                caller()
+                code = 0
+            except SystemExit as exit_:
+                code = exit_.code
+        return code, out.getvalue()
+
+    def absent_callers(self, missing):
+        self.runner.PUBLICATION_PATH = missing
+
+        def must_not_build():
+            raise AssertionError("absent path must not build a publication")
+
+        return {
+            "select_ci_subset": lambda: self.run_caller(
+                self.runner.select_ci_subset
+            ),
+            "check_committed_publication": lambda: self.run_caller(
+                lambda: check_committed_publication(
+                    missing,
+                    "tools/qualify_mutations_matrix.py",
+                    build_publication=must_not_build,
+                    differing_fields=lambda committed, fresh: [],
+                    summary_fields=lambda fresh: {},
+                )
+            ),
+        }
+
     def test_absent_publication_is_exit_2_never_a_pass(self):
-        self.runner.PUBLICATION_PATH = self.tmp_path / "missing.json"
-        _, code, out = self.run_quiet()
-        self.assertEqual(code, 2)
-        self.assertIn("ABSENT", out)
+        missing = self.tmp_path / "missing.json"
+        for name, run in self.absent_callers(missing).items():
+            with self.subTest(caller=name):
+                code, out = run()
+                self.assertEqual(code, 2)
+                self.assertEqual(out, ABSENT_LINE)
+
+    def test_corrupt_publication_never_takes_the_absent_path(self):
+        corrupt = self.tmp_path / "corrupt.json"
+        corrupt.write_text("{not json")
+        self.runner.PUBLICATION_PATH = corrupt
+
+        def must_not_build():
+            raise AssertionError("corrupt JSON must fail before building")
+
+        callers = {
+            "select_ci_subset": lambda: self.runner.select_ci_subset(),
+            "check_committed_publication": lambda: check_committed_publication(
+                corrupt,
+                "tools/qualify_mutations_matrix.py",
+                build_publication=must_not_build,
+                differing_fields=lambda committed, fresh: [],
+                summary_fields=lambda fresh: {},
+            ),
+        }
+        for name, caller in callers.items():
+            with self.subTest(caller=name):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    with self.assertRaises(json.JSONDecodeError):
+                        caller()
+                self.assertNotIn("ABSENT", out.getvalue())
 
     def test_ci_subset_and_check_are_mutually_exclusive(self):
         completed = subprocess.run(

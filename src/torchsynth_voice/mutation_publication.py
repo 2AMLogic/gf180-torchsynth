@@ -38,6 +38,26 @@ def plain_differing_fields(
     return compare
 
 
+def require_publication(publication_path: Path, tool_name: str) -> None:
+    """Fail visibly when the committed publication is missing.
+
+    The single construction site of the ``ABSENT`` line: a missing
+    publication prints that line — naming ``tool_name`` as the owning
+    tool and stating that absence is never reported as a pass — and
+    raises ``SystemExit(2)``. A present publication falls through so
+    each caller continues with its own stale/PASS flow; a present but
+    unreadable one is not handled here either, so the caller's
+    ``json.loads`` failure surfaces untouched instead of being reported
+    as absence.
+    """
+    if not publication_path.exists():
+        print(
+            f"publication: ABSENT — requires {tool_name}; "
+            "absence is never reported as a pass"
+        )
+        raise SystemExit(2)
+
+
 def check_committed_publication(
     publication_path: Path,
     tool_name: str,
@@ -53,12 +73,7 @@ def check_committed_publication(
     ``summary_fields(fresh)`` appended after the shared ``status`` and
     ``publication`` keys, preserving the original key order.
     """
-    if not publication_path.exists():
-        print(
-            f"publication: ABSENT — requires {tool_name}; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
+    require_publication(publication_path, tool_name)
     committed = json.loads(publication_path.read_bytes())
     fresh = build_publication()
     failures = differing_fields(committed, fresh)
