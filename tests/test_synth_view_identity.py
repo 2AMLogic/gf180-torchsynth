@@ -293,6 +293,7 @@ class TestClass2RomPayloadMatchesTheLaneProducer(unittest.TestCase):
         # Exactly what ``run_voice.voice`` does before it simulates
         # (tb/run_voice.py:1158-1159), so ``_table`` resolves the way the
         # lane's own ``write_lut_memh`` calls at :829-830 resolve it.
+        cls._saved = dict(run_voice._LUT_TABLES)
         run_voice._LUT_TABLES["audio"] = formats.table
         run_voice._LUT_TABLES["control"] = FixedControlPath(formats.control_spec).table
 
@@ -311,6 +312,13 @@ class TestClass2RomPayloadMatchesTheLaneProducer(unittest.TestCase):
                            for memh, text in cls.lane_text.items()}
         cls.entry_count = package_int_localparams(
             PKG_SV.read_text(encoding="utf-8"))["C5_N_ENTRIES"]
+
+    @classmethod
+    def tearDownClass(cls):
+        import run_voice
+
+        run_voice._LUT_TABLES.clear()
+        run_voice._LUT_TABLES.update(cls._saved)
 
     def test_the_view_writes_the_lane_payload_byte_for_byte(self):
         self.assertEqual(check_payload_hashes(self.ledger["memh_sha256"],
