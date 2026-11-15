@@ -37,6 +37,62 @@ IDENTITY_KEYS = (
     "parameters_before_sha256",
 )
 
+# Trace-level dataflow of the pinned Voice.output (torchsynth/synth.py at
+# 2b0964d4, lines 475-510): producer trace -> consumer traces. This describes
+# the pinned Voice, not either mutation family (#481): both family adapters
+# alias ``VOICE_DATAFLOW`` instead of keeping their own copies, and the map is
+# used only to derive the declared blast radius; every other trace must stay
+# invariant.
+VOICE_ROUTE_TRACES = (
+    "mod_matrix.vco_1_pitch",
+    "mod_matrix.vco_1_amp",
+    "mod_matrix.vco_2_pitch",
+    "mod_matrix.vco_2_amp",
+    "mod_matrix.noise_amp",
+)
+_VOICE_ROUTES = list(VOICE_ROUTE_TRACES)
+VOICE_DATAFLOW: Dict[str, List[str]] = {
+    "keyboard.midi_f0": ["vco_1.raw", "vco_2.raw"],
+    "keyboard.duration": [
+        "lfo_1_rate_adsr.output",
+        "lfo_2_rate_adsr.output",
+        "lfo_1_amp_adsr.output",
+        "lfo_2_amp_adsr.output",
+        "adsr_1.output",
+        "adsr_2.output",
+    ],
+    "lfo_1_rate_adsr.output": ["lfo_1.raw"],
+    "lfo_2_rate_adsr.output": ["lfo_2.raw"],
+    "lfo_1.raw": ["lfo_1.post_control_vca"],
+    "lfo_1_amp_adsr.output": ["lfo_1.post_control_vca"],
+    "lfo_2.raw": ["lfo_2.post_control_vca"],
+    "lfo_2_amp_adsr.output": ["lfo_2.post_control_vca"],
+    "adsr_1.output": _VOICE_ROUTES,
+    "adsr_2.output": _VOICE_ROUTES,
+    "lfo_1.post_control_vca": _VOICE_ROUTES,
+    "lfo_2.post_control_vca": _VOICE_ROUTES,
+    "mod_matrix.vco_1_pitch": ["control_upsample.vco_1_pitch"],
+    "mod_matrix.vco_1_amp": ["control_upsample.vco_1_amp"],
+    "mod_matrix.vco_2_pitch": ["control_upsample.vco_2_pitch"],
+    "mod_matrix.vco_2_amp": ["control_upsample.vco_2_amp"],
+    "mod_matrix.noise_amp": ["control_upsample.noise_amp"],
+    "control_upsample.vco_1_pitch": ["vco_1.raw"],
+    "vco_1.raw": ["vco_1.post_vca"],
+    "control_upsample.vco_1_amp": ["vco_1.post_vca"],
+    "control_upsample.vco_2_pitch": ["vco_2.raw"],
+    "vco_2.raw": ["vco_2.post_vca"],
+    "control_upsample.vco_2_amp": ["vco_2.post_vca"],
+    "noise.raw": ["noise.post_vca"],
+    "control_upsample.noise_amp": ["noise.post_vca"],
+    "vco_1.post_vca": ["mixer.pre_normalization"],
+    "vco_2.post_vca": ["mixer.pre_normalization"],
+    "noise.post_vca": ["mixer.pre_normalization"],
+    "mixer.pre_normalization": ["mixer.peak", "mixer.output"],
+    "mixer.peak": ["mixer.gain"],
+    "mixer.gain": ["mixer.output"],
+    "mixer.output": [],
+}
+
 
 def load_manifest(root: Path, ops: Any) -> Tuple[Dict[str, Any], str]:
     """Load the committed manifest; fail closed on revision/digest drift."""
