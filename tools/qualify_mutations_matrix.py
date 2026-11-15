@@ -55,6 +55,10 @@ from torchsynth_voice import mutations_identity  # noqa: E402
 from torchsynth_voice import mutations_signal  # noqa: E402
 from torchsynth_voice import mutations_timing  # noqa: E402
 from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
+from torchsynth_voice.mutation_publication import (  # noqa: E402
+    check_committed_publication,
+    plain_differing_fields,
+)
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
 
@@ -926,32 +930,22 @@ def select_ci_subset() -> list:
     return fresh["rows"]
 
 
+def _summary_fields(fresh: dict) -> dict:
+    return {
+        "fault_rows": fresh["counts"]["fault_rows"],
+        "mandatory_detectors": fresh["counts"]["mandatory_detectors"],
+        "ci_subset_rows": fresh["counts"]["ci_subset_rows"],
+        "sensitivity_no_verdict": fresh["counts"]["sensitivity_no_verdict"],
+    }
+
+
 def check_publication() -> None:
-    if not PUBLICATION_PATH.exists():
-        print(
-            "publication: ABSENT — requires tools/qualify_mutations_matrix.py; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
-    committed = json.loads(PUBLICATION_PATH.read_bytes())
-    fresh = build_publication()
-    failures = [
-        field for field in COMPARABLE_FIELDS if committed.get(field) != fresh[field]
-    ]
-    if failures:
-        print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
-        raise SystemExit(1)
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "fault_rows": fresh["counts"]["fault_rows"],
-                "mandatory_detectors": fresh["counts"]["mandatory_detectors"],
-                "ci_subset_rows": fresh["counts"]["ci_subset_rows"],
-                "sensitivity_no_verdict": fresh["counts"]["sensitivity_no_verdict"],
-            }
-        )
+    check_committed_publication(
+        PUBLICATION_PATH,
+        "tools/qualify_mutations_matrix.py",
+        build_publication,
+        plain_differing_fields(COMPARABLE_FIELDS),
+        _summary_fields,
     )
 
 
