@@ -4,6 +4,8 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-14
 
+- **PR #471**: docs: record a 2026-11-14 klt 0.9.2.dev re-check status for friction F1-F12
+- **Issue #466** (closed): Re-check klt friction items F1-F12 against a current klt release and record each item's status
 - **PR #462**: refactor: give the f32le sidecar codec and trace digest one definition each
 - **Issue #461** (closed): Fold vco2_golden.py's duplicate voice_digest and f32le word-packing helpers into the shared modules
 
