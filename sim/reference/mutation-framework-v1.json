@@ -207,7 +207,7 @@
   "inputs": {
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "spec/schemas/mutation-v1.schema.json": "1cf1df64b81bcefbd95dadc5d8e17cba65394d600384e92143692bf2f0bd087e",
-    "src/torchsynth_voice/artifacts.py": "be4bf299c6699b547ea321d4eaa7ec719b97b13e63437a0112ab1456fb5fdb33",
+    "src/torchsynth_voice/artifacts.py": "63a286e91b67a0773c01482a1d7d027971aea00a1a0c830023014fa6ee5818ef",
     "src/torchsynth_voice/case_registry.py": "a4e54a7587c14500b80ee18379519c6382ccdcb1a7b70b72a80e91a41e0b2077",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",

@@ -72,12 +72,12 @@ jobs:
         run: python3 tools/generate_rtl_constants.py --check
       # T1 items 9 and 10 (issue 389). Pin the klayout-tools PyPI release
       # that carries `signoff --attest` (a git pin reports a dev version
-      # and no longer satisfies `==0.8.0`, klayout-tools#2823). Drift in an
+      # and no longer satisfies `==0.9.2`, klayout-tools#2823). Drift in an
       # inventoried file turns this red.
       - name: T1 item 9/10 attestation drift check (klt, PDK-free)
         timeout-minutes: 10
         run: |
-          KLT="klayout-tools==0.8.0"
+          KLT="klayout-tools==0.9.2"
           pip install uv
           uvx --from "$KLT" klt --version
           uvx --from "$KLT" klt signoff --attest 9 --inventory evidence/item9-inventory.json --check evidence/item9-attestation.json
@@ -87,13 +87,13 @@ jobs:
       # `klt signoff --manifest` exits 3 while any T1 item is unmet (valid
       # JSON still on stdout); every other non-zero code is a real failure.
       # Regenerate after a manifest or attestation change with:
-      #   uvx --from "klayout-tools==0.8.0" klt signoff \
+      #   uvx --from "klayout-tools==0.9.2" klt signoff \
       #     --manifest manifests/gf180-torchsynth.signoff.json --format json \
       #     > manifests/gf180-torchsynth.signoff-report.json   # exit 3 expected
       - name: T1 signoff report drift check (klt, PDK-free)
         timeout-minutes: 5
         run: |
-          KLT="klayout-tools==0.8.0"
+          KLT="klayout-tools==0.9.2"
           pip install uv
           rc=0
           uvx --from "$KLT" klt signoff --manifest manifests/gf180-torchsynth.signoff.json --format json > "$RUNNER_TEMP/signoff-report.json" || rc=$?

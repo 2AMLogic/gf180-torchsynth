@@ -1264,7 +1264,7 @@
       "links": {
         "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
         "envelope_ids": [
-          "mu1-e06d4fe921fb9ad7d93e8ce65cb67ecefde9b079b58583839c3c17b9f2e4ef88"
+          "mu1-d6b7fd80f7b13a0e8aa8effe61743bb14de7626386726fed759988f84fc60d6a"
         ],
         "observed_refusal": "frequency_hz measured near 4.87 Hz against declared truth 4.37 Hz beyond the 0.02 Hz mandatory limit (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1304,7 +1304,7 @@
       "links": {
         "downstream": "periodic_estimators.score_periodic against the committed sim/qualification/periodic-v1.json range cell",
         "envelope_ids": [
-          "mu1-7152e6cafc6a483ca60be3bdd7de59459a6899e89e9723626a0f2aa66c57cc13"
+          "mu1-e24369d8f88243e5337cd313669c7745834f3dacee5716451cfbe8c4fd486256"
         ],
         "observed_refusal": "depth_peak_to_peak measured near 2.1 against declared truth 2.0 beyond the 0.01 native mandatory limit (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1460,7 +1460,7 @@
       "links": {
         "downstream": "paired_metrics time-locked primary row (analytic exactness rubric); source lane and parameter-map digest equality",
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "observed_refusal": "ZOH re-derivation diverges from the landed align_corners=False interpolation (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1498,7 +1498,7 @@
       "links": {
         "downstream": "trace_capture.check_endpoint_bytes + paired exactness row",
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "observed_refusal": "trace_capture.check_endpoint_bytes: endpoint loss: upsampled first/last sample bytes differ from control",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1536,7 +1536,7 @@
       "links": {
         "downstream": "paired_metrics time-locked primary row (analytic exactness rubric)",
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "observed_refusal": "one-sample audio delay stays visible in the unaligned row (verdict FAIL)",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -1576,7 +1576,7 @@
       "links": {
         "downstream": "in-band declared-order events + paired exactness row",
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "observed_refusal": "declared-order events applied then applied; the composed fault diverges from the expected trace",
         "publication": "sim/reference/mutation-timing-v1.json"
@@ -2428,9 +2428,9 @@
     }
   ],
   "inputs": {
-    "sim/reference/mutation-identity-v1.json": "67e37e72c6cb806d6974c919d702ee6f34692caaf5cfa20fc8c92e8fe957dac7",
+    "sim/reference/mutation-identity-v1.json": "fda3487b8df71f1d3978fd11c43a70081743591902fbc7e7bc6d786cbe3f2612",
     "sim/reference/mutation-signal-v1.json": "045793c215274eb98a20b002fac29e54ccb94750a9c4bd99ddf2b75f4f86671a",
-    "sim/reference/mutation-timing-v1.json": "08a0d9a457046d7711be0d5036f05f071dcceeb02ea99b2ad9984a8a175d3699",
+    "sim/reference/mutation-timing-v1.json": "65928d0206e600121236414d9b2a96edb31ecb0f0de935c42411eb9b193fa23b",
     "spec/MUTATIONS.md": "ee8098b1df4202246b4518f12544839b7b725842e66e62f3dda3cb5c6bb326df",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
@@ -3513,7 +3513,7 @@
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3570,7 +3570,7 @@
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3598,7 +3598,7 @@
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3628,8 +3628,8 @@
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-7152e6cafc6a483ca60be3bdd7de59459a6899e89e9723626a0f2aa66c57cc13",
-          "mu1-e06d4fe921fb9ad7d93e8ce65cb67ecefde9b079b58583839c3c17b9f2e4ef88"
+          "mu1-d6b7fd80f7b13a0e8aa8effe61743bb14de7626386726fed759988f84fc60d6a",
+          "mu1-e24369d8f88243e5337cd313669c7745834f3dacee5716451cfbe8c4fd486256"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"
@@ -3657,7 +3657,7 @@
       "family": "timing",
       "links": {
         "envelope_ids": [
-          "mu1-81e40f4dd168fd2f2f9c7a48c46c3bb3c0d34f681760828d619367b558023574"
+          "mu1-24eb962a532bb2ee0040f384281b852cc7ca6e4b0bf26c771e2d91fb63db25c5"
         ],
         "publications": [
           "sim/reference/mutation-timing-v1.json"

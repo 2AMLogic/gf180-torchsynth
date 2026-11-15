@@ -2,8 +2,23 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-15
+
+- **PR #489**: refactor: hoist the pinned-Voice DATAFLOW table into one shared source
+- **Issue #481** (closed): Hoist the duplicated DATAFLOW table and route list out of the two runtime adapters
+- **PR #485**: docs: correct F1 caveat in klt-friction.md — the synthesis view has four rewrite jobs, not two
+- **Issue #473** (closed): asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four
+- **PR #483**: feat: record C3 divider-depth proportionality outcome from the committed record
+- **PR #479**: test: prove the four synthesis-view rewrites are value-preserving
+- **Issue #468** (closed): Check from the committed record whether divider depth explains the measured critical paths (feasibility plan C3)
+- **Issue #465** (closed): Add static sample-identity checks for the synthesis-view rewrites (feasibility plan C1, C2; part of #82)
+
 ### 2026-11-14
 
+- **PR #477**: refactor: hoist seven near-duplicate signal/timing runtime helpers
+- **PR #475**: refactor(tb): fold per-lane loader/ops/simulate/budget scaffold into tb_harness
+- **Issue #472** (closed): Deduplicate per-lane scaffold in tb/run_tb.py into the landed tb_harness.py (#383 follow-on)
+- **Issue #463** (closed): Finish the signal/timing runtime dedupe #405 started: 7 near-duplicate helper pairs an exact-match diff missed
 - **PR #471**: docs: record a 2026-11-14 klt 0.9.2.dev re-check status for friction F1-F12
 - **Issue #466** (closed): Re-check klt friction items F1-F12 against a current klt release and record each item's status
 - **PR #462**: refactor: give the f32le sidecar codec and trace digest one definition each
