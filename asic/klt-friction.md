@@ -547,3 +547,15 @@ from the host `klt`.
   so the reaper is still load-bearing on a shared worker. It is called after
   every klt invocation (`tools/synthesize_oneshot.py:345`) and its count is
   reported as `reaped_orphan_abc`.
+
+**Update 2026-11-15 — the CI pin moved.** #467 bumped the CI pin in
+`.github/workflows/tb-sim.yml` and the `README.md` attestation recipe from
+`klayout-tools==0.8.0` to `klayout-tools==0.9.2`. The rows and bullets above
+were measured at the now-superseded `0.8.0` pin and stay verbatim as the
+record at that pin; they are not re-asserted at `0.9.2`. One precondition this
+move satisfies: **F2 is now removable** — at `klayout-tools==0.9.2`
+(`uvx --from "klayout-tools==0.9.2"`, 2026-11-15) `yosys_timeout_s` **is** in
+`klayout_tools.synthesize._ALLOWED_REQUEST_KEYS`, with the same
+`YOSYS_TIMEOUT_MAX_S = 3600.0` ceiling noted above. As stated, each removal
+still belongs to its own issue with its own re-attestation; the F2 hold above
+describes the pre-bump state.
