@@ -151,7 +151,7 @@
     {
       "id": "mutation-matrix-v2",
       "path": "sim/reference/mutation-matrix-v2.json",
-      "sha256": "66f38c2266b45f5ca34902be048d0b64bdafaaf65b793abfb04b67a3fafac650",
+      "sha256": "1bf103bab99c3435cf92d0486fea5ca7c49953449621777fda62414e06fbdc89",
       "role": "#137 bidirectional mutation-coverage matrix"
     },
     {
@@ -217,7 +217,7 @@
     {
       "id": "estimator-qualification-spec",
       "path": "spec/ESTIMATOR-QUALIFICATION.md",
-      "sha256": "0205c7314dd285765fe1d3edd3693fd778e40aee3cf50146582f280728bc93ea",
+      "sha256": "bf299fbf667d44448fc610f01d7c4cff467baef5078638fe36703a7e23d2401c",
       "role": "estimator ledger semantics; preparation gate; publication view"
     },
     {
