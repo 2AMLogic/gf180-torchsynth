@@ -151,7 +151,7 @@
     {
       "id": "mutation-matrix-v2",
       "path": "sim/reference/mutation-matrix-v2.json",
-      "sha256": "66f38c2266b45f5ca34902be048d0b64bdafaaf65b793abfb04b67a3fafac650",
+      "sha256": "b85d1d01c46e1a74edde6355f79c08624995d5a8d6aa523c2159c7ddfa16b00d",
       "role": "#137 bidirectional mutation-coverage matrix"
     },
     {
