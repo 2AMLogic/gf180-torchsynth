@@ -58,6 +58,7 @@ from torchsynth_voice.digest import sha256_bytes as sha256  # noqa: E402
 from torchsynth_voice.mutation_publication import (  # noqa: E402
     check_committed_publication,
     plain_differing_fields,
+    require_publication,
 )
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
@@ -879,12 +880,7 @@ def select_ci_subset() -> list:
     ``matrix-numerical`` job). It never generates; it is independent of the
     generate-before-check ordering defect tracked in #257.
     """
-    if not PUBLICATION_PATH.exists():
-        print(
-            "publication: ABSENT — requires tools/qualify_mutations_matrix.py; "
-            "absence is never reported as a pass"
-        )
-        raise SystemExit(2)
+    require_publication(PUBLICATION_PATH, "tools/qualify_mutations_matrix.py")
     committed = json.loads(PUBLICATION_PATH.read_bytes())
     fresh = build_ci_subset(committed["faults_to_tests"])
     problems = []
