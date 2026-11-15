@@ -4,6 +4,10 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-15
 
+- **PR #489**: refactor: hoist the pinned-Voice DATAFLOW table into one shared source
+- **Issue #481** (closed): Hoist the duplicated DATAFLOW table and route list out of the two runtime adapters
+- **PR #485**: docs: correct F1 caveat in klt-friction.md — the synthesis view has four rewrite jobs, not two
+- **Issue #473** (closed): asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four
 - **PR #483**: feat: record C3 divider-depth proportionality outcome from the committed record
 - **PR #479**: test: prove the four synthesis-view rewrites are value-preserving
 - **Issue #468** (closed): Check from the committed record whether divider depth explains the measured critical paths (feasibility plan C3)
