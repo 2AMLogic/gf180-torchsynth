@@ -24,6 +24,7 @@ the same way.
 
 import copy
 import json
+import math
 import re
 import sys
 import unittest
@@ -347,8 +348,13 @@ def check_plan_pins(record: dict, plan_text: str) -> list:
             problems.append("%s: not in the record" % path)
             continue
         if isinstance(actual, float):
-            decimals = len(expected.partition(".")[2])
-            if round(actual, decimals) != round(float(expected), decimals):
+            # Relative tolerance, not a decimals-from-plan rule: the plan
+            # legitimately states a rounded form of a full-precision record
+            # value, so the comparison precision must never come from the
+            # plan string. rel_tol=1e-3 is the measured knee: it refuses
+            # the small-magnitude truncations (worst_slack_ns -5.38 -> -5)
+            # while passing every committed pin.
+            if not math.isclose(actual, float(expected), rel_tol=1e-3):
                 problems.append("%s: plan %s != record %r" % (path, expected, actual))
         elif str(actual) != expected:
             problems.append("%s: plan %s != record %r" % (path, expected, actual))
@@ -372,6 +378,25 @@ class TestWholeVoicePlan(unittest.TestCase):
         bad = self.plan.replace("%s = %s" % (path, expected), "%s = 1" % path)
         self.assertNotEqual(bad, self.plan)
         self.assertTrue(check_plan_pins(self.record, bad))
+
+    def test_a_truncated_pinned_figure_is_refused(self):
+        # Small-magnitude slack pins restated with fewer decimals: the old
+        # plan-derived-precision rule accepted these (e.g. -5 against a
+        # record of -5.38319, a 7.1% distortion).
+        for old, new in (
+            ("targets.noise_stream_dut.sta.corners.ss_125C_4v50"
+             ".worst_slack_ns = -5.38",
+             "targets.noise_stream_dut.sta.corners.ss_125C_4v50"
+             ".worst_slack_ns = -5"),
+            ("targets.normalization_replay_engine.sta.corners.tt_025C_5v00"
+             ".worst_slack_ns = -170.29",
+             "targets.normalization_replay_engine.sta.corners.tt_025C_5v00"
+             ".worst_slack_ns = -170"),
+        ):
+            with self.subTest(pin_line=old):
+                bad = self.plan.replace(old, new)
+                self.assertNotEqual(bad, self.plan)
+                self.assertTrue(check_plan_pins(self.record, bad))
 
     def test_a_drifted_record_is_refused(self):
         bad = copy.deepcopy(self.record)
@@ -431,12 +456,42 @@ class TestDividerDepthCheck(unittest.TestCase):
         self.assertEqual(cdd.check_plan(self.record, self.plan), [])
 
     def test_an_altered_c3_block_is_refused(self):
+        truncations = (
+            # Each conclusion-bearing figure restated with fewer decimals
+            # than the tool declares: the old plan-derived-precision rule
+            # accepted every one of these, asserting the opposite of the
+            # recorded C3 conclusion.
+            ("tolerance_relative = 0.10", "tolerance_relative = 0"),
+            ("ratio_b1_over_b2 = 1.4795", "ratio_b1_over_b2 = 1"),
+            ("relative_difference = 0.387", "relative_difference = 0"),
+            ("intercept_ps = -220707.30", "intercept_ps = -220707"),
+            ("normalization_replay_engine.ps_per_stage = 3257.44",
+             "normalization_replay_engine.ps_per_stage = 3257"),
+        )
         for old, new in (("verdict = disagree", "verdict = agree"),
-                         ("ps_per_stage = 3257.44", "ps_per_stage = 1")):
+                         ("ps_per_stage = 3257.44", "ps_per_stage = 1")) \
+                + truncations:
             with self.subTest(block_line=old):
                 bad = self.plan.replace(old, new)
                 self.assertNotEqual(bad, self.plan)
                 self.assertTrue(cdd.check_plan(self.record, bad))
+
+    def test_a_c3_figure_stated_with_extra_decimals_is_refused(self):
+        # Deliberate, not accidental: the block records the outcome at the
+        # precision the tool declares, so any other spelling of a figure --
+        # more precision included -- is refused. The comparison precision
+        # never comes from the plan string.
+        bad = self.plan.replace("relative_difference = 0.387",
+                                "relative_difference = 0.3868")
+        self.assertNotEqual(bad, self.plan)
+        self.assertTrue(cdd.check_plan(self.record, bad))
+
+    def test_stage_figures_compare_as_exact_integer_text(self):
+        figures = cdd.block_figures(cdd.analyze(self.record))
+        for name, stages in cdd.MODULE_STAGES:
+            with self.subTest(module=name):
+                self.assertEqual(figures[name + ".stages"], str(stages))
+                self.assertNotIn(".", figures[name + ".stages"])
 
     def test_zero_stage_controls_are_reported_not_divided(self):
         result = cdd.analyze(self.record)
