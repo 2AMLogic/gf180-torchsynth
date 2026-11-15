@@ -519,9 +519,18 @@ from the host `klt`.
   already emits `read_verilog -sv` for a `.sv`/`.svh` source, and this repo's
   RTL is `.sv` (`tb/sv/*.sv`, plus `gf180_patch_table.svh`), so the *syntax*
   reason for the package-to-`` `define `` rewrite is gone. The caveat: that
-  rewrite is only **reason 1** of the view's two jobs — reason 2 (injecting the
-  `quarter_wave_lut` / `lfo_vca_engine` ROM payloads, `tools/synth_view.py:16`)
-  is not klt friction and is unaffected. So this is a *narrowing* of
+  rewrite is only **reason 1** of the view's **four** jobs (the
+  `tools/synth_view.py` module docstring enumerates them). Reasons 2–4 are not
+  `klt` friction and survive the `-sv` fix unchanged: **reason 2** — injecting
+  the ROM payloads into `quarter_wave_lut`, `sine_vco_engine` and
+  `lfo_vca_engine`; **reason 3** — dropping `upsample_engine`'s optional
+  `+max_j` plusarg (a simulation walk cap); **reason 4** — rewriting the
+  `adsr_engine` / `lfo_vca_engine` restoring-division loop guard, whose
+  data-dependent start Yosys refuses to unroll. Reason 4 is the one
+  replacement that is arithmetically identical but a *derived-source* change:
+  the synthesis view is not itself simulated by the committed bit-exactness
+  evidence (`asic/README.md`, "The synthesis view (a derived source -- read
+  this)"). So this is a *narrowing* of
   `synth_view.py`, not a deletion of it, and it changes the derived-source
   bytes that the #82 evidence record hashes — which is why it belongs in its
   own issue with its own re-attestation, not here.
