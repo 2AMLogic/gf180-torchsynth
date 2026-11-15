@@ -1061,7 +1061,7 @@
     "spec/ENVELOPE-ESTIMATORS.md": "8b5e5bb83e5e6bbfe6d714b0895f2a59a637c22af05ee232b8b2834c760a660d",
     "spec/PERIODIC-ESTIMATORS.md": "359b05496ac1498d3a101a8be66725cef66eacd71b6ca295b9a8d79dbb6b8ba1",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
-    "src/torchsynth_voice/artifacts.py": "63a286e91b67a0773c01482a1d7d027971aea00a1a0c830023014fa6ee5818ef",
+    "src/torchsynth_voice/artifacts.py": "4acfa339f5709ebb426a025ed97a35e7115d5663c9633912749ae7fcf6565314",
     "src/torchsynth_voice/envelope_estimators.py": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
     "src/torchsynth_voice/mutation_runtime.py": "46852a31d2151fb64e0a9dadfa288c5cb1a316e6b787263ec39acb0756fb8526",
     "src/torchsynth_voice/mutations.py": "99b7a3dc68dd22721a38b5f9472d9a06a8b855731a0cee01e6cbcd0605f672f4",
