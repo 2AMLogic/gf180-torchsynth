@@ -4,6 +4,17 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-15
 
+- **PR #494**: fix: derive plan-figure comparison precision from the tool, not the plan string
+- **PR #491**: chore: bump klt CI pin 0.8.0 -> 0.9.2 and regenerate T1 attestations
+- **PR #490**: test: restore run_voice._LUT_TABLES after synth view identity class 2
+- **PR #486**: refactor: hoist duplicated check_publication skeleton into one shared helper
+- **PR #474**: refactor: make the estimator ledger schema the sole structural authority
+- **PR #464**: docs: roadmap as of 2026-11-13
+- **Issue #487** (closed): Plan-figure drift guards accept a truncated-precision figure, so 'relative_difference = 0' passes --check
+- **Issue #484** (closed): Simplify: hoist duplicated check_publication skeleton across five mutation qualifiers
+- **Issue #482** (closed): tests/test_synth_view_identity.py leaves run_voice._LUT_TABLES populated for the rest of the process
+- **Issue #470** (closed): Make spec/schemas/estimator-qualification-v1.schema.json live or non-normative: it has a dangling $ref and nothing loads it
+- **Issue #467** (closed): Bump the klayout-tools pin from 0.8.0 to the current PyPI release and regenerate the T1 attestations and signoff report
 - **PR #489**: refactor: hoist the pinned-Voice DATAFLOW table into one shared source
 - **Issue #481** (closed): Hoist the duplicated DATAFLOW table and route list out of the two runtime adapters
 - **PR #485**: docs: correct F1 caveat in klt-friction.md — the synthesis view has four rewrite jobs, not two

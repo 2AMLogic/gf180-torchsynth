@@ -26,12 +26,9 @@ Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a h
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#80**: [Epic #2] Build and measure a resource-generous FPGA core
-- **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
-- **#481**: Hoist the duplicated DATAFLOW table and route list out of the two runtime adapters
 
 ## In Progress
 
@@ -39,16 +36,15 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#470**: Make spec/schemas/estimator-qualification-v1.schema.json live or non-normative: it has a dangling $ref and nothing loads it
-- **#473**: asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four
-- **#484**: Simplify: hoist duplicated check_publication skeleton across five mutation qualifiers
+- **#492**: Land the estimator-qualification schema link in spec/ESTIMATOR-QUALIFICATION.md together with an explicit holdout re-seal decision
+- **#496**: artifacts._structure silently ignores minLength: 10 declared constraints in estimator-qualification-v1.schema.json never run
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#485**: docs: correct F1 caveat in klt-friction.md — the synthesis view has four rewrite jobs, not two
-- **#486**: refactor: hoist duplicated check_publication skeleton into one shared helper
+- **#498**: spec: land the estimator-qualification schema link via the DR-0013 archive mechanism
+- **#499**: fix(artifacts): implement schema minLength and police the full _SCHEMA_FILES allowlist
 
 ## Approved (Awaiting Merge)
 
@@ -78,9 +74,8 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
-- **#467**: Bump the klayout-tools pin from 0.8.0 to the current PyPI release and regenerate the T1 attestations and signoff report *(curated)*
-- **#473**: asic/klt-friction.md: Removable workarounds says synth_view.py has two jobs; it has four *(curated)*
-- **#481**: Hoist the duplicated DATAFLOW table and route list out of the two runtime adapters *(curated)*
+- **#492**: Land the estimator-qualification schema link in spec/ESTIMATOR-QUALIFICATION.md together with an explicit holdout re-seal decision *(curated)*
+- **#496**: artifacts._structure silently ignores minLength: 10 declared constraints in estimator-qualification-v1.schema.json never run *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -112,11 +107,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 2 |
-| Ready (`loom:issue`) | 6 |
-| In Progress (`loom:building`) | 5 |
+| Ready (`loom:issue`) | 3 |
+| In Progress (`loom:building`) | 4 |
 | PRs awaiting review | 2 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 21 |
+| Curated | 20 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
