@@ -28,3 +28,25 @@ their validation would fail.
 
 No new actual-Voice runtime evidence, holdout read, approval or re-seal is
 claimed. A future rubric version binds the live matrix directly.
+
+## Amendment 2026-11-15: second binding (estimator-qualification-spec, issue #492)
+
+The same mechanism is applied a second time, to a `spec/` source. Issue #492
+legitimately refreshes `spec/ESTIMATOR-QUALIFICATION.md` (linking its own
+structural schema, `spec/schemas/estimator-qualification-v1.schema.json`),
+while rubrics v0, v1 and v2 — all `status: frozen` — pin the pre-edit bytes by
+sha256 (`0205c7314dd285765fe1d3edd3693fd778e40aee3cf50146582f280728bc93ea`).
+As before: rubric bytes are unchanged, no seal moves, `pinned_commit` stays
+`eb9207c4606bc867a9f85458b39853fe0eef12a0`, and no hash verification is
+skipped.
+
+- The pre-edit bytes are archived at
+  `spec/reference/history/estimator-qualification-0205c731.md` (sha256
+  `0205c731…`, mirroring the `<name>-<digest-prefix>` convention above; a
+  `spec/` document archives under `spec/reference/history/`).
+- `HISTORICAL_SOURCE_BINDINGS` carries
+  (`rubric-v0`|`rubric-v1`|`rubric-v2`, `estimator-qualification-spec`) rows
+  resolving to that archive; `tools/validate_rubric.py` still checks each
+  rubric's pinned sha256 against the archived bytes.
+- The live `spec/ESTIMATOR-QUALIFICATION.md` is free to advance with its
+  schema; no holdout identity is read (`holdout_identities_read` stays `0`).
