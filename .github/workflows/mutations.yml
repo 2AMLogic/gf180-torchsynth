@@ -84,6 +84,8 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8" # manual pin; Dependabot bumps the action SHA, not this input
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
@@ -114,6 +116,8 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8" # manual pin; Dependabot bumps the action SHA, not this input
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
@@ -142,6 +146,8 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.8" # manual pin; Dependabot bumps the action SHA, not this input
       - name: Install locked numerical environment
         run: uv sync --locked --extra metrics --python '3.13'
       - name: Require NumPy (a missing dependency must not become a skip)
