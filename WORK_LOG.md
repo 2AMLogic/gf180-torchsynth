@@ -2,6 +2,10 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-16
+
+- **PR #509**: build(deps): Bump astral-sh/setup-uv from 10.3.2 to 10.3.3 in the github-actions group across 1 directory
+
 ### 2026-11-15
 
 - **PR #504**: fix(artifacts): anchor estimator sha256 patterns; drive pattern guard and cache from the full allowlist
