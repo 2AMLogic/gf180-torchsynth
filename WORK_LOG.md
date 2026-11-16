@@ -4,6 +4,8 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-15
 
+- **PR #504**: fix(artifacts): anchor estimator sha256 patterns; drive pattern guard and cache from the full allowlist
+- **Issue #502** (closed): Two remaining two-schema-era leftovers in artifacts.py: pattern guard hardcodes 2 of 4 schemas, _schema_document cache sized 2
 - **PR #505**: refactor: extract require_publication primitive for the ABSENT publication line
 - **PR #503**: fix: rebind T1 item 9 evidence klt pin 0.8.0 -> 0.9.2 (inventory, attestation, manifest, report)
 - **PR #499**: fix(artifacts): implement schema minLength and police the full _SCHEMA_FILES allowlist
