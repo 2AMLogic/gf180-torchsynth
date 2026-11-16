@@ -36,15 +36,12 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#492**: Land the estimator-qualification schema link in spec/ESTIMATOR-QUALIFICATION.md together with an explicit holdout re-seal decision
-- **#496**: artifacts._structure silently ignores minLength: 10 declared constraints in estimator-qualification-v1.schema.json never run
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#498**: spec: land the estimator-qualification schema link via the DR-0013 archive mechanism
-- **#499**: fix(artifacts): implement schema minLength and police the full _SCHEMA_FILES allowlist
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -74,8 +71,6 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
-- **#492**: Land the estimator-qualification schema link in spec/ESTIMATOR-QUALIFICATION.md together with an explicit holdout re-seal decision *(curated)*
-- **#496**: artifacts._structure silently ignores minLength: 10 declared constraints in estimator-qualification-v1.schema.json never run *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -108,10 +103,10 @@ Issues carrying `loom:curated`.
 | Very important | 1 |
 | Important | 2 |
 | Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 4 |
-| PRs awaiting review | 2 |
+| In Progress (`loom:building`) | 2 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 20 |
+| Curated | 18 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
