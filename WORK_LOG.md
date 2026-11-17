@@ -2,6 +2,12 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-17
+
+- **PR #512**: ci: pin setup-uv installer version to 0.13.8 across evidence workflows
+- **Issue #514** (closed): Consider a single source of truth for the CI uv version instead of 8 duplicated with: version: pins
+- **Issue #510** (closed): CI installs an unpinned uv binary: setup-uv steps declare no version, so the installer floats across all 8 evidence-generating workflows
+
 ### 2026-11-16
 
 - **PR #509**: build(deps): Bump astral-sh/setup-uv from 10.3.2 to 10.3.3 in the github-actions group across 1 directory
