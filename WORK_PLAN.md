@@ -36,13 +36,12 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#510**: CI installs an unpinned uv binary: setup-uv steps declare no version, so the installer floats across all 8 evidence-generating workflows
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#512**: ci: pin setup-uv installer version to 0.13.8 across evidence workflows
+- **#513**: docs: Guide document maintenance update
 
 ## Approved (Awaiting Merge)
 
@@ -104,7 +103,7 @@ Issues carrying `loom:curated`.
 | Very important | 1 |
 | Important | 2 |
 | Ready (`loom:issue`) | 3 |
-| In Progress (`loom:building`) | 3 |
+| In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 18 |
