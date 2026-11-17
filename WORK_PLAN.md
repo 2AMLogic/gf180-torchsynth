@@ -41,7 +41,7 @@ Issues currently being built (`loom:building`).
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#513**: docs: Guide document maintenance update
 
 ## Approved (Awaiting Merge)
 
@@ -104,7 +104,7 @@ Issues carrying `loom:curated`.
 | Important | 2 |
 | Ready (`loom:issue`) | 3 |
 | In Progress (`loom:building`) | 2 |
-| PRs awaiting review | 0 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 18 |
 | Architect / Hermit proposals | 14 |
