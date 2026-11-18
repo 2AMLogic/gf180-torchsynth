@@ -2,11 +2,13 @@
 
 **Label: synthesis feasibility, plan only.** This document changes no RTL,
 spec, decision record, clock, schedule, evidence record or capability-graph
-node, and it ran no tool. Nothing here is layout, signoff, silicon, hardware
-playback or sound fidelity. It is built from three inputs only: the committed
-record `asic/evidence/oneshot-synth-feasibility-v1.json`, `asic/README.md`
-and a reading of `tb/sv/*.sv`. Figures quoted from the record are pinned to it
-by `tests/test_synth_feasibility_evidence.py` (see "Pinned figures"). Anything
+node. Nothing here is layout, signoff, silicon, hardware playback or sound
+fidelity. It is built from four inputs only: the committed records
+`asic/evidence/oneshot-synth-feasibility-v1.json` and
+`asic/evidence/oneshot-synth-ltp-v1.json` (C4's unmapped per-engine depth
+run, below), `asic/README.md` and a reading of `tb/sv/*.sv`. Figures quoted
+from a record are pinned to it by `tests/test_synth_feasibility_evidence.py`
+(see "Pinned figures" and "C4: unmapped per-engine path depth"). Anything
 not measured is marked **inferred, not measured**.
 
 ## Status of every #82 acceptance criterion
@@ -43,18 +45,19 @@ a clock rather than a structure.
 | B1 | 64-stage unrolled restoring divider (once per clip) | `normalization_replay_engine.sv:172-194` | measured: `normalization_replay_engine` TT setup -170.29 ns, ABC critical path 208,476 ps, 290 flops, 11,050 cells | P3 (schedule), P5 |
 | B2 | 49-stage unrolled restoring divider, one per upsample column (x5) | `upsample_engine.sv:142-170`, instanced `one_shot_voice_top.sv:400` | measured on one instance with B3: TT -69.36 ns; the divider's share of that path is **inferred, not measured** | P3, P5 |
 | B3 | 5 x (1,764 x 24-bit) control-column memories lowered to flip-flops plus a read mux | `upsample_engine.sv:97` | measured: one column is 42,679 flops / 165,732 cells / 5,510,646 um^2; five columns 27.55 mm^2 is arithmetic on that instance, not a measurement | P2 |
-| B4 | Two 96-bit `/` and `%` with a variable divisor (K site) | `sine_vco_engine.sv:169-183` (operators 175-176) | front-end audit: 2 `$div`/`$mod` cells; `sine_vco_engine` did not finish at 300 s, so **no timing number exists** (cost inferred) | P3, P1 |
-| B5 | 107-stage (ADSR) and 92-stage (LFO) unrolled restoring dividers, three per ADSR (x6 instances) and per LFO (x2 instances) | `adsr_engine.sv:126-159` (loop 145); `lfo_vca_engine.sv:156-189` (loop 175); instanced `one_shot_voice_top.sv:261,310` | both engines timed out at 300 s in `abc`; **inferred, not measured**: same style as B1 but deeper | P3, P5 |
-| B6 | 64-stage restoring divider in the square/saw VCO | `square_saw_vco_engine.sv:143-166` | timed out at 300 s in `abc`; **inferred, not measured** | P3, P5 |
-| B7 | 76 of 93 `$mul` are 96x96->96 | sites include `sine_vco_engine.sv:189`, `253-254`; per-site list not in the record | measured count in the front-end audit; per-site delay **inferred, not measured**; mapped as `alumacc`/`maccmap` adder trees with no Booth | P3, P5 |
+| B4 | Two 96-bit `/` and `%` with a variable divisor (K site) | `sine_vco_engine.sv:169-183` (operators 175-176) | front-end audit: 2 `$div`/`$mod` cells, matched by the C4 record (`$div` and `$mod`, each 96x31->96); `sine_vco_engine` did not finish at 300 s, so **no timing number exists** (cost inferred); C4 unmapped longest path 43 cell levels (see C4) | P3, P1 |
+| B5 | 107-stage (ADSR) and 92-stage (LFO) unrolled restoring dividers, three per ADSR (x6 instances) and per LFO (x2 instances) | `adsr_engine.sv:126-159` (loop 145); `lfo_vca_engine.sv:156-189` (loop 175); instanced `one_shot_voice_top.sv:261,310` | both engines timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest paths 32 (`adsr_engine`) and 396 (`lfo_vca_engine`) cell levels; that a divider dominates either path remains **inferred, not measured** | P3, P5 |
+| B6 | 64-stage restoring divider in the square/saw VCO | `square_saw_vco_engine.sv:143-166` | timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest path 501 cell levels, the deepest of the five; any nanosecond figure stays **inferred, not measured** | P3, P5 |
+| B7 | 76 of 93 `$mul` are 96x96->96 | sites include `sine_vco_engine.sv:189`, `253-254`; per-site list not in the record | measured count in the front-end audit; per-site delay **inferred, not measured**; mapped as `alumacc`/`maccmap` adder trees with no Booth; `sine_vco_engine`'s C4 unmapped longest path is 43 cell levels, an upper bound that attributes no share to any multiplier | P3, P5 |
 | B8 | Five copies of the 4097 x 24 sine ROM mapped as logic | `quarter_wave_lut.sv:24`; copies in `square_saw_vco_engine.sv:221-222`, `sine_vco_engine.sv:119`, `lfo_vca_engine.sv:222` | measured: `quarter_wave_lut` 223,693 um^2, TT -11.67 ns on a purely combinational in-to-out path with a 24 ns budget (the 40 ns period less the 8 ns input and 8 ns output delays); `memory_mapping: lowered_to_logic` | P2 |
-| B9 | Mod-matrix 5 x 4 history registers and 4-lane blend | `mod_matrix_engine.sv:85-110` | did not finish even at 2,700 s; cause **inferred, not measured** | P3 |
+| B9 | Mod-matrix 5 x 4 history registers and 4-lane blend | `mod_matrix_engine.sv:85-110` | did not finish even at 2,700 s; C4 unmapped longest path 20 cell levels, the shallowest of the five; why only its `abc` run blew the bound stays **inferred, not measured** | P3 |
 | B10 | Single-cycle timing of every path (no multicycle exception in `klt sta`) | `one_shot_voice_top.sv` 4-cycle group | by construction pessimistic (friction F5); size of the pessimism **not measured** | P1, P3 |
 
 Reading of the table: the measured failures (B1, B3, B8) are all structural,
 not a tool glitch, and each is sized in nanoseconds or square millimetres. The
-unmeasured rows (B4-B7, B9) are the ones the 300 s bound hid. The plan below
-treats them as hypotheses to test cheaply, not as findings.
+rows the 300 s bound hid (B4-B7, B9) now each carry an unmapped cell-level
+depth from C4 (below), while their nanosecond attribution stays open. The
+plan below treats them as hypotheses to test cheaply, not as findings.
 
 ## Sample-identity gap
 
@@ -87,7 +90,7 @@ and is out of scope here.
 | C1 | Rewrite classes 1-2 are value-preserving | Python comparing the view's macro values to the package, and the payload hash to the lane's | pass: zero differences; fail: any differing value or hash | local CPU, seconds |
 | C2 | Rewrite class 4 is identity | software model of both loop forms over `den_msb` in 0..46 | pass: equal quotients and remainders for all tested denominators | local CPU, seconds |
 | C3 | The B-row ordering (which construct dominates the path) | `python3 tools/check_divider_depth.py` — arithmetic on the committed record; no run (default `--check` re-verifies the recorded block in "C3: divider-depth proportionality" below) | pass: B1 (64 stages) and B2 (49 stages) per-stage gate-delay rates agree within the tool's declared tolerance; fail: they do not — proportionality falsified, monotonic ordering still reported, dominance attribution left to C4 | the committed record; no run |
-| C4 | The unmeasured rows B4-B7 cost what B1 suggests | one Yosys `synth -run :fine` plus `abc -D` per engine with a *scoped* script, or a Yosys `ltp`/`stat` of the unmapped design (single engine, one process) | pass: a path-depth number appears inside minutes for the engines that timed out; fail: still no result | one `yosys` process, local, minutes; **not run here**, needs operator sign-off because it is a new tool run on the shared worker |
+| C4 | The unmeasured rows B4-B7 cost what B1 suggests | `python3 tools/synth_feasibility_ltp.py --run` — per-engine Yosys `synth -run :fine -flatten` + `ltp -noff` + `stat` on the unmapped design (one process per engine, 600 s bound; `--check` re-verifies) | pass: a path-depth number appeared inside minutes for every engine that timed out — depths 20-501 cell levels in 0.6-237.4 s each (2026-11-17, section below); fail would have been a recorded timeout or empty `ltp`, not retried | one `yosys` process at a time, local, minutes; recorded in `asic/evidence/oneshot-synth-ltp-v1.json`; no PDK, no liberty, no abc, no timing claim |
 | C5 | The derived view computes the same samples | the #79 lane against the view, after a source-directory override exists | pass: sample-exact on every case; fail: first mismatch localized by the lane | simulator CPU; **not run**; harness change plus a campaign, so needs its own issue |
 | C6 | A restructured divider (iterative or serialized) would close 25 MHz | a DR-governed experiment on one engine (`normalization_replay_engine`, once per clip) | pass: TT setup slack >= 0 with `complete` constraints; fail: still negative | `klt synthesize` plus `klt sta` on one engine; needs a decision record first |
 
@@ -181,6 +184,80 @@ intercept_ps = -220707.30
 verdict = disagree
 ```
 
+### C4: unmapped per-engine path depth
+
+Recorded 2026-11-17 by `python3 tools/synth_feasibility_ltp.py --run`
+(stdlib-only driver; one local `yosys` process per engine, sequential). This
+is the check C4 asked for: a **cell-level count of the unmapped netlist**
+(`synth -run :fine -flatten`, then `ltp -noff` and `stat`) over the derived
+synthesis view — no PDK, no liberty, no `abc -D` or mapping, no
+`klt synthesize`/`klt sta`, and **no timing, slack or area figure of any
+kind**: a cell level is not a nanosecond. Each engine run was bounded by a
+declared 600 s wall-clock timeout recorded with the result; a timeout would
+have been recorded, not retried. The flow reads the view with plain
+`read_verilog` — the same non-SV frontend whose `abc` stage timed out in the
+committed record; the view exists precisely for that frontend. The tool's
+default `--check` mode re-verifies the record against the tree (rebuilding
+the view and comparing hashes) and against the fenced block below.
+
+| engine (plan row) | status | wall (s) | unmapped longest path (cell levels) | ltp endpoints |
+|---|---|---|---|---|
+| sine_vco_engine (B4, B7) | ok | 0.6 | 43 | `fq_word [31]` → ff `op_sats [31]` |
+| adsr_engine (B5) | ok | 6.3 | 32 | `sustain_entry [31]` → ff `env_word [23]` |
+| lfo_vca_engine (B5) | ok | 186.9 | 396 | `rate_env [23]` → ff `post_word [23]` |
+| square_saw_vco_engine (B6) | ok | 237.4 | 501 | `fq_word [31]` → ff `op_sats [31]` |
+| mod_matrix_engine (B9) | ok | 1.6 | 20 | `col_adsr_1 [23]` → ff `op_sats [31]` |
+
+Outcome, in four parts:
+
+1. **C4 passes: the depth numbers exist, inside minutes.** All five engines
+   that `abc` could not finish completed the unmapped flow in 0.6-237.4 s
+   each, inside the declared 600 s bound; none timed out, so no negative
+   result had to be recorded.
+2. **`abc`'s difficulty ordering does not track unmapped depth.** Deepest is
+   `square_saw_vco_engine` (501), then `lfo_vca_engine` (396),
+   `sine_vco_engine` (43), `adsr_engine` (32), and shallowest
+   `mod_matrix_engine` (20) — the one engine whose `abc` run alone blew even
+   2,700 s. On this netlist, depth does not explain which engines `abc`
+   choked on; the attribution the B-rows hid stays open at the nanosecond
+   level.
+3. **The deepest two are the ROM-bearing engines**, consistent with B8's
+   quarter-wave copies lowering to logic: the record pins endpoints and
+   totals only, so which construct dominates each path stays
+   **inferred, not measured**. `lfo_vca_engine`'s post-flow netlist still
+   contains one `$mem_v2` cell (visible in its recorded `stat` counts),
+   which `ltp` would count as a single level if traversed.
+4. **No timing claim follows.** These are cell levels on a technology-blind
+   netlist; they are not comparable with the committed record's ABC
+   critical-path picoseconds (the new record's own comparability note says
+   so), and no row above gains or loses a nanosecond number. DR-0010 P3/P5
+   attribution still requires a mapped run (C6's territory, out of scope
+   here).
+
+```pinned-ltp-figures
+# Recorded outcome of tools/synth_feasibility_ltp.py (check C4), pinned to
+# asic/evidence/oneshot-synth-ltp-v1.json. The tool's --check mode and
+# tests/test_synth_feasibility_evidence.py re-derive every line from the
+# record and refuse drift. Depths are cell levels of the unmapped netlist,
+# never a time.
+timeout_s_per_engine = 600
+engines.sine_vco_engine.status = ok
+engines.sine_vco_engine.wall_time_s = 0.6
+engines.sine_vco_engine.ltp.depth_cells = 43
+engines.adsr_engine.status = ok
+engines.adsr_engine.wall_time_s = 6.3
+engines.adsr_engine.ltp.depth_cells = 32
+engines.lfo_vca_engine.status = ok
+engines.lfo_vca_engine.wall_time_s = 186.9
+engines.lfo_vca_engine.ltp.depth_cells = 396
+engines.square_saw_vco_engine.status = ok
+engines.square_saw_vco_engine.wall_time_s = 237.4
+engines.square_saw_vco_engine.ltp.depth_cells = 501
+engines.mod_matrix_engine.status = ok
+engines.mod_matrix_engine.wall_time_s = 1.6
+engines.mod_matrix_engine.ltp.depth_cells = 20
+```
+
 ## Decision records that must change before any structural edit
 
 No such change is made here. Before any of these edits, a decision record (or
@@ -205,8 +282,10 @@ an amendment to DR-0010) has to exist and be accepted:
 
 No new `klt synthesize` or `klt sta` run, no larger timeout, no lower or new
 clock, no simulation campaign, Monte Carlo, spending or AWS box use, no
-change to the `synthesized` capability node or to the evidence record, and no
-closure or split of #82. Floorplan, place and route stay with #83.
+change to the `synthesized` capability node or to the committed feasibility
+record (`asic/evidence/oneshot-synth-feasibility-v1.json`), and no closure
+or split of #82. Floorplan, place and route stay with #83. C4's plain-yosys
+unmapped depth run (below) is none of those.
 
 ## Pinned figures
 
