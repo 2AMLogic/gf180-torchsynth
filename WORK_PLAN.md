@@ -36,7 +36,6 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
-- **#516**: Whole-voice feasibility check C4: per-engine Yosys ltp/stat depth for timed-out engines
 
 ## PRs Awaiting Review
 
@@ -72,7 +71,6 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)* *(held)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)* *(held)*
-- **#516**: Whole-voice feasibility check C4: per-engine Yosys ltp/stat depth for timed-out engines *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -105,10 +103,10 @@ Issues carrying `loom:curated`.
 | Very important | 1 |
 | Important | 2 |
 | Ready (`loom:issue`, net of holds/building/merge-pending) | 3 |
-| In Progress (`loom:building`) | 3 |
+| In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 19 |
+| Curated | 18 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->

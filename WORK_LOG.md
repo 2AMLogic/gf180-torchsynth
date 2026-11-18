@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-18
+
+- **PR #518**: feat: add per-engine unmapped ltp/stat depth evidence (plan check C4)
+- **Issue #516** (closed): Whole-voice feasibility check C4: per-engine Yosys ltp/stat depth for timed-out engines
+
 ### 2026-11-17
 
 - **PR #512**: ci: pin setup-uv installer version to 0.13.8 across evidence workflows
