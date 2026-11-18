@@ -36,8 +36,10 @@ sys.path.insert(0, str(ROOT / "tools"))
 import synth_view  # noqa: E402
 import synthesize_oneshot as so  # noqa: E402
 import check_divider_depth as cdd  # noqa: E402
+import synth_feasibility_ltp as sfl  # noqa: E402
 
 RECORD = ROOT / "asic" / "evidence" / "oneshot-synth-feasibility-v1.json"
+LTP_RECORD = ROOT / "asic" / "evidence" / "oneshot-synth-ltp-v1.json"
 CORNERS = so.STA_CORNERS
 
 
@@ -504,6 +506,168 @@ class TestDividerDepthCheck(unittest.TestCase):
             else:
                 self.assertAlmostEqual(
                     row["critical_path_ps"] / row["stages"], row["ps_per_stage"])
+
+
+def rebuild_view_ledger(record: dict) -> dict:
+    """Regenerate the synthesis view in a temp dir with the record's memh text.
+
+    The ``$readmemh`` directory text is part of the view's bytes, so a
+    rebuild with a different text would invent drift.
+    """
+    memh_dir_text = record["identity"].get("memh_dir_text", "asic/build/src")
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        return synth_view.build(Path(tmp) / "src", memh_dir_text=memh_dir_text)
+
+
+@unittest.skipUnless(LTP_RECORD.exists() and PLAN.exists(),
+                     "no ltp record or plan")
+class TestLtpDepthEvidence(unittest.TestCase):
+    """Plan check C4: the committed unmapped-depth record must stay honest.
+
+    Same discipline as ``TestCommittedRecord``/``TestWholeVoicePlan``, for
+    the second record: depths are cell levels of an unmapped netlist and can
+    never grow a timing field; every figure the plan quotes is pinned; the
+    hashes are fresh against the working tree. The discrimination checks
+    prove the gates bite.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.record = json.loads(LTP_RECORD.read_text(encoding="utf-8"))
+        cls.plan = PLAN.read_text(encoding="utf-8")
+        cls.ledger = rebuild_view_ledger(cls.record)
+
+    def test_record_is_citeable_depth_evidence(self):
+        self.assertEqual(sfl.check_record(self.record, self.ledger), [])
+
+    def test_record_hashes_are_fresh_against_the_tree(self):
+        identity = self.record["identity"]
+        self.assertEqual(self.ledger["synthesis_view_sha256"],
+                         identity["synthesis_view_sha256"])
+        self.assertEqual(self.ledger["memh_sha256"], identity["memh_sha256"])
+        self.assertEqual(self.ledger["original_sha256"], identity["rtl_sha256"])
+
+    def test_engines_match_c4s_declared_set(self):
+        self.assertEqual(set(self.record["engines"]),
+                         {"sine_vco_engine", "adsr_engine", "lfo_vca_engine",
+                          "square_saw_vco_engine", "mod_matrix_engine"})
+
+    def test_no_timing_like_key_exists_anywhere(self):
+        def keys(node):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    yield key
+                    yield from keys(value)
+            elif isinstance(node, list):
+                for value in node:
+                    yield from keys(value)
+        for key in keys(self.record):
+            self.assertIsNone(sfl.FORBIDDEN_KEY_RE.search(str(key)), key)
+
+    def test_units_say_cell_levels(self):
+        self.assertIn("cell level", self.record["units"])
+        self.assertIn("not nanoseconds",
+                      self.record["engines"]["adsr_engine"]["note"])
+
+    def test_every_engine_ran_inside_its_declared_bound(self):
+        for name, engine in self.record["engines"].items():
+            with self.subTest(engine=name):
+                self.assertEqual(engine["timeout_bound_s"],
+                                 self.record["timeout_s_per_engine"])
+                self.assertLessEqual(engine["wall_time_s"],
+                                     engine["timeout_bound_s"])
+
+    def test_ok_engines_carry_depth_and_counts(self):
+        for name, engine in self.record["engines"].items():
+            if engine["status"] != "ok":
+                continue
+            with self.subTest(engine=name):
+                self.assertIsInstance(engine["ltp"]["depth_cells"], int)
+                self.assertIsInstance(engine["ltp"]["path_start"], str)
+                self.assertIsInstance(engine["ltp"]["path_end"], str)
+                self.assertIsInstance(engine["stat_cell_counts"], dict)
+
+    def test_sine_vco_div_mod_widths_match_the_frontend_audit(self):
+        # B4's front-end audit counted 2 $div/$mod cells; the C4 record
+        # names them with widths -- the two records agree.
+        arith = self.record["engines"]["sine_vco_engine"]["arith_operator_widths"]
+        self.assertEqual(arith,
+                         {"$div": {"96x31->96": 1}, "$mod": {"96x31->96": 1}})
+
+    def test_a_timeout_and_an_empty_ltp_are_results_not_crashes(self):
+        # The negative outcomes C4 accepts: the parsers yield None/{}/nothing
+        # to record, and the gates accept a timeout engine that carries no
+        # depth -- recorded, never retried.
+        self.assertIsNone(sfl.parse_ltp("no longest path here"))
+        self.assertEqual(sfl.parse_stat("nothing"), {})
+        self.assertEqual(sfl.parse_arith(Path("/nonexistent/arith.json")), {})
+        bad = copy.deepcopy(self.record)
+        bad["engines"]["lfo_vca_engine"].update({"status": "timeout",
+                                                 "exit_code": None,
+                                                 "ltp": None,
+                                                 "stat_cell_counts": None,
+                                                 "arith_operator_widths": None})
+        self.assertEqual(
+            [p for p in sfl.check_record(bad, self.ledger)
+             if p.startswith("lfo_vca_engine")], [])
+
+    def test_plan_pins_match_the_record(self):
+        self.assertEqual(sfl.check_plan(self.record, self.plan), [])
+
+    def test_an_altered_pin_is_refused(self):
+        bad = self.plan.replace("engines.adsr_engine.ltp.depth_cells = 32",
+                                "engines.adsr_engine.ltp.depth_cells = 33")
+        self.assertNotEqual(bad, self.plan)
+        self.assertTrue(sfl.check_plan(self.record, bad))
+
+    def test_a_drifted_record_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        bad["engines"]["mod_matrix_engine"]["ltp"]["depth_cells"] = 999
+        self.assertTrue(sfl.check_plan(bad, self.plan))
+
+    def test_a_timing_like_key_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        bad["engines"]["adsr_engine"]["worst_slack_ns"] = -1.0
+        self.assertTrue(sfl.check_record(bad, self.ledger))
+
+    def test_an_absolute_host_path_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        script = bad["engines"]["adsr_engine"]["yosys_script"]
+        bad["engines"]["adsr_engine"]["yosys_script"] = script.replace(
+            "read_verilog asic/build/ltp/src",
+            "read_verilog /home/builder/gf180-torchsynth/asic/build/ltp/src",
+            1)
+        self.assertNotEqual(script,
+                            bad["engines"]["adsr_engine"]["yosys_script"])
+        self.assertTrue(sfl.check_record(bad, self.ledger))
+
+    def test_depth_on_a_timed_out_engine_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        bad["engines"]["mod_matrix_engine"]["status"] = "timeout"
+        self.assertTrue(sfl.check_record(bad, self.ledger))
+
+    def test_b_row_cells_quote_the_recorded_depths(self):
+        row_depth = {"| B4 |": "sine_vco_engine",
+                     "| B6 |": "square_saw_vco_engine",
+                     "| B9 |": "mod_matrix_engine"}
+        for prefix, engine in row_depth.items():
+            line = next(l for l in self.plan.splitlines()
+                        if l.startswith(prefix))
+            depth = self.record["engines"][engine]["ltp"]["depth_cells"]
+            self.assertIn(str(depth), line, engine)
+        b5 = next(l for l in self.plan.splitlines() if l.startswith("| B5 |"))
+        self.assertIn("32", b5)
+        self.assertIn("396", b5)
+
+    def test_c4_row_reports_the_outcome(self):
+        row = next(l for l in self.plan.splitlines() if l.startswith("| C4 |"))
+        self.assertIn("tools/synth_feasibility_ltp.py", row)
+        self.assertIn("2026-11-18", row)
+        self.assertNotIn("**not run here**", row)
+
+    def test_tool_check_mode_passes(self):
+        self.assertEqual(sfl.main(["--check"]), 0)
 
 
 if __name__ == "__main__":
