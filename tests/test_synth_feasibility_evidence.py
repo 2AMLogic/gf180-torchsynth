@@ -631,6 +631,17 @@ class TestLtpDepthEvidence(unittest.TestCase):
         bad["engines"]["adsr_engine"]["worst_slack_ns"] = -1.0
         self.assertTrue(sfl.check_record(bad, self.ledger))
 
+    def test_an_absolute_host_path_is_refused(self):
+        bad = copy.deepcopy(self.record)
+        script = bad["engines"]["adsr_engine"]["yosys_script"]
+        bad["engines"]["adsr_engine"]["yosys_script"] = script.replace(
+            "read_verilog asic/build/ltp/src",
+            "read_verilog /home/builder/gf180-torchsynth/asic/build/ltp/src",
+            1)
+        self.assertNotEqual(script,
+                            bad["engines"]["adsr_engine"]["yosys_script"])
+        self.assertTrue(sfl.check_record(bad, self.ledger))
+
     def test_depth_on_a_timed_out_engine_is_refused(self):
         bad = copy.deepcopy(self.record)
         bad["engines"]["mod_matrix_engine"]["status"] = "timeout"
@@ -652,7 +663,7 @@ class TestLtpDepthEvidence(unittest.TestCase):
     def test_c4_row_reports_the_outcome(self):
         row = next(l for l in self.plan.splitlines() if l.startswith("| C4 |"))
         self.assertIn("tools/synth_feasibility_ltp.py", row)
-        self.assertIn("2026-11-17", row)
+        self.assertIn("2026-11-18", row)
         self.assertNotIn("**not run here**", row)
 
     def test_tool_check_mode_passes(self):
