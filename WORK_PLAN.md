@@ -3,6 +3,7 @@
 This snapshot records workflow state. Issue closure and Loom labels do not establish technical qualification; consult the committed evidence and capability reports for claim status.
 
 <!-- guide:plan-body:start -->
+_Generated: 2026-11-19T09:30:02Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -36,6 +37,7 @@ Issues currently being built (`loom:building`).
 
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
+- **#454**: Whole-voice evidence regeneration has no fleet-reachable substrate: klt sim `commands` needs an operator-supplied approvals file
 
 ## PRs Awaiting Review
 
@@ -71,6 +73,7 @@ Issues carrying `loom:curated`.
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393) *(curated)*
 - **#411**: fix: isolate historical pip from release-era downloads *(curated)* *(held)*
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)* *(held)*
+- **#454**: Whole-voice evidence regeneration has no fleet-reachable substrate: klt sim `commands` needs an operator-supplied approvals file *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -103,10 +106,10 @@ Issues carrying `loom:curated`.
 | Very important | 1 |
 | Important | 2 |
 | Ready (`loom:issue`, net of holds/building/merge-pending) | 3 |
-| In Progress (`loom:building`) | 2 |
+| In Progress (`loom:building`) | 3 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 18 |
+| Curated | 19 |
 | Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
