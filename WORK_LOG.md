@@ -2,6 +2,10 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-19
+
+- **PR #521**: feat: shard (unit) and merge modes for fleet-reachable whole-voice evidence regeneration
+
 ### 2026-11-18
 
 - **PR #518**: feat: add per-engine unmapped ltp/stat depth evidence (plan check C4)
