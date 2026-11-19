@@ -665,6 +665,28 @@ per-case breakdown (~30 s of model derivation, ~10 min of Icarus per
 full-length case, prefix walks proportionally faster) — indicative, not
 bounds. Until the measurement exists, do not submit a sized fleet run.
 
+### Shard equivalence, measured (2026-11-19)
+
+One real comparison of the `regression` profile, at the commit that
+introduced the modes, all three runs on one 16-core dispatch worker with
+Icarus 13.0 (the shard groups deliberately concurrent, as shards would be):
+
+- single-process run: PASS;
+- the same profile as two shard groups — both `case:` units plus
+  `binding-baseline` + `hash` + `replay` (~25 min wall), and all thirteen
+  `mut:` units (~22 min wall), run concurrently with it;
+- `--merge-units` over the 18 shard results: PASS, in seconds.
+
+`diff` of the single-process record and the merged record: **byte-for-byte
+identical**. The same single-process run differs from the pre-refactor
+single-process record in exactly one line, `identity.git_head`; and it
+reproduces the committed `oneshot-whole-voice-regression-v1.json`'s
+`artifact_hashes`, `mutations` and every other common field exactly — the
+committed record predates the `case_diagnostics`/`directed_cases`/
+`peak_envelope` fields, which the current writer adds. These local figures
+are indicative of that worker, not of the fleet's `sim` image; shard sizing
+still waits on the fleet measurement above.
+
 **Reachability before committing a regenerated record.** This repository
 squash-merges, so a record produced on a pull-request branch cites a commit
 that never lands on the default branch;
