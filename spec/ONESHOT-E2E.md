@@ -637,11 +637,14 @@ not this checkout's HEAD, or a dirty `EVIDENCE_TREE_SCOPE` (`tb`, `src`,
 `iverilog` line comes from the shards, because the shards are the runs that
 produced the captures.
 
-Dispatch shape (per shard; `--wait-for-capacity 600` per the worker host
-rules; `--output` is each shard's declared units directory):
+Dispatch shape (per shard; `--image-profile sim` selects the `sim` image —
+the submitter defaults to `heavy`, which has no `iverilog` and a different
+job cap — and `--wait-for-capacity 600` per the worker host rules;
+`--output` is each shard's declared units directory):
 
 ```
 infra/aws/repo-script-submit.py --source-dir <repo> --script tb/run_voice.py \
+    --image-profile sim \
     --issue <n> --output units \
     --shard "--profile regression --unit case:normalization:below --unit case:voice:divide-distinct-levels --workdir work --units-out units" \
     --shard "--profile regression --unit binding-baseline --unit hash --unit replay --workdir work --units-out units" \
