@@ -31,7 +31,7 @@
         "role": "testbench",
         "path": "tb/run_voice.py",
         "passed": true,
-        "content_hash": "sha256:11744dae8a40d8eed734d661d52074dc695e58112f8ebd19505d992dd15260b8"
+        "content_hash": "sha256:f9eb2e20501c79db51a41c956fbe18158b31571db27b834b9a603bd1b18c0fba"
       },
       {
         "check": "present",

@@ -905,7 +905,7 @@ class CorruptCaptureIsInconclusiveNotAVerdict(unittest.TestCase):
         self.addCleanup(shutil.rmtree, tmp, True)
         real_voice = rv.voice
 
-        def fake_voice(workdir):
+        def fake_voice(workdir, profile):
             raise rv.VoiceCaptureIntegrityError("capture audiocap is CORRUPT")
 
         rv.voice = fake_voice

@@ -579,6 +579,127 @@ Exit status is the lane's own pass/fail, and two of the four statuses are
 | `3` | Icarus Verilog is absent and **nothing ran** — never reported as a pass |
 | `4` | a capture file was corrupt, so the run is **INCONCLUSIVE** — see below |
 
+### Sharded regeneration on the Spot fleet (`repo-script`, issue #454)
+
+The three committed whole-voice records must be regenerated whenever a
+digested RTL/bench source changes, and `directed` (43 min measured) and
+`full` (5 h 17 min measured) exceed or crowd the Spot `sim` image's 3600 s
+job cap as a single job. The 2026-11-18 operator ruling
+(`/fleet:decide` round 20261118-r16, q163) therefore routes regeneration
+through the `repo-script` job kind (2AMLogic/2am#6381,
+`infra/aws/repo-script-batch.md`), **sharded**: no `klt sim` command-approvals
+file, no AWS box, and the fleet's `sim` image carries `iverilog`. The runner
+is one flow wearing three modes, not three flows:
+
+| Mode | Command | What it does |
+| --- | --- | --- |
+| single-process | `python3 tb/run_voice.py --profile P --workdir DIR` | the whole flow in one process (unchanged; the PR/CI gate) |
+| unit (shard) | `python3 tb/run_voice.py --profile P --workdir DIR --unit NAME [--unit ...] --units-out DIR` | runs a named subset of the profile's units, writes one result JSON per unit |
+| merge | `python3 tb/run_voice.py --profile P --workdir DIR --merge-units DIR` | validates every planned unit's result and assembles the record |
+| plan | `python3 tb/run_voice.py --profile P --list-units` | prints the planned unit names, one per line |
+
+The planned units (`--list-units`) are, in flow order: one `case:<id>` unit
+per committed case, then `binding-baseline`, `hash`, `replay`, and one
+`mut:<label>` unit per negative control — 18 units for `regression`, 21 for
+`directed`, 47 for `full`. Every unit body and the record assembler are
+shared with the single-process flow, so the modes cannot drift apart: a
+merge of all of a profile's units writes a record **byte-identical** to what
+a single-process run of the same results writes (verified by diffing the two
+records for `regression`; see "Shard equivalence, measured").
+
+**A shard never writes `git_head`/`git_tree_dirty`.** A `repo-script` job
+tree is a synthetic, throwaway one-commit git repo (`RS_SYNTHETIC_HEAD=1`)
+whose id is a function of the tarball bytes, not the repo's commit — a
+record citing it would cite a commit nobody can resolve. A shard records its
+provenance from the submitter's environment instead (`RS_SOURCE_COMMIT`,
+`RS_SRC_SHA256`, both read from the environment, never from git), plus the
+tool/source digests it actually ran (`iverilog`, `rtl_sha256`,
+`fixed_vector_sha256`). Shard results carry the schema
+`gf180-torchsynth/oneshot-whole-voice-shard-v1`; a shard exits `0` only if
+every unit it ran passed (`1` if any failed — a verdict, still written as a
+FAIL result; `2` for a unit name not in the plan or repeated; `3` no
+simulator; `4` corrupt capture).
+
+**The merge owns identity and refuses every gap.** It runs on the dispatch
+worker in the real clean checkout of the commit being regenerated (no
+simulator needed). It refuses — non-zero exit, nothing written — on: an
+unreadable or non-shard JSON in the units tree, a duplicate unit, a missing
+planned unit (which is also how "the shard exited 0 but omitted its declared
+output" surfaces; the submitter fails such a shard first), a unit outside
+the plan, a profile mismatch, a unit that did not PASS, a payload missing
+its declared keys, shards disagreeing on `iverilog`/`rtl_sha256`/
+`fixed_vector_sha256`/`source_commit`/`rs_src_sha256`, shard digests not
+matching the checkout (the shards and the merge must run the same committed
+sources), a shard that wrote git identity anyway, a `source_commit` that is
+not this checkout's HEAD, or a dirty `EVIDENCE_TREE_SCOPE` (`tb`, `src`,
+`spec/reference`, `sim/reference`) in the checkout it runs in. Its record's
+`git_head`/`git_tree_dirty` come from real git in that clean checkout; its
+`iverilog` line comes from the shards, because the shards are the runs that
+produced the captures.
+
+Dispatch shape (per shard; `--image-profile sim` selects the `sim` image —
+the submitter defaults to `heavy`, which has no `iverilog` and a different
+job cap — and `--wait-for-capacity 600` per the worker host rules;
+`--output` is each shard's declared units directory):
+
+```
+infra/aws/repo-script-submit.py --source-dir <repo> --script tb/run_voice.py \
+    --image-profile sim \
+    --issue <n> --output units \
+    --shard "--profile regression --unit case:normalization:below --unit case:voice:divide-distinct-levels --workdir work --units-out units" \
+    --shard "--profile regression --unit binding-baseline --unit hash --unit replay --workdir work --units-out units" \
+    --shard "--profile regression --unit mut:matrix-column-shuffle ... --workdir work --units-out units" \
+    ... one --shard per planned group ...
+    --wait-for-capacity 600 --out ./voice-shards
+python3 tb/run_voice.py --profile regression --workdir out/merged \
+    --merge-units ./voice-shards     # rglob'd, so per-shard subdirs are fine
+```
+
+**Sizing shards: measure first, never guess.** A shard group must keep every
+shard under ~2400 s (margin under the 3600 s `BATCH_MAX_JOB_SECONDS`).
+Per-simulation wall time on the `sim` image is **not yet measured** — the
+first measurement attempt is blocked by the sim-submit IAM refusals
+(2AMLogic/2am#7368, 2am#7568, both open as of 2026-11-19). Before any
+regeneration submit: run one shard of each kind (a single case unit, the
+heaviest mutant, the hash pair), read each shard's wall seconds from its
+`run.json`, and size the groups from those numbers. The only figures that
+exist today are the single-process host measurements above and the dev-Mac
+per-case breakdown (~30 s of model derivation, ~10 min of Icarus per
+full-length case, prefix walks proportionally faster) — indicative, not
+bounds. Until the measurement exists, do not submit a sized fleet run.
+
+### Shard equivalence, measured (2026-11-19)
+
+One real comparison of the `regression` profile, at the commit that
+introduced the modes, all three runs on one 16-core dispatch worker with
+Icarus 13.0 (the shard groups deliberately concurrent, as shards would be):
+
+- single-process run: PASS;
+- the same profile as two shard groups — both `case:` units plus
+  `binding-baseline` + `hash` + `replay` (~25 min wall), and all thirteen
+  `mut:` units (~22 min wall), run concurrently with it;
+- `--merge-units` over the 18 shard results: PASS, in seconds.
+
+`diff` of the single-process record and the merged record: **byte-for-byte
+identical**. The same single-process run differs from the pre-refactor
+single-process record in exactly one line, `identity.git_head`; and it
+reproduces the committed `oneshot-whole-voice-regression-v1.json`'s
+`artifact_hashes`, `mutations` and every other common field exactly — the
+committed record predates the `case_diagnostics`/`directed_cases`/
+`peak_envelope` fields, which the current writer adds. These local figures
+are indicative of that worker, not of the fleet's `sim` image; shard sizing
+still waits on the fleet measurement above.
+
+**Reachability before committing a regenerated record.** This repository
+squash-merges, so a record produced on a pull-request branch cites a commit
+that never lands on the default branch;
+`tools/verify_oneshot_evidence.py --require-reachable` is the gate (and
+`tests/test_committed_oneshot_evidence.py` pins it). Read its
+`reachability_status` procedure and decide the sequence (e.g. regenerate
+after the source change is on `main`, or record the constraint explicitly in
+the PR) **before** regenerating — never weaken the gate to fit a branch
+commit.
+
 ### A corrupt capture is inconclusive, not a verdict
 
 `CLAUDE.md` requires that a check which did not run is never reported as a
