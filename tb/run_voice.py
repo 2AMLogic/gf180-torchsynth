@@ -37,6 +37,18 @@ gate, whose lint ledger is calibrated to CI's toolchain. See
 ``spec/ONESHOT-E2E.md`` for the acceptance ledger, the runtime/regression
 partition and the evidence commands.
 
+Sharded regeneration (issue #454): the 2026-11-18 operator ruling routes
+profile regeneration through the Spot fleet's ``repo-script`` job kind,
+sharded under the sim image's 3600 s job cap. The flow is therefore also
+callable as named **units** -- ``--unit NAME`` runs a subset of one
+profile's stages and writes a per-unit result JSON (no git identity: the
+job tree's HEAD is synthetic), and ``--merge-units DIR`` validates every
+planned unit's result and assembles the SAME evidence record a
+single-process run writes, with identity from real git in the clean
+checkout the merge runs in. ``--list-units`` prints the plan. Both modes
+share every stage body and the record assembler with the single-process
+flow, so the modes cannot drift apart.
+
 Scope honesty: the host still supplies the ratified host-replayed shadow
 words (DR-0010's 2026-09-22 amendment), the S1 entry words, the exact C8
 noise bytes and the phase enables. No synthesis, layout, signoff,
@@ -48,6 +60,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -360,6 +373,168 @@ VOICE_STATUS_NAMES = (
     "pass_index", "norm.compares", "norm.selects", "norm.recip_divs",
     "norm.mults", "norm.narrows", "norm.saturations", "mixer.peak_feed",
 )
+
+# ---------------------------------------------------------------------------
+# Sharded regeneration (issue #454): the unit plan and the negative-control
+# table. The 2026-11-18 operator ruling sends whole-voice regeneration to the
+# Spot fleet's `repo-script` job kind, sharded under the sim image's 3600 s
+# job cap (2AMLogic/2am, infra/aws/repo-script-batch.md). A unit is one
+# independently runnable slice of a profile's flow; a shard invocation
+# (`--unit`) runs a subset and writes one result JSON per unit, and a merge
+# invocation (`--merge-units`) validates every planned unit's result and
+# assembles the SAME record a single-process run writes.
+# ---------------------------------------------------------------------------
+VOICE_SHARD_SCHEMA = "gf180-torchsynth/oneshot-whole-voice-shard-v1"
+UNIT_BINDING_BASELINE = "binding-baseline"
+UNIT_HASH = "hash"
+UNIT_REPLAY = "replay"
+#: Provenance the repo-script submitter exports to the job (RS_COMMIT is
+#: exported again as RS_SOURCE_COMMIT "for scripts that record which source
+#: they ran"). A shard records these from the environment, never from git:
+#: the job tree's HEAD is a synthetic, throwaway one-commit repo whose id is
+#: a function of the tarball bytes, not the repo's commit
+#: (RS_SYNTHETIC_HEAD=1).
+RS_SOURCE_COMMIT_ENV = "RS_SOURCE_COMMIT"
+RS_SRC_SHA256_ENV = "RS_SRC_SHA256"
+#: Identity fields a shard result must never carry -- the job tree's git
+#: identity is synthetic, so the merged record's comes from real git in the
+#: clean checkout the merge runs in, and the merge refuses a shard that
+#: wrote them.
+SHARD_FORBIDDEN_IDENTITY_KEYS = ("git_head", "git_tree_dirty")
+
+
+def voice_unit_case(case_id: str) -> str:
+    """Unit name for one committed case's full-length simulation."""
+
+    return "case:" + case_id
+
+
+def voice_unit_mut(label: str) -> str:
+    """Unit name for one negative control's simulation."""
+
+    return "mut:" + label
+
+
+def voice_mutant_specs() -> list:
+    """Every negative control, as data: one spec per planted RTL mutant.
+
+    The single-process flow and the shard unit plan both read this table, so
+    a mutant added to the flow is automatically a sharded unit and vice
+    versa -- the two cannot drift apart. Order matches the historical
+    stage-4 order; the record's mutation map is keyed, not ordered. The four
+    normalization controls are full-length walks (their fault lives in the
+    replay controller, whose branch decision is only reached at sample
+    176,400); every other control bites inside the declared prefix cap.
+    """
+
+    specs = []
+    for label in VOICE_BINDING_CONTROLS:
+        anchor, replacement = VOICE_TOP_MUTATIONS[label]
+        specs.append({
+            "label": label,
+            "case": VOICE_MUTATION_BINDING_CASE,
+            "target": VOICE_TOP_SV, "anchor": anchor,
+            "replacement": replacement, "localize": None,
+            "walk": VOICE_MUTATION_WALK_CAP,
+        })
+    anchor, replacement = VOICE_TOP_MUTATIONS["missing-sample"]
+    specs.append({
+        "label": "missing-sample",
+        "case": VOICE_MUTATION_DIVIDE_CASE,
+        "target": VOICE_TOP_SV, "anchor": anchor,
+        "replacement": replacement,
+        "localize": ("link.replay_input[pass1]", VOICE_DROP_SAMPLE),
+        "walk": VOICE_MUTATION_WALK_CAP,
+    })
+    specs.append({
+        "label": "interpolation-zoh",
+        "case": VOICE_MUTATION_DIVIDE_CASE,
+        "target": MM_UP_DUT_SV, "anchor": VOICE_ZOH_ANCHOR,
+        "replacement": VOICE_ZOH_MUTANT, "localize": None,
+        "walk": VOICE_MUTATION_WALK_CAP,
+    })
+    truncate_anchor, truncate_replacement = MIX_RTL_MUTATIONS["mixer-truncate"]
+    specs.append({
+        "label": "mixer-truncate",
+        "case": VOICE_MUTATION_DIVIDE_CASE,
+        "target": MIX_DUT_SV, "anchor": truncate_anchor,
+        "replacement": truncate_replacement, "localize": None,
+        "walk": VOICE_MUTATION_WALK_CAP,
+    })
+    for label, case_id, anchor, replacement in (
+        ("normalization-always-off", VOICE_MUTATION_DIVIDE_CASE,
+         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_OFF_MUTANT),
+        ("normalization-always-on", VOICE_MUTATION_BYPASS_CASE,
+         NORMREPLAY_ALWAYS_ON_ANCHOR, NORMREPLAY_ALWAYS_ON_MUTANT),
+        ("normalization-wrong-reciprocal", VOICE_MUTATION_DIVIDE_CASE,
+         NORMREPLAY_WRONG_RECIPROCAL_ANCHOR,
+         NORMREPLAY_WRONG_RECIPROCAL_MUTANT),
+        ("normalization-wrong-peak", VOICE_MUTATION_DIVIDE_CASE,
+         NORMREPLAY_WRONG_PEAK_ANCHOR, NORMREPLAY_WRONG_PEAK_MUTANT),
+    ):
+        specs.append({
+            "label": label, "case": case_id,
+            "target": NORMREPLAY_DUT_SV, "anchor": anchor,
+            "replacement": replacement, "localize": None,
+            "walk": AUDIO_SAMPLES,
+        })
+    return specs
+
+
+def voice_plan(profile: str, cases: dict) -> list:
+    """The declared committed-case plan for a profile."""
+
+    if profile == "full":
+        plan = [(cid, cases[cid]) for cid in sorted(cases)]
+        plan += [(cid, None) for cid in MIX_FIXTURE_CASES]
+        plan += [(cid, None) for cid in sorted(VOICE_DERIVED_CASES)]
+    elif profile == "directed":
+        # Strict superset of `regression`: the same committed cases, plus the
+        # three declared directed vectors at the same full clip length. Every
+        # later stage (binding baseline, hash identity, replay, all thirteen
+        # RTL mutations) is shared code below and runs unchanged.
+        plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
+        plan += [(cid, None) for cid in VOICE_DIRECTED_CASES]
+    else:
+        plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
+    return plan
+
+
+def voice_planned_units(profile: str, cases: dict) -> list:
+    """Every unit a profile's shard fleet must run, in flow order: one per
+    committed case, then the binding baseline, the hash pair, the replay
+    pair and one per negative control. The merge refuses a shard set that
+    does not cover exactly these."""
+
+    units = [voice_unit_case(cid) for cid, _ in voice_plan(profile, cases)]
+    units += [UNIT_BINDING_BASELINE, UNIT_HASH, UNIT_REPLAY]
+    units += [voice_unit_mut(spec["label"]) for spec in voice_mutant_specs()]
+    return units
+
+
+def voice_unit_payload_keys(unit: str) -> tuple:
+    """The payload keys a unit's shard result must carry; the merge refuses
+    a result whose payload is missing any of them."""
+
+    if unit.startswith("case:"):
+        return ("branch", "frozen_pinned", "gain_word", "peak_word", "result")
+    if unit.startswith("mut:"):
+        return ("case", "detected", "walk")
+    if unit == UNIT_HASH:
+        return ("artifact_hashes", "ok")
+    return ("ok",)
+
+
+def voice_shard_provenance() -> dict:
+    """Submitter-exported provenance, read from the environment only."""
+
+    def env(name):
+        return os.environ.get(name) or None
+
+    return {
+        "source_commit": env(RS_SOURCE_COMMIT_ENV),
+        "rs_src_sha256": env(RS_SRC_SHA256_ENV),
+    }
 
 
 def _u32(value: int) -> int:
@@ -1102,8 +1277,61 @@ def voice_artifact_hashes(workdir: Path, runs: int = 1) -> dict:
     return hashes
 
 
-def voice_tool_identity() -> dict:
-    """Exact commit/tool identity for an evidence record (no PDK, no float)."""
+def voice_source_digests() -> dict:
+    """sha256 of every RTL and frozen-vector source an evidence record pins."""
+
+    def digest(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    return {
+        "rtl_sha256": {
+            path.name: digest(path)
+            for path in (CONSTANTS_PKG_SV,) + VOICE_ENGINE_SV
+            + (VOICE_TOP_SV, VOICE_TB_SV)
+        },
+        "fixed_vector_sha256": {
+            "fixed-voice-golden-v1.json": digest(VCO_RECEIPT_PATH),
+            "directed-voice-v1.json": digest(dr.MANIFEST_PATH),
+        },
+    }
+
+
+def voice_git_head(root: Path = ROOT):
+    """The checkout's HEAD, or None when git cannot answer (fail closed)."""
+
+    try:
+        return subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def voice_tree_dirty(root: Path = ROOT) -> bool:
+    """True when the evidence tree scope carries uncommitted changes -- or
+    when git cannot answer at all, which refuses rather than trusts."""
+
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "status", "--porcelain", "--",
+             *EVIDENCE_TREE_SCOPE],
+            check=True, capture_output=True, text=True,
+        ).stdout
+    except Exception:  # noqa: BLE001
+        return True
+    return bool(out.strip())
+
+
+def voice_tool_identity(git_identity: bool = True) -> dict:
+    """Exact commit/tool identity for an evidence record (no PDK, no float).
+
+    ``git_identity=False`` omits the git fields, for a SHARD result: a
+    ``repo-script`` job tree's HEAD is a synthetic one-commit repo whose id
+    is not the repo's, so a shard never writes ``git_head``/``git_tree_dirty``
+    -- the merge computes them from real git in the clean checkout it runs
+    in.
+    """
 
     def git(*args):
         try:
@@ -1121,190 +1349,133 @@ def voice_tool_identity() -> dict:
     except Exception:  # noqa: BLE001
         iverilog = "unavailable"
 
-    def digest(path):
-        return hashlib.sha256(path.read_bytes()).hexdigest()
-
-    return {
-        "git_head": git("rev-parse", "HEAD"),
-        "git_tree_dirty": bool(git("status", "--porcelain", "--",
-                                   *EVIDENCE_TREE_SCOPE)),
-        "iverilog": iverilog,
-        "rtl_sha256": {
-            path.name: digest(path)
-            for path in (CONSTANTS_PKG_SV,) + VOICE_ENGINE_SV
-            + (VOICE_TOP_SV, VOICE_TB_SV)
-        },
-        "fixed_vector_sha256": {
-            "fixed-voice-golden-v1.json": digest(VCO_RECEIPT_PATH),
-            "directed-voice-v1.json": digest(dr.MANIFEST_PATH),
-        },
-    }
+    identity = {}
+    if git_identity:
+        identity["git_head"] = git("rev-parse", "HEAD")
+        identity["git_tree_dirty"] = bool(git("status", "--porcelain", "--",
+                                              *EVIDENCE_TREE_SCOPE))
+    identity.update(voice_source_digests())
+    identity["iverilog"] = iverilog
+    return identity
 
 
 # ---------------------------------------------------------------------------
-# The flow
+# The flow, as named units. Every stage body lives in exactly one function
+# and the single-process flow, shard mode and merge mode all share them, so
+# a sharded regeneration cannot drift from the flow it shards (issue #454).
 # ---------------------------------------------------------------------------
-def voice(workdir: Path) -> int:
-    """Issue #79 flow: the integrated whole-voice top vs the frozen model."""
+def voice_context(profile: str) -> dict:
+    """Receipt, fixtures, formats and the plan: everything but simulation.
 
-    profile = VOICE_PROFILE
+    The refusal gate runs here, before any unit of any mode simulates.
+    """
+
     try:
         receipt, formats, cases = mix_load_receipt()
     except ChoiceNotAccepted as error:
-        print("VOICE REFUSED: accepted register refused: %s" % error)
-        return 1
+        raise SystemExit("VOICE REFUSED: accepted register refused: %s" % error)
     _manifest, fixtures = mix_load_fixtures()
     fcp = FixedControlPath(formats.control_spec)
     _LUT_TABLES["audio"] = formats.table
     _LUT_TABLES["control"] = fcp.table
+    plan = voice_plan(profile, cases)
+    return {
+        "receipt": receipt, "formats": formats, "cases": cases,
+        "fixtures": fixtures, "fcp": fcp,
+        "plan": plan, "plan_frozen": dict(plan), "derived": {},
+    }
 
-    if profile == "full":
-        plan = [(cid, cases[cid]) for cid in sorted(cases)]
-        plan += [(cid, None) for cid in MIX_FIXTURE_CASES]
-        plan += [(cid, None) for cid in sorted(VOICE_DERIVED_CASES)]
-    elif profile == "directed":
-        # Strict superset of `regression`: the same committed cases, plus the
-        # three declared directed vectors at the same full clip length. Every
-        # later stage (binding baseline, hash identity, replay, all thirteen
-        # RTL mutations) is shared code below and runs unchanged.
-        plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
-        plan += [(cid, None) for cid in VOICE_DIRECTED_CASES]
-    else:
-        plan = [(cid, cases.get(cid)) for cid in VOICE_REGRESSION_CASES]
 
-    print("VOICE profile %s: %d cases through the INTEGRATED WHOLE-VOICE top "
-          "(1,764-tick control walk + two 176,400-sample audio passes each); "
-          "frozen receipt bindings verified (DR-0008 %s)"
-          % (profile, len(plan), receipt["bindings"]["dr_0008_status"]))
-    print("VOICE engines composed: %s"
-          % ", ".join(path.stem for path in VOICE_ENGINE_SV))
+def voice_resolve_case(case_id: str, ctx: dict, frozen) -> tuple:
+    """(physical, normalized) for one case id, exactly as the committed-case
+    loop always resolved them: a declared derived fixture's base + overrides
+    first, then a directed fixture's committed parameters, then the frozen
+    receipt parameters of a committed receipt case."""
 
-    ok = True
-    derived = {}
-    divide_seen = bypass_seen = False
-    #: Per-case normalization diagnostics, recorded for every committed case so
-    #: a reader of the evidence record can see which peak/gain words were
-    #: actually walked rather than taking "5 cases passed" on trust.
-    diagnostics = {}
-
-    # 1. Committed cases: every declared checkpoint bit-exact over the full
-    #    176,400-sample clip, both passes, plus exact status/op sequences.
-    for case_id, frozen in plan:
-        case_dir = workdir / ("case-" + case_id.replace(":", "_"))
-        case_dir.mkdir(parents=True, exist_ok=True)
-        if case_id in VOICE_DERIVED_CASES:
-            base_id, overrides = VOICE_DERIVED_CASES[case_id]
-            physical = dict(fixtures[base_id]["physical"])
-            physical.update(overrides)
-            normalized = fixtures[base_id]["normalized"]
-        elif frozen is None:
-            physical = fixtures[case_id]["physical"]
-            normalized = fixtures[case_id]["normalized"]
-        else:
-            physical = frozen["parameters"]
-            normalized = None
-        case = voice_derive_case(
-            formats, fcp, case_id, physical, normalized, frozen
-        )
-        derived[case_id] = case
-        expected = voice_expected(case, AUDIO_SAMPLES)
-        voice_write_case(case_dir, 0, case)
-        capture = voice_simulate(case_dir, 1)[0]
-        rows = voice_rows(capture, expected)
-        counts = (
-            len(capture["ctl"]), len(capture["audio1"]),
-            len(capture["audio2"]), len(capture["out"]),
-        )
-        count_ok = counts == (CONTROL_SAMPLES, AUDIO_SAMPLES, AUDIO_SAMPLES,
-                              AUDIO_SAMPLES)
-        if not count_ok:
-            print("VOICE FAILED: %s capture counts ctl/pass1/pass2/out = "
-                  "%d/%d/%d/%d (need %d/%d/%d/%d)"
-                  % ((case_id,) + counts + (CONTROL_SAMPLES, AUDIO_SAMPLES,
-                                            AUDIO_SAMPLES, AUDIO_SAMPLES)))
-        voice_print_rows(case_id, rows)
-        case_ok = count_ok and not rows
-        if not case_ok:
-            keep = Path(tempfile.mkdtemp(prefix=VOICE_RETAIN_PREFIX))
-            shutil.copytree(case_dir, keep / case_dir.name)
-            print("VOICE: raw artifacts of failed case %s retained at %s"
-                  % (case_id, keep / case_dir.name))
-        ok = ok and case_ok
-        divide_seen = divide_seen or bool(case["norm_diag"]["normalized_branch"])
-        bypass_seen = bypass_seen or not case["norm_diag"]["normalized_branch"]
-        diagnostics[case_id] = {
-            "branch": ("divide" if case["norm_diag"]["normalized_branch"]
-                       else "bypass"),
-            "peak_word": case["norm_diag"]["peak_word"],
-            "gain_word": case["norm_diag"]["gain_word"],
-            "frozen_pinned": frozen is not None,
-            "result": "PASS" if case_ok else "FAIL",
-        }
-        print("case %s: 1764 ticks + 176400 samples x 2 passes over %d named "
-              "traces, branch %s, peak %d, gain %d, frozen-pinned %s -> %s"
-              % (case_id, len(VOICE_CTL_TRACES) + len(VOICE_AUDIO_TRACES) + 1,
-                 "divide" if case["norm_diag"]["normalized_branch"] else "bypass",
-                 case["norm_diag"]["peak_word"], case["norm_diag"]["gain_word"],
-                 frozen is not None, "OK" if case_ok else "FAIL"))
-    branches_ok = divide_seen and bypass_seen
-    print("branch coverage: divide %s, bypass %s -> %s"
-          % (divide_seen, bypass_seen, "OK" if branches_ok else "FAIL"))
-    ok = ok and branches_ok
-
-    # 1a. Peak-envelope coverage. Branch coverage alone says the controller
-    #     took both decisions; it says nothing about *where* in the peak
-    #     range it took them. The directed vectors are the only committed
-    #     cases that reach the ends -- a zero peak (reciprocal undefined) and
-    #     a full-scale peak -- so in any profile that plans them, reaching
-    #     both ends is a pass condition, not a happy accident. If a fixture
-    #     edit ever stopped producing a zero peak, this fails loudly instead
-    #     of quietly shrinking the proof.
-    #     The ceiling is DERIVED from the accepted audio format, never a
-    #     literal: the peak is a magnitude of the Q2.21 mix word, so the
-    #     largest value it can take is the magnitude of that format's own
-    #     negative rail.
-    ceiling = -formats.audio.min_int
-    peaks = sorted(row["peak_word"] for row in diagnostics.values())
-    zero_peak_seen = 0 in peaks
-    ceiling_peak_seen = ceiling in peaks
-    envelope = {"zero_peak": zero_peak_seen,
-                "ceiling_peak": ceiling_peak_seen,
-                "ceiling_peak_word": ceiling,
-                "observed_peaks": peaks}
-    directed_planned = [cid for cid, _ in plan if cid in VOICE_DIRECTED_CASES]
-    if directed_planned:
-        envelope_ok = zero_peak_seen and ceiling_peak_seen
-        print("peak envelope (%d directed vectors planned): zero peak %s, "
-              "ceiling peak %d %s, observed %s -> %s"
-              % (len(directed_planned), zero_peak_seen, ceiling,
-                 ceiling_peak_seen, peaks, "OK" if envelope_ok else "FAIL"))
-        if not envelope_ok:
-            print("VOICE FAILED: the directed vectors are planned but the "
-                  "peak envelope's ends were not both reached -- a fixture "
-                  "change has shrunk the proof this profile exists to make")
-        ok = ok and envelope_ok
-    else:
-        print("peak envelope: no directed vector planned in profile %s "
-              "(observed peaks %s); the envelope's ends are proven by the "
-              "directed and full profiles, not here" % (profile, peaks))
-
-    # 1b. The binding case. Every *binding* control below needs a stimulus
-    #     that distinguishes the two things the fault confuses; the uniform
-    #     `special:stress` parameters do not (see voice_binding_overrides).
-    #     In the `full` profile this case is one of the committed
-    #     full-length cases above; in `regression` it is derived here. Either
-    #     way the pristine RTL is proven bit-exact on it over the declared
-    #     prefix cap FIRST, so a later DETECTED verdict is attributable to the
-    #     planted mutation rather than to a pre-existing divergence.
-    if VOICE_MUTATION_BINDING_CASE not in derived:
-        base_id, overrides = VOICE_DERIVED_CASES[VOICE_MUTATION_BINDING_CASE]
+    fixtures = ctx["fixtures"]
+    if case_id in VOICE_DERIVED_CASES:
+        base_id, overrides = VOICE_DERIVED_CASES[case_id]
         physical = dict(fixtures[base_id]["physical"])
         physical.update(overrides)
-        derived[VOICE_MUTATION_BINDING_CASE] = voice_derive_case(
-            formats, fcp, VOICE_MUTATION_BINDING_CASE, physical,
-            fixtures[base_id]["normalized"], None,
+        return physical, fixtures[base_id]["normalized"]
+    if frozen is None:
+        fixture = fixtures[case_id]
+        return fixture["physical"], fixture["normalized"]
+    return frozen["parameters"], None
+
+
+def voice_derive_case_cached(ctx: dict, case_id: str) -> dict:
+    """A case's derived stimulus/golden truth, computed once per process.
+
+    Derivation is deterministic in the receipt and fixtures, so a shard
+    process deriving a case on its own gets exactly what the single-process
+    flow derived inlined -- that is what makes the merge's record
+    byte-identical to the single-process record.
+    """
+
+    derived = ctx["derived"]
+    if case_id not in derived:
+        frozen = ctx["plan_frozen"].get(case_id)
+        physical, normalized = voice_resolve_case(case_id, ctx, frozen)
+        derived[case_id] = voice_derive_case(
+            ctx["formats"], ctx["fcp"], case_id, physical, normalized, frozen,
         )
-    binding = derived[VOICE_MUTATION_BINDING_CASE]
+    return derived[case_id]
+
+
+def voice_run_case_unit(case_id: str, frozen, ctx: dict,
+                        workdir: Path) -> dict:
+    """Stage 1 for one committed case: full-length bit-exact comparison of
+    every declared checkpoint, both passes, plus exact status/op sequences.
+    Returns the case's diagnostics entry (JSON-serializable)."""
+
+    case_dir = workdir / ("case-" + case_id.replace(":", "_"))
+    case_dir.mkdir(parents=True, exist_ok=True)
+    case = voice_derive_case_cached(ctx, case_id)
+    expected = voice_expected(case, AUDIO_SAMPLES)
+    voice_write_case(case_dir, 0, case)
+    capture = voice_simulate(case_dir, 1)[0]
+    rows = voice_rows(capture, expected)
+    counts = (
+        len(capture["ctl"]), len(capture["audio1"]),
+        len(capture["audio2"]), len(capture["out"]),
+    )
+    count_ok = counts == (CONTROL_SAMPLES, AUDIO_SAMPLES, AUDIO_SAMPLES,
+                          AUDIO_SAMPLES)
+    if not count_ok:
+        print("VOICE FAILED: %s capture counts ctl/pass1/pass2/out = "
+              "%d/%d/%d/%d (need %d/%d/%d/%d)"
+              % ((case_id,) + counts + (CONTROL_SAMPLES, AUDIO_SAMPLES,
+                                        AUDIO_SAMPLES, AUDIO_SAMPLES)))
+    voice_print_rows(case_id, rows)
+    case_ok = count_ok and not rows
+    if not case_ok:
+        keep = Path(tempfile.mkdtemp(prefix=VOICE_RETAIN_PREFIX))
+        shutil.copytree(case_dir, keep / case_dir.name)
+        print("VOICE: raw artifacts of failed case %s retained at %s"
+              % (case_id, keep / case_dir.name))
+    print("case %s: 1764 ticks + 176400 samples x 2 passes over %d named "
+          "traces, branch %s, peak %d, gain %d, frozen-pinned %s -> %s"
+          % (case_id, len(VOICE_CTL_TRACES) + len(VOICE_AUDIO_TRACES) + 1,
+             "divide" if case["norm_diag"]["normalized_branch"] else "bypass",
+             case["norm_diag"]["peak_word"], case["norm_diag"]["gain_word"],
+             frozen is not None, "OK" if case_ok else "FAIL"))
+    return {
+        "branch": ("divide" if case["norm_diag"]["normalized_branch"]
+                   else "bypass"),
+        "peak_word": case["norm_diag"]["peak_word"],
+        "gain_word": case["norm_diag"]["gain_word"],
+        "frozen_pinned": frozen is not None,
+        "result": "PASS" if case_ok else "FAIL",
+    }
+
+
+def voice_run_baseline_unit(ctx: dict, workdir: Path) -> dict:
+    """Stage 1b: the binding case's pristine-RTL prefix baseline. Every
+    binding control's DETECTED verdict below is attributable to the planted
+    mutation only because this baseline is bit-exact first."""
+
+    binding = voice_derive_case_cached(ctx, VOICE_MUTATION_BINDING_CASE)
     baseline_dir = workdir / "binding-baseline"
     baseline_dir.mkdir(parents=True, exist_ok=True)
     voice_write_case(baseline_dir, 0, binding, walk=VOICE_MUTATION_WALK_CAP)
@@ -1320,14 +1491,20 @@ def voice(workdir: Path) -> int:
           "-> %s"
           % (VOICE_MUTATION_BINDING_CASE, VOICE_MUTATION_WALK_CAP,
              "OK" if baseline_ok else "FAIL"))
-    ok = ok and baseline_ok
+    return {"ok": baseline_ok}
 
-    # 2. Two clean simulations are artifact-hash identical (determinism).
+
+def voice_run_hash_unit(ctx: dict, workdir: Path) -> dict:
+    """Stage 2: two clean full-length simulations must be artifact-hash
+    identical (determinism). The first run's hashes are the record's
+    ``artifact_hashes``."""
+
+    case = voice_derive_case_cached(ctx, VOICE_HASH_CASE)
     digests = []
     for attempt in (1, 2):
         d = workdir / ("hash-%d" % attempt)
         d.mkdir(parents=True, exist_ok=True)
-        voice_write_case(d, 0, derived[VOICE_HASH_CASE])
+        voice_write_case(d, 0, case)
         voice_simulate(d, 1)
         digests.append(voice_artifact_hashes(d))
     hash_ok = digests[0] == digests[1]
@@ -1335,25 +1512,29 @@ def voice(workdir: Path) -> int:
           "(%d files) -> %s"
           % (VOICE_HASH_CASE, "identical" if hash_ok else "DIFFER",
              len(digests[0]), "OK" if hash_ok else "FAIL"))
-    ok = ok and hash_ok
+    return {"ok": hash_ok, "artifact_hashes": digests[0]}
 
-    # 3. Back-to-back renders with no reset in between: no datapath state
-    #    (phase accumulators, envelope indices, column memories, peak
-    #    trackers) may leak from run 0 into run 1. Prefix-capped: this is
-    #    state-leak evidence, not a clip-length claim.
+
+def voice_run_replay_unit(ctx: dict, workdir: Path) -> dict:
+    """Stage 3: back-to-back renders with no reset in between -- no datapath
+    state (phase accumulators, envelope indices, column memories, peak
+    trackers) may leak from run 0 into run 1. Prefix-capped: this is
+    state-leak evidence, not a clip-length claim."""
+
+    first, second = VOICE_MUTATION_BYPASS_CASE, VOICE_HASH_CASE
+    first_case = voice_derive_case_cached(ctx, first)
+    second_case = voice_derive_case_cached(ctx, second)
     replay_dir = workdir / "replay"
     replay_dir.mkdir(parents=True, exist_ok=True)
-    first, second = VOICE_MUTATION_BYPASS_CASE, VOICE_HASH_CASE
-    for index, cid in enumerate((first, second)):
-        voice_write_case(replay_dir, index, derived[cid],
-                         walk=VOICE_REPLAY_WALK_CAP)
+    for index, case in enumerate((first_case, second_case)):
+        voice_write_case(replay_dir, index, case, walk=VOICE_REPLAY_WALK_CAP)
     pair = voice_simulate(replay_dir, 2)
     solo_dir = workdir / "solo"
     solo_dir.mkdir(parents=True, exist_ok=True)
-    voice_write_case(solo_dir, 0, derived[second], walk=VOICE_REPLAY_WALK_CAP)
+    voice_write_case(solo_dir, 0, second_case, walk=VOICE_REPLAY_WALK_CAP)
     solo = voice_simulate(solo_dir, 1)[0]
-    capped = {cid: voice_expected(derived[cid], VOICE_REPLAY_WALK_CAP)
-              for cid in (first, second)}
+    capped = {cid: voice_expected(case, VOICE_REPLAY_WALK_CAP)
+              for cid, case in ((first, first_case), (second, second_case))}
     replay_ok = (
         bool(pair[1]["audio1"])
         and [row[3:] for row in pair[1]["audio1"]]
@@ -1367,90 +1548,151 @@ def voice(workdir: Path) -> int:
           "reproduces the solo run and both match the model -> %s"
           % (first, second, VOICE_REPLAY_WALK_CAP,
              "OK" if replay_ok else "FAIL"))
+    return {"ok": replay_ok}
+
+
+def voice_run_mutant_unit(spec: dict, ctx: dict, workdir: Path,
+                          expect_cache: dict) -> dict:
+    """Stage 4 for one negative control: the planted RTL fault MUST be
+    detected -- and, where declared, localized to the declared trace/sample.
+    ``spec`` comes from :func:`voice_mutant_specs`."""
+
+    label = spec["label"]
+    walk = spec["walk"]
+    case = voice_derive_case_cached(ctx, spec["case"])
+    mut_dir = workdir / ("mut-" + label)
+    mut_dir.mkdir(parents=True, exist_ok=True)
+    path = mut_dir / ("mutant_" + spec["target"].name)
+    path.write_text(
+        mutate_sv(spec["target"].read_text(encoding="utf-8"), spec["anchor"],
+                  spec["replacement"], label),
+        encoding="utf-8",
+    )
+    voice_write_case(mut_dir, 0, case, walk=walk)
+    capture = voice_simulate(mut_dir, 1, sources={spec["target"]: path})[0]
+    key = (case["id"], walk)
+    if key not in expect_cache:
+        expect_cache[key] = voice_expected(case, walk)
+    rows = voice_rows(capture, expect_cache[key])
+    detected = bool(rows)
+    first_row = rows[0] if rows else None
+    if spec["localize"] is not None and detected:
+        located = (first_row[0], first_row[2]) == spec["localize"]
+        if not located:
+            print("VOICE FAILED: mutation %s detected but not localized "
+                  "(first row trace=%s sample=%s; need trace=%s sample=%s)"
+                  % ((label, first_row[0], first_row[2]) + spec["localize"]))
+            detected = False
+    print("mutation %s (RTL, case %s, %d-sample walk): %s%s"
+          % (label, case["id"], walk,
+             "DETECTED (test fails the mutant)" if detected
+             else "NOT DETECTED",
+             "; first mismatch trace=%s cycle=%s sample=%s expected=%s "
+             "actual=%s" % first_row if first_row else ""))
+    return {"detected": detected, "walk": walk, "case": case["id"]}
+
+
+def voice_run_unit(unit: str, ctx: dict, workdir: Path,
+                   expect_cache: dict) -> dict:
+    """Run one unit by name and return its payload. The one dispatch every
+    mode shares; a unit name outside the plan is a caller bug."""
+
+    if unit.startswith("case:"):
+        case_id = unit[len("case:"):]
+        return voice_run_case_unit(
+            case_id, ctx["plan_frozen"].get(case_id), ctx, workdir)
+    if unit == UNIT_BINDING_BASELINE:
+        return voice_run_baseline_unit(ctx, workdir)
+    if unit == UNIT_HASH:
+        return voice_run_hash_unit(ctx, workdir)
+    if unit == UNIT_REPLAY:
+        return voice_run_replay_unit(ctx, workdir)
+    if unit.startswith("mut:"):
+        label = unit[len("mut:"):]
+        spec = next(s for s in voice_mutant_specs() if s["label"] == label)
+        return voice_run_mutant_unit(spec, ctx, workdir, expect_cache)
+    raise AssertionError("not a unit name: %r" % unit)
+
+
+def voice_unit_ok(unit: str, payload: dict) -> bool:
+    """A unit's own pass verdict, from its payload."""
+
+    if unit.startswith("case:"):
+        return payload["result"] == "PASS"
+    if unit.startswith("mut:"):
+        return payload["detected"]
+    return bool(payload["ok"])
+
+
+def voice_branch_coverage(diagnostics: dict) -> tuple:
+    """(divide_seen, bypass_seen) over the run's case diagnostics."""
+
+    divide_seen = bypass_seen = False
+    for entry in diagnostics.values():
+        divide_seen = divide_seen or entry["branch"] == "divide"
+        bypass_seen = bypass_seen or not entry["branch"] == "divide"
+    return divide_seen, bypass_seen
+
+
+def voice_envelope(diagnostics: dict, formats, plan: list) -> dict:
+    """Peak-envelope coverage: the ends of the peak range the planned cases
+    actually reached. The ceiling is DERIVED from the accepted audio format,
+    never a literal: the peak is a magnitude of the Q2.21 mix word, so the
+    largest value it can take is the magnitude of that format's own negative
+    rail."""
+
+    ceiling = -formats.audio.min_int
+    peaks = sorted(entry["peak_word"] for entry in diagnostics.values())
+    return {
+        "zero_peak": 0 in peaks,
+        "ceiling_peak": ceiling in peaks,
+        "ceiling_peak_word": ceiling,
+        "observed_peaks": peaks,
+    }
+
+
+def voice_assemble_record(profile: str, plan: list, formats, identity: dict,
+                          payloads: dict) -> dict:
+    """The evidence record, assembled from unit payloads alone.
+
+    The single-process flow and the merge hand in the same payload shape, so
+    for the same results both write the same bytes: this is the ONE record
+    builder (issue #454). ``identity`` is computed by the caller -- always
+    from real git in a clean checkout, never from a shard's synthetic job
+    tree.
+    """
+
+    diagnostics = {cid: payloads[voice_unit_case(cid)] for cid, _ in plan}
+    ok = all(entry["result"] == "PASS" for entry in diagnostics.values())
+    divide_seen, bypass_seen = voice_branch_coverage(diagnostics)
+    branches_ok = divide_seen and bypass_seen
+    ok = ok and branches_ok
+
+    envelope = voice_envelope(diagnostics, formats, plan)
+    directed_planned = [cid for cid, _ in plan if cid in VOICE_DIRECTED_CASES]
+    if directed_planned:
+        envelope_ok = envelope["zero_peak"] and envelope["ceiling_peak"]
+        ok = ok and envelope_ok
+
+    baseline_ok = payloads[UNIT_BINDING_BASELINE]["ok"]
+    ok = ok and baseline_ok
+    hash_ok = payloads[UNIT_HASH]["ok"]
+    ok = ok and hash_ok
+    replay_ok = payloads[UNIT_REPLAY]["ok"]
     ok = ok and replay_ok
 
-    # 4. Negative controls: every planted RTL fault MUST be detected.
-    divide = derived[VOICE_MUTATION_DIVIDE_CASE]
-    bypass = derived[VOICE_MUTATION_BYPASS_CASE]
-    expect_cache = {}
+    mutants = {}
+    for spec in voice_mutant_specs():
+        payload = payloads[voice_unit_mut(spec["label"])]
+        detected = payload["detected"]
+        ok = ok and detected
+        mutants[spec["label"]] = {
+            "verdict": "DETECTED" if detected else "NOT DETECTED",
+            "walk": payload["walk"],
+            "case": payload["case"],
+        }
 
-    def expectation(case, walk):
-        key = (case["id"], walk)
-        if key not in expect_cache:
-            expect_cache[key] = voice_expected(case, walk)
-        return expect_cache[key]
-
-    mutants = []
-
-    def sim_mutant(label, case, target, anchor, replacement, localize=None,
-                   walk=VOICE_MUTATION_WALK_CAP):
-        mut_dir = workdir / ("mut-" + label)
-        mut_dir.mkdir(parents=True, exist_ok=True)
-        path = mut_dir / ("mutant_" + target.name)
-        path.write_text(
-            mutate_sv(target.read_text(encoding="utf-8"), anchor,
-                      replacement, label),
-            encoding="utf-8",
-        )
-        voice_write_case(mut_dir, 0, case, walk=walk)
-        capture = voice_simulate(mut_dir, 1, sources={target: path})[0]
-        rows = voice_rows(capture, expectation(case, walk))
-        detected = bool(rows)
-        first_row = rows[0] if rows else None
-        if localize is not None and detected:
-            located = (first_row[0], first_row[2]) == localize
-            if not located:
-                print("VOICE FAILED: mutation %s detected but not localized "
-                      "(first row trace=%s sample=%s; need trace=%s sample=%s)"
-                      % ((label, first_row[0], first_row[2]) + localize))
-                detected = False
-        print("mutation %s (RTL, case %s, %d-sample walk): %s%s"
-              % (label, case["id"], walk,
-                 "DETECTED (test fails the mutant)" if detected
-                 else "NOT DETECTED",
-                 "; first mismatch trace=%s cycle=%s sample=%s expected=%s "
-                 "actual=%s" % first_row if first_row else ""))
-        mutants.append((label, detected, walk, case["id"]))
-        return detected
-
-    mut_ok = True
-    # Binding faults: demonstrated on the binding case, whose stimulus
-    # distinguishes every source column, envelope role and route. Each bites
-    # inside the declared prefix cap -- five on a named sample trace, and
-    # vco-pitch-wire-swap on the vco_1 engine's MIDI-clamp op counter (the
-    # host-replayed exp2 shadow hides it from every sample trace).
-    for label in VOICE_BINDING_CONTROLS:
-        anchor, replacement = VOICE_TOP_MUTATIONS[label]
-        mut_ok = sim_mutant(label, binding, VOICE_TOP_SV, anchor,
-                            replacement) and mut_ok
-    anchor, replacement = VOICE_TOP_MUTATIONS["missing-sample"]
-    mut_ok = sim_mutant(
-        "missing-sample", divide, VOICE_TOP_SV, anchor, replacement,
-        localize=("link.replay_input[pass1]", VOICE_DROP_SAMPLE),
-    ) and mut_ok
-    mut_ok = sim_mutant("interpolation-zoh", divide, MM_UP_DUT_SV,
-                        VOICE_ZOH_ANCHOR, VOICE_ZOH_MUTANT) and mut_ok
-    mut_ok = sim_mutant("mixer-truncate", divide, MIX_DUT_SV,
-                        *MIX_RTL_MUTATIONS["mixer-truncate"]) and mut_ok
-    # The normalization faults live entirely in the replay controller, whose
-    # branch decision is only reached at sample 176,400 -- they are therefore
-    # demonstrated on a FULL-LENGTH walk, never on a prefix.
-    for label, case, anchor, replacement in (
-        ("normalization-always-off", divide, NORMREPLAY_ALWAYS_ON_ANCHOR,
-         NORMREPLAY_ALWAYS_OFF_MUTANT),
-        ("normalization-always-on", bypass, NORMREPLAY_ALWAYS_ON_ANCHOR,
-         NORMREPLAY_ALWAYS_ON_MUTANT),
-        ("normalization-wrong-reciprocal", divide,
-         NORMREPLAY_WRONG_RECIPROCAL_ANCHOR,
-         NORMREPLAY_WRONG_RECIPROCAL_MUTANT),
-        ("normalization-wrong-peak", divide, NORMREPLAY_WRONG_PEAK_ANCHOR,
-         NORMREPLAY_WRONG_PEAK_MUTANT),
-    ):
-        mut_ok = sim_mutant(label, case, NORMREPLAY_DUT_SV, anchor,
-                            replacement, walk=AUDIO_SAMPLES) and mut_ok
-    ok = ok and mut_ok
-
-    record = {
+    return {
         "schema": "gf180-torchsynth/oneshot-whole-voice-evidence-v1",
         "profile": profile,
         "result": "PASS" if ok else "FAIL",
@@ -1467,36 +1709,85 @@ def voice(workdir: Path) -> int:
         "float_tolerance": None,
         "branch_coverage": {"divide": divide_seen, "bypass": bypass_seen},
         "case_diagnostics": diagnostics,
-        "directed_cases": [cid for cid, _ in plan
-                           if cid in VOICE_DIRECTED_CASES],
+        "directed_cases": directed_planned,
         "peak_envelope": envelope,
-        "mutations": {
-            label: {
-                "verdict": "DETECTED" if det else "NOT DETECTED",
-                "walk": walk,
-                "case": cid,
-            }
-            for label, det, walk, cid in mutants
-        },
+        "mutations": mutants,
         "mutation_kind": "all-RTL",
         "mutation_walk_cap": VOICE_MUTATION_WALK_CAP,
         "replay_walk_cap": VOICE_REPLAY_WALK_CAP,
         "binding_case": VOICE_MUTATION_BINDING_CASE,
         "binding_baseline": "PASS" if baseline_ok else "FAIL",
-        "artifact_hashes": digests[0],
+        "artifact_hashes": payloads[UNIT_HASH]["artifact_hashes"],
         "artifact_hash_case": VOICE_HASH_CASE,
-        "identity": voice_tool_identity(),
+        "identity": identity,
         "scope": "integrated whole-voice one-shot top: #70 x6, #71 x2, #72 "
                  "(matrix + 5 upsample columns), #73, #74, #75, #76, #77. "
                  "Host supplies the ratified host-replayed shadow words, the "
                  "S1 entry words, the exact C8 noise bytes and the phase "
                  "enables. No synthesis/layout/signoff/hardware claim.",
     }
+
+
+def voice(workdir: Path, profile: str = VOICE_PROFILE) -> int:
+    """Issue #79 flow: the integrated whole-voice top vs the frozen model.
+
+    Single-process: every unit of the profile in flow order, one record at
+    the end. The units are exactly :func:`voice_planned_units`' names -- the
+    same set shard mode runs and merge mode requires -- so the three modes
+    are one flow, not three.
+    """
+
+    ctx = voice_context(profile)
+    plan = ctx["plan"]
+    print("VOICE profile %s: %d cases through the INTEGRATED WHOLE-VOICE top "
+          "(1,764-tick control walk + two 176,400-sample audio passes each); "
+          "frozen receipt bindings verified (DR-0008 %s)"
+          % (profile, len(plan), ctx["receipt"]["bindings"]["dr_0008_status"]))
+    print("VOICE engines composed: %s"
+          % ", ".join(path.stem for path in VOICE_ENGINE_SV))
+
+    payloads = {}
+    expect_cache = {}
+    units = voice_planned_units(profile, ctx["cases"])
+    case_unit_count = len(plan)
+    for unit in units[:case_unit_count]:
+        payloads[unit] = voice_run_unit(unit, ctx, workdir, expect_cache)
+
+    # 1/1a. Branch and peak-envelope coverage, from the case payloads.
+    diagnostics = {cid: payloads[voice_unit_case(cid)] for cid, _ in plan}
+    divide_seen, bypass_seen = voice_branch_coverage(diagnostics)
+    print("branch coverage: divide %s, bypass %s -> %s"
+          % (divide_seen, bypass_seen,
+             "OK" if divide_seen and bypass_seen else "FAIL"))
+    envelope = voice_envelope(diagnostics, ctx["formats"], plan)
+    directed_planned = [cid for cid, _ in plan if cid in VOICE_DIRECTED_CASES]
+    if directed_planned:
+        envelope_ok = envelope["zero_peak"] and envelope["ceiling_peak"]
+        print("peak envelope (%d directed vectors planned): zero peak %s, "
+              "ceiling peak %d %s, observed %s -> %s"
+              % (len(directed_planned), envelope["zero_peak"],
+                 envelope["ceiling_peak_word"], envelope["ceiling_peak"],
+                 envelope["observed_peaks"], "OK" if envelope_ok else "FAIL"))
+        if not envelope_ok:
+            print("VOICE FAILED: the directed vectors are planned but the "
+                  "peak envelope's ends were not both reached -- a fixture "
+                  "change has shrunk the proof this profile exists to make")
+    else:
+        print("peak envelope: no directed vector planned in profile %s "
+              "(observed peaks %s); the envelope's ends are proven by the "
+              "directed and full profiles, not here"
+              % (profile, envelope["observed_peaks"]))
+
+    for unit in units[case_unit_count:]:
+        payloads[unit] = voice_run_unit(unit, ctx, workdir, expect_cache)
+
+    record = voice_assemble_record(
+        profile, plan, ctx["formats"], voice_tool_identity(), payloads)
     (workdir / "voice-evidence.json").write_text(
         json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print("VOICE evidence record written to %s"
           % (workdir / "voice-evidence.json"))
-    if not ok:
+    if record["result"] != "PASS":
         print("VOICE RUN FAILED")
         return 1
     print("VOICE RUN PASSED (profile %s: %d cases bit-exact over 1764 control "
@@ -1505,19 +1796,292 @@ def voice(workdir: Path) -> int:
           "artifact-hash identity + %d all-RTL mutations detected; integrated "
           "whole-voice top)"
           % (profile, len(plan),
-             len(VOICE_CTL_TRACES) + len(VOICE_AUDIO_TRACES) + 1, len(mutants)))
+             len(VOICE_CTL_TRACES) + len(VOICE_AUDIO_TRACES) + 1,
+             len(record["mutations"])))
+    return 0
+
+def voice_write_shard_doc(units_out: Path, unit: str, profile: str,
+                          payload: dict, ok: bool) -> Path:
+    """One unit's shard result JSON: identity without git, provenance from
+    the submitter's environment, the unit's payload."""
+
+    doc = {
+        "schema": VOICE_SHARD_SCHEMA,
+        "profile": profile,
+        "unit": unit,
+        "result": "PASS" if ok else "FAIL",
+        "payload": payload,
+    }
+    doc.update(voice_tool_identity(git_identity=False))
+    doc.update(voice_shard_provenance())
+    path = units_out / (unit.replace(":", "_") + ".json")
+    path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8")
+    print("VOICE shard result written to %s" % path)
+    return path
+
+
+def voice_shard(profile: str, units: list, workdir: Path,
+                units_out: Path) -> int:
+    """Unit mode: run a named subset of one profile's units, write one
+    result JSON per unit for the merge to assemble.
+
+    A shard NEVER writes ``git_head``/``git_tree_dirty``: the job tree's
+    HEAD is synthetic (RS_SYNTHETIC_HEAD=1) and a record citing it would
+    cite a commit nobody can resolve. The merge owns identity. Exit 0 iff
+    every unit this invocation ran passed; a failed unit still writes its
+    FAIL result (the merge refuses it by name), a crashed one writes none
+    (the merge refuses it as missing).
+    """
+
+    ctx = voice_context(profile)
+    planned = voice_planned_units(profile, ctx["cases"])
+    unknown = [u for u in units if u not in planned]
+    if unknown:
+        print("VOICE SHARD REFUSED: unit(s) not in profile %s's plan: %s "
+              "(planned units: %s)"
+              % (profile, ", ".join(unknown), ", ".join(planned)))
+        return 2
+    repeated = sorted({u for u in units if units.count(u) > 1})
+    if repeated:
+        print("VOICE SHARD REFUSED: unit(s) repeated on the command line: %s"
+              % ", ".join(repeated))
+        return 2
+    units_out.mkdir(parents=True, exist_ok=True)
+    print("VOICE shard profile %s: running %d of the %d planned units: %s"
+          % (profile, len(units), len(planned), ", ".join(units)))
+    ok = True
+    expect_cache = {}
+    for unit in units:
+        payload = voice_run_unit(unit, ctx, workdir, expect_cache)
+        unit_ok = voice_unit_ok(unit, payload)
+        ok = ok and unit_ok
+        voice_write_shard_doc(units_out, unit, profile, payload, unit_ok)
+    return 0 if ok else 1
+
+
+def voice_merge(profile: str, units_dir: Path, workdir: Path,
+                git_head=None, tree_dirty=None) -> int:
+    """Merge mode: validate every planned shard result and assemble the
+    profile's evidence record -- byte for byte what a single-process run of
+    the same results writes (the assembler is shared).
+
+    Refuses -- non-zero exit, nothing written -- on: an unreadable or
+    non-shard file in the units tree, a duplicate unit, a missing planned
+    unit (which is also how "the shard exited 0 but omitted its declared
+    output" surfaces here), a unit outside the plan, a unit that did not
+    PASS, a malformed payload, shards disagreeing on tools or sources, shard
+    digests not matching this checkout, a shard that wrote git identity, or
+    a dirty evidence tree in the checkout this runs in.
+
+    Identity comes from real git in THIS checkout (which must be clean over
+    ``EVIDENCE_TREE_SCOPE``) and from the shards' own simulator line, because
+    the shards are the runs that produced the captures. ``git_head`` /
+    ``tree_dirty`` are injectable for tests; ``None`` computes from real git.
+
+    ``source_commit`` is the shard jobs' ``RS_SOURCE_COMMIT``; when the
+    shards recorded one, it must be exactly this checkout's HEAD. A local
+    (non-fleet) merge, where the shards ran with no submitter environment,
+    records none and no commit equality is claimed.
+    """
+
+    def refuse(reason: str) -> int:
+        print("VOICE MERGE REFUSED: %s" % reason)
+        return 1
+
+    ctx = voice_context(profile)
+    planned = voice_planned_units(profile, ctx["cases"])
+    docs = {}
+    for path in sorted(units_dir.rglob("*.json")):
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError) as error:
+            return refuse("shard result %s is unreadable: %s" % (path, error))
+        if not isinstance(doc, dict):
+            return refuse("shard result %s is not a JSON object" % path)
+        if doc.get("schema") != VOICE_SHARD_SCHEMA:
+            return refuse(
+                "shard result %s carries schema %r, not %s -- the units "
+                "directory must hold only shard results"
+                % (path, doc.get("schema"), VOICE_SHARD_SCHEMA))
+        unit = doc.get("unit")
+        if not isinstance(unit, str):
+            return refuse("shard result %s names no unit" % path)
+        if unit in docs:
+            return refuse("duplicate shard result for unit %s (%s and %s)"
+                          % (unit, docs[unit][0], path))
+        if doc.get("profile") != profile:
+            return refuse("shard result %s is for profile %r, not %s"
+                          % (path, doc.get("profile"), profile))
+        docs[unit] = (path, doc)
+    missing = [u for u in planned if u not in docs]
+    if missing:
+        return refuse(
+            "missing shard result(s) for profile %s: %s -- a shard that "
+            "exited 0 but omitted its declared output surfaces here"
+            % (profile, ", ".join(missing)))
+    unexpected = sorted(u for u in docs if u not in planned)
+    if unexpected:
+        return refuse("shard result(s) not in profile %s's plan: %s"
+                      % (profile, ", ".join(unexpected)))
+
+    for unit in planned:
+        path, doc = docs[unit]
+        for key in SHARD_FORBIDDEN_IDENTITY_KEYS:
+            if key in doc:
+                return refuse(
+                    "shard result %s for unit %s carries %s -- a shard job "
+                    "tree's git identity is synthetic (RS_SYNTHETIC_HEAD=1) "
+                    "and never citable" % (path, unit, key))
+        if doc.get("result") != "PASS":
+            return refuse("unit %s result is %r, not PASS"
+                          % (unit, doc.get("result")))
+        payload = doc.get("payload")
+        required = voice_unit_payload_keys(unit)
+        absent = sorted(set(required) - set(payload)) \
+            if isinstance(payload, dict) else sorted(required)
+        if absent:
+            return refuse("unit %s's payload misses %s"
+                          % (unit, ", ".join(absent)))
+
+    first_path, first_doc = docs[planned[0]]
+    for key in ("iverilog", "source_commit", "rs_src_sha256"):
+        agreed_value = first_doc.get(key)
+        differing = [u for u in planned[1:]
+                     if docs[u][1].get(key) != agreed_value]
+        if differing:
+            return refuse(
+                "shards disagree on %s: %r (%s) != %r (%s)"
+                % (key, agreed_value, first_path,
+                   docs[differing[0]][1].get(key), docs[differing[0]][0]))
+    for key in ("rtl_sha256", "fixed_vector_sha256"):
+        absent = [u for u in planned
+                  if not isinstance(docs[u][1].get(key), dict)]
+        if absent:
+            return refuse("shard result for %s misses %s" % (absent[0], key))
+        agreed_value = first_doc[key]
+        differing = [u for u in planned[1:] if docs[u][1][key] != agreed_value]
+        if differing:
+            return refuse("shards disagree on %s: unit %s carries a "
+                          "different digest table" % (key, differing[0]))
+        local = voice_source_digests()[key]
+        if agreed_value != local:
+            differing_file = next(
+                (name for name in sorted(set(agreed_value) | set(local))
+                 if agreed_value.get(name) != local.get(name)), "?")
+            return refuse(
+                "shard %s does not match this checkout (%s differs: shards "
+                "have %r, this tree has %r) -- the shards and the merge "
+                "must run the same committed sources"
+                % (key, differing_file, agreed_value.get(differing_file),
+                   local.get(differing_file)))
+
+    if tree_dirty is None:
+        tree_dirty = voice_tree_dirty(ROOT)
+    if tree_dirty:
+        return refuse("the checkout this merge runs in is dirty over %s -- "
+                      "identity must come from a clean tree (commit or "
+                      "revert first)"
+                      % ", ".join(EVIDENCE_TREE_SCOPE))
+    if git_head is None:
+        git_head = voice_git_head(ROOT)
+    if not (isinstance(git_head, str) and len(git_head) == 40):
+        return refuse("could not resolve this checkout's git HEAD (%r)"
+                      % git_head)
+    if first_doc.get("source_commit") is not None \
+            and first_doc["source_commit"] != git_head:
+        return refuse("shards cite source_commit %s but this checkout is at "
+                      "%s" % (first_doc["source_commit"], git_head))
+
+    identity = {
+        "git_head": git_head,
+        "git_tree_dirty": False,
+        "iverilog": first_doc["iverilog"],
+        "rtl_sha256": first_doc["rtl_sha256"],
+        "fixed_vector_sha256": first_doc["fixed_vector_sha256"],
+    }
+    payloads = {unit: docs[unit][1]["payload"] for unit in planned}
+    record = voice_assemble_record(
+        profile, ctx["plan"], ctx["formats"], identity, payloads)
+    workdir.mkdir(parents=True, exist_ok=True)
+    (workdir / "voice-evidence.json").write_text(
+        json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print("VOICE MERGE: %d shard results assembled; evidence record written "
+          "to %s (git_head %s, iverilog %s)"
+          % (len(planned), workdir / "voice-evidence.json", git_head,
+             identity["iverilog"]))
     return 0
 
 
+def voice_inconclusive(error: Exception) -> int:
+    """Exit 4, for a corrupt capture: no verdict, no record, either way."""
+
+    # Its own exit status, distinct from both 0 (pass) and 1 (a real
+    # bit-identity failure), for the same reason exit 3 is distinct for
+    # "iverilog is absent": neither may be read as a verdict. No evidence
+    # record is written, because none was earned -- the run did not
+    # complete, so there is nothing to certify in either direction.
+    print("VOICE RUN INCONCLUSIVE -- a capture file is corrupt, so "
+          "nothing was proven and nothing was disproven:")
+    print("  %s" % error)
+    return 4
+
+
 def main(argv=None) -> int:
-    global VOICE_PROFILE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profile", default="regression",
                         choices=["regression", "directed", "full"])
     parser.add_argument("--workdir", type=Path, default=None,
                         help="keep raw artifacts here instead of a temp dir")
+    parser.add_argument("--unit", action="append", default=None, metavar="NAME",
+                        help="shard mode: run one named unit of --profile "
+                             "(repeatable) and write a result JSON per unit "
+                             "under --units-out; requires --workdir. "
+                             "--list-units prints the names")
+    parser.add_argument("--units-out", type=Path, default=None, metavar="DIR",
+                        help="shard mode: directory for the per-unit result "
+                             "JSONs (default: <workdir>/units)")
+    parser.add_argument("--merge-units", type=Path, default=None, metavar="DIR",
+                        help="merge mode: assemble --profile's evidence "
+                             "record from the shard result JSONs under DIR "
+                             "(searched recursively); requires --workdir for "
+                             "the record. Refuses, writing nothing, unless "
+                             "every planned unit is present, PASS, and "
+                             "tool/source-identical to its siblings and to "
+                             "this clean checkout")
+    parser.add_argument("--list-units", action="store_true",
+                        help="print the planned unit names for --profile, "
+                             "one per line, and exit")
     args = parser.parse_args(argv)
-    VOICE_PROFILE = args.profile
+    modes = [("shard", args.unit is not None),
+             ("merge", args.merge_units is not None),
+             ("list", args.list_units)]
+    if sum(enabled for _name, enabled in modes) > 1:
+        parser.error("--unit, --merge-units and --list-units are mutually "
+                     "exclusive")
+    if args.list_units:
+        _receipt, _formats, cases = mix_load_receipt()
+        for unit in voice_planned_units(args.profile, cases):
+            print(unit)
+        return 0
+    if args.unit is not None or args.merge_units is not None:
+        if args.workdir is None:
+            parser.error("--workdir is required for --unit and --merge-units")
+        if args.unit is not None and shutil.which("iverilog") is None:
+            print("ERROR: iverilog is not installed; the whole-voice run cannot "
+                  "execute here. An unrun check is never a pass.")
+            return 3
+        args.workdir.mkdir(parents=True, exist_ok=True)
+        workdir = args.workdir.resolve()
+        try:
+            if args.unit is not None:
+                units_out = args.units_out or (workdir / "units")
+                return voice_shard(args.profile, args.unit, workdir,
+                                   units_out.resolve())
+            return voice_merge(args.profile, args.merge_units.resolve(),
+                               workdir)
+        except VoiceCaptureIntegrityError as error:
+            return voice_inconclusive(error)
     if shutil.which("iverilog") is None:
         print("ERROR: iverilog is not installed; the whole-voice run cannot "
               "execute here. An unrun check is never a pass.")
@@ -1528,19 +2092,11 @@ def main(argv=None) -> int:
             # Absolute from here on: printed artifact paths stay meaningful
             # after the simulator has chdir'd, and the record names a real
             # location.
-            return voice(args.workdir.resolve())
+            return voice(args.workdir.resolve(), args.profile)
         with tempfile.TemporaryDirectory(prefix="tb-voice-") as tmp:
-            return voice(Path(tmp))
+            return voice(Path(tmp), args.profile)
     except VoiceCaptureIntegrityError as error:
-        # Its own exit status, distinct from both 0 (pass) and 1 (a real
-        # bit-identity failure), for the same reason exit 3 is distinct for
-        # "iverilog is absent": neither may be read as a verdict. No
-        # evidence record is written, because none was earned -- the run did
-        # not complete, so there is nothing to certify in either direction.
-        print("VOICE RUN INCONCLUSIVE -- a capture file is corrupt, so "
-              "nothing was proven and nothing was disproven:")
-        print("  %s" % error)
-        return 4
+        return voice_inconclusive(error)
 
 
 if __name__ == "__main__":
