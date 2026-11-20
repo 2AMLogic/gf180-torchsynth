@@ -23,7 +23,7 @@ This plan does not change any status below.
 | Latch / loop / width / X / unsupported-construct audit | met by #376 (pre-mapping front-end audit) | the derived view is not simulated (below) |
 | Constraint completeness; no "timing met" with unconstrained logic | met for the 4 completed modules; **unmet** for the whole voice | whole-voice verdict is `unverifiable`, never `met` |
 | Called synthesis feasibility, not layout/signoff/silicon | met | unchanged |
-| Generic `klt` friction separated | met by #376 (`asic/klt-friction.md`) | appended to, not fixed here |
+| Generic `klt` friction separated | met by #376 (`asic/klt-friction.md`) | appended to, not fixed here; the open F4/F5 halves are filed upstream as 2AMLogic/klayout-tools#6907 and #6908 |
 | P5 (DR-0010 area/fit/PPA) | **unmet** | needs a mapped whole voice and #83 |
 
 The 25 MHz (40 ns) point is a declared **evaluation point** taken from the
@@ -45,19 +45,28 @@ a clock rather than a structure.
 | B1 | 64-stage unrolled restoring divider (once per clip) | `normalization_replay_engine.sv:172-194` | measured: `normalization_replay_engine` TT setup -170.29 ns, ABC critical path 208,476 ps, 290 flops, 11,050 cells | P3 (schedule), P5 |
 | B2 | 49-stage unrolled restoring divider, one per upsample column (x5) | `upsample_engine.sv:142-170`, instanced `one_shot_voice_top.sv:400` | measured on one instance with B3: TT -69.36 ns; the divider's share of that path is **inferred, not measured** | P3, P5 |
 | B3 | 5 x (1,764 x 24-bit) control-column memories lowered to flip-flops plus a read mux | `upsample_engine.sv:97` | measured: one column is 42,679 flops / 165,732 cells / 5,510,646 um^2; five columns 27.55 mm^2 is arithmetic on that instance, not a measurement | P2 |
-| B4 | Two 96-bit `/` and `%` with a variable divisor (K site) | `sine_vco_engine.sv:169-183` (operators 175-176) | front-end audit: 2 `$div`/`$mod` cells, matched by the C4 record (`$div` and `$mod`, each 96x31->96); `sine_vco_engine` did not finish at 300 s, so **no timing number exists** (cost inferred); C4 unmapped longest path 43 cell levels (see C4) | P3, P1 |
-| B5 | 107-stage (ADSR) and 92-stage (LFO) unrolled restoring dividers, three per ADSR (x6 instances) and per LFO (x2 instances) | `adsr_engine.sv:126-159` (loop 145); `lfo_vca_engine.sv:156-189` (loop 175); instanced `one_shot_voice_top.sv:261,310` | both engines timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest paths 32 (`adsr_engine`) and 396 (`lfo_vca_engine`) cell levels; that a divider dominates either path remains **inferred, not measured** | P3, P5 |
-| B6 | 64-stage restoring divider in the square/saw VCO | `square_saw_vco_engine.sv:143-166` | timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest path 501 cell levels, the deepest of the five; any nanosecond figure stays **inferred, not measured** | P3, P5 |
-| B7 | 76 of 93 `$mul` are 96x96->96 | sites include `sine_vco_engine.sv:189`, `253-254`; per-site list not in the record | measured count in the front-end audit; per-site delay **inferred, not measured**; mapped as `alumacc`/`maccmap` adder trees with no Booth; `sine_vco_engine`'s C4 unmapped longest path is 43 cell levels, an upper bound that attributes no share to any multiplier | P3, P5 |
+| B4 | Two 96-bit `/` and `%` with a variable divisor (K site) | `sine_vco_engine.sv:169-183` (operators 175-176) | front-end audit: 2 `$div`/`$mod` cells, matched by the C4 record (`$div` and `$mod`, each 96x31->96); `sine_vco_engine` did not finish at 300 s, so **no timing number exists** (cost inferred); C4 unmapped longest path 43 cell levels (see C4); ABC-bound friction F4 filed as 2AMLogic/klayout-tools#6907 | P3, P1 |
+| B5 | 107-stage (ADSR) and 92-stage (LFO) unrolled restoring dividers, three per ADSR (x6 instances) and per LFO (x2 instances) | `adsr_engine.sv:126-159` (loop 145); `lfo_vca_engine.sv:156-189` (loop 175); instanced `one_shot_voice_top.sv:261,310` | both engines timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest paths 32 (`adsr_engine`) and 396 (`lfo_vca_engine`) cell levels; that a divider dominates either path remains **inferred, not measured**; ABC-bound friction F4 filed as 2AMLogic/klayout-tools#6907 | P3, P5 |
+| B6 | 64-stage restoring divider in the square/saw VCO | `square_saw_vco_engine.sv:143-166` | timed out at 300 s in `abc`; no timing number exists; C4 unmapped longest path 501 cell levels, the deepest of the five; any nanosecond figure stays **inferred, not measured**; ABC-bound friction F4 filed as 2AMLogic/klayout-tools#6907 | P3, P5 |
+| B7 | 76 of 93 `$mul` are 96x96->96 | sites include `sine_vco_engine.sv:189`, `253-254`; per-site list not in the record | measured count in the front-end audit; per-site delay **inferred, not measured**; mapped as `alumacc`/`maccmap` adder trees with no Booth; `sine_vco_engine`'s C4 unmapped longest path is 43 cell levels, an upper bound that attributes no share to any multiplier; ABC-bound friction F4 filed as 2AMLogic/klayout-tools#6907 | P3, P5 |
 | B8 | Five copies of the 4097 x 24 sine ROM mapped as logic | `quarter_wave_lut.sv:24`; copies in `square_saw_vco_engine.sv:221-222`, `sine_vco_engine.sv:119`, `lfo_vca_engine.sv:222` | measured: `quarter_wave_lut` 223,693 um^2, TT -11.67 ns on a purely combinational in-to-out path with a 24 ns budget (the 40 ns period less the 8 ns input and 8 ns output delays); `memory_mapping: lowered_to_logic` | P2 |
-| B9 | Mod-matrix 5 x 4 history registers and 4-lane blend | `mod_matrix_engine.sv:85-110` | did not finish even at 2,700 s; C4 unmapped longest path 20 cell levels, the shallowest of the five; why only its `abc` run blew the bound stays **inferred, not measured** | P3 |
-| B10 | Single-cycle timing of every path (no multicycle exception in `klt sta`) | `one_shot_voice_top.sv` 4-cycle group | by construction pessimistic (friction F5); size of the pessimism **not measured** | P1, P3 |
+| B9 | Mod-matrix 5 x 4 history registers and 4-lane blend | `mod_matrix_engine.sv:85-110` | did not finish even at 2,700 s; C4 unmapped longest path 20 cell levels, the shallowest of the five; why only its `abc` run blew the bound stays **inferred, not measured**; ABC-bound friction F4 filed as 2AMLogic/klayout-tools#6907 | P3 |
+| B10 | Single-cycle timing of every path (no multicycle exception in `klt sta`) | `one_shot_voice_top.sv` 4-cycle group | by construction pessimistic (friction F5, filed upstream as 2AMLogic/klayout-tools#6908); size of the pessimism **not measured** | P1, P3 |
 
 Reading of the table: the measured failures (B1, B3, B8) are all structural,
 not a tool glitch, and each is sized in nanoseconds or square millimetres. The
 rows the 300 s bound hid (B4-B7, B9) now each carry an unmapped cell-level
 depth from C4 (below), while their nanosecond attribution stays open. The
 plan below treats them as hypotheses to test cheaply, not as findings.
+
+What changes when the filed friction lands (state of 2026-11-20; both
+upstream issues open): with request-level ABC control (friction F4,
+2AMLogic/klayout-tools#6907), a bounded per-engine mapped netlist becomes
+obtainable, so rows B4-B7 and B9 gain real attribution numbers — an
+attribution, never a timing-met claim. With multicycle constraints (friction
+F5's remaining half, 2AMLogic/klayout-tools#6908), B10's single-cycle
+pessimism becomes measurable instead of declared. Both re-runs remain subject
+to #82's authorization and are not part of this plan.
 
 ## Sample-identity gap
 

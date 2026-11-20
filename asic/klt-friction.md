@@ -8,7 +8,28 @@ the sweep ran; per-response `provenance.klt_version` is recorded in the
 evidence record), Yosys 0.67+post, OpenROAD 26Q3-1510, `gf180mcuD`
 (open_pdks `f6eeac7d`), `gf180mcu_fd_sc_mcu7t5v0`.
 
-Not yet filed upstream; the PR for #82 names this file.
+Upstream filing state (recorded 2026-11-20, issue #526). The "2026-11-14
+status" column repeats that re-check's verdict unchanged; F3's newer dated
+status in its own section below supersedes its row here.
+
+| Item | 2026-11-14 status | Upstream issue |
+|---|---|---|
+| F1 | `fixed` | fixed by upstream #3797 (`read_verilog -sv` inference) and #4198 (`sv2v` front end) |
+| F2 | `fixed` (request half) | #5773 (open; tracks the remaining CLI/env-override half) |
+| F3 | `still present` | #5871 (this file's paste-ready title) and #5798, both closed COMPLETED 2026-11-17 — fixed, see F3's 2026-11-20 status |
+| F4 | `still present` | #6907 (open) |
+| F5 | `changed` | landed halves: #2968, #4240, #4241, #5240, #5236; remaining multicycle/generated-clock half: #6908 (open) |
+| F6 | `still present` (host-scoped) | none — host provisioning matter, not a klt code bug |
+| F7 | `still present` | `unfiled` |
+| F8 | `still present` | `unfiled` |
+| F9 | `still present` | `unfiled` |
+| F10 | `still present` | `unfiled` |
+| F11 | `not re-checked` | `unfiled` |
+| F12 | `still present` | `unfiled` |
+
+The `unfiled` rows each carry a paste-ready upstream title in their section
+below; a later pass files them (filing upstream issues was out of scope for
+#526, and no duplicate of an existing open/closed issue was found for them).
 
 ## Re-check of 2026-11-14
 
@@ -178,6 +199,30 @@ this a cheap upstream change.
 * Paste-ready upstream title:
   `klt synthesize: _run_yosys orphans yosys-abc on timeout — use start_new_session + killpg as netlist.py and formal.py already do`
 
+**Status (2026-11-20, host `klt 0.9.3.dev2575+g6bd18bbc8637`, CI pin
+`klayout-tools==0.9.2`): fixed upstream — present at the host tool, absent at
+the CI pin.** Filed upstream as #5871 (under the paste-ready title above) and
+independently as #5798; both closed COMPLETED on 2026-11-17 — #5871 by PR
+#5918, #5798 by PR #6012. Same read-only method as the 2026-11-14 re-check,
+installed package source (the host tool's site-packages now lives under
+`lib/python3.13/`, not the `python3.14` path quoted in the re-check preamble —
+the tool was re-provisioned):
+
+* At the host `0.9.3.dev2575`, a new module `_engine_proc.py` provides
+  `run_in_group()`: `subprocess.run(argv, start_new_session=True, ...)` with
+  the whole group `killpg`-ed on every exit path (normal return, timeout,
+  non-zero exit, `KeyboardInterrupt`/any other `BaseException`); its module
+  docstring names issue #5871. `_run_yosys` now spawns through it
+  (`run_in_group(["yosys", "-s", script_path], ...)`), and its timeout
+  handler still converts `TimeoutExpired` to `SynthesizeError` after the
+  group kill — exactly the `start_new_session` + `killpg` ask above.
+* At the CI pin `klayout-tools==0.9.2` (throwaway
+  `uv run --no-project --with "klayout-tools==0.9.2"` environment,
+  2026-11-20), `klayout_tools._engine_proc` does not exist and `_run_yosys`'s
+  source contains no group kill. The fix postdates the pin (pinned
+  2026-11-15, merged 2026-11-17), so `reap_orphan_abc()` stays load-bearing
+  for runs at the pin.
+
 ## F4. The ABC step has no cheap or bounded mode
 
 The generated script always runs `synth` (whose internal `abc -fast` is
@@ -221,6 +266,9 @@ allowlist above.
 
 * Paste-ready upstream title:
   `klt synthesize: no request-level control over the ABC mapping pass (abc_script / abc_fast / abc_timeout_s), so an arithmetic-heavy cone can only be abandoned`
+
+Filed upstream as 2AMLogic/klayout-tools#6907 (2026-11-20, open), under the
+paste-ready title above.
 
 ## F5. `klt sta` cannot express exceptions, generated clocks or uncertainty
 
@@ -288,6 +336,10 @@ report made for #82 does not need revising.
 
 * Paste-ready upstream title:
   `klt sta: no multicycle-path or generated-clock constraint (false_path_from only anchors at input ports), so an enable-sequenced design can only be timed single-cycle`
+
+Filed upstream as 2AMLogic/klayout-tools#6908 (2026-11-20, open); its delivery
+scope names the four-cycle feedback case as the release criterion, which is
+this repo's B10 shape.
 
 ## F6. `sta` in `klt synthesize` is `null` on the shared worker
 
@@ -559,3 +611,12 @@ move satisfies: **F2 is now removable** — at `klayout-tools==0.9.2`
 `YOSYS_TIMEOUT_MAX_S = 3600.0` ceiling noted above. As stated, each removal
 still belongs to its own issue with its own re-attestation; the F2 hold above
 describes the pre-bump state.
+
+**Update 2026-11-20 — F3 fixed at the host tool, absent at the pin.** The F3
+row's "Fixed at host" cell was measured at `0.9.2.dev1022` and stays as that
+record. At the host `klt 0.9.3.dev2575` the orphan fix is present (F3's
+2026-11-20 status above; upstream #5871/#5798, PRs #5918/#6012); at the CI pin
+`klayout-tools==0.9.2` it is absent (`klayout_tools._engine_proc` does not
+exist there). The row's verdict — keep the reaper — therefore still holds for
+pinned runs, and becomes removable only when the pin moves past the
+2026-11-17 fix.
