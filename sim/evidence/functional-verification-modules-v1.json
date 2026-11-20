@@ -1,0 +1,634 @@
+{
+  "schema": "gf180-torchsynth/functional-verification-modules-v1",
+  "scope": "Sample-exact functional agreement of the listed RTL modules with the frozen fixed-point model's golden vectors under Icarus Verilog, driven by cocotb through `klt functional-verification`. No synthesis, SDF, post-route, hardware or sound-fidelity claim is made.",
+  "result": "pass",
+  "identity": {
+    "git_head": "a482db4248c54682f8dbc81e7b8fcf7d5d41ff42",
+    "git_tree_dirty": false,
+    "tools": {
+      "iverilog": "Icarus Verilog version 13.0 (stable) (v13_0)",
+      "klt": "klt 0.7.1.dev1751+ga7b27571bbf8",
+      "python": "3.12.3",
+      "cocotb": "2.1.0"
+    }
+  },
+  "lanes": [
+    {
+      "lane": "adsr",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_adsr_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 105960.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "16bc0d1d7d176984263b7fe6acf894aa2bc566bc4e553268d79d1d31f0c0ea03",
+      "request_sha256": "8d7a491ff6500e615a27ad501c7f32c2190492826d562e2dd1e52cae12fa1ecf",
+      "test_module_sha256": "b7f4c276e96c27638fd24bab4dc4014b605f8758c993f2dbea69c426f479bbab",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/adsr_engine.sv": "d3d1dc8404cd0ed3949372814b49dd6d721e96cfc64b890448c42c4ec0a054c2",
+        "tb/sv/tb_adsr_engine.sv": "ea62bf0ecaef2f0be6e7bae698741c9bcad531e3a77c650c5dddd71004ec3552"
+      },
+      "vector_sha256": {
+        "sim/reference/adsr-golden-v1/attack-sweep.json": "7d699a9398ec4185cf66aae45a67f074a915b4fdcd967d9d9a13546aba2667d9",
+        "sim/reference/adsr-golden-v1/boundary-tie.json": "55b40c7cf9e1e5438d0aa239e287d7d565828666329eec3c08069a6338355a8f",
+        "sim/reference/adsr-golden-v1/decay-release-sweep.json": "a2ff108f3a3e2992454079345ab69366070383c27b633f0fb5a6a7014cc7df6c",
+        "sim/reference/adsr-golden-v1/frozen-envelope-receipt.json": "88b6976e71a3b0ec97d8559bdb1f9a6d14d03d9ab23cbddacc41d2788cbe88af",
+        "sim/reference/adsr-golden-v1/min-max-degenerate.json": "80e321a0eb3f54204b745f086aa6d3b2cf414006a4400a5eb80a55b83d76fc5e",
+        "sim/reference/adsr-golden-v1/sustain-alpha-sweep.json": "1fb09a454473daee3637fe0a96c07896b1ae01970aa491d37c2df723ca163886"
+      }
+    },
+    {
+      "lane": "anchor",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_anchor_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 1764016.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "ff47dfa918d0c40518a3afeaba16cb1db6e91112b2dea1ed538cb6ec065a1e71",
+      "request_sha256": "64a9c780a2b01634b69b1119f9f6464755fc1789ee2a506f5754749e2e18b987",
+      "test_module_sha256": "03ee8ac3d9747590cf91b55df77d76a87e9452234b62a7b7336da3f03bb46315",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/lut_sine_dut.sv": "c671319be172e1b602e7e1900231edc4e31b96be2d9a64e57004e64782b2086d",
+        "tb/sv/tb_lut_sine_dut.sv": "8672f015c577063b554d2687b776098360bf2b5cb42a4283bc80566f3f186c91"
+      },
+      "vector_sha256": {
+        "sim/reference/golden-vector-fixed-anchor.json": "c5868dcdca4b99f86e767a34d90458e8c9e6705af3b17c5fa25c58de8c6aa4bd"
+      }
+    },
+    {
+      "lane": "lfo",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_lfo_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 229580.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "69e6fe4a1296b24066dc5cc1210e8d1dda5e986b71e481706d2072ceb8e3997b",
+      "request_sha256": "aa94ea29925dbb5606602d9fb9e53dbc78a73bcb03ba7330ab2f567aed4c7a23",
+      "test_module_sha256": "b2a684f48f35e88ca3832ba6954ba78c8d448be236adeb84babb1a714b042cff",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/lfo_vca_engine.sv": "245e18919ec63d755501652fce3e9fecfd384f1c79e3bd554869f93aabf10614",
+        "tb/sv/tb_lfo_vca_engine.sv": "21cff3f0677e5869e59d3f32b3a1d764d073e64fe452f6beca5e9becaba54efb"
+      },
+      "vector_sha256": {
+        "sim/reference/lfo-vca-golden-v1/depth-extremes.json": "a021174df0370fa7e51d513963a6c2f51c1cfc7dae6eff0d51ccfe73632651db",
+        "sim/reference/lfo-vca-golden-v1/depth-negative-clamp.json": "2a4f317ce61662f2b08d91c077407a3417d89aa953846516aab901c1a0f303b3",
+        "sim/reference/lfo-vca-golden-v1/frequency-phase-extremes.json": "9d017a25ddd1ef30132f706327a8799cb4010c9d097dff200845c8e117b29adf",
+        "sim/reference/lfo-vca-golden-v1/frozen-lfo-receipt.json": "5bcecb97da701acf4103632431810131526557460f65b8753e9ce1d32a476928",
+        "sim/reference/lfo-vca-golden-v1/min-max-degenerate.json": "bf3e65da21f63bd42fd6fc6c377d5752d9b67c963751c5c6ca93b04f029afa80",
+        "sim/reference/lfo-vca-golden-v1/phase-boundary.json": "953a8c93fa6410e532f8242a5b440f8e8743731ded56a5bb942ea90fc93d5d41",
+        "sim/reference/lfo-vca-golden-v1/rate-amp-modulation.json": "6a9a12ab223f880d4c8d6369ac1fbf6fd302fd08dc680c79f825d72213a2ad5b",
+        "sim/reference/lfo-vca-golden-v1/shape-blend-boundary.json": "ddb58ba065f21482ed4582e53695bde0a245fa04d5bd8b58618b2725848da031",
+        "sim/reference/lfo-vca-golden-v1/shape-blend-mixed.json": "7d3eab86caf1c02b8f2ec0c84de6d3881ed43044a2356fe622e42ab8bd0677cf",
+        "sim/reference/lfo-vca-golden-v1/shape-rsaw-dominant.json": "38593246712b57b790802c5a46a2bc9d0b159c10b0e039963c183a8fa0dd627a",
+        "sim/reference/lfo-vca-golden-v1/shape-second-sweep.json": "59fb538363cb3a7bce2916240434ae3a49a7011e243da91c6c3427380ad61d83",
+        "sim/reference/lfo-vca-golden-v1/shape-single-sweep.json": "2603d1c79cad206c32629f574a90c6dfe2de08b248098f7f77ed6f3b5a37c80f",
+        "sim/reference/lfo-vca-golden-v1/shape-square-equal-blend.json": "1d566b4b29f99b42da327c3837ae20ff4e672ea1ea6c8eca9a8060ccc816c202"
+      }
+    },
+    {
+      "lane": "mix",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_mix_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 51156580.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "8942a3ece4b94c559b8eef6142e4869363928a439fb88639b31174d21f48448b",
+      "request_sha256": "9882d43fbd93b78c79a57240066393832b76007006ce07f6e88e2bee9100e0aa",
+      "test_module_sha256": "97ec46495bd97a093fd2a51c3c34c06ee857bfc14ba3ff6dd36879833b54f965",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
+        "tb/sv/tb_audio_mix_engine.sv": "648565720d3f45f60616e8a38e77bc57ffed09f662b30d98dddee271ceb0654b"
+      },
+      "vector_sha256": {
+        "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_1.raw.f32le": "72cbd841092a4bbe5634464d02ea28caa740dab346f3386a71be1acf2005d7e4",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_1.raw.f32le": "039154a62245519744785c3c41b6745c586dc03c5cf669f2c157f22c83bffcd2",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_1.raw.f32le": "3e27ee6a2db91739b15c758080a5aa641f3639514487405343c7d83d42ca1e3b",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_1.raw.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_2.raw.f32le": "b5534813a928c7093ef2989262a16853c1ee3ad41cfc7277780da41551bfcc8c",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization-stress:anchor-3.9478583336.mixer.output.f32le": "7244a00edf0b33aecca14fb282fa260642268b45fe6ae72d7d13f93711ef7476",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization:above.mixer.output.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/waveform:vco_2:saw.vco_2.raw.f32le": "3d5c4cae8392b1195fb7766f69882bc273de842447662359c6a9f44bab05ce5d"
+      }
+    },
+    {
+      "lane": "modmatrix",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_modmatrix_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 10795860.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "bd2e7042143af71f423604e5c15c9e3b2fdb0e9c6acf814ee51d28308a055c8f",
+      "request_sha256": "3464e9ad0f076bd183094e66b12265b1b94a4582545be8eaef2fe5df33b6d7a4",
+      "test_module_sha256": "e040c7b159d8827b4ed2b1fab2706519f0be7a5b0a3170e437ac46b433a73f80",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
+        "tb/sv/upsample_engine.sv": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679",
+        "tb/sv/tb_mod_matrix_upsample.sv": "baffe0c24c3eebbdc624c9c3c8b212cbb06502e7391ed9352ed4502d4a3df0a9"
+      },
+      "vector_sha256": {
+        "sim/reference/mod-matrix-golden-v1/frozen-mod-matrix-receipt.json": "d4664906e61ceb6e8a89b4df8343ac78b880243cfa73823e0e91c2ff9534f557",
+        "sim/reference/mod-matrix-golden-v1/mixed-sign-routes.json": "432def6671ed5a24a8ec8c37160ca7f03f9aec141033d4883be130b7bff7e4b6",
+        "sim/reference/mod-matrix-golden-v1/route-extremes-negative.json": "4087e9fde494765b4fe240ace687ad9b31b3aa02872b78c205bb9819e91710d5",
+        "sim/reference/mod-matrix-golden-v1/route-extremes-positive.json": "6c5c7a68423f461585e8d7d39bb19c90eba9b75faededf8d2e9a6d45a9230d20",
+        "sim/reference/mod-matrix-golden-v1/shape-sweep-columns.json": "38e4e55030d3bd6d9156d22bab8a32a10a42d2978d8938ffc067aa9ad7812aaa",
+        "sim/reference/mod-matrix-golden-v1/zero-depth.json": "0f1d2a94e5990cb70129e40093eb2fa123cb061d9cb4f620027560c58ba9d01e",
+        "sim/reference/mod-matrix-golden-v1-traces/frozen-mod-matrix-receipt.control_upsample.noise_amp.f32le": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+        "sim/reference/mod-matrix-golden-v1-traces/frozen-mod-matrix-receipt.control_upsample.vco_1_amp.f32le": "9aa3be467949f2e13e5f468a41db216bb8c894d1856b75604f2a677f5c3fe19c",
+        "sim/reference/mod-matrix-golden-v1-traces/frozen-mod-matrix-receipt.control_upsample.vco_1_pitch.f32le": "bc03b3af935e71038e8505391f8600b4c25172a82eac7046b64bb7bd3b0d55bf",
+        "sim/reference/mod-matrix-golden-v1-traces/frozen-mod-matrix-receipt.control_upsample.vco_2_amp.f32le": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a",
+        "sim/reference/mod-matrix-golden-v1-traces/frozen-mod-matrix-receipt.control_upsample.vco_2_pitch.f32le": "bbbf3baab8a5dc22f0ccabe9c9e753a0ec5a58713d6eab66ea37813498a1625a"
+      }
+    },
+    {
+      "lane": "noise",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_noise_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 261073510.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "93cd5195ad5687d6e808d3c397bfb16ae10f07cd68bfdf4895e74e432ba5a32f",
+      "request_sha256": "09551b625c4136173537456778615827c4792d8b7a2b76eb85ee07ec28d55133",
+      "test_module_sha256": "24480b775d32862763a28d092a32f3e65e82af87aa0f91c899b6a7b0ebfcbd91",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/noise_stream_dut.sv": "a20da409081056c60b892cfb7d1fddc3a13d89f5ac921ad67c936f97bc919c4d",
+        "tb/sv/tb_noise_stream_dut.sv": "1aba76b021c260d817bacb98a160a8ff76b928353383c4a8eb8353623135e1f6"
+      },
+      "vector_sha256": {
+        "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_1.raw.f32le": "72cbd841092a4bbe5634464d02ea28caa740dab346f3386a71be1acf2005d7e4",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_1.raw.f32le": "039154a62245519744785c3c41b6745c586dc03c5cf669f2c157f22c83bffcd2",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_1.raw.f32le": "3e27ee6a2db91739b15c758080a5aa641f3639514487405343c7d83d42ca1e3b",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_1.raw.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_2.raw.f32le": "b5534813a928c7093ef2989262a16853c1ee3ad41cfc7277780da41551bfcc8c",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization-stress:anchor-3.9478583336.mixer.output.f32le": "7244a00edf0b33aecca14fb282fa260642268b45fe6ae72d7d13f93711ef7476",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization:above.mixer.output.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/waveform:vco_2:saw.vco_2.raw.f32le": "3d5c4cae8392b1195fb7766f69882bc273de842447662359c6a9f44bab05ce5d"
+      }
+    },
+    {
+      "lane": "normreplay",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_normreplay_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 52921230.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "17635d93bec5d825021bdc654a7b60eb71ed9d300e3dfeae2c36f835171e4bfe",
+      "request_sha256": "6139e4f41fb6b5a083575f74a9b273f92bf404fe686adaeec4f99e0ee1d5856b",
+      "test_module_sha256": "0f8a89b0c7402ba4a4e8e02d2c4e81c3d619afe2ab3e3396d5cd9c861ed86548",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/normalization_replay_engine.sv": "eba4d47a0bab5886319e0f7f3f9f12e613d5ad9acfdd8c42810c1b78587a57f1",
+        "tb/sv/tb_normalization_replay_engine.sv": "5b8da7de7d3680d449af09a42f189720d38a9845e551dc40b33d297bdfdadb36"
+      },
+      "vector_sha256": {
+        "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_1.raw.f32le": "72cbd841092a4bbe5634464d02ea28caa740dab346f3386a71be1acf2005d7e4",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_1.raw.f32le": "039154a62245519744785c3c41b6745c586dc03c5cf669f2c157f22c83bffcd2",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_1.raw.f32le": "3e27ee6a2db91739b15c758080a5aa641f3639514487405343c7d83d42ca1e3b",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_1.raw.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_2.raw.f32le": "b5534813a928c7093ef2989262a16853c1ee3ad41cfc7277780da41551bfcc8c",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization-stress:anchor-3.9478583336.mixer.output.f32le": "7244a00edf0b33aecca14fb282fa260642268b45fe6ae72d7d13f93711ef7476",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization:above.mixer.output.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/waveform:vco_2:saw.vco_2.raw.f32le": "3d5c4cae8392b1195fb7766f69882bc273de842447662359c6a9f44bab05ce5d"
+      }
+    },
+    {
+      "lane": "patch",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_patch_mirror_exact",
+          "status": "passed",
+          "sim_time_ns": 19574128.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "56a9f43f2e36ad7c28b64f44193269007afeb8d2bdd5afed9044d52c40e3f068",
+      "request_sha256": "2b1e9a6e28394047534209bf741162b5ef50cfbc401ec5a1a92a103ab0e98362",
+      "test_module_sha256": "2150392e70f1d28ce735755e4f1cf33468ad5b43c3510c32183b403ba8408b8c",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/patch_control.sv": "322919135cd8ca6b32318742911c0980c548fe7090d2f7e8150adceb12130646",
+        "tb/sv/tb_patch_control.sv": "7c90a993a627f60810d43d5292c171272b0fc32dc9049279f6f41ffab0453b4c"
+      },
+      "vector_sha256": {
+        "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6"
+      }
+    },
+    {
+      "lane": "patch_small",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_patch_small_mirror_exact",
+          "status": "passed",
+          "sim_time_ns": 2757488.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "34dcd7fa46f87df8305c757c5f9ed0a408b102beea1e877732790215fc8f85c2",
+      "request_sha256": "5eeaf2e36c83edcc4d860769b83f63100bf02a4f28b75964f4e035af1f796f25",
+      "test_module_sha256": "75d77d91d53b02b0562b6aea5b70adf92a0cb070184b2380264f10ee319ca67c",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/patch_control.sv": "322919135cd8ca6b32318742911c0980c548fe7090d2f7e8150adceb12130646",
+        "tb/sv/tb_patch_control.sv": "7c90a993a627f60810d43d5292c171272b0fc32dc9049279f6f41ffab0453b4c"
+      },
+      "vector_sha256": {
+        "spec/reference/parameter-inventory-v1.json": "b360bbab2860e672a6d709296c4d88a900861fbaa30b2099d4dbd39f3399a3e6"
+      }
+    },
+    {
+      "lane": "vco",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_vco_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 91729040.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "c030a87f1cedcf8f738951cf6eed007dbbda547b4899a305d7a8fd925f4fdea9",
+      "request_sha256": "6e567f543922aa03a39cd11af7daaf0741d9f883d375a7d9224839ae02e8cf28",
+      "test_module_sha256": "36ba8f0fd6b3a204768d94af820787908fd353add1e86b2df4b4f51e81dbe8d4",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/sine_vco_engine.sv": "aa22c6ec29e8dd08a103c2e71d100969fc1ccdb313b30844f491a7fa356ead8f",
+        "tb/sv/tb_sine_vco_engine.sv": "aa4abcb6611d1f89dec182d35d5daad3115430503591c6663e32f813172108ae"
+      },
+      "vector_sha256": {
+        "sim/reference/sine-vco-golden-v1/corner:depth-min-freq-min.json": "ea6819a7381fc4a1c8d8e850b9d3bf0743d8686a843ffa12b3793de7b01c8631",
+        "sim/reference/sine-vco-golden-v1/corner:depth-min-lfo-freq-max.json": "8b949aafa53f5d3d5fd3fc9a2485b79ae8e5c6e68c89ee53967c79f9f03e109b",
+        "sim/reference/sine-vco-golden-v1/corner:tuning-max-freq-max.json": "51acca9252bc369f36fd77996645f0cd98416bc6795e8cb10378f692e492879c",
+        "sim/reference/sine-vco-golden-v1/corner:tuning-min-freq-min.json": "fd8f4ee99dd926678fcd2d655633c0395d434db8bb38427121601b05e2d4d563",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:max-mod.json": "6e5895a7738979ac0ae2ae7157e5ff0d0dfe02932dff643c203689014385285d",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:max-unmod.json": "80ccd064086e1ac79bfafd7085e601783de8993217d9317a9bd2fb0b09712f13",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:mid-mod.json": "38eea3ce01ee8785f3858e6813d38314e1bd4605edc5a91e974448de0ec49118",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:mid-unmod.json": "489bbdeb321ca706c84cfdd604be6e808cd7f1e182defc06774637f385c115b2",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:min-mod.json": "64433dcf855c5139516d771368a454ce8daf4aa7a00f966120570a96c8d41d7e",
+        "sim/reference/sine-vco-golden-v1/freq:max-phase:min-unmod.json": "cd7e674a2aa3c91a1df35c51026dfa3f52d427ad43ecc68b2e2d9624f07e79eb",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:max-mod.json": "4a9cf965c1f69f79b9659e346110c3f04dc88368c3c35837c70bc3fe0a3273fd",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:max-unmod.json": "4329ee739e23905c15a2ace51fd35fc91019a161a188a9b10bc09bdf7fff38f9",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:mid-mod.json": "abf434d0f8db701e0312f6f422866fef3a29d80922bd11cc19eb420674a5e005",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:mid-unmod.json": "b395edb42cece58bd7da719889afed29a180695d6bb8f131aae1e801ca1ec2fd",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:min-mod.json": "2798d04fa0d98970e5f8055db529bb6ec366bfd6cf5c6ef6adb809f4297711f7",
+        "sim/reference/sine-vco-golden-v1/freq:mid-phase:min-unmod.json": "c71b953b6aef62d1a13de00f532e2ed48d617a2dc83eb2049200c3385d22d998",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:max-mod.json": "8d653c7f7ef2ea6ec4eac2db6ce274ae0c48d16f3d5470e883e35ae37e8ba75b",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:max-unmod.json": "17003f483b92421cafa8676e05b178c4e82d5347dc96bedfe1d36b15436c149a",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:mid-mod.json": "1645446b8f0e6cf5cb3190b3aafe2355cd2ea39c04c909b4afcb358159374ed4",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:mid-unmod.json": "688c9627dd4f1b92a48cc9a56406482d678c9e1a9368addde26ec529a85fb83c",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:min-mod.json": "ecd22c058404a962dca6599334904951c35add53f44b16d3211dbea81434d4fe",
+        "sim/reference/sine-vco-golden-v1/freq:min-phase:min-unmod.json": "67924484682d385669c84ad37ec7695aacdb1bf2c539b6c59ca05bbb4ffd34d8",
+        "sim/reference/sine-vco-golden-v1/frozen:boundary:vco_1.initial_phase:upper.json": "8746e04061fadf9e44dec1141a091b9561d98976cf8a80e25aa66a29f02179cb",
+        "sim/reference/sine-vco-golden-v1/frozen:boundary:vco_1.mod_depth:upper.json": "43ce378872b601a7d8e00c5d1a0b50252eed4af0e1f9915a4fd6d7a4b69336bd",
+        "sim/reference/sine-vco-golden-v1/frozen:boundary:vco_1.tuning:upper.json": "9c2a7d64636f18a808e2b84128492cdf6ecaaba3b50b2f66da22d87454bac255",
+        "sim/reference/sine-vco-golden-v1/frozen:boundary:vco_2.mod_depth:upper.json": "08b691af0da1ba8b229e56e1f78a7712271552e98dae98795bfb6113880ac1c3",
+        "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_1.raw.f32le": "72cbd841092a4bbe5634464d02ea28caa740dab346f3386a71be1acf2005d7e4",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_1.raw.f32le": "039154a62245519744785c3c41b6745c586dc03c5cf669f2c157f22c83bffcd2",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_1.raw.f32le": "3e27ee6a2db91739b15c758080a5aa641f3639514487405343c7d83d42ca1e3b",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_1.raw.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_2.raw.f32le": "b5534813a928c7093ef2989262a16853c1ee3ad41cfc7277780da41551bfcc8c",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization-stress:anchor-3.9478583336.mixer.output.f32le": "7244a00edf0b33aecca14fb282fa260642268b45fe6ae72d7d13f93711ef7476",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization:above.mixer.output.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/waveform:vco_2:saw.vco_2.raw.f32le": "3d5c4cae8392b1195fb7766f69882bc273de842447662359c6a9f44bab05ce5d"
+      }
+    },
+    {
+      "lane": "vco2",
+      "status": "pass",
+      "test_count": 1,
+      "tests": [
+        {
+          "name": "test_vco2_sample_exact",
+          "status": "passed",
+          "sim_time_ns": 28224320.0
+        }
+      ],
+      "engine": "icarus",
+      "engine_version": "13.0",
+      "cocotb_version": "2.1.0",
+      "results_xml_sha256": "c6c8d4b7e5acb3cb3d46778ed7211222c951b3aeafdf45735ba257ea5f173957",
+      "request_sha256": "e0cd156468c5d45930241291335797a633756d68cba58e4815dd3deb795c6c6f",
+      "test_module_sha256": "f4fd28975a2a7fc0fb0988ff770fbb21736dfe1421784d04b72e1841ea31d08f",
+      "harness_sha256": {
+        "tb/klt/klt_lane.py": "b444e28421f1f35aec75ae179cedb3b72b7d4c1cfe737612df18d1428082ce21",
+        "tb/klt/patch_lane.py": "9da0a1f4026866f37dc8228a2867ae521c73c8cb28e88ba5572bffe98274c92b",
+        "tb/run_tb.py": "d72ec677d365667d22c59700f488817b2410cfb6b09b7151b6fea07ae1dac411"
+      },
+      "rtl_sha256": {
+        "tb/sv/gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
+        "tb/sv/quarter_wave_lut.sv": "d459695edc814483faf709050e87266bc2639bd4fd7e11d71c24957a181f9f09",
+        "tb/sv/square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
+        "tb/sv/tb_square_saw_vco.sv": "e11b5ed277bdf71b3cce6527462ff316c5a53ebaa17f584c29c7a3dd1b38293e"
+      },
+      "vector_sha256": {
+        "sim/reference/square-saw-vco-golden-v1/frozen:boundary:vco_1.initial_phase:upper.json": "dfc42ce1e5e6982c8615f6f8e02c5a431831d645e840cad4febc3f71093c2804",
+        "sim/reference/square-saw-vco-golden-v1/frozen:boundary:vco_1.mod_depth:upper.json": "6d271ffe8b427fa2a04e25d2170145d19b936a7b24a0d69082c5151be0243d0b",
+        "sim/reference/square-saw-vco-golden-v1/frozen:boundary:vco_1.tuning:upper.json": "54fc7a509e1d23835a63d177f53b0a718e7cfb1b31c519649d3f68cf1f5645da",
+        "sim/reference/square-saw-vco-golden-v1/frozen:boundary:vco_2.mod_depth:upper.json": "87041a34d814f57d42bdcd9b4cb4b852bfdf42b5bfa7d83a47718e081decdc3d",
+        "sim/reference/square-saw-vco-golden-v1/frozen:waveform:vco_2:saw.json": "30c74f55bde0155eab1c38fda554c98d08e5054fbc5e63b2c3d8987a71df92f6",
+        "sim/reference/square-saw-vco-golden-v1/mod:depth-max-shape-half.json": "26280e3e7dadf77ef5ebc7b1efc4aa61b72abd0052cd543839212d351b1a6f5d",
+        "sim/reference/square-saw-vco-golden-v1/phase:near-full-turn.json": "1f6331b61a13d5e53cd77814af1eecdec89166e9d2acd14b6b310c9645288210",
+        "sim/reference/square-saw-vco-golden-v1/phase:near-top.json": "bb02660410fcdaffb6af0e755af85431b0961c1efbfdde02f83ef045ed268aac",
+        "sim/reference/square-saw-vco-golden-v1/phase:quarter-turn.json": "b501a24bac5bd590346ba505e5c9ff315be66eb5c060f0646466cc13d8e76c3a",
+        "sim/reference/square-saw-vco-golden-v1/shape:intermediate-half.json": "66cac57475ec3e3fbfd8b802408a1264c251198b006acff28a99456963ea1091",
+        "sim/reference/square-saw-vco-golden-v1/shape:intermediate-quarter.json": "1e74472679478d6df71ef63db527e754af135d46a9e5b7134651e26408eab8c8",
+        "sim/reference/square-saw-vco-golden-v1/shape:lsb-step.json": "9e0d09213f1a085ac1d4f1e6b8c5a648580cc72d28066eeb4b43f75959856eb0",
+        "sim/reference/square-saw-vco-golden-v1/shape:lsb-tie-down.json": "56582f08a4c8bc6b90c3b6128358edfc27f1ee365dc3e50d17f5ac0e24bd5e97",
+        "sim/reference/square-saw-vco-golden-v1/shape:lsb-tie-up.json": "96e2742aa9f14a3a80477891de43d824b40dcf9d2bf6f70085e8598cc4bdf1ef",
+        "sim/reference/square-saw-vco-golden-v1/shape:one-minus-lsb.json": "2e8411de9c8324feb0452c769360dc42ea3b18a6373991420caa893e18ac0eaf",
+        "sim/reference/square-saw-vco-golden-v1/shape:three-quarters.json": "a402a11ce1029c417dcd5b6d682b0dbd4d0aa588f691720c8e1228724c343399",
+        "sim/reference/fixed-voice-golden-v1.json": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_1.raw.f32le": "72cbd841092a4bbe5634464d02ea28caa740dab346f3386a71be1acf2005d7e4",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.initial_phase:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_1.raw.f32le": "039154a62245519744785c3c41b6745c586dc03c5cf669f2c157f22c83bffcd2",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.mod_depth:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_1.raw.f32le": "3e27ee6a2db91739b15c758080a5aa641f3639514487405343c7d83d42ca1e3b",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_1.tuning:upper.vco_2.raw.f32le": "4273d99dcb5cf6f5224b2b89e21a8dc4843cb51f9f8a6b63c9de240a51e49c75",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_1.raw.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/boundary:vco_2.mod_depth:upper.vco_2.raw.f32le": "b5534813a928c7093ef2989262a16853c1ee3ad41cfc7277780da41551bfcc8c",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization-stress:anchor-3.9478583336.mixer.output.f32le": "7244a00edf0b33aecca14fb282fa260642268b45fe6ae72d7d13f93711ef7476",
+        "sim/reference/fixed-voice-golden-v1-traces/normalization:above.mixer.output.f32le": "ca3ac737c22079d63e7e0e3d3c48332754fbd5227e8236493f2c9527f55d2b03",
+        "sim/reference/fixed-voice-golden-v1-traces/waveform:vco_2:saw.vco_2.raw.f32le": "3d5c4cae8392b1195fb7766f69882bc273de842447662359c6a9f44bab05ce5d"
+      }
+    }
+  ],
+  "negative_controls": [
+    {
+      "lane": "adsr",
+      "mutated_source": "tb/sv/adsr_engine.sv",
+      "mutation": {
+        "old": "wire signed [C4_WIDTH-1:0] sustain_eff = sustain_entry;",
+        "new": "wire signed [C4_WIDTH-1:0] sustain_eff = -sustain_entry;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "anchor",
+      "mutated_source": "tb/sv/lut_sine_dut.sv",
+      "mutation": {
+        "old": "wire [C2_WIDTH-1:0]      phase_next = phase + phase_step;",
+        "new": "wire [C2_WIDTH-1:0]      phase_next = phase + phase_step + 1;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "lfo",
+      "mutated_source": "tb/sv/lfo_vca_engine.sv",
+      "mutation": {
+        "old": "wire signed [24:0] entry_word = negate ? -lut_word : lut_word;",
+        "new": "wire signed [24:0] entry_word = lut_word;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "mix",
+      "mutated_source": "tb/sv/audio_mix_engine.sv",
+      "mutation": {
+        "old": "wire signed [95:0] mix_out = mix_eff;",
+        "new": "wire signed [95:0] mix_out = mix_eff + 96'sd1;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "modmatrix",
+      "mutated_source": "tb/sv/mod_matrix_engine.sv",
+      "mutation": {
+        "old": "C1_SAT_HI = 96'sd8388607;",
+        "new": "C1_SAT_HI = 96'sd2097151;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "noise",
+      "mutated_source": "tb/sv/noise_stream_dut.sv",
+      "mutation": {
+        "old": "sample_word      <= narrow_value[C1_WIDTH-1:0];",
+        "new": "sample_word      <= narrow_value[C1_WIDTH-1:0] + 1'b1;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "normreplay",
+      "mutated_source": "tb/sv/normalization_replay_engine.sv",
+      "mutation": {
+        "old": "if (peak_word > UNITY_INT) begin",
+        "new": "if (1'b1) begin"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "patch",
+      "mutated_source": "tb/sv/patch_control.sv",
+      "mutation": {
+        "old": "b = PATCH_DOMAIN_TAG[(DOMAIN_TAG_LEN*8-1) - c_fed*8 -: 8];",
+        "new": "b = 8'h00;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "patch_small",
+      "mutated_source": "tb/sv/patch_control.sv",
+      "mutation": {
+        "old": "(cap_c != rnd_digest)",
+        "new": "(1'b0)"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "vco",
+      "mutated_source": "tb/sv/sine_vco_engine.sv",
+      "mutation": {
+        "old": "wire [C5_INDEX_BITS-1:0] a_index = i[C5_INDEX_BITS-1:0];",
+        "new": "wire [C5_INDEX_BITS-1:0] a_index = i[C5_INDEX_BITS-1:0] + 1'b1;"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    },
+    {
+      "lane": "vco2",
+      "mutated_source": "tb/sv/square_saw_vco_engine.sv",
+      "mutation": {
+        "old": "wire signed [95:0] right_prod = $signed(s_shape) * $signed(cos2);",
+        "new": "wire signed [95:0] right_prod = (96'sd2097152 - $signed(s_shape)) * $signed(cos2);"
+      },
+      "expected": "fail",
+      "observed": "fail",
+      "detected": true
+    }
+  ],
+  "declared_gaps": [
+    {
+      "item": "whole-voice one-shot top (tb_one_shot_voice)",
+      "status": "not covered",
+      "owner": "tb/run_voice.py; whole-voice evidence under sim/evidence/"
+    },
+    {
+      "item": "one-shot tail chain (tb_one_shot_tail)",
+      "status": "not covered",
+      "owner": "tb/run_oneshot.py; sim/evidence/oneshot-tail-chain-*.json"
+    },
+    {
+      "item": "render binding (tb_render_binding)",
+      "status": "not covered",
+      "owner": "tb/run_tb.py patch / normreplay bind_reject paths"
+    },
+    {
+      "item": "run_tb.py mutation, replay and budget stages",
+      "status": "not covered by the cocotb lanes; still gated by tb/run_tb.py",
+      "owner": "tb/run_tb.py <lane>"
+    },
+    {
+      "item": "synthesis, SDF back-annotation, post-route simulation",
+      "status": "not performed; no such claim is made",
+      "owner": "#82, #83"
+    }
+  ]
+}

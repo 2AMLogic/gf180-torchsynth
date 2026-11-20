@@ -398,3 +398,55 @@ jobs:
           path: out/
           retention-days: 30
           if-no-files-found: ignore
+
+  klt-functional-verification:
+    # Issue #388: the same RTL-vs-golden comparisons as the sim-lanes-* jobs,
+    # re-run under cocotb through `klt functional-verification` so the verdict
+    # is readable by klt tooling (tb/klt/, tb/README.md "Functional
+    # verification through klt"). It does not replace the run_tb.py lanes and
+    # is not an input to rtl-module-qualification. Steps: a static hash check
+    # of the committed record, a full run compared with that record (lane
+    # verdicts + RTL/vector/test hashes; tool versions are provenance, not
+    # compared), then the per-lane negative controls (each planted RTL fault
+    # must make its cocotb test fail). klayout-tools is pinned to a commit
+    # because the published release has no `-o/--outdir`.
+    #
+    # Budgets are ~3x the measured local wall-clock (lanes ~35 min, negative
+    # controls ~30 min on an 8-core dev host with iverilog 13.0; the hosted
+    # runner is slower).
+    runs-on: ubuntu-24.04
+    # Step budgets: 20 setup + 10 klt install + 5 check + 120 lanes + 120
+    # negative controls + 5 upload = 280. Cap 300: 20 minutes over the step
+    # sum, 60 minutes under the 360-minute hosted limit.
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        timeout-minutes: 5
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        timeout-minutes: 5
+        with:
+          python-version: "3.12"
+      - name: Install Icarus Verilog (PDK-free)
+        timeout-minutes: 10
+        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Install klt with cocotb (pinned commit)
+        timeout-minutes: 10
+        run: python3 -m pip install "klayout-tools[functional-verification] @ git+https://github.com/2AMLogic/klayout-tools@a7b27571bbf82be6075b18320bcc110198f35ac0"
+      - name: Committed functional-verification record is fresh against the tree
+        timeout-minutes: 5
+        run: python3 tb/klt/run_lanes.py check
+      - name: "klt functional-verification lanes (issue 388, iverilog, cocotb, PDK-free)"
+        timeout-minutes: 120
+        run: python3 tb/klt/run_lanes.py run --out out/klt-fv --write out/klt-fv/report.json --compare sim/evidence/functional-verification-modules-v1.json
+      - name: "klt functional-verification negative controls (issue 388)"
+        timeout-minutes: 120
+        run: python3 tb/klt/run_lanes.py negative-controls --out out/klt-fv --merge out/klt-fv/report.json
+      - name: Upload functional-verification evidence
+        if: always()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: klt-functional-verification-evidence
+          path: out/klt-fv/report.json
+          retention-days: 30
+          if-no-files-found: ignore

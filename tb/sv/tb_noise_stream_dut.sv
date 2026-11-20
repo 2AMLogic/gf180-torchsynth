@@ -24,6 +24,12 @@ import gf180_rtl_constants::*;
 
 module tb;
 
+`ifdef KLT_COCOTB
+    // Set only after every capture/status file is closed; a cocotb test waits
+    // on it. Every error path still calls $finish, which fails the test.
+    reg klt_done = 1'b0;
+`endif
+
     localparam integer MAX_BYTES = SCHED_SAMPLES_PER_PASS * 4;
     // The duplicated-byte mutation feeds a few bytes past the clip length;
     // the DUT (not the TB) must be the one that flags the overrun.
@@ -197,7 +203,11 @@ module tb;
             $fclose(status_fd[r]);
         end
         $display("TB-DONE %0d", RUNS);
+`ifdef KLT_COCOTB
+        klt_done = 1'b1;
+`else
         $finish;
+`endif
     end
 
 endmodule

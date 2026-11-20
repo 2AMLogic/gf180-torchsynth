@@ -764,6 +764,8 @@ class TestWorkflowBudgetsFitTheHostedLimit(unittest.TestCase):
         "oneshot-tail-chain",
         "oneshot-whole-voice",
         "rtl-module-qualification",
+        # Issue #388: the cocotb/klt re-run of the lanes plus negative controls.
+        "klt-functional-verification",
     }
 
     @classmethod
@@ -779,6 +781,7 @@ class TestWorkflowBudgetsFitTheHostedLimit(unittest.TestCase):
                 self.assertGreaterEqual(len(job["steps"]), 3)
         self.assertEqual(len(jobs["sim-lanes-vco"]["steps"]), 3 + 2)
         self.assertEqual(len(jobs["sim-lanes-engines"]["steps"]), 3 + 7)
+        self.assertEqual(len(jobs["klt-functional-verification"]["steps"]), 3 + 5)
 
     def test_every_job_and_step_budget_fits(self):
         self.assertEqual(_budget_violations(self.text), [])

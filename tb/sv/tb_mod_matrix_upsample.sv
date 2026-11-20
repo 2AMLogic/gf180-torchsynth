@@ -35,6 +35,12 @@ import gf180_rtl_constants::*;
 
 module tb;
 
+`ifdef KLT_COCOTB
+    // Set only after every capture file is closed; a cocotb test waits on it.
+    // Every error path still calls $finish, which fails the cocotb test.
+    reg klt_done = 1'b0;
+`endif
+
     localparam integer CONTROL_SAMPLES = 1764;
     localparam integer AUDIO_SAMPLES   = 176400;
     localparam integer N_ROUTES        = 5;
@@ -292,7 +298,11 @@ module tb;
                 $fclose(cap_audio[r*N_ROUTES + i]);
 
         $display("TB-DONE %0d", RUNS);
+`ifdef KLT_COCOTB
+        klt_done = 1'b1;
+`else
         $finish;
+`endif
     end
 
 endmodule
