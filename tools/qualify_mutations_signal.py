@@ -44,7 +44,10 @@ from torchsynth_voice import paired_metrics as pm  # noqa: E402
 from torchsynth_voice import periodic_estimators as pe  # noqa: E402
 from torchsynth_voice import spectral_estimators as se  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
-from torchsynth_voice.mutation_publication import check_committed_publication  # noqa: E402
+from torchsynth_voice.mutation_publication import (  # noqa: E402
+    check_committed_publication,
+    write_publication,
+)
 
 family.register_family()
 
@@ -1152,23 +1155,7 @@ def main():
     if args.check:
         check_publication()
         return
-    publication = build_publication()
-    PUBLICATION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PUBLICATION_PATH.write_text(
-        json.dumps(publication, sort_keys=True, indent=2, allow_nan=False) + "\n"
-    )
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "operators": publication["counts"]["operators"],
-                "faults": publication["counts"]["faults"],
-                "tripped": publication["counts"]["tripped"],
-                "envelope_id": publication["envelope"]["envelope_id"],
-            }
-        )
-    )
+    write_publication(PUBLICATION_PATH, build_publication, _summary_fields)
 
 
 if __name__ == "__main__":

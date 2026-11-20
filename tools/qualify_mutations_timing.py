@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 from pathlib import Path
 import re
 import sys
@@ -33,7 +32,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import mutations, mutations_timing  # noqa: E402
-from torchsynth_voice.mutation_publication import check_committed_publication  # noqa: E402
+from torchsynth_voice.mutation_publication import (  # noqa: E402
+    check_committed_publication,
+    write_publication,
+)
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-timing-v1.json"
 
@@ -290,23 +292,7 @@ def main():
     if args.check:
         check_publication()
         return
-    publication = build_publication()
-    PUBLICATION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PUBLICATION_PATH.write_text(
-        json.dumps(publication, sort_keys=True, indent=2, allow_nan=False) + "\n"
-    )
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "faults": publication["counts"]["faults"],
-                "envelope_ids": [
-                    envelope["envelope_id"] for envelope in publication["envelopes"]
-                ],
-            }
-        )
-    )
+    write_publication(PUBLICATION_PATH, build_publication, _summary_fields)
 
 
 if __name__ == "__main__":

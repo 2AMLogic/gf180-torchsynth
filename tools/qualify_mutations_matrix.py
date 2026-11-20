@@ -59,6 +59,7 @@ from torchsynth_voice.mutation_publication import (  # noqa: E402
     check_committed_publication,
     plain_differing_fields,
     require_publication,
+    write_publication,
 )
 
 PUBLICATION_PATH = ROOT / "sim/reference/mutation-matrix-v2.json"
@@ -967,25 +968,7 @@ def main() -> None:
     if args.check:
         check_publication()
         return
-    publication = build_publication()
-    PUBLICATION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PUBLICATION_PATH.write_text(
-        json.dumps(publication, sort_keys=True, indent=2, allow_nan=False) + "\n"
-    )
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(PUBLICATION_PATH),
-                "fault_rows": publication["counts"]["fault_rows"],
-                "mandatory_detectors": publication["counts"]["mandatory_detectors"],
-                "ci_subset_rows": publication["counts"]["ci_subset_rows"],
-                "sensitivity_no_verdict": publication["counts"][
-                    "sensitivity_no_verdict"
-                ],
-            }
-        )
-    )
+    write_publication(PUBLICATION_PATH, build_publication, _summary_fields)
 
 
 if __name__ == "__main__":
