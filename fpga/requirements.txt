@@ -1,0 +1,8 @@
+# Pinned throwaway toolchain for the FPGA measurement build (DR-0013).
+# Installed only into fpga/build/venv by build.sh; never on the host.
+yowasp-yosys==0.70.0.0.post1259
+yowasp-nextpnr-ecp5==0.11.1.0.post826
+yowasp-runtime==1.96
+wasmtime==47.0.1
+platformdirs==4.13.0
+click==8.5.0
