@@ -2,6 +2,11 @@
 
 Merged PRs and closed issues from the initial 30-day maintenance window. These entries record repository activity, not new test runs or qualification verdicts.
 
+### 2026-11-20
+
+- **PR #529**: docs(asic): record upstream klt-friction filings and the F3 orphan-fix re-check
+- **Issue #526** (closed): Record the filed upstream issues for klt friction F4 (ABC control) and F5 (multicycle) in asic/klt-friction.md and the #82 feasibility plan
+
 ### 2026-11-19
 
 - **PR #521**: feat: shard (unit) and merge modes for fleet-reachable whole-voice evidence regeneration
