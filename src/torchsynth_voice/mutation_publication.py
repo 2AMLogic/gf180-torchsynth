@@ -1,14 +1,18 @@
-"""Shared committed-publication check for the mutation qualifier tools (#484).
+"""Shared publication write-and-report for the mutation qualifier tools.
 
-The five ``check_publication()`` entry points under ``tools/`` carried the
-same copy-pasted skeleton: an absent committed publication prints the
-``ABSENT`` line and exits 2 (absence is never reported as a pass), a stale
-or drifted one names the differing fields and exits 1, and a valid one
-prints a ``PASS`` JSON summary. This module owns that flow once; each tool
-keeps its ``check_publication()`` name and passes in its publication path,
-its repo-relative tool path (as printed in the ``ABSENT`` line), its
-``build_publication()``, a field comparator and its family-specific PASS
-summary fields.
+The five qualifier CLIs under ``tools/`` carried two copies of the same
+skeleton. ``--check`` revalidated the committed publication (#484): an
+absent committed publication prints the ``ABSENT`` line and exits 2
+(absence is never reported as a pass), a stale or drifted one names the
+differing fields and exits 1, and a valid one prints a ``PASS`` JSON
+summary. The default command then hand-built the same PASS summary a
+second time after writing the publication, so a change to a family's
+summary fields had to be made in two places. This module now owns both
+flows once; each tool keeps its ``check_publication()`` name and passes
+in its publication path, its repo-relative tool path (as printed in the
+``ABSENT`` line), its ``build_publication()``, a field comparator and
+its family-specific PASS summary fields — the same ``_summary_fields``
+serves both modes.
 
 The exit codes and message texts are part of the verification contract and
 are byte-identical to the per-tool originals. Only the field comparator
@@ -58,6 +62,53 @@ def require_publication(publication_path: Path, tool_name: str) -> None:
         raise SystemExit(2)
 
 
+def print_pass_summary(
+    publication_path: Path,
+    fresh: Dict[str, Any],
+    summary_fields: Callable[[Dict[str, Any]], Dict[str, Any]],
+) -> None:
+    """Print the single ``PASS`` JSON line shared by both modes.
+
+    The line starts with the shared ``status`` and ``publication`` keys
+    and appends ``summary_fields(fresh)`` in the family's declared order
+    — the one construction site of the summary each tool's ``--check``
+    and default command print.
+    """
+    print(
+        json.dumps(
+            {
+                "status": "PASS",
+                "publication": str(publication_path),
+                **summary_fields(fresh),
+            }
+        )
+    )
+
+
+def write_publication(
+    publication_path: Path,
+    build_publication: Callable[[], Dict[str, Any]],
+    summary_fields: Callable[[Dict[str, Any]], Dict[str, Any]],
+) -> None:
+    """Build the publication, write it, then report it (default command).
+
+    The default-command body the five qualifier CLIs previously duplicated:
+    build the publication, create missing parent directories and write it
+    as sorted two-space-indented JSON with finite values (``allow_nan=False``
+    rejects non-finite numbers) and a trailing newline, then print the same
+    ``PASS`` summary ``check_committed_publication`` prints for the same
+    inputs. A failure anywhere before the write completes — including a
+    non-finite value failing serialization — propagates, so a failed write
+    never prints a PASS line.
+    """
+    fresh = build_publication()
+    publication_path.parent.mkdir(parents=True, exist_ok=True)
+    publication_path.write_text(
+        json.dumps(fresh, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    )
+    print_pass_summary(publication_path, fresh, summary_fields)
+
+
 def check_committed_publication(
     publication_path: Path,
     tool_name: str,
@@ -80,12 +131,4 @@ def check_committed_publication(
     if failures:
         print("FAIL: committed publication is stale or drifted: " + ", ".join(failures))
         raise SystemExit(1)
-    print(
-        json.dumps(
-            {
-                "status": "PASS",
-                "publication": str(publication_path),
-                **summary_fields(fresh),
-            }
-        )
-    )
+    print_pass_summary(publication_path, fresh, summary_fields)
