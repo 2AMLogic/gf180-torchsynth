@@ -1,9 +1,11 @@
-"""README T1 content guard (issue #422).
+"""README T1 content guard (issues #422, #524).
 
 klayout-tools T1 item 10 asks for a README with the block's spec table and
 how to reproduce every result. The attestation inventory only checks that
-README.md exists; this checks the two sections are present and that the spec
-table names every row of ``spec/T1-SPEC.md`` and states it is not ratified.
+README.md exists; this checks the two sections are present, that the spec
+table names every row of ``spec/T1-SPEC.md``, and that the section records
+the table's 2026-11-04 ratification (DR-0016 / PR #419) instead of the former
+provisional status.
 """
 
 import re
@@ -34,7 +36,12 @@ class ReadmeT1SectionsTest(unittest.TestCase):
         body = section(self.readme, "T1 spec table")
         for row_id in self.row_ids:
             self.assertRegex(body, r"(?m)^\| %s \|" % row_id, row_id)
-        self.assertIn("not ratified", body)
+        self.assertIn("Ratified 2026-11-04", body)
+        self.assertNotIn("not ratified", body)
+        self.assertNotIn("provisional until it lands", body)
+        self.assertIn("pull/419", body)
+        self.assertIn("0016-ratify-t1-spec.md", body)
+        self.assertIn("manifests/gf180-torchsynth.signoff.json", body)
         self.assertIn("spec/T1-SPEC.md", body)
 
     def test_spec_table_is_outside_capabilities_block(self):
