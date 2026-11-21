@@ -1,0 +1,37 @@
+{
+  "rows": [
+    {
+      "id": "F1",
+      "class": "deterministic",
+      "reason": "Not statistical: the claim is exact equality on a finite declared vector set, so there is no accuracy, offset, matching, yield, sigma or Cpk quantity to bound.",
+      "reviewed_not_statistical": true
+    },
+    {
+      "id": "F2",
+      "class": "deterministic",
+      "reason": "Not statistical: a count of killed mutants out of a fixed list, not a distribution. It grades the harness behind F1, not the silicon."
+    },
+    {
+      "id": "C1",
+      "class": "deterministic (cycle count) given a selected clock; the clock bound itself is a timing-closure check",
+      "reason": "Not statistical: cycles per sample is a schedule property of the RTL, and clock closure is a per-corner slack sign check, not a spread."
+    },
+    {
+      "id": "T1",
+      "class": "deterministic",
+      "reason": "Not statistical: per-corner static timing is a worst-case check, not a yield or sigma bound. Statistical OCV/derating, if later adopted, would need its own row.",
+      "reviewed_not_statistical": true
+    },
+    {
+      "id": "A1",
+      "class": "deterministic",
+      "reason": "Not statistical: area of a fixed mapped netlist is a single deterministic number; no matching or yield quantity.",
+      "reviewed_not_statistical": true
+    },
+    {
+      "id": "PW1",
+      "class": "deterministic given the named activity vector",
+      "reason": "Not statistical as defined: a single-vector estimate, not a spread. Vector-to-vector variation is not bounded here and, if wanted, is a separate row."
+    }
+  ]
+}

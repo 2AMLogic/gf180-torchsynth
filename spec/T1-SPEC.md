@@ -1,13 +1,15 @@
 # T1 block spec table (issue #387)
 
-Status: **Ratification pending; ratified on operator approval of the PR
-carrying DR-0016** (`spec/decision-records/0016-ratify-t1-spec.md`). This is
-the block-level spec table that klayout-tools T1 items 5, 6, 8 and 10 grade
+Status: ratified. The operator approved and merged
+[PR #419](https://github.com/2AMLogic/gf180-torchsynth/pull/419) — the PR
+carrying DR-0016 (`spec/decision-records/0016-ratify-t1-spec.md`) — on
+2026-11-04, with the re-run EE-key (`approved`) and market-key
+(`adequate-for-catalog`) reviews recorded at `c0998d4f2493`. This is the
+block-level spec table that klayout-tools T1 items 5, 6, 8 and 10 grade
 against (tracker #386; klayout-tools `docs/design-evidence-tiers.md`). It
 selects no clock, changes no RTL or evidence record, and ran no tool. DR-0016
 states exactly what is ratified: the table as written, with pending rows
-staying pending. Until the operator approves that PR, every verdict graded
-against this table is provisional.
+staying pending.
 
 It states claims the block *will* make at T1. It is not evidence that any of
 them holds: no row below is a synthesis, layout, signoff, hardware-playback or
@@ -56,4 +58,3 @@ deliberately absent here. Sound fidelity is likewise not claimed by any row.
 | Whole-voice mapped netlist | #82 | T1, A1 |
 | Power activity and corner report | #83 | PW1 |
 | `klt functional-verification` run over F1 | not yet run | F1 |
-| Ratification of this table | operator approval of the DR-0016 PR (EE key and market key reviews as input) | all |

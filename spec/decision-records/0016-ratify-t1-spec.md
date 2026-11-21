@@ -1,7 +1,8 @@
 # DR-0016: Ratify the T1 block spec table (`spec/T1-SPEC.md`)
 
-- Status: Proposed (ratified on operator approval of the PR that carries this
-  record)
+- Status: accepted (ratified 2026-11-04: the operator approved and merged
+  PR #419, which carries this record; the re-run EE-key and market-key
+  reviews are recorded on that PR at `c0998d4f2493`)
 - Date: 2026-10-27
 - Decision owners: 2AM Logic
 - Issue: #418 (prerequisite for T1 items 5-8 on tracker #386; table drafted
