@@ -22,3 +22,4 @@ questions and must not be represented as finished hardware decisions.
 | [0014](0014-rubric-v2-mutation-matrix.md) | Accepted | Rubric v2 for the grown mutation-matrix row set (issue #297) |
 | [0015](0015-runtime-family-campaign-revision-2.md) | Proposed | Runtime-family campaign manifest revision 2: #297 additions registered as deferred_unmeasured (issue #379) |
 | [0016](0016-ratify-t1-spec.md) | Proposed | Ratify the T1 block spec table (`spec/T1-SPEC.md`); pending rows stay pending, no clock selected (issue #418) |
+| [0017](0017-fpga-measurement-target.md) | Proposed | FPGA feasibility-measurement target: ECP5 LFE5U-85F, open flow, measurement-shim wrapper boundary (issue #80) |
