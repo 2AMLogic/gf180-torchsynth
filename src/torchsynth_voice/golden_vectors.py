@@ -46,9 +46,18 @@ import hashlib
 import json
 import struct
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Union,
+)
 
-from .digest import digest_words, sha256_file
+from .digest import digest_words, sha256_bytes, sha256_file
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = ROOT / "spec/reference/trace-registry-v1.json"
@@ -70,6 +79,14 @@ SCHEMA_VERSION = 1
 #: Hand-typing them per generator is how one copy drifts silently.
 MODEL_IDENTITY = "fixed-voice-v1 (frozen composition control path, PR #156)"
 DR_0008_STATUS = "Accepted (reviewed merge; 2026-09-21)"
+
+#: The two VCO lanes' committed provenance strings (#73/#74), shared so one
+#: lane cannot drift from the other. Deliberately NOT ``MODEL_IDENTITY`` /
+#: ``DR_0008_STATUS``: those carry the control-path text, and rewriting the
+#: VCO vectors' provenance would change committed bytes across all 42 VCO
+#: vector files (out of scope for #535; the strings stay byte-identical).
+VCO_MODEL_IDENTITY = "fixed-voice-v1"
+VCO_DR_0008_STATUS = "Accepted"
 
 #: Canonical one-shot clip profile (DR-0002 offline 4 s @ 44.1 kHz).
 CANONICAL_PROFILE = "canonical-default-nebula-4s"
@@ -407,6 +424,297 @@ def run_case_generator(
         generate_case_documents(documents_out=documents, **cases)
         return check_committed(documents, out_dir, tool_name)
     return generate_case_documents(**cases)
+
+
+def build_vco_vector(
+    *,
+    case_id: str,
+    physical: Dict[str, Any],
+    formats: Any,
+    trace_name: str,
+    mirror_stream_key: str,
+    derive_case: Callable[[Any, Dict[str, Any]], Dict[str, Any]],
+    static_words: Callable[[Dict[str, Any]], Dict[str, Any]],
+    issue: int,
+    generator: str,
+    shadow_boundary: str,
+    extra_provenance: Optional[
+        Callable[[Dict[str, Any]], Dict[str, Any]]
+    ] = None,
+    frozen: Optional[Dict[str, Any]] = None,
+    rendered_words: Optional[List[int]] = None,
+) -> Dict[str, Any]:
+    """Assemble one committed VCO lane vector (#535, issues #73/#74).
+
+    The mirror-vs-frozen sidecar custody verification, the mirror-vs-model
+    dedicated-render check, and the scalar ``keyboard.midi_f0`` trace tail
+    are lane-independent; the lane supplies its ``derive_case``, its trace
+    name (``vco_1.raw`` / ``vco_2.raw``; the provenance raw key is derived
+    from it), the mirror stream key, its static-word and extra-provenance
+    hooks, and its provenance labels. Assembly runs with ``validate=False``
+    (each lane's committed vectors are loader- and contract-checked by
+    their consumers, ``tb/run_tb.py``'s VCO lanes and the VCO test suites),
+    preserving the generators' behavior.
+    """
+
+    derivation = derive_case(formats, physical)
+    mirror_digest = digest_words(derivation["streams"][mirror_stream_key])
+    raw_key = trace_name.replace(".", "_")
+
+    provenance: Dict[str, Any] = {
+        "issue": issue,
+        "generator": generator,
+        "model_identity": VCO_MODEL_IDENTITY,
+        "case_id": case_id,
+        "shadow_boundary": shadow_boundary,
+        "dr_0008_status": VCO_DR_0008_STATUS,
+        "dr_0008_constants_package_sha256": sha256_file(
+            CONSTANTS_PACKAGE_PATH
+        ),
+        "choices_register_sha256": sha256_file(CHOICES_REGISTER_PATH),
+        "static_words": static_words(derivation),
+    }
+    if extra_provenance is not None:
+        provenance.update(extra_provenance(derivation))
+    provenance[raw_key] = None
+    provenance["frozen_binding"] = None
+
+    if frozen is not None:
+        if mirror_digest != frozen["digest"]:
+            raise SystemExit(
+                "mirror does not reproduce the frozen %s digest for "
+                "%s: mirror %s frozen %s"
+                % (trace_name, case_id, mirror_digest, frozen["digest"])
+            )
+        sidecar_payload = (ROOT / frozen["sidecar_file"]).read_bytes()
+        if sha256_bytes(sidecar_payload) != frozen["sidecar_sha256"]:
+            raise SystemExit(
+                "frozen sidecar bytes drifted for %s (%s); regenerate"
+                % (case_id, frozen["sidecar_file"])
+            )
+        words = unpack_words_f32le(sidecar_payload)
+        if digest_words(words) != frozen["digest"]:
+            raise SystemExit(
+                "frozen sidecar words digest drift for %s" % case_id
+            )
+        row = evidence_row(words)
+        if row["words_sha256"] != frozen["digest"]:
+            raise SystemExit("evidence digest mismatch for " + case_id)
+        provenance[raw_key] = row
+        provenance["frozen_binding"] = {
+            "verified": True,
+            "golden_document": "sim/reference/fixed-voice-golden-v1.json",
+            "case_id": frozen["golden_case_id"],
+            "trace_digest": frozen["digest"],
+            "sidecar": {
+                "file": frozen["sidecar_file"],
+                "sha256": frozen["sidecar_sha256"],
+            },
+        }
+    else:
+        if digest_words(rendered_words) != mirror_digest:
+            raise SystemExit(
+                "mirror does not reproduce the model's own %s render "
+                "for %s" % (trace_name, case_id)
+            )
+        provenance[raw_key] = evidence_row(rendered_words)
+        provenance["derivation"] = (
+            "FixedVoiceModel.render of the declared parameters; the "
+            "committed digest is the model's own %s words; the host "
+            "mirror reproduced it exactly at generation time" % trace_name
+        )
+
+    traces = [
+        {
+            "name": "keyboard.midi_f0",
+            "kind": "scalar",
+            "encoding": "synthetic-int",
+            "cycle_start": 0,
+            "values": [derivation["words"]["keyboard.midi_f0"]],
+        }
+    ]
+    return build_vector_document(
+        dict(physical), traces, provenance, validate=False
+    )
+
+
+def build_vco_vectors(
+    *,
+    formats: Any,
+    directed_path: Path,
+    trace_name: str,
+    frozen_sidecar_cases: Sequence[str],
+    regime_cases: Iterable[Any],
+    build_case_vector: Callable[..., Dict[str, Any]],
+    frozen_case_extras: Optional[
+        Callable[[Dict[str, Any]], Sequence[Any]]
+    ] = None,
+    verbose: bool = False,
+    verbose_report: Optional[
+        Callable[[str, Dict[str, Any]], None]
+    ] = None,
+    post_check: Optional[Callable[[Dict[str, Any]], None]] = None,
+) -> Dict[str, Any]:
+    """Render one VCO lane's full vector set in memory (#535).
+
+    ``frozen_sidecar_cases`` names the frozen receipt cases whose
+    ``trace_name`` sidecars the lane validates against directly;
+    ``frozen_case_extras`` (the sine lane's frozen ``regime`` row) is
+    forwarded positionally before ``frozen=``. ``regime_cases`` yields
+    ``(case_id, overrides, ...)`` rows whose tail, if any, is forwarded
+    positionally before ``rendered_words=`` (the sine lane's directed
+    ``regime``); each case renders through the frozen whole-voice model
+    via :func:`render_fixed_trace`. ``post_check`` (the sine lane's
+    matrix non-vacuity refusal) runs over the finished set before the
+    caller's ``--check`` comparison or write.
+    """
+
+    directed = json.loads(directed_path.read_bytes())
+    base_p = {
+        name: entry["physical"] for name, entry in directed["base"].items()
+    }
+    frozen_doc = json.loads(RECEIPT_PATH.read_bytes())
+    frozen_cases = {case["id"]: case for case in frozen_doc["cases"]}
+
+    vectors: Dict[str, Any] = {}
+
+    for case_id in frozen_sidecar_cases:
+        case = frozen_cases[case_id]
+        sidecar_file = (
+            "sim/reference/fixed-voice-golden-v1-traces/%s.%s.f32le"
+            % (case_id, trace_name)
+        )
+        extras = (
+            frozen_case_extras(case)
+            if frozen_case_extras is not None
+            else ()
+        )
+        vectors["frozen:" + case_id] = build_case_vector(
+            "frozen:" + case_id,
+            case["parameters"],
+            formats,
+            *extras,
+            frozen={
+                "golden_case_id": case_id,
+                "digest": case["traces"][trace_name],
+                "sidecar_file": sidecar_file,
+                "sidecar_sha256": sha256_file(ROOT / sidecar_file),
+            },
+        )
+        if verbose:
+            print("built frozen:%s" % case_id)
+
+    for row in regime_cases:
+        case_id, overrides = row[0], row[1]
+        physical = dict(base_p)
+        physical.update(overrides)
+        words = render_fixed_trace(formats, physical, trace_name)
+        vectors[case_id] = build_case_vector(
+            case_id, physical, formats, *row[2:], rendered_words=words
+        )
+        if verbose:
+            if verbose_report is not None:
+                verbose_report(case_id, vectors[case_id])
+            else:
+                print("built %s" % case_id)
+
+    if post_check is not None:
+        post_check(vectors)
+    return vectors
+
+
+def run_vco_generator(
+    argv: Optional[Sequence[str]],
+    *,
+    description: Optional[str],
+    out_dir: Path,
+    build_all: Callable[[Any, bool], Dict[str, Any]],
+    tool_name: str,
+    frozen_count: int,
+    regime_label: str,
+) -> int:
+    """``--check`` / write entry point shared by the two VCO generators.
+
+    The write path rewrites the committed vector files; ``--check``
+    regenerates in memory and refuses any drift against them — including
+    an orphan committed ``.json`` no generator case accounts for (#535:
+    only the sine lane checked this before, so a stale square/saw file
+    passed unnoticed). ``--verbose`` reports each built case (a harmless
+    opt-in for the square/saw lane).
+    """
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="verify the committed vectors against a fresh in-memory build",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="report each built case"
+    )
+    args = parser.parse_args(argv)
+
+    # Deferred: keeps the schema/loader module free of the model import chain.
+    from .fixed_voice import AcceptedFormats
+
+    try:
+        formats = AcceptedFormats()
+    except Exception as error:  # noqa: BLE001 - refusal must be explicit
+        print("REFUSED: accepted register refused: %s" % error)
+        return 1
+
+    vectors = build_all(formats, args.verbose)
+
+    if args.check:
+        mismatches = []
+        for case_id, vector in sorted(vectors.items()):
+            path = out_dir / (case_id + ".json")
+            if not path.exists():
+                mismatches.append((case_id, "missing committed file"))
+                continue
+            committed = load_vector(path)
+            if committed != vector:
+                mismatches.append((case_id, "regeneration differs"))
+        extra = sorted(
+            path.stem for path in out_dir.glob("*.json")
+            if path.stem not in vectors
+        )
+        for case_id in extra:
+            mismatches.append(
+                (case_id, "committed file has no generator case")
+            )
+        if mismatches:
+            for case_id, why in mismatches:
+                print("CHECK FAIL: %s: %s" % (case_id, why))
+            return 1
+        print(
+            "CHECK OK: %d committed %s vectors regenerate exactly "
+            "(deterministic)" % (len(vectors), tool_name)
+        )
+        return 0
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for case_id, vector in sorted(vectors.items()):
+        path = out_dir / (case_id + ".json")
+        path.write_text(
+            json.dumps(vector, indent=1, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        try:
+            shown = path.relative_to(ROOT)
+        except ValueError:  # out_dir outside the repo (unit tests)
+            shown = path
+        print("wrote %s" % shown)
+    print(
+        "wrote %d vectors (%d frozen-binding, %d %s regime)"
+        % (
+            len(vectors),
+            frozen_count,
+            len(vectors) - frozen_count,
+            regime_label,
+        )
+    )
+    return 0
 
 
 def render_fixed_trace(formats: Any, physical: Dict[str, Any], trace_name: str) -> List[int]:

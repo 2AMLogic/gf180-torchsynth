@@ -1,15 +1,19 @@
 """Golden-vector schema, loader, and first-mismatch reporter (issue #68)."""
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
+from torchsynth_voice.digest import digest_words, sha256_bytes  # noqa: E402
 
 REGISTRY = gv.load_registry_document()
 INVENTORY = gv.load_inventory_document()
@@ -497,6 +501,355 @@ class TestSharedVectorAssembly(unittest.TestCase):
         self.assertEqual(
             document["traces"][0]["name"], "not.a.registered.trace"
         )
+
+
+#: Full-clip length: ``gv.evidence_row`` pins word 176399, and every word
+#: must survive the f32le pack/unpack round trip as an exact Q10.21 value.
+SYNTHETIC_VCO_WORDS = [
+    (index * 7) % 1024 - 512 for index in range(gv.CANONICAL_SAMPLE_COUNT)
+]
+
+
+def synthetic_vco_derivation(words=None):
+    """A fake lane derivation: mirror stream plus the pinned word sites."""
+
+    return {
+        "words": {
+            "keyboard.midi_f0": 69,
+            "vco_x.tuning": 3,
+            "vco_x.mod_depth": -5,
+        },
+        "init_word": 123456789,
+        "streams": {
+            "vco": SYNTHETIC_VCO_WORDS if words is None else words
+        },
+        "clamps": 2,
+        "counters": {
+            "records": [
+                {"kind": "saturation", "count": 4},
+                {"kind": "wrap", "count": 9},
+            ]
+        },
+    }
+
+
+def synthetic_static_words(derivation):
+    return {
+        "keyboard.midi_f0": derivation["words"]["keyboard.midi_f0"],
+        "init_phase_word": derivation["init_word"],
+    }
+
+
+class TestSharedVcoVectorAssembly(unittest.TestCase):
+    """The shared VCO vector builder both VCO generators delegate to (#535).
+
+    The two generators used to carry line-for-line copies of the vector
+    assembly and the sidecar-custody verification. These pin the single
+    shared copy to both lanes' behavior with a synthetic lane, so the
+    real generators' committed bytes stay pinned by their own ``--check``
+    gates instead of a slow model render here.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.words = SYNTHETIC_VCO_WORDS
+        cls.words_digest = digest_words(cls.words)
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.sidecar = Path(cls.tmp.name) / "case.vco_x.raw.f32le"
+        cls.sidecar.write_bytes(gv.pack_words_f32le(cls.words))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def build(self, frozen=None, rendered_words=...):
+        return gv.build_vco_vector(
+            case_id="case:synthetic",
+            physical={"keyboard.midi_f0": 69.0},
+            formats=None,
+            trace_name="vco_x.raw",
+            mirror_stream_key="vco",
+            derive_case=lambda formats, physical: synthetic_vco_derivation(),
+            static_words=synthetic_static_words,
+            issue=499,
+            generator="tools/generate_fake_vco_golden.py",
+            shadow_boundary="declared shadow boundary text",
+            frozen=frozen,
+            rendered_words=None if rendered_words is ... else rendered_words,
+        )
+
+    def frozen_binding(self, digest=None):
+        return {
+            "golden_case_id": "boundary:synthetic",
+            "digest": digest if digest is not None else self.words_digest,
+            "sidecar_file": str(self.sidecar),
+            "sidecar_sha256": sha256_bytes(self.sidecar.read_bytes()),
+        }
+
+    def test_frozen_sidecar_path_builds_the_binding_vector(self):
+        vector = self.build(frozen=self.frozen_binding())
+        provenance = vector["provenance"]
+        self.assertEqual(provenance["vco_x_raw"], gv.evidence_row(self.words))
+        self.assertEqual(provenance["frozen_binding"]["verified"], True)
+        self.assertEqual(
+            provenance["frozen_binding"]["case_id"], "boundary:synthetic"
+        )
+        self.assertEqual(
+            provenance["frozen_binding"]["golden_document"],
+            "sim/reference/fixed-voice-golden-v1.json",
+        )
+        self.assertEqual(
+            provenance["frozen_binding"]["trace_digest"], self.words_digest
+        )
+        self.assertEqual(
+            provenance["frozen_binding"]["sidecar"]["file"],
+            str(self.sidecar),
+        )
+        self.assertNotIn("derivation", provenance)
+
+    def test_provenance_carries_the_vco_lane_strings_verbatim(self):
+        """#535 out-of-scope guard: the committed provenance strings stay
+        byte-identical, NOT the control-path ``MODEL_IDENTITY`` text."""
+
+        provenance = self.build(frozen=self.frozen_binding())["provenance"]
+        self.assertEqual(provenance["model_identity"], "fixed-voice-v1")
+        self.assertEqual(provenance["dr_0008_status"], "Accepted")
+        self.assertNotEqual(provenance["model_identity"], gv.MODEL_IDENTITY)
+        self.assertNotEqual(provenance["dr_0008_status"], gv.DR_0008_STATUS)
+        self.assertEqual(
+            provenance["dr_0008_constants_package_sha256"],
+            gv.sha256_file(gv.CONSTANTS_PACKAGE_PATH),
+        )
+        self.assertEqual(
+            provenance["choices_register_sha256"],
+            gv.sha256_file(gv.CHOICES_REGISTER_PATH),
+        )
+        self.assertEqual(provenance["issue"], 499)
+        self.assertEqual(
+            provenance["generator"], "tools/generate_fake_vco_golden.py"
+        )
+        self.assertEqual(
+            provenance["shadow_boundary"], "declared shadow boundary text"
+        )
+
+    def test_assembly_carries_the_lane_hooks_and_scalar_trace(self):
+        vector = self.build(frozen=self.frozen_binding())
+        self.assertEqual(
+            vector["provenance"]["static_words"],
+            {"keyboard.midi_f0": 69, "init_phase_word": 123456789},
+        )
+        self.assertEqual(vector["parameters"], {"keyboard.midi_f0": 69.0})
+        self.assertEqual(vector["traces"], scalar_trace(69))
+        self.assertEqual(
+            vector["content_hash"], gv.compute_content_hash(vector)
+        )
+
+    def test_dedicated_render_path_builds_the_evidence_row(self):
+        vector = self.build(rendered_words=list(self.words))
+        provenance = vector["provenance"]
+        self.assertEqual(
+            provenance["vco_x_raw"]["words_sha256"], self.words_digest
+        )
+        self.assertIsNone(provenance["frozen_binding"])
+        self.assertIn("vco_x.raw words", provenance["derivation"])
+        self.assertIn("host mirror", provenance["derivation"])
+
+    def test_frozen_digest_mismatch_refuses(self):
+        with self.assertRaises(SystemExit) as caught:
+            self.build(frozen=self.frozen_binding(digest="0" * 64))
+        self.assertIn(
+            "mirror does not reproduce the frozen vco_x.raw digest",
+            str(caught.exception),
+        )
+
+    def test_frozen_sidecar_byte_drift_refuses(self):
+        frozen = self.frozen_binding()
+        frozen["sidecar_sha256"] = sha256_bytes(b"drifted")
+        with self.assertRaises(SystemExit) as caught:
+            self.build(frozen=frozen)
+        self.assertIn("frozen sidecar bytes drifted", str(caught.exception))
+
+    def test_dedicated_render_mismatch_refuses(self):
+        drifted = list(self.words)
+        drifted[176399] = drifted[176399] + 1
+        with self.assertRaises(SystemExit) as caught:
+            self.build(rendered_words=drifted)
+        self.assertIn(
+            "mirror does not reproduce the model's own vco_x.raw render",
+            str(caught.exception),
+        )
+
+
+class TestSharedVcoVectorSet(unittest.TestCase):
+    """``gv.build_vco_vectors`` iteration over the live frozen receipt."""
+
+    def test_frozen_and_regime_iteration_forward_the_lane_inputs(self):
+        receipt = json.loads(gv.RECEIPT_PATH.read_bytes())
+        case = next(
+            c
+            for c in receipt["cases"]
+            if c["id"] == "boundary:vco_1.initial_phase:upper"
+        )
+        calls = {}
+        post_check_seen = {}
+
+        def build_case_vector(
+            case_id, physical, formats, *extras, frozen=None, rendered_words=None
+        ):
+            calls[case_id] = (physical, extras, frozen, rendered_words)
+            return {"case": case_id}
+
+        words = [1, 2, 3]
+
+        def post_check(vectors):
+            post_check_seen["vectors"] = vectors
+
+        with mock.patch.object(
+            gv, "render_fixed_trace", return_value=words
+        ) as render:
+            vectors = gv.build_vco_vectors(
+                formats="FORMATS",
+                directed_path=ROOT / "spec/reference/directed-voice-v1.json",
+                trace_name="vco_1.raw",
+                frozen_sidecar_cases=("boundary:vco_1.initial_phase:upper",),
+                regime_cases=[("case:x", {"vco_1.tuning": 1.0}, "REGIME")],
+                build_case_vector=build_case_vector,
+                frozen_case_extras=lambda case: ("EXTRA",),
+                post_check=post_check,
+            )
+
+        frozen_id = "frozen:boundary:vco_1.initial_phase:upper"
+        self.assertEqual(set(vectors), {frozen_id, "case:x"})
+        self.assertIs(post_check_seen["vectors"], vectors)
+
+        physical, extras, frozen, rendered = calls[frozen_id]
+        self.assertEqual(physical, case["parameters"])
+        self.assertEqual(extras, ("EXTRA",))
+        self.assertEqual(frozen["golden_case_id"], case["id"])
+        self.assertEqual(frozen["digest"], case["traces"]["vco_1.raw"])
+        self.assertEqual(
+            frozen["sidecar_file"],
+            "sim/reference/fixed-voice-golden-v1-traces/"
+            "boundary:vco_1.initial_phase:upper.vco_1.raw.f32le",
+        )
+        self.assertEqual(
+            frozen["sidecar_sha256"],
+            gv.sha256_file(gv.ROOT / frozen["sidecar_file"]),
+        )
+        self.assertIsNone(rendered)
+
+        rphysical, rextras, rfrozen, rrendered = calls["case:x"]
+        self.assertEqual(rphysical["vco_1.tuning"], 1.0)
+        self.assertEqual(rextras, ("REGIME",))
+        self.assertIsNone(rfrozen)
+        self.assertEqual(rrendered, words)
+        render.assert_called_once_with("FORMATS", rphysical, "vco_1.raw")
+
+
+class TestSharedVcoDriver(unittest.TestCase):
+    """``gv.run_vco_generator``'s write path and ``--check`` refusals (#535).
+
+    The orphan-file refusal is the drift this issue closes: only the sine
+    lane's copy carried it, so a stale square/saw ``.json`` passed
+    ``--check`` unnoticed.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.out_dir = Path(self.tmp.name) / "golden"
+        self.vectors = {
+            "frozen:case:1": make_vector(4),
+            "directed:case:2": make_vector(5),
+        }
+        self.recorded_verbose = None
+
+    def build_all(self, formats, verbose):
+        self.recorded_verbose = verbose
+        return {case_id: dict(vector) for case_id, vector in self.vectors.items()}
+
+    def run_driver(self, argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            status = gv.run_vco_generator(
+                argv,
+                description="synthetic VCO driver",
+                out_dir=self.out_dir,
+                build_all=self.build_all,
+                tool_name="synthetic VCO",
+                frozen_count=1,
+                regime_label="directed",
+            )
+        return status, out.getvalue()
+
+    def test_write_path_writes_each_file_and_reports_the_summary(self):
+        status, output = self.run_driver([])
+        self.assertEqual(status, 0)
+        for case_id in self.vectors:
+            path = self.out_dir / (case_id + ".json")
+            self.assertTrue(path.exists(), case_id)
+            committed = gv.load_vector(path)
+            self.assertEqual(committed, self.vectors[case_id])
+        self.assertIn(
+            "wrote 2 vectors (1 frozen-binding, 1 directed regime)", output
+        )
+
+    def test_check_passes_against_committed_files(self):
+        self.run_driver([])
+        status, output = self.run_driver(["--check"])
+        self.assertEqual(status, 0)
+        self.assertIn(
+            "CHECK OK: 2 committed synthetic VCO vectors regenerate "
+            "exactly (deterministic)",
+            output,
+        )
+
+    def test_check_refuses_a_missing_committed_file(self):
+        self.run_driver([])
+        (self.out_dir / "directed:case:2.json").unlink()
+        status, output = self.run_driver(["--check"])
+        self.assertEqual(status, 1)
+        self.assertIn(
+            "CHECK FAIL: directed:case:2: missing committed file", output
+        )
+
+    def test_check_refuses_a_drifted_committed_file(self):
+        self.run_driver([])
+        path = self.out_dir / "directed:case:2.json"
+        committed = json.loads(path.read_text(encoding="utf-8"))
+        committed["traces"][0]["values"][0] = 999
+        committed["content_hash"] = gv.compute_content_hash(committed)
+        path.write_text(
+            json.dumps(committed, indent=1, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        status, output = self.run_driver(["--check"])
+        self.assertEqual(status, 1)
+        self.assertIn(
+            "CHECK FAIL: directed:case:2: regeneration differs", output
+        )
+
+    def test_check_refuses_an_orphan_committed_file(self):
+        self.run_driver([])
+        (self.out_dir / "orphan.json").write_text("{}", encoding="utf-8")
+        status, output = self.run_driver(["--check"])
+        self.assertEqual(status, 1)
+        self.assertIn(
+            "CHECK FAIL: orphan: committed file has no generator case",
+            output,
+        )
+
+    def test_verbose_flag_reaches_build_all(self):
+        """--verbose is shared: both lanes' build_all take it (#535)."""
+
+        status, _output = self.run_driver(["--verbose"])
+        self.assertEqual(status, 0)
+        self.assertTrue(self.recorded_verbose)
+
+    def test_no_verbose_flag_defaults_to_quiet(self):
+        status, _output = self.run_driver([])
+        self.assertEqual(status, 0)
+        self.assertFalse(self.recorded_verbose)
 
 
 if __name__ == "__main__":

@@ -27,8 +27,6 @@ hardware-playback, or sound-fidelity claim is made.
 
 from __future__ import annotations
 
-import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -37,19 +35,15 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import vco2_golden as vg  # noqa: E402
-from torchsynth_voice.digest import sha256_bytes, sha256_file  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
     AcceptedFormats,
 )
 
 DIRECTED_PATH = ROOT / "spec/reference/directed-voice-v1.json"
-FROZEN_GOLDEN = ROOT / "sim/reference/fixed-voice-golden-v1.json"
-TRACE_DIR = ROOT / "sim/reference/fixed-voice-golden-v1-traces"
-CONSTANTS_PACKAGE = ROOT / "tb/sv/gf180_rtl_constants_pkg.sv"
-CHOICES_REGISTER = ROOT / "spec/reference/fixedpoint-choices-v1.json"
 OUT_DIR = ROOT / "sim/reference/square-saw-vco-golden-v1"
 
 ISSUE = 74
+GENERATOR = "tools/generate_square_saw_vco_golden.py"
 
 #: The frozen cases whose retained vco_2.raw sidecars the engine validates
 #: against directly (the "landed cases").
@@ -98,10 +92,6 @@ SHADOW_BOUNDARY = (
 )
 
 
-def load_json(path: Path):
-    return json.loads(path.read_bytes())
-
-
 def build_vector(
     case_id: str,
     physical: dict,
@@ -109,21 +99,22 @@ def build_vector(
     frozen: dict = None,
     rendered_words: list = None,
 ) -> dict:
-    """One committed vector: frozen-binding or dedicated-regime."""
+    """One committed vector: frozen-binding or dedicated-regime.
 
-    derivation = vg.derive_case(formats, physical)
-    mirror_digest = vg.voice_digest(derivation["streams"]["v2"])
+    The sidecar custody verification, the dedicated-render check, and the
+    vector assembly are shared in ``golden_vectors.build_vco_vector``
+    (#535); this wrapper supplies the square/saw lane's derivation hook
+    and static words.
+    """
 
-    provenance = {
-        "issue": ISSUE,
-        "generator": "tools/generate_square_saw_vco_golden.py",
-        "model_identity": "fixed-voice-v1",
-        "case_id": case_id,
-        "shadow_boundary": SHADOW_BOUNDARY,
-        "dr_0008_status": "Accepted",
-        "dr_0008_constants_package_sha256": sha256_file(CONSTANTS_PACKAGE),
-        "choices_register_sha256": sha256_file(CHOICES_REGISTER),
-        "static_words": {
+    return gv.build_vco_vector(
+        case_id=case_id,
+        physical=physical,
+        formats=formats,
+        trace_name="vco_2.raw",
+        mirror_stream_key="v2",
+        derive_case=vg.derive_case,
+        static_words=lambda derivation: {
             "keyboard.midi_f0": derivation["words"]["keyboard.midi_f0"],
             "vco_2.tuning": derivation["words"]["vco_2.tuning"],
             "vco_2.mod_depth": derivation["words"]["vco_2.mod_depth"],
@@ -131,161 +122,43 @@ def build_vector(
             "partials_word": derivation["partials"].word,
             "init_phase_word": derivation["init_word"],
         },
-        "vco_2_raw": None,
-        "frozen_binding": None,
-    }
-
-    if frozen is not None:
-        if mirror_digest != frozen["digest"]:
-            raise SystemExit(
-                "mirror does not reproduce the frozen vco_2.raw digest for "
-                "%s: mirror %s frozen %s"
-                % (case_id, mirror_digest, frozen["digest"])
-            )
-        sidecar_payload = (ROOT / frozen["sidecar_file"]).read_bytes()
-        if sha256_bytes(sidecar_payload) != frozen["sidecar_sha256"]:
-            raise SystemExit(
-                "frozen sidecar bytes drifted for %s (%s); regenerate"
-                % (case_id, frozen["sidecar_file"])
-            )
-        words = vg.unpack_words_f32le(sidecar_payload)
-        if vg.voice_digest(words) != frozen["digest"]:
-            raise SystemExit(
-                "frozen sidecar words digest drift for %s" % case_id
-            )
-        row = gv.evidence_row(words)
-        if row["words_sha256"] != frozen["digest"]:
-            raise SystemExit("evidence digest mismatch for " + case_id)
-        provenance["vco_2_raw"] = row
-        provenance["frozen_binding"] = {
-            "verified": True,
-            "golden_document": "sim/reference/fixed-voice-golden-v1.json",
-            "case_id": frozen["golden_case_id"],
-            "trace_digest": frozen["digest"],
-            "sidecar": {
-                "file": frozen["sidecar_file"],
-                "sha256": frozen["sidecar_sha256"],
-            },
-        }
-    else:
-        if vg.voice_digest(rendered_words) != mirror_digest:
-            raise SystemExit(
-                "mirror does not reproduce the model's own vco_2.raw render "
-                "for %s" % case_id
-            )
-        provenance["vco_2_raw"] = gv.evidence_row(rendered_words)
-        provenance["derivation"] = (
-            "FixedVoiceModel.render of the declared parameters; the "
-            "committed digest is the model's own vco_2.raw words; the host "
-            "mirror reproduced it exactly at generation time"
-        )
-
-    traces = [
-        {
-            "name": "keyboard.midi_f0",
-            "kind": "scalar",
-            "encoding": "synthetic-int",
-            "cycle_start": 0,
-            "values": [derivation["words"]["keyboard.midi_f0"]],
-        }
-    ]
-    # validate=False preserves this generator's behavior: the committed
-    # vectors are loader- and contract-checked by their consumers
-    # (tb/run_tb.py vco_load_vectors, tests/test_square_saw_vco_engine.py), not at assembly time.
-    return gv.build_vector_document(
-        dict(physical), traces, provenance, validate=False
+        issue=ISSUE,
+        generator=GENERATOR,
+        shadow_boundary=SHADOW_BOUNDARY,
+        frozen=frozen,
+        rendered_words=rendered_words,
     )
 
 
-def build_all(formats: AcceptedFormats) -> dict:
-    directed = load_json(DIRECTED_PATH)
-    base_p = {name: entry["physical"] for name, entry in directed["base"].items()}
-    frozen_doc = load_json(FROZEN_GOLDEN)
-    frozen_cases = {case["id"]: case for case in frozen_doc["cases"]}
+def build_all(formats: AcceptedFormats, verbose: bool = False) -> dict:
+    """The lane's full vector set, via ``golden_vectors.build_vco_vectors``.
 
-    vectors = {}
+    The frozen-sidecar iteration and the dedicated-case renders run in
+    the shared builder (#535); ``verbose`` is the shared driver's
+    harmless opt-in.
+    """
 
-    for case_id in FROZEN_SIDECAR_CASES:
-        case = frozen_cases[case_id]
-        sidecar_file = "sim/reference/fixed-voice-golden-v1-traces/%s.vco_2.raw.f32le" % case_id
-        digest = case["traces"]["vco_2.raw"]
-        vectors["frozen:" + case_id] = build_vector(
-            "frozen:" + case_id,
-            case["parameters"],
-            formats,
-            frozen={
-                "golden_case_id": case_id,
-                "digest": digest,
-                "sidecar_file": sidecar_file,
-                "sidecar_sha256": sha256_file(ROOT / sidecar_file),
-            },
-        )
-
-    for case_id, overrides in DEDICATED_CASES:
-        physical = dict(base_p)
-        physical.update(overrides)
-        words = gv.render_fixed_trace(formats, physical, "vco_2.raw")
-        vectors[case_id] = build_vector(
-            case_id, physical, formats, rendered_words=words
-        )
-
-    return vectors
+    return gv.build_vco_vectors(
+        formats=formats,
+        directed_path=DIRECTED_PATH,
+        trace_name="vco_2.raw",
+        frozen_sidecar_cases=FROZEN_SIDECAR_CASES,
+        regime_cases=DEDICATED_CASES,
+        build_case_vector=build_vector,
+        verbose=verbose,
+    )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="verify the committed vectors against a fresh in-memory build",
+    return gv.run_vco_generator(
+        None,
+        description=__doc__,
+        out_dir=OUT_DIR,
+        build_all=build_all,
+        tool_name="square/saw VCO",
+        frozen_count=len(FROZEN_SIDECAR_CASES),
+        regime_label="dedicated",
     )
-    args = parser.parse_args()
-
-    try:
-        formats = AcceptedFormats()
-    except Exception as error:  # noqa: BLE001 - reported, never a silent pass
-        print("REFUSED: accepted register refused: %s" % error)
-        return 1
-
-    vectors = build_all(formats)
-
-    if args.check:
-        mismatches = []
-        for case_id, vector in sorted(vectors.items()):
-            path = OUT_DIR / (case_id + ".json")
-            if not path.exists():
-                mismatches.append((case_id, "missing committed file"))
-                continue
-            committed = gv.load_vector(path)
-            if committed != vector:
-                mismatches.append((case_id, "regeneration differs"))
-        if mismatches:
-            for case_id, why in mismatches:
-                print("CHECK FAIL: %s: %s" % (case_id, why))
-            return 1
-        print(
-            "CHECK OK: %d committed square/saw VCO vectors regenerate "
-            "exactly (deterministic)" % len(vectors)
-        )
-        return 0
-
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    for case_id, vector in sorted(vectors.items()):
-        path = OUT_DIR / (case_id + ".json")
-        path.write_text(
-            json.dumps(vector, indent=1, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        print("wrote %s" % path.relative_to(ROOT))
-    print(
-        "wrote %d vectors (%d frozen-binding, %d dedicated regime)"
-        % (
-            len(vectors),
-            len(FROZEN_SIDECAR_CASES),
-            len(DEDICATED_CASES),
-        )
-    )
-    return 0
 
 
 if __name__ == "__main__":
