@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# FPGA feasibility-measurement build (DR-0013, issue #80).
+# FPGA feasibility-measurement build (DR-0017, issues #80 and #374).
 #
-#   fpga/build.sh [stage ...]     stages: env stage synth engines pnr report (default: all)
+#   fpga/build.sh [stage ...]     stages: env stage synth engines pnr synth_voice vsim report (default: all)
 #
 # Everything is written under fpga/build/ (git-ignored); the small evidence
 # files are copied to fpga/reports/. Single-threaded by design (one yosys,
@@ -21,7 +21,7 @@ PY="$VENV/bin/python"
 RUN="$PY -W ignore $HERE/scripts/yowasp_bigstack.py"
 SOURCES="gf180_rtl_constants_pkg.sv adsr_engine.sv lfo_vca_engine.sv mod_matrix_engine.sv upsample_engine.sv quarter_wave_lut.sv sine_vco_engine.sv square_saw_vco_engine.sv noise_stream_dut.sv audio_mix_engine.sv normalization_replay_engine.sv one_shot_voice_top.sv fpga_oneshot_top.sv"
 TOP=fpga_oneshot_top
-STAGES=("$@"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(env stage synth engines pnr report)
+STAGES=("$@"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(env stage synth engines pnr synth_voice vsim report)
 want() { local s; for s in "${STAGES[@]}"; do [ "$s" = "$1" ] && return 0; done; return 1; }
 
 mkdir -p "$B" "$OUT" "$REP"
@@ -73,6 +73,28 @@ if want pnr; then
     --log "$OUT/pnr.log" --textcfg "$OUT/$TOP.cfg" >/dev/null 2>"$OUT/pnr.stderr"
   echo "nextpnr exit code: $?" > "$OUT/pnr.rc"
   set -e
+fi
+
+if want synth_voice; then
+  # #374: post-synthesis netlist of the UNMODIFIED whole-voice top (no
+  # measurement shim), same staged sources and flow as `synth`, for the
+  # exact-sentinel simulation attempt. Emits both the JSON netlist the flow
+  # standardizes on and a Verilog copy for the simulator.
+  cd "$SRC"
+  VTOP=one_shot_voice_top
+  VSRC="${SOURCES% fpga_oneshot_top.sv}"
+  MAPLUTS="check -latchonly -assert; techmap -map +/lattice/latches_map.v; abc -lut 4:7 -dress; clean"
+  $RUN yosys -q -l "$OUT/synth_voice_top.log" -p "read_slang -j 1 --top $VTOP $VSRC; synth_ecp5 -top $VTOP -run :map_luts; $MAPLUTS; synth_ecp5 -top $VTOP -run map_cells: -json $OUT/$VTOP.json; write_verilog -noattr $OUT/$VTOP.v; tee -o $OUT/stat_voice_top.txt stat" >/dev/null 2>"$OUT/synth_voice_top.stderr"
+fi
+
+if want vsim; then
+  # #374: attempt the named exact-sentinel simulation of the synth_ecp5
+  # netlist with the installed open simulators (iverilog/verilator) and the
+  # pinned toolchain's own primitive models. A committed refusal with the
+  # measured reason is a complete outcome; the runner exits non-zero only
+  # when it can produce no verdict at all.
+  python3 "$HERE/scripts/run_postsynth_sentinel.py" \
+    --root "$ROOT" --venv "$VENV" --out "$OUT" --rep "$REP"
 fi
 
 if want report; then

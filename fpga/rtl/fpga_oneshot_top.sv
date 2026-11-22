@@ -1,5 +1,5 @@
 // fpga_oneshot_top.sv -- MEASUREMENT WRAPPER around one_shot_voice_top
-// (issue #80, DR-0013). It exists only so the passing one-shot RTL can be
+// (issue #80, DR-0017). It exists only so the passing one-shot RTL can be
 // synthesized, placed and routed on one ECP5 device and so its resource,
 // timing and cycle numbers can be read. It is NOT a product control path:
 // the physical control/audio path is issue #81.
