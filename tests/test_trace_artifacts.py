@@ -15,6 +15,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from torchsynth_voice import artifact_renderer  # noqa: E402
 from torchsynth_voice import trace_artifacts as ta  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
@@ -610,7 +611,9 @@ class TracedDockerReceiptTests(unittest.TestCase):
         store = ArtifactStore(self.base / "store")
         request = dict(copy.deepcopy(self.template), fixture=fixture(0))
         with mocked_docker_launch(
-            qta, request["project_git"], TracedBackend()
+            # The launch skeleton lives in DockerBackend.__call__ now, so the
+            # identity patch must target artifact_renderer, not the qta alias.
+            artifact_renderer, request["project_git"], TracedBackend()
         ) as executed:
             product = render_artifact(request, store, self.backend)
         self.assertEqual(len(executed), 1)
@@ -623,7 +626,7 @@ class TracedDockerReceiptTests(unittest.TestCase):
     def test_traced_corpus_finish_records_are_path_free(self):
         root = self.base / "store"
         with mocked_docker_launch(
-            qta, self.template["project_git"], TracedBackend()
+            artifact_renderer, self.template["project_git"], TracedBackend()
         ) as executed:
             envelope = run_corpus(
                 root,

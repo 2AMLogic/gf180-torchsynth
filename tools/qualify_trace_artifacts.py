@@ -17,11 +17,8 @@ attaches the shared container-side capture provider,
 import argparse
 import hashlib
 import json
-import platform
 import subprocess
 import sys
-import tempfile
-import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,23 +28,14 @@ from torchsynth_voice import trace_artifacts as ta  # noqa: E402
 from torchsynth_voice import trace_registry  # noqa: E402
 from torchsynth_voice.artifact_renderer import (  # noqa: E402
     DockerBackend,
-    PORTABLE_COMMAND_REPRESENTATION,
-    PROFILE,
-    PROJECT_ROOT_PLACEHOLDER,
-    THREAD_ENV,
-    WORKER_OUTPUT_PLACEHOLDER,
     digest,
-    dispatch_flags,
-    dispatch_unset_flags,
+    host_admission,  # noqa: F401 - re-export; qta.host_admission is public
     json_bytes,
     loads,
     project_identity,
     qualification,
-    release_profile_environment,
     render_artifact,
     request_template,
-    sha256_file,
-    validate_request,
     require,
 )
 from torchsynth_voice.artifacts import (  # noqa: E402
@@ -217,52 +205,13 @@ def check_inputs():
     )
 
 
-def host_admission(publication):
-    """DR-0006 host and image gates, identical in scope to the landed backend."""
-    image = publication["provenance"]["image"]["Id"]
-    host = dict(
-        host_platform=platform.platform(),
-        host_os_version=platform.mac_ver()[0],
-        host_architecture=platform.machine(),
-        host_cpu=subprocess.check_output(
-            ["sysctl", "-n", "machdep.cpu.brand_string"], text=True
-        ).strip(),
-        docker_server=subprocess.check_output(
-            [
-                "docker",
-                "version",
-                "--format",
-                "{{.Server.Os}}/{{.Server.Arch}} {{.Server.Version}}",
-            ],
-            text=True,
-        ).strip(),
-    )
-    require(
-        platform.system() == "Darwin"
-        and host["host_os_version"] == "26.5.1"
-        and host["host_architecture"] == "arm64"
-        and host["host_cpu"] == "Apple M5"
-        and host["docker_server"] == publication["provenance"]["docker_server"],
-        "host outside DR-0006 measured scope",
-    )
-    inspection = loads(
-        subprocess.check_output(["docker", "image", "inspect", image])
-    )[0]
-    require(
-        inspection["Id"] == image
-        and inspection["Architecture"] == "amd64"
-        and inspection["Os"] == "linux",
-        "qualified image mismatch",
-    )
-    return host, image
-
-
-class TracedDockerBackend:
+class TracedDockerBackend(DockerBackend):
     """Qualified launch whose worker attaches the #23 capture provider.
 
-    The landed stock backend refuses providers; this #24-owned integration
-    reuses its admission checks and launch environment and adds the
-    container-side driver that binds ``TraceCapture`` to the same worker call.
+    The landed stock backend owns the DR-0006 admission sequence and the
+    ``docker run`` argv/receipt skeleton; this #24-owned integration overrides
+    only the hooks that stage the container-side driver binding
+    ``TraceCapture`` to the same worker call and re-collect its trace bytes.
 
     ``driver_source`` and ``collect_telemetry`` are optional extension points
     for #287's measurement runner; the defaults leave the #24 launch, driver
@@ -270,16 +219,10 @@ class TracedDockerBackend:
     """
 
     driver_source = DRIVER_SOURCE
+    timeout_seconds = 900
+    worker_label = "traced worker"
 
-    def __init__(self, *, project_root=None):
-        self.project_root = Path(project_root or repository_root()).resolve()
-
-    def collect_telemetry(self, directory, launcher_elapsed_seconds):
-        """Return optional worker telemetry for the receipt; None adds nothing."""
-        return None
-
-    def __call__(self, request, *, capture_provider=None):
-        validate_request(request)
+    def _refuse_unqualified_request(self, request, capture_provider):
         require(
             capture_provider is None,
             "host-side providers cannot cross the worker process boundary",
@@ -288,130 +231,31 @@ class TracedDockerBackend:
             request["requested_traces"],
             "use the stock DockerBackend for audio-only requests",
         )
-        require(
-            not request["project_git"]["dirty"],
-            "production requires a frozen clean producer checkout",
-        )
-        require(
-            project_identity(self.project_root) == request["project_git"],
-            "producer checkout changed",
-        )
-        publication, expected_runtime = qualification()
-        host, image = host_admission(publication)
-        # Derived from the preregistered plan, never restated: the driver below
-        # runs render_artifact.render_selected, which asserts the plan's whole
-        # profile_environment["release"] before it renders (issue #3).
-        profile = release_profile_environment()
-        with tempfile.TemporaryDirectory() as temporary:
-            directory = Path(temporary).resolve()
-            (directory / "request.json").write_bytes(json_bytes(request))
-            (directory / "driver.py").write_text(self.driver_source)
 
-            def launch(project_source, output_source):
-                # Shared by the executed argv (real mount sources) and the
-                # published receipt (named placeholders); see
-                # spec/CORPUS-RUNNER.md "Portable attempt receipts".
-                return [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "--pull",
-                    "never",
-                    "--platform",
-                    "linux/amd64",
-                    "--network",
-                    "none",
-                    "--memory",
-                    "6g",
-                    "--cpus",
-                    "1",
-                    *[
-                        part
-                        for k, v in THREAD_ENV.items()
-                        for part in ("--env", k + "=" + v)
-                    ],
-                    *dispatch_flags(profile),
-                    "--mount",
-                    "type=bind,src=" + project_source + ",dst=/repo,readonly",
-                    "--mount",
-                    "type=bind,src=" + output_source + ",dst=/output",
-                    "--entrypoint",
-                    "env",
-                    image,
-                    *dispatch_unset_flags(profile),
-                    "python",
-                    "/output/driver.py",
-                ]
+    def _prepare_directory(self, directory, request):
+        super()._prepare_directory(directory, request)
+        (directory / "driver.py").write_text(self.driver_source)
 
-            command = launch(str(self.project_root), str(directory))
-            portable_command = launch(
-                PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER
-            )
-            launched = time.monotonic()
-            result = subprocess.run(
-                command, capture_output=True, timeout=900, check=False
-            )
-            launcher_elapsed_seconds = time.monotonic() - launched
+    def _worker_arguments(self):
+        return ["python", "/output/driver.py"]
+
+    def _collect_traces(self, directory, request, observed):
+        traces = {}
+        for descriptor in loads(
+            (directory / "trace-descriptors.json").read_bytes()
+        ):
+            data = (directory / descriptor["file_ref"]).read_bytes()
             require(
-                result.returncode == 0,
-                "traced worker failed: "
-                + result.stderr.decode(errors="replace")[-2000:],
+                hashlib.sha256(data).hexdigest() == descriptor["sha256"],
+                "returned trace bytes disagree with the capture descriptor: "
+                + descriptor["name"],
             )
-            observed = loads((directory / "observation.json").read_bytes())
-            for name in ("audio", "noise", "pre_normalization"):
-                observed[name] = (directory / (name + ".f32le")).read_bytes()
-            traces = {}
-            for descriptor in loads(
-                (directory / "trace-descriptors.json").read_bytes()
-            ):
-                data = (directory / descriptor["file_ref"]).read_bytes()
-                require(
-                    hashlib.sha256(data).hexdigest() == descriptor["sha256"],
-                    "returned trace bytes disagree with the capture descriptor: "
-                    + descriptor["name"],
-                )
-                traces[descriptor["name"]] = data
-            require(
-                set(traces) == set(request["requested_traces"]),
-                "traced worker returned the wrong trace set",
-            )
-            observed["traces"] = traces
-            receipt = observed["receipt"]
-            require(
-                receipt["request_sha256"] == digest(json_bytes(request)),
-                "worker request mismatch",
-            )
-            require(
-                receipt["worker_sha256"]
-                == sha256_file(
-                    self.project_root / "env/release-era/render_artifact.py"
-                ),
-                "worker implementation mismatch",
-            )
-            require(
-                receipt["runtime"] == expected_runtime,
-                "actual worker outside qualified identity",
-            )
-            receipt.update(
-                runtime_profile=PROFILE,
-                host=host,
-                image=image,
-                command=portable_command,
-                command_representation=PORTABLE_COMMAND_REPRESENTATION,
-                exit_code=result.returncode,
-                stdout_sha256=digest(result.stdout),
-                stderr_sha256=digest(result.stderr),
-            )
-            telemetry = self.collect_telemetry(
-                directory, launcher_elapsed_seconds
-            )
-            if telemetry is not None:
-                receipt["worker_telemetry"] = telemetry
+            traces[descriptor["name"]] = data
         require(
-            project_identity(self.project_root) == request["project_git"],
-            "producer changed during render",
+            set(traces) == set(request["requested_traces"]),
+            "traced worker returned the wrong trace set",
         )
-        return observed
+        observed["traces"] = traces
 
 
 def build_case_bundle(store, case):

@@ -15,6 +15,7 @@ import stat
 import struct
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -382,6 +383,46 @@ def qualification():
     return record, runtime
 
 
+def host_admission(publication):
+    """DR-0006 host and image gates, shared by every qualified launch."""
+    image = publication["provenance"]["image"]["Id"]
+    host = dict(
+        host_platform=platform.platform(),
+        host_os_version=platform.mac_ver()[0],
+        host_architecture=platform.machine(),
+        host_cpu=subprocess.check_output(
+            ["sysctl", "-n", "machdep.cpu.brand_string"], text=True
+        ).strip(),
+        docker_server=subprocess.check_output(
+            [
+                "docker",
+                "version",
+                "--format",
+                "{{.Server.Os}}/{{.Server.Arch}} {{.Server.Version}}",
+            ],
+            text=True,
+        ).strip(),
+    )
+    require(
+        platform.system() == "Darwin"
+        and host["host_os_version"] == "26.5.1"
+        and host["host_architecture"] == "arm64"
+        and host["host_cpu"] == "Apple M5"
+        and host["docker_server"] == publication["provenance"]["docker_server"],
+        "host outside DR-0006 measured scope",
+    )
+    inspection = loads(
+        subprocess.check_output(["docker", "image", "inspect", image])
+    )[0]
+    require(
+        inspection["Id"] == image
+        and inspection["Architecture"] == "amd64"
+        and inspection["Os"] == "linux",
+        "qualified image mismatch",
+    )
+    return host, image
+
+
 def runtime_descriptor(runtime):
     # Full CPU text is retained in the run receipt; v1 permits restricted strings.
     return dict(
@@ -672,17 +713,53 @@ def render_artifact(request, store: ArtifactStore, backend, *, capture_provider=
 
 
 class DockerBackend:
-    """Qualified emulated-host launch; construction performs no render/data access."""
+    """Qualified emulated-host launch; construction performs no render/data access.
+
+    The launch skeleton below is the single owner of the DR-0006 admission
+    sequence and the ``docker run`` argv/receipt pair; the traced producer
+    (``tools/qualify_trace_artifacts.py``) subclasses it and overrides only the
+    narrow hooks, so the two cannot drift apart again.
+    """
+
+    #: Wall-clock budget for one worker launch.
+    timeout_seconds = 600
+    #: Failure-message prefix naming which worker refused.
+    worker_label = "worker"
 
     def __init__(self, *, project_root=None):
         self.project_root = Path(project_root or repository_root()).resolve()
 
-    def __call__(self, request, *, capture_provider=None):
-        validate_request(request)
+    def collect_telemetry(self, directory, launcher_elapsed_seconds):
+        """Return optional worker telemetry for the receipt; None adds nothing."""
+        return None
+
+    def _refuse_unqualified_request(self, request, capture_provider):
         require(
             capture_provider is None,
             "Docker capture provider integration belongs to issue 24",
         )
+
+    def _prepare_directory(self, directory, request):
+        (directory / "request.json").write_bytes(json_bytes(request))
+
+    def _worker_arguments(self):
+        return [
+            "python",
+            "/repo/env/release-era/render_artifact.py",
+            "--request",
+            "/output/request.json",
+            "--output",
+            "/output",
+            "--source-root",
+            "/opt/torchsynth",
+        ]
+
+    def _collect_traces(self, directory, request, observed):
+        """Extend the read observation with worker outputs beyond the base set."""
+
+    def __call__(self, request, *, capture_provider=None):
+        validate_request(request)
+        self._refuse_unqualified_request(request, capture_provider)
         require(
             not request["project_git"]["dirty"],
             "production requires a frozen clean producer checkout",
@@ -691,46 +768,15 @@ class DockerBackend:
             project_identity(self.project_root) == request["project_git"],
             "producer checkout changed",
         )
-        publication, _ = qualification()
-        host = dict(
-            host_platform=platform.platform(),
-            host_os_version=platform.mac_ver()[0],
-            host_architecture=platform.machine(),
-            host_cpu=subprocess.check_output(
-                ["sysctl", "-n", "machdep.cpu.brand_string"], text=True
-            ).strip(),
-            docker_server=subprocess.check_output(
-                [
-                    "docker",
-                    "version",
-                    "--format",
-                    "{{.Server.Os}}/{{.Server.Arch}} {{.Server.Version}}",
-                ],
-                text=True,
-            ).strip(),
-        )
-        require(
-            platform.system() == "Darwin"
-            and host["host_os_version"] == "26.5.1"
-            and host["host_architecture"] == "arm64"
-            and host["host_cpu"] == "Apple M5"
-            and host["docker_server"] == publication["provenance"]["docker_server"],
-            "host outside DR-0006 measured scope",
-        )
-        image = publication["provenance"]["image"]["Id"]
-        inspection = loads(
-            subprocess.check_output(["docker", "image", "inspect", image])
-        )[0]
-        require(
-            inspection["Id"] == image
-            and inspection["Architecture"] == "amd64"
-            and inspection["Os"] == "linux",
-            "qualified image mismatch",
-        )
+        publication, expected_runtime = qualification()
+        host, image = host_admission(publication)
+        # Derived from the preregistered plan, never restated: the worker
+        # asserts the plan's whole profile_environment["release"] before it
+        # renders (issue #3).
         profile = release_profile_environment()
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary).resolve()
-            (directory / "request.json").write_bytes(json_bytes(request))
+            self._prepare_directory(directory, request)
 
             def launch(project_source, output_source):
                 # One construction serves the executed argv (real sources) and
@@ -756,38 +802,35 @@ class DockerBackend:
                         for part in ("--env", k + "=" + v)
                     ],
                     *dispatch_flags(profile),
-                    "--mount",
-                    "type=bind,src=" + project_source + ",dst=/repo,readonly",
-                    "--mount",
-                    "type=bind,src=" + output_source + ",dst=/output",
+                    *mount_options(project_source, output_source),
                     "--entrypoint",
                     "env",
                     image,
                     *dispatch_unset_flags(profile),
-                    "python",
-                    "/repo/env/release-era/render_artifact.py",
-                    "--request",
-                    "/output/request.json",
-                    "--output",
-                    "/output",
-                    "--source-root",
-                    "/opt/torchsynth",
+                    *self._worker_arguments(),
                 ]
 
-            command = launch(str(self.project_root), str(directory))
-            portable_command = launch(
-                PROJECT_ROOT_PLACEHOLDER, WORKER_OUTPUT_PLACEHOLDER
+            command, portable_command = launch_and_described(
+                launch, self.project_root, directory
             )
+            launched = time.monotonic()
             result = subprocess.run(
-                command, capture_output=True, timeout=600, check=False
+                command,
+                capture_output=True,
+                timeout=self.timeout_seconds,
+                check=False,
             )
+            launcher_elapsed_seconds = time.monotonic() - launched
             require(
                 result.returncode == 0,
-                "worker failed: " + result.stderr.decode(errors="replace")[-2000:],
+                self.worker_label
+                + " failed: "
+                + result.stderr.decode(errors="replace")[-2000:],
             )
             observed = loads((directory / "observation.json").read_bytes())
             for name in ("audio", "noise", "pre_normalization"):
                 observed[name] = (directory / (name + ".f32le")).read_bytes()
+            self._collect_traces(directory, request, observed)
             receipt = observed["receipt"]
             require(
                 receipt["request_sha256"] == digest(json_bytes(request)),
@@ -800,7 +843,6 @@ class DockerBackend:
                 ),
                 "worker implementation mismatch",
             )
-            _, expected_runtime = qualification()
             require(
                 receipt["runtime"] == expected_runtime,
                 "actual worker outside qualified identity",
@@ -815,6 +857,11 @@ class DockerBackend:
                 stdout_sha256=digest(result.stdout),
                 stderr_sha256=digest(result.stderr),
             )
+            telemetry = self.collect_telemetry(
+                directory, launcher_elapsed_seconds
+            )
+            if telemetry is not None:
+                receipt["worker_telemetry"] = telemetry
         require(
             project_identity(self.project_root) == request["project_git"],
             "producer changed during render",

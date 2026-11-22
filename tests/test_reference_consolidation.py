@@ -22,7 +22,7 @@ Three kinds of test live here, and the second kind is the load-bearing one:
    every real-render spawn deriving its dispatch pins from the preregistered
    plan instead of restating them, so the container the worker admits is the
    container the plan declares. ``check_dispatch_profile_sites`` enforces that
-   across all seven registered spawn/worker pairs; these tests cover the shared
+   across every registered spawn/worker pair; these tests cover the shared
    helper those spawns call.
 """
 
