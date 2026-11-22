@@ -29,7 +29,17 @@ published negative result, not a pass.
 | `TRELLIS_FF` | 4,754 | 83,640 | 5% |
 | `MULT18X18D` (DSP) | 324 | 156 | 207% |
 | `DP16KD` (block RAM) | 0 | 208 | 0% |
-| Distributed RAM (`TRELLIS_DPR16X4` 3,996 -> `TRELLIS_RAMW`) | 3,996 | 10,455 | 38% |
+| Distributed RAM cells (`TRELLIS_DPR16X4` -> `TRELLIS_RAMW`, after packing) | 3,996 | 10,455 | 38% |
+| Distributed RAM read LUT4s ("RAM LUTs", before packing; write "RAMW LUTs" 7,992/20,910 = 38%) | 15,984 | 10,455 | 152% |
+
+- Distributed-RAM units (corrected per the EE review of #375): both rows are
+  nextpnr's own, in the unit it printed (`reports/pnr_tail.log`). The 38% row
+  counts **packed cells** — 3,996 `TRELLIS_RAMW` against the device's 10,455
+  (= 83,640/8) — so numerator and denominator are both cell counts. The same
+  memory in LUT4 units *also* overflows the device: 15,984 read ("RAM") LUT4s
+  are 152% of the 10,455 LUT4s usable as RAM (write "RAMW" LUT4s
+  7,992/20,910 = 38%). Both LUT4 counts are already inside the 329,198 LUT4
+  total above.
 
 - nextpnr-ecp5 0.11.1 packed the design, printed the utilisation above and
   then aborted with an uncaught WebAssembly exception (exit 1) with no
@@ -55,8 +65,11 @@ published negative result, not a pass.
   conservative for the does-not-fit conclusion (unobserved cones can only
   make the total smaller).
 - Cycles per clip (shim schedule, confirmed by simulation, see below):
-  **1,418,281** cycles from `start` (1,418,282 counting the `start` cycle, as simulated) (4 cycles/sample, 705,611 per audio pass,
-  7,058 control-walk cycles). The second audio pass (the normalization
+  **1,418,282** cycles counting the `start` cycle — the one convention used
+  in this summary, matching `reports/cycle_check.txt` and the report's
+  `sim_cycle_check` field (the report JSON's `clip_cycles_start_to_done` is
+  the exclusive count, one cycle fewer) (4 cycles/sample, 705,611 per audio
+  pass, 7,058 control-walk cycles). The second audio pass (the normalization
   replay re-render) costs **705,611** cycles. At the DR-0010 candidate clocks
   this *would be* 56.7 ms / 28.4 ms / 14.2 ms (25/50/100 MHz) **if** the
   design fit and met those clocks, which was not shown. DR-0010's serialized
@@ -83,7 +96,8 @@ published negative result, not a pass.
   would be needed for block RAM. This is a mismatch with the ROM assumption
   and the largest single area item; it is stated, not fixed (no RTL change).
 - **Column memories** (5 x 1764 x 24 b, `upsample_engine`): inferred as
-  distributed RAM (3,996 `TRELLIS_DPR16X4`), again 0 block RAM.
+  distributed RAM (3,996 `TRELLIS_DPR16X4`, the summary table's distributed-RAM
+  rows), again 0 block RAM.
 - **P3/A8 (24x24 products, one serialized shared multiplier):** the integrated
   top is unserialized. `MULT18X18D` count 324 (a 24x24 signed product needs
   several 18x18 DSPs); the DR-0010 schedule candidate is not what was built.
