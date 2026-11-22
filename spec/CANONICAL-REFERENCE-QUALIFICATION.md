@@ -306,11 +306,16 @@ declared value, `env -u` for each declared `null`) through one shared helper
 `src/torchsynth_voice/artifact_renderer.py`), mirroring
 `qualify_repeatability.py`'s spawn. The declaration keeps its one home — the
 preregistered plan — and `check_dispatch_profile_sites` in
-`tools/check_reference_consolidation.py` registers all seven spawn/worker pairs,
+`tools/check_reference_consolidation.py` registers every spawn/worker pair,
 proves each spawn derives rather than restates, proves each worker still
 asserts the plan, and refuses any *unregistered* non-test module that
 hard-codes a declared pin. Test modules are exempt by design: asserting that a
-pin reaches the container is their job.
+pin reaches the container is their job. One of the five repaired rows above no
+longer spawns at all: since issue #539 the traced producer
+(`tools/qualify_trace_artifacts.py`) delegates its `docker run` launch to
+`DockerBackend` in `src/torchsynth_voice/artifact_renderer.py`, so its row is
+retired from the registry (the completeness scan still holds the file to the
+no-hard-coded-pins rule).
 
 The sixth is not repaired here, and the check does not let that pass silently:
 `DISPATCH_RECAPTURE_GATED` names it, requires its producer binding to stay

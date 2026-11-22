@@ -94,12 +94,14 @@ PUBLICATION_PIN_MESSAGE = "ratified runtime publication changed"
 #: must *derive* its ``docker run`` environment from the plan and never restate a
 #: pin as a literal. DR-0009 amendment A2 added two ISA pins to the plan; the two
 #: sentinel spawn paths already derived it, and the other six restated the
-#: pre-amendment pins as literals and therefore refused at the worker. Five are
-#: repaired; the sixth is in :data:`DISPATCH_RECAPTURE_GATED`.
+#: pre-amendment pins as literals and therefore refused at the worker. Four are
+#: repaired in place, a fifth was eliminated when the traced producer began
+#: delegating its launch to ``DockerBackend`` in
+#: ``src/torchsynth_voice/artifact_renderer.py`` (issue #539), and the last is
+#: in :data:`DISPATCH_RECAPTURE_GATED`.
 DISPATCH_SPAWN_SITES = (
     ("env/release-era/qualify_repeatability.py", "env/release-era/qualify_repeatability.py"),
     ("src/torchsynth_voice/artifact_renderer.py", "env/release-era/render_artifact.py"),
-    ("tools/qualify_trace_artifacts.py", "env/release-era/render_artifact.py"),
     ("tools/capture_float_sources.py", "env/release-era/render_artifact.py"),
     ("tools/probe_trace_registry.py", "tools/probe_trace_registry.py"),
     ("tools/qualify_mutations_runtime.py", "env/release-era/mutation_worker.py"),
