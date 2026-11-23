@@ -6,6 +6,31 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-23
+
+- **PR #550**: refactor: delegate capabilities schema checks to artifacts and digest helpers
+- **PR #548**: Remove orphaned tools/render_reference.py render wrapper
+- **PR #547**: refactor: share benchmark spearman_rank with the listening protocol
+- **PR #543**: refactor: hoist duplicated signal/timing validation gates into mutation_family_runtime
+- **PR #534**: spec: record T1 item 6 not_applicable against the ratified T1 spec table
+- **Issue #551** (closed): Sibling schema-evaluator and sha256 duplicates remain in case_registry.py and trace_registry.py
+- **Issue #549** (closed): Deduplicate capabilities._structure and _digest into artifacts._structure and digest.sha256_bytes
+- **Issue #546** (closed): Reuse the benchmark Spearman calculation in listening analysis
+- **Issue #541** (closed): Hoist duplicated process/cell/event validation and plan helpers from signal and timing runtime adapters into mutation_family_runtime
+- **Issue #524** (closed): T1 item 6: record not_applicable against the ratified T1 spec table and cite it in the manifest
+- **Issue #478** (closed): Remove tools/render_reference.py: orphaned wrapper duplicating the documented render CLI
+
+### 2026-11-22
+
+- **PR #540**: refactor: deduplicate DR-0006 admission and Docker launch into DockerBackend
+- **PR #538**: docs(fpga): fix distributed-RAM units and unify cycle-count convention in README
+- **PR #536**: refactor: share the VCO vector builder and --check/write driver
+- **PR #375**: FPGA feasibility measurement: ECP5 LFE5U-85F does not fit (DR-0017, #80)
+- **Issue #539** (closed): Deduplicate host_admission and DockerBackend launch logic between artifact_renderer.py and qualify_trace_artifacts.py
+- **Issue #537** (closed): Correct two figures in fpga/README.md from the DR-0017 EE review
+- **Issue #535** (closed): Dedupe the VCO golden-vector builder and --check/write driver into golden_vectors.py
+- **Issue #80** (closed): [Epic #2] Build and measure a resource-generous FPGA core
+
 ### 2026-11-21
 
 - **PR #532**: refactor: share write-and-report across the mutation qualifier CLIs
