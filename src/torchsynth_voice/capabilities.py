@@ -8,15 +8,21 @@ It cannot authenticate a dishonest producer; see the generated CAPABILITIES.md.
 
 from __future__ import annotations
 
-import hashlib
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .artifacts import canonical_bytes, loads, validate_artifact
+from .artifacts import (
+    ValidationError,
+    _structure as _artifact_structure,
+    canonical_bytes,
+    loads,
+    validate_artifact,
+)
 from .contract import repository_root
+from .digest import sha256_bytes as _digest
 from .scorecard import validate_row
 
 
@@ -151,70 +157,24 @@ def _require(condition: bool, message: str) -> None:
         raise CapabilityError(message)
 
 
-def _digest(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+def _structure(
+    value: Any,
+    schema: dict,
+    where: str = "$",
+    filename: str = "capability-graph-v1.schema.json",
+) -> None:
+    """Evaluate the capability schemas via the shared subset in artifacts.
 
-
-def _structure(value: Any, schema: dict, where: str = "$") -> None:
-    """Evaluate exactly the JSON Schema subset used by the two local schemas."""
-    if "oneOf" in schema:
-        matches = 0
-        for option in schema["oneOf"]:
-            try:
-                _structure(value, option, where)
-                matches += 1
-            except CapabilityError:
-                pass
-        _require(matches == 1, f"{where}: expected one allowed form")
-        return
-    kinds = {
-        "object": dict,
-        "array": list,
-        "string": str,
-        "integer": int,
-        "boolean": bool,
-        "null": type(None),
-    }
-    if "type" in schema:
-        _require(type(value) is kinds[schema["type"]], f"{where}: wrong type")
-    if "const" in schema:
-        _require(
-            canonical_bytes(value) == canonical_bytes(schema["const"]),
-            f"{where}: wrong constant",
-        )
-    if "enum" in schema:
-        _require(value in schema["enum"], f"{where}: unknown value")
-    if isinstance(value, dict):
-        _require(
-            set(schema.get("required", [])) <= value.keys(),
-            f"{where}: missing required field",
-        )
-        _require(
-            len(value) >= schema.get("minProperties", 0), f"{where}: too few fields"
-        )
-        for key, child in value.items():
-            if "propertyNames" in schema:
-                _structure(key, schema["propertyNames"], where + ".<key>")
-            properties = schema.get("properties", {})
-            additional = schema.get("additionalProperties", {})
-            _require(
-                key in properties or additional is not False,
-                f"{where}: unknown field {key}",
-            )
-            _structure(child, properties.get(key, additional), where + "." + key)
-    if isinstance(value, list):
-        _require(len(value) >= schema.get("minItems", 0), f"{where}: too few items")
-        if schema.get("uniqueItems"):
-            _require(
-                len({canonical_bytes(item) for item in value}) == len(value),
-                f"{where}: duplicate item",
-            )
-        for child in value:
-            _structure(child, schema["items"], where + "[]")
-    if isinstance(value, str) and "pattern" in schema:
-        _require(
-            re.fullmatch(schema["pattern"], value) is not None, f"{where}: invalid text"
-        )
+    The capability schemas are not in artifacts._SCHEMA_FILES; that is sound
+    because they use no $ref, so the filename is only consulted if a $ref with
+    an empty document part ever appears, which then refuses instead of
+    silently validating against an unnamed schema. ValidationError becomes
+    CapabilityError to keep this module's exception contract.
+    """
+    try:
+        _artifact_structure(value, schema, filename, where)
+    except ValidationError as error:
+        raise CapabilityError(str(error)) from error
 
 
 def _validate(value: Any, kind: str) -> None:
@@ -225,7 +185,7 @@ def _validate(value: Any, kind: str) -> None:
             repository_root() / f"spec/schemas/capability-{kind}-v1.schema.json"
         ).read_bytes()
     )
-    _structure(value, schema)
+    _structure(value, schema, filename=f"capability-{kind}-v1.schema.json")
 
 
 def _contained(path: str) -> None:
