@@ -141,14 +141,20 @@ the independent SHA-256 manifest before a render begins.
 
 ## T1 spec table
 
-**Proposed / not ratified.** The normative block spec is
+**Ratified 2026-11-04.** The normative block spec is
 [`spec/T1-SPEC.md`](spec/T1-SPEC.md); this is a summary, and the spec wins on
-any difference. Ratification is tracked in
-[#418](https://github.com/2AMLogic/gf180-torchsynth/issues/418) /
-[PR #419](https://github.com/2AMLogic/gf180-torchsynth/pull/419), and every
-verdict graded against the table is provisional until it lands. The rows are
+any difference. The operator approved and merged
+[PR #419](https://github.com/2AMLogic/gf180-torchsynth/pull/419) — the
+ratification carried by
+[DR-0016](spec/decision-records/0016-ratify-t1-spec.md), with the re-run
+EE-key and market-key reviews recorded at `c0998d4f2493` — on 2026-11-04, so
+verdicts graded against the table are no longer provisional. The rows are
 claims the block will make, not results: none is a synthesis, layout, signoff,
-playback or sound-fidelity claim.
+playback or sound-fidelity claim. The spec is bound by content hash into the
+T1 item 6 `not_applicable` record: any later edit to `spec/T1-SPEC.md`
+requires refreshing its content hash in
+[`manifests/gf180-torchsynth.signoff.json`](manifests/gf180-torchsynth.signoff.json)
+and regenerating the committed signoff report.
 
 | id | metric | bound | status |
 | --- | --- | --- | --- |

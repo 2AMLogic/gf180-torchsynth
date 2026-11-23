@@ -6,6 +6,7 @@
   "t1_item_count": 11,
   "build_t1_item_count": 11,
   "t1_met_count": 2,
+  "t1_not_applicable_count": 1,
   "source_doc": "docs/design-evidence-tiers.md",
   "source_doc_content_hash": "sha256:d9287ec9dc6107e560e00b1a8b7a670f757722713b5c651dee3d2cbde058490a",
   "build": {
@@ -90,10 +91,59 @@
         "**Add the missing statistical row(s)** to the block's spec through a decision record the operator ratifies, then supply Monte Carlo evidence (`klt yield`) for them. Where the PDK has no mismatch models, assumed mismatch is acceptable, labelled as such in the evidence.",
         "**Declare item 6 a gap** for the analog partition. The digital partition of the same block may still use `not_applicable`. **Several statistical rows, only some evidenced** (issue #2908): item 6 is a claim about *every* statistical row, so a manifest may declare the row set under `spec_rows.\"6\"` and cite one `klt yield` report per row set (`rows` on each citation). Item 6 grades `met` only when every declared row is covered by a passing citation against a ratified target. A row with no citation (`uncovered_rows`), a row declared a `gap` because no evidence can exist yet (`declared_gaps`), or a row declared `ratified: false` (`unratified_rows`, evidence against a proposed limit is provisional) grades `unmet` / `partial_coverage`, never `met`. Without a declaration the item grades as before; a `not_applicable` entry contradicts a declared row set and is `invalid_evidence`."
       ],
-      "status": "unmet",
-      "reason": "no_evidence",
+      "status": "not_applicable",
+      "reason": null,
       "graded_by_build": true,
-      "citation": null
+      "citation": null,
+      "not_applicable": {
+        "spec": {
+          "file": "spec/T1-SPEC.md",
+          "content_hash": "sha256:a08cb6d023147b61063605363241acd8bcb6a2ac2f04496a412ae8e41949f6a7",
+          "status": "ratified",
+          "row_count": 6,
+          "format": "markdown-table",
+          "id_column": "id"
+        },
+        "statement": {
+          "file": "evidence/item6-na-statement.json",
+          "content_hash": "sha256:4c8feb1c5388721266e2f5e8e3cb0ec87e1ee4e7ff84c653bf3e60d6ad44cd31",
+          "rows": [
+            {
+              "id": "F1",
+              "class": "deterministic",
+              "reason": "Not statistical: the claim is exact equality on a finite declared vector set, so there is no accuracy, offset, matching, yield, sigma or Cpk quantity to bound.",
+              "reviewed_not_statistical": true
+            },
+            {
+              "id": "F2",
+              "class": "deterministic",
+              "reason": "Not statistical: a count of killed mutants out of a fixed list, not a distribution. It grades the harness behind F1, not the silicon."
+            },
+            {
+              "id": "C1",
+              "class": "deterministic (cycle count) given a selected clock; the clock bound itself is a timing-closure check",
+              "reason": "Not statistical: cycles per sample is a schedule property of the RTL, and clock closure is a per-corner slack sign check, not a spread."
+            },
+            {
+              "id": "T1",
+              "class": "deterministic",
+              "reason": "Not statistical: per-corner static timing is a worst-case check, not a yield or sigma bound. Statistical OCV/derating, if later adopted, would need its own row.",
+              "reviewed_not_statistical": true
+            },
+            {
+              "id": "A1",
+              "class": "deterministic",
+              "reason": "Not statistical: area of a fixed mapped netlist is a single deterministic number; no matching or yield quantity.",
+              "reviewed_not_statistical": true
+            },
+            {
+              "id": "PW1",
+              "class": "deterministic given the named activity vector",
+              "reason": "Not statistical as defined: a single-vector estimate, not a spread. Vector-to-vector variation is not bounded here and, if wanted, is a separate row."
+            }
+          ]
+        }
+      }
     },
     {
       "tier": "T1",
