@@ -1,4 +1,4 @@
-"""Shared signal/timing runtime adapter helpers (#405, #463). Stdlib-only.
+"""Shared signal/timing runtime adapter helpers (#405, #463, #541). Stdlib-only.
 
 These tests establish that the two family adapters agree on the helpers they
 share, and that the places where they deliberately differ are the only places
@@ -10,22 +10,52 @@ The cross-family row-shape test is the standing regression guard for #463.
 ``paired_exactness`` had drifted -- signal reported ``mean_error`` and timing
 did not, from otherwise identical bodies -- and nothing failed. Both families
 now route through one body, and a future one-sided edit fails here.
+
+The unified fail-closed guard tests are the standing regression guard for
+#541: five verification checks existed only in the signal copy of the two
+``evaluate_process`` bodies (sham consumed replacements, duplicate and
+undeclared-instance consumed evidence, the module-event operator/trace/slot
+binding, and the non-empty mandatory-detector predicate). Both families now
+route through the shared helpers, and each guard below refuses for BOTH
+families.
 """
 
+import copy
 import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tests"))
 
+from torchsynth_voice import mutations  # noqa: E402
 from torchsynth_voice import mutation_family_runtime as family  # noqa: E402
 from torchsynth_voice import mutations_signal_runtime as sr  # noqa: E402
 from torchsynth_voice import mutations_timing_runtime as tr  # noqa: E402
 from torchsynth_voice import timing_voice_ops as tops  # noqa: E402
 from torchsynth_voice.mutations import MutationError  # noqa: E402
 
+import test_mutations_signal_runtime as signal_fixtures  # noqa: E402
+import test_mutations_timing_runtime as timing_fixtures  # noqa: E402
+
 REFERENCE = [0.0, 0.25, -0.5, 1.0, 0.125, -0.125, 0.0, 0.75]
+
+_REGISTRY_SNAPSHOT = None
+
+
+def setUpModule():
+    # Scope the operators the guard tests register to this module: the full
+    # suite shares one process, and test_mutations_matrix pins the global
+    # registry count (same contract as the two family test modules).
+    global _REGISTRY_SNAPSHOT
+    _REGISTRY_SNAPSHOT = dict(mutations.OPERATORS)
+
+
+def tearDownModule():
+    mutations.OPERATORS.clear()
+    mutations.OPERATORS.update(_REGISTRY_SNAPSHOT)
+
 
 # The shared paired-exactness row. Named explicitly so that adding or dropping
 # a key is a deliberate edit to this list, not a silent drift in one family.
@@ -238,6 +268,95 @@ class RuntimeDefinitionTests(unittest.TestCase):
                 self.assertEqual(definition["version"], 1)
                 self.assertEqual(definition["configuration"]["slot"],
                                  {"type": "integer", "minimum": 0})
+
+
+class UnifiedFailClosedGuardsTests(unittest.TestCase):
+    """The five verification gates that had drifted signal-only (#541).
+
+    Signal and timing validated worker reports through two copies of the same
+    gate logic, and five fail-closed checks existed only in the signal copy.
+    Both ``evaluate_process`` bodies now route through the shared helpers, so
+    each guard below refuses for BOTH families; a future one-sided removal
+    fails here twice instead of silently weakening one family's report. The
+    synthetic processes come from the two family test modules: unit fixtures
+    exercise adapter mechanics only and never qualify actual-Voice coverage.
+    """
+
+    CELL = {"signal": "signal:gain.db", "timing": "timing:route-sign-flip"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.signal = signal_fixtures.SyntheticProcess("global-0")
+        cls.timing = timing_fixtures.SyntheticProcess("global-31")
+
+    def process(self, label):
+        return self.signal if label == "signal" else self.timing
+
+    def evaluate(self, label, records, schedules):
+        process = self.process(label)
+        if label == "signal":
+            return sr.evaluate_process(
+                signal_fixtures.MANIFEST, signal_fixtures.MANIFEST_SHA256,
+                signal_fixtures.DOCUMENT, signal_fixtures.INVENTORY,
+                signal_fixtures.CATALOG, process.case_id, 1, schedules, records,
+                process.store.__getitem__, estimator=signal_fixtures.refusing_estimator)
+        return tr.evaluate_process(
+            timing_fixtures.MANIFEST, timing_fixtures.MANIFEST_SHA256,
+            timing_fixtures.DOCUMENT, timing_fixtures.INVENTORY,
+            timing_fixtures.CATALOG, process.case_id, 1, schedules, records,
+            process.store.__getitem__)
+
+    def assertBothRefuse(self, mutate, pattern):
+        for label in ("signal", "timing"):
+            with self.subTest(family=label):
+                process = self.process(label)
+                records = copy.deepcopy(process.records)
+                schedules = copy.deepcopy(process.schedules)
+                mutate(label, records, schedules)
+                with self.assertRaisesRegex(MutationError, pattern):
+                    self.evaluate(label, records, schedules)
+
+    def test_the_sham_control_may_not_consume_replacements(self):
+        # Signal always refused this; timing's copy omitted the guard even
+        # though the shared worker records the field identically.
+        self.assertBothRefuse(
+            lambda label, r, s: r["sham"].update(consumed_replacements=[
+                {"instance_id": "drifted", "trace": "vco_1.post_vca", "slot": 0,
+                 "sha256": "0" * 64, "file": "nowhere"}]),
+            "sham consumed a replacement")
+
+    def test_duplicate_consumed_replacement_evidence_refuses(self):
+        # Timing's dict comprehension silently overwrote duplicates.
+        self.assertBothRefuse(
+            lambda label, r, s: r[self.CELL[label]]["consumed_replacements"].append(
+                r[self.CELL[label]]["consumed_replacements"][0]),
+            "duplicate consumed replacement evidence")
+
+    def test_consumed_replacement_for_an_undeclared_instance_refuses(self):
+        # Timing's copy never checked the evidence against the schedule.
+        self.assertBothRefuse(
+            lambda label, r, s: r[self.CELL[label]]["consumed_replacements"][0].update(
+                instance_id="undeclared-instance"),
+            "consumed replacement evidence for an undeclared instance")
+
+    def test_module_event_detail_is_bound_to_its_schedule_row(self):
+        # Timing's evaluator never verified operator/trace/slot even though
+        # the real timing worker populates all three; only the synthetic
+        # fixture omitted them because nothing checked.
+        for field, value in (("operator", "drifted.op"), ("trace", "foreign.trace"),
+                             ("slot", None)):
+            self.assertBothRefuse(
+                lambda label, r, s, field=field, value=value:
+                    r[self.CELL[label]]["events"][0]["detail"].update({field: value}),
+                "not bound to its scheduled operator/trace/slot")
+
+    def test_an_empty_mandatory_detector_set_is_never_vacuously_detected(self):
+        # Timing's predicate was bare ``all(...)`` over the row set, which is
+        # vacuously True when a cell has no mandatory detector rows.
+        cell = {"mandatory_detectors": []}
+        entry = {"detector_ids": [], "runtime_truth": {"compared_traces": []}}
+        self.assertFalse(family.evaluate_mandatory_detectors(
+            cell, entry, {}, {}, {}, {}, {"traces": []}, lambda record, trace: []))
 
 
 if __name__ == "__main__":

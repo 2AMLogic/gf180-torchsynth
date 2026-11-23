@@ -260,11 +260,6 @@ def register_runtime_operators() -> None:
     family.register_runtime_operators(runtime_definitions())
 
 
-def _instance(instance_id: str, operator_id: str, magnitude: Optional[Dict[str, Any]],
-              configuration: Dict[str, Any]) -> Dict[str, Any]:
-    return family.instance(instance_id, operator_id, magnitude, configuration, ops)
-
-
 def _source_binding(manifest: Dict[str, Any], case: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "case_id": case["id"],
@@ -293,32 +288,19 @@ def cell_plan(manifest: Dict[str, Any], entry_id: str, case_id: str,
             "refused: " + entry_id + " is deferred_unmeasured (DR-0012 D8); no faithful writable "
             "realisation is selected and its obligation stays open"
         )
-    _require(case_id in entry["development_cases"], "case not declared for entry: " + case_id)
-    case = case_record(manifest, case_id)
-    register_runtime_operators()
-    instances = []
-    fault = entry_id.split(":", 1)[1]
-    for index, ((operator_id, target), magnitude) in enumerate(
-        zip(REALISATIONS[entry_id], entry["magnitude"])
-    ):
-        configuration = dict(target, slot=case["batch_slot"])
-        instances.append(
-            _instance("tmr-" + fault + "-" + str(index), operator_id,
-                      _runtime_magnitude(operator_id, magnitude), configuration)
-        )
-    return mutations.make_plan(_source_binding(manifest, case), instances, catalog)
+    return family.build_cell_plan(
+        manifest, entry_id, entry, case_id, catalog, ops=ops, instance_prefix="tmr",
+        realisations=REALISATIONS, runtime_magnitude=_runtime_magnitude,
+        register=register_runtime_operators, source_binding=_source_binding,
+        case_of=case_record)
 
 
 def control_plan(manifest: Dict[str, Any], case_id: str, kind: str,
                  catalog: Dict[str, Any]) -> Dict[str, Any]:
-    _require(kind in ("empty", "sham"), "unknown control plan: " + str(kind))
-    case = case_record(manifest, case_id)
-    register_runtime_operators()
-    instances = []
-    if kind == "sham":
-        instances.append(_instance("tmr-sham", ops.SHAM, None,
-                                   {"trace": SHAM_TARGET, "slot": case["batch_slot"]}))
-    return mutations.make_plan(_source_binding(manifest, case), instances, catalog)
+    return family.control_plan(
+        manifest, case_id, kind, catalog, ops=ops, instance_prefix="tmr",
+        sham_target=SHAM_TARGET, register=register_runtime_operators,
+        source_binding=_source_binding, case_of=case_record)
 
 
 def expected_attempts(manifest: Dict[str, Any], case_id: str) -> List[str]:
@@ -689,15 +671,8 @@ def evaluate_gated(entry: Dict[str, Any], plain: Callable[[str], List[float]],
 # Process report validation
 # --------------------------------------------------------------------------
 
-_IDENTITY_KEYS = family.IDENTITY_KEYS
-
-
 def _inventory_digests(record: Dict[str, Any]) -> Dict[str, str]:
     return family.inventory_digests(record)
-
-
-def _require_identical(plain: Dict[str, Any], record: Dict[str, Any], label: str) -> None:
-    family.require_identical(plain, record, label, _IDENTITY_KEYS)
 
 
 def _plan_for(manifest: Dict[str, Any], attempt: str, case_id: str, catalog: Dict[str, Any]) -> Dict[str, Any]:
@@ -709,28 +684,7 @@ def _plan_for(manifest: Dict[str, Any], attempt: str, case_id: str, catalog: Dic
 def _check_module_event(event: Dict[str, Any], mutation: Dict[str, Any], record: Dict[str, Any],
                         plain: Dict[str, Any], consumed: Dict[Tuple[str, str], Dict[str, Any]],
                         read_bytes: Callable[[str], bytes], previous: Dict[str, str]) -> None:
-    detail = event["detail"]
-    digests = _inventory_digests(record)
-    pairs = [(mutation["trace"], detail["original_slot_sha256"], detail["replacement_slot_sha256"])]
-    if "partner_trace" in mutation:
-        pairs.append((mutation["partner_trace"], detail["partner_original_slot_sha256"],
-                      detail["partner_replacement_slot_sha256"]))
-    for trace, original, replacement in pairs:
-        expected_original = previous.get(trace, digests[trace])
-        _require(original == expected_original,
-                 "event original digest is not the passive original/ordered input: " + trace)
-        _require(digests[trace] == _inventory_digests(plain)[trace],
-                 "seam capture did not retain the original bytes: " + trace)
-        _require(replacement != original, "applied event without a replacement: " + trace)
-        evidence = consumed.get((mutation["instance_id"], trace))
-        _require(evidence is not None, "consumed replacement evidence missing: " + trace)
-        data = read_bytes(evidence["file"])
-        _require(sha256(data) == evidence["sha256"] == replacement,
-                 "consumed replacement evidence does not match the event: " + trace)
-        previous[trace] = replacement
-    if "control_trace" in mutation:
-        _require(detail["control_input_slot_sha256"] == digests[mutation["control_trace"]],
-                 "control input is not the registry producer's output (association broken)")
+    return family.check_module_event(event, mutation, record, plain, consumed, read_bytes, previous)
 
 
 def _check_parameter_event(event: Dict[str, Any], swap: Dict[str, Any], record: Dict[str, Any]) -> None:
@@ -761,36 +715,11 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
     promoted: only ``detected`` is a candidate kill for the campaign, and only
     after the campaign's own repeat rule (#337).
     """
-    require_inventory_match(manifest)
-    binding = manifest_binding(manifest, manifest_sha256)
-    expected = expected_attempts(manifest, case_id)
-    _require(list(records) == expected,
-             "attempt inventory differs from the expected order: " + ", ".join(records))
-    _require(list(schedules) == [name for name in expected if name not in ("plain", "clean_rerun")],
-             "schedule inventory differs from the expected attempts")
-    fresh = process_schedules(manifest, manifest_sha256, case_id, repeat, document, inventory, catalog)
-    for name, schedule in schedules.items():
-        _require(schedule == fresh[name], "schedule differs from its manifest re-derivation: " + name)
-    for name, record in records.items():
-        _require(record.get("case") == case_id, "attempt bound to a foreign case: " + name)
-        _require(record.get("attempt") == name, "attempt label mismatch: " + name)
-        _require(record.get("plan_id") == (schedules[name]["plan_id"] if name in schedules else None),
-                 "attempt not bound to its schedule plan: " + name)
-    plain = records["plain"]
-    _require(plain["errored"] is None and plain["shapes_ok"] is True and plain["state_restored"] is True,
-             "plain attempt malformed")
-    _require(plain["events"] == [], "plain attempt recorded events")
-    for name in ("empty", "sham", "clean_rerun"):
-        record = records[name]
-        _require(record["errored"] is None and record["state_restored"] is True,
-                 "control attempt errored or did not restore state: " + name)
-        _require_identical(plain, record, name)
-    _require(records["clean_rerun"]["events"] == [], "clean rerun recorded events")
-    mutations.validate_events(_plan_for(manifest, "empty", case_id, catalog), records["empty"]["events"])
-    mutations.validate_events(_plan_for(manifest, "sham", case_id, catalog), records["sham"]["events"])
-    sham_events = records["sham"]["events"]
-    _require(len(sham_events) == 1 and sham_events[0]["status"] == "ineffective"
-             and sham_events[0]["sham"] is True, "sham event must be one sham ineffective event")
+    binding, plain = family.validate_process_controls(
+        manifest, manifest_sha256, case_id, repeat, document, inventory, catalog,
+        schedules, records, require_match=require_inventory_match,
+        binding_of=manifest_binding, attempts_of=expected_attempts,
+        schedules_of=process_schedules, plan_for=_plan_for)
 
     plain_digests = _inventory_digests(plain)
     plain_samples: Dict[str, List[float]] = {}
@@ -826,47 +755,15 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
             "invariance": {},
         }
         cells.append(cell)
-        _require(record["state_restored"] is True, "attempt did not restore state: " + name)
-        if record["errored"] is not None:
-            declared = schedule["declared_order"]
-            observed = [event["instance_id"] for event in record["events"]]
-            _require(observed == declared[: len(observed)] and observed
-                     and record["events"][-1]["status"] == "errored",
-                     "errored attempt events are not an ordered prefix ending in errored: " + name)
-            cell["outcome"] = "errored"
+        applied = family.validate_applied_cell(
+            cell, name, record, schedule, plan, plain, plain_digests, realised, read_bytes,
+            dataflow=DATAFLOW, parameter_roots=PARAMETER_ROOTS,
+            check_parameter_event=_check_parameter_event)
+        if applied is None:
             continue
-        mutations.validate_events(plan, record["events"])
-        statuses = set(cell["events"])
-        if "refused" in statuses or "errored" in statuses:
-            cell["outcome"] = "refused" if "refused" in statuses else "errored"
-            continue
-        if statuses != {"applied"}:
-            cell["outcome"] = "open_ineffective"
-            continue
-        consumed = {(item["instance_id"], item["trace"]): item for item in record.get("consumed_replacements", [])}
-        by_id = {item["instance_id"]: item for item in schedule["module_mutations"]}
-        swaps = {item["instance_id"]: item for item in schedule["parameter_swaps"]}
-        previous: Dict[str, str] = {}
-        for event in record["events"]:
-            if event["instance_id"] in swaps:
-                _check_parameter_event(event, swaps[event["instance_id"]], record)
-            else:
-                _check_module_event(event, by_id[event["instance_id"]], record, plain, consumed,
-                                    read_bytes, previous)
+        consumed, base_invariance = applied
         digests = _inventory_digests(record)
-        allowed = blast_radius(realised)
-        seams = seam_traces(realised)
-        siblings = sorted(trace for trace in plain_digests if trace not in allowed)
-        cell["invariance"] = {
-            "original_retained_at_seam": all(digests[t] == plain_digests[t] for t in seams),
-            "siblings_unchanged": [t for t in siblings if digests[t] != plain_digests[t]] == [],
-            "undeclared_slots_unchanged": all(
-                digest == plain["slot_sha256"][index]
-                for index, digest in enumerate(record["slot_sha256"])
-                if index != schedule["campaign"]["case"]["batch_slot"]
-            ),
-            "invocation_counts_unchanged": record["invocation_counts"] == plain["invocation_counts"],
-        }
+        cell["invariance"] = base_invariance
         if entry["detector_ids"] == ["det-timing-06"]:
             control_lane = entry["configuration"]["control_lane"]
             cell["invariance"]["source_control_lane_unchanged"] = digests[control_lane] == plain_digests[control_lane]
@@ -875,23 +772,8 @@ def evaluate_process(manifest: Dict[str, Any], manifest_sha256: str, document: D
         if "dropped-endpoint" in name:
             cell["invariance"]["original_endpoint_capture_unchanged"] = (
                 digests["control_upsample.vco_1_amp"] == plain_digests["control_upsample.vco_1_amp"])
-        for trace in entry["runtime_truth"]["compared_traces"]:
-            if trace not in plain_samples:
-                plain_samples[trace] = samples_of(plain, trace)
-                rate = _registry_trace(document, trace)["rate_hz"]
-                controls[trace] = {
-                    control: paired_exactness(plain_samples[trace], samples_of(records[control], trace),
-                                              rate, trace)["verdict"]
-                    for control in ("empty", "sham", "clean_rerun")
-                }
-                _require(set(controls[trace].values()) == {"PASS"},
-                         "control detector did not PASS on " + trace)
-            rate = _registry_trace(document, trace)["rate_hz"]
-            row = paired_exactness(plain_samples[trace], samples_of(record, trace), rate, trace)
-            row["detector_ids"] = list(entry["detector_ids"])
-            cell["mandatory_detectors"].append(row)
-        detected = all(row["verdict"] == "FAIL" and row["framing_match"] == 1
-                       and row["max_abs_error"] not in (None, 0) for row in cell["mandatory_detectors"])
+        detected = family.evaluate_mandatory_detectors(
+            cell, entry, record, records, plain_samples, controls, document, samples_of)
         if entry["gated_detectors"]:
             replaced = {trace: item for (_, trace), item in consumed.items()}
 
