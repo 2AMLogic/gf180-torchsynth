@@ -20,6 +20,7 @@
     "tb/sv/tb_synth_dut.sv",
     "tb/run_tb.py",
     "tb/tb_harness.py",
+    "tb/lane_adsr.py",
     "tb/run_oneshot.py",
     "tb/run_voice.py"
   ],
