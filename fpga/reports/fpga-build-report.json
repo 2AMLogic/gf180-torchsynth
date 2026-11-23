@@ -1,10 +1,78 @@
 {
+  "clean_checkout_rebuild": {
+    "baseline": {
+      "decision_record": "DR-0013",
+      "git_head": "feature/issue-80@4d650c122f4148112b7dad5b314545014923d17e-dirty"
+    },
+    "baseline_report": "fpga/reports/fpga-build-report.json as committed by #80 (PR #375), read before this rebuild overwrote it",
+    "drift": [],
+    "fields_compared": [
+      "synthesis_flat.raw_cell_types",
+      "synthesis_flat.cells",
+      "synthesis_per_engine_standalone",
+      "engines_failed",
+      "device",
+      "yosys",
+      "nextpnr_banner",
+      "python_packages_in_build_venv",
+      "place_and_route.nextpnr_exit"
+    ],
+    "flat_cell_counts": {
+      "CCU2C": {
+        "baseline": 54229,
+        "rebuild": 54229
+      },
+      "L6MUX21": {
+        "baseline": 27605,
+        "rebuild": 27605
+      },
+      "LUT4": {
+        "baseline": 196764,
+        "rebuild": 196764
+      },
+      "MULT18X18D": {
+        "baseline": 324,
+        "rebuild": 324
+      },
+      "PFUMX": {
+        "baseline": 50074,
+        "rebuild": 50074
+      },
+      "TRELLIS_DPR16X4": {
+        "baseline": 3996,
+        "rebuild": 3996
+      },
+      "TRELLIS_FF": {
+        "baseline": 4754,
+        "rebuild": 4754
+      },
+      "cells": {
+        "baseline": 337746,
+        "rebuild": 337746
+      },
+      "ports": {
+        "baseline": 8,
+        "rebuild": 8
+      },
+      "wires": {
+        "baseline": 212953,
+        "rebuild": 212953
+      }
+    },
+    "nondeterminism_sources": "none observed: every compared field is byte-equal; toolchain pinned by fpga/requirements.txt and installed by build.sh env",
+    "rebuild": {
+      "decision_record": "DR-0017",
+      "git_head": "HEAD@6a2825c403c97abe98011b35b429b02fc29d4519-dirty"
+    },
+    "rebuild_issue": 374,
+    "verdict": "identical"
+  },
   "clock_constraint_mhz": 25.0,
   "commands": [
     "#!/usr/bin/env bash",
-    "# FPGA feasibility-measurement build (DR-0013, issue #80).",
+    "# FPGA feasibility-measurement build (DR-0017, issues #80 and #374).",
     "#",
-    "#   fpga/build.sh [stage ...]     stages: env stage synth engines pnr report (default: all)",
+    "#   fpga/build.sh [stage ...]     stages: env stage synth engines pnr synth_voice vsim report (default: all)",
     "#",
     "# Everything is written under fpga/build/ (git-ignored); the small evidence",
     "# files are copied to fpga/reports/. Single-threaded by design (one yosys,",
@@ -24,7 +92,7 @@
     "RUN=\"$PY -W ignore $HERE/scripts/yowasp_bigstack.py\"",
     "SOURCES=\"gf180_rtl_constants_pkg.sv adsr_engine.sv lfo_vca_engine.sv mod_matrix_engine.sv upsample_engine.sv quarter_wave_lut.sv sine_vco_engine.sv square_saw_vco_engine.sv noise_stream_dut.sv audio_mix_engine.sv normalization_replay_engine.sv one_shot_voice_top.sv fpga_oneshot_top.sv\"",
     "TOP=fpga_oneshot_top",
-    "STAGES=(\"$@\"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(env stage synth engines pnr report)",
+    "STAGES=(\"$@\"); [ ${#STAGES[@]} -eq 0 ] && STAGES=(env stage synth engines pnr synth_voice vsim report)",
     "want() { local s; for s in \"${STAGES[@]}\"; do [ \"$s\" = \"$1\" ] && return 0; done; return 1; }",
     "",
     "mkdir -p \"$B\" \"$OUT\" \"$REP\"",
@@ -78,6 +146,28 @@
     "  set -e",
     "fi",
     "",
+    "if want synth_voice; then",
+    "  # #374: post-synthesis netlist of the UNMODIFIED whole-voice top (no",
+    "  # measurement shim), same staged sources and flow as `synth`, for the",
+    "  # exact-sentinel simulation attempt. Emits both the JSON netlist the flow",
+    "  # standardizes on and a Verilog copy for the simulator.",
+    "  cd \"$SRC\"",
+    "  VTOP=one_shot_voice_top",
+    "  VSRC=\"${SOURCES% fpga_oneshot_top.sv}\"",
+    "  MAPLUTS=\"check -latchonly -assert; techmap -map +/lattice/latches_map.v; abc -lut 4:7 -dress; clean\"",
+    "  $RUN yosys -q -l \"$OUT/synth_voice_top.log\" -p \"read_slang -j 1 --top $VTOP $VSRC; synth_ecp5 -top $VTOP -run :map_luts; $MAPLUTS; synth_ecp5 -top $VTOP -run map_cells: -json $OUT/$VTOP.json; write_verilog -noattr $OUT/$VTOP.v; tee -o $OUT/stat_voice_top.txt stat\" >/dev/null 2>\"$OUT/synth_voice_top.stderr\"",
+    "fi",
+    "",
+    "if want vsim; then",
+    "  # #374: attempt the named exact-sentinel simulation of the synth_ecp5",
+    "  # netlist with the installed open simulators (iverilog/verilator) and the",
+    "  # pinned toolchain's own primitive models. A committed refusal with the",
+    "  # measured reason is a complete outcome; the runner exits non-zero only",
+    "  # when it can produce no verdict at all.",
+    "  python3 \"$HERE/scripts/run_postsynth_sentinel.py\" \\",
+    "    --root \"$ROOT\" --venv \"$VENV\" --out \"$OUT\" --rep \"$REP\"",
+    "fi",
+    "",
     "if want report; then",
     "  python3 \"$HERE/scripts/make_report.py\" \"$ROOT\" \"$OUT\" \"$SRC\" \"$REP\" \"$FREQ_MHZ\"",
     "fi"
@@ -98,7 +188,7 @@
       "50": 0.02836562
     }
   },
-  "decision_record": "DR-0013",
+  "decision_record": "DR-0017",
   "device": "LFE5U-85F CABGA381 speed 6 (nextpnr --85k)",
   "device_capacity": {
     "DP16KD": 208,
@@ -109,46 +199,27 @@
   },
   "engines_failed": [],
   "git": {
-    "branch": "feature/issue-80",
+    "branch": "HEAD",
     "dirty": true,
-    "head": "4d650c122f4148112b7dad5b314545014923d17e",
+    "head": "6a2825c403c97abe98011b35b429b02fc29d4519",
     "porcelain": [
-      " M fpga/README.md",
-      " M spec/decision-records/README.md",
-      "?? fpga/.gitignore",
-      "?? fpga/build.sh",
-      "?? fpga/reports/cycle_check.txt",
-      "?? fpga/reports/fpga-build-report.json",
-      "?? fpga/reports/luts.json",
-      "?? fpga/reports/pnr.rc",
-      "?? fpga/reports/pnr_tail.log",
-      "?? fpga/reports/sources.json",
-      "?? fpga/reports/stat_engines.txt",
-      "?? fpga/reports/stat_flat.txt",
-      "?? fpga/requirements.txt",
-      "?? fpga/rtl/fpga_oneshot_top.sv",
-      "?? fpga/scripts/gen_luts.py",
-      "?? fpga/scripts/make_report.py",
-      "?? fpga/scripts/prepare_sources.py",
-      "?? fpga/scripts/yowasp_bigstack.py",
-      "?? fpga/tb/tb_fpga_cycles.sv",
-      "?? spec/decision-records/0013-fpga-measurement-target.md"
+      "?? fpga/reports/post-synth-sim.json"
     ],
-    "tracked_diff_plus_untracked_sha256": "382de9e0eb82d430499d454f0dd409b6104d3f62fa727e2306010fba590e64b7"
+    "tracked_diff_plus_untracked_sha256": "7268bd3bc78ecce28243f2e2badc10d903cb9891c64f898aa935a2c2546d77f2"
   },
   "hashes_sha256": {
-    "build_script": "f3ee6844c46d7d5383132e14f963db938cd82b2db83f5b0e43aba5efceaa5e3b",
+    "build_script": "bd79d5dab2636282ff9c549007c587bfbcd879846b0a5709593ece104c6766d1",
     "golden_vector_fixed_voice": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
     "memory_images": {
       "quarter_wave_audio.memh": "8818e98fbfcbdb1e179bfabce25bcaab010efade4292abc4fdd6c952aecd25a5",
       "quarter_wave_control.memh": "c4e8d2b852309dca659c724096ce383c8b9a5a752d0ff12e8f8cfcd26d7a6f7a"
     },
     "netlist_json": "905f586414358fdb4b4c6aacbda46400cd763b2d8f13912571d69c16fa4abbb5",
-    "requirements": "19af6dd387ea258ec35cc2cde6e32abb4bd71856f62b53291eaa30133ab8e2e9",
+    "requirements": "5000e04a9b36c3b4f4d777d8286bd4404409b544917263db9dc488e743ed8952",
     "staged_sources": {
       "adsr_engine.sv": "2003d437c37cd23320c0b79728a7f2fc1036142491d711a0bc65055be45e1585",
       "audio_mix_engine.sv": "9c2b043880a164ff2f3f42158dcca66d691bf240944a8c17a78346467440dc60",
-      "fpga_oneshot_top.sv": "b9d3e117df12bc0bc468f2606d88e1583e373537c809b51dcaddf3746b2e3f41",
+      "fpga_oneshot_top.sv": "114dd957b942a007e5a2762db18312203640f7db258da065bac0800fd201be26",
       "gf180_rtl_constants_pkg.sv": "ecf3af2799ea6b7ead3ac29d59914d3ecee1f4fc7df0cbcd0f2e8edb436d7bb7",
       "lfo_vca_engine.sv": "c83f377007c5bea3c7a6da9787536066be28e045a5290eeb5e2bf59eb0b6ed95",
       "mod_matrix_engine.sv": "de2f162e548804c7e236d3ec8ae4e944e8bc62f8ff4588cf2588ad7be741a7c9",
@@ -174,7 +245,9 @@
       "square_saw_vco_engine.sv": "5f2b8d4eaa1b385abddea47c84698b05fdf92a351c2de60ac05a3b47b3e446e3",
       "upsample_engine.sv": "0224a1283eaac23a2435c7b29b46d6f19256356d36ecf6086cf50c62488ac679"
     },
-    "wrapper": "b9d3e117df12bc0bc468f2606d88e1583e373537c809b51dcaddf3746b2e3f41"
+    "voice_netlist_json": "d4c72d546a483b33eaf7350d5fd71f4385184325b3247a086d6f5e688a6034d0",
+    "voice_netlist_verilog": "8238e1ee9eee312698d8f7579f72f943d359e1e95f309ecc1dc2ca3fbb901c7a",
+    "wrapper": "114dd957b942a007e5a2762db18312203640f7db258da065bac0800fd201be26"
   },
   "issue": 80,
   "lut_manifest": {
@@ -363,6 +436,23 @@
       }
     ],
     "warning_count": 0
+  },
+  "post_synth_sim": {
+    "claim_scope": "post-synthesis (synth_ecp5, yosys 0.70) netlist of the unmodified one_shot_voice_top, staged sources, this flow only; NO post-route netlist exists (#80 did not fit), no gf180mcu / playback / Fmax / sound-fidelity claim",
+    "issue": 374,
+    "netlist": {
+      "$specify2": 18,
+      "CCU2C": 61661,
+      "L6MUX21": 26763,
+      "LUT4": 223603,
+      "MULT18X18D": 378,
+      "PFUMX": 51467,
+      "TRELLIS_DPR16X4": 6660,
+      "TRELLIS_FF": 6124
+    },
+    "no_shrink_note": "the design was not modified, serialized or re-mapped to make simulation feasible",
+    "reason": "primitive-model gap: the pinned toolchain's simulation library provides no behavioral model for MULT18X18D (MULT18X18D: blackbox-only (cells_bb.v)); the simulator's own error output names exactly MULT18X18D as unresolvable, and nothing in the open flow can elaborate these cells",
+    "verdict": "refused"
   },
   "python_packages_in_build_venv": [
     "click-8.5.0",
@@ -679,6 +769,32 @@
         "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 6660,
         "TRELLIS_FF": 1715
       }
+    }
+  },
+  "synthesis_voice_top": {
+    "cells": {
+      "ALU54B": 0,
+      "CCU2C_carry_slices (2 LUT4 each)": 61661,
+      "DP16KD (block RAM)": 0,
+      "L6MUX21": 26763,
+      "LUT4": 223603,
+      "MULT18X18D (DSP)": 378,
+      "PFUMX": 51467,
+      "TRELLIS_DPR16X4 (distributed RAM, 16x4)": 6660,
+      "TRELLIS_FF": 6124
+    },
+    "note": "unmodified one_shot_voice_top (no measurement shim), same staged sources and flow as the flat measurement synthesis; netlist for the #374 sentinel attempt",
+    "raw_cell_types": {
+      "CCU2C": 61661,
+      "L6MUX21": 26763,
+      "LUT4": 223603,
+      "MULT18X18D": 378,
+      "PFUMX": 51467,
+      "TRELLIS_DPR16X4": 6660,
+      "TRELLIS_FF": 6124,
+      "cells": 376656,
+      "ports": 145,
+      "wires": 229407
     }
   },
   "warnings": {

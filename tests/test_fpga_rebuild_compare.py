@@ -220,8 +220,10 @@ class TestCommittedEvidence(unittest.TestCase):
         self.assertEqual(report["post_synth_sim"]["verdict"],
                          json.loads(PSIM.read_text(encoding="utf-8"))
                          ["verdict"])
-        self.assertIn("one_shot_voice_top", report["hashes_sha256"]
-                      ["voice_netlist_json"])
+        self.assertRegex(report["hashes_sha256"]["voice_netlist_json"],
+                         r"^[0-9a-f]{64}$")
+        self.assertRegex(report["hashes_sha256"]["voice_netlist_verilog"],
+                         r"^[0-9a-f]{64}$")
 
     def test_dr0013_rebind_happened_in_the_hash_bound_files(self):
         for path in (BUILD_SH, REQUIREMENTS, WRAPPER):

@@ -1,0 +1,173 @@
+{
+  "claim_scope": "post-synthesis (synth_ecp5, yosys 0.70) netlist of the unmodified one_shot_voice_top, staged sources, this flow only; NO post-route netlist exists (#80 did not fit), no gf180mcu / playback / Fmax / sound-fidelity claim",
+  "decision_record": "DR-0017",
+  "issue": 374,
+  "netlist": {
+    "cell_counts": {
+      "$specify2": 18,
+      "CCU2C": 61661,
+      "L6MUX21": 26763,
+      "LUT4": 223603,
+      "MULT18X18D": 378,
+      "PFUMX": 51467,
+      "TRELLIS_DPR16X4": 6660,
+      "TRELLIS_FF": 6124
+    },
+    "cell_total": 376674,
+    "json_sha256": "d4c72d546a483b33eaf7350d5fd71f4385184325b3247a086d6f5e688a6034d0",
+    "source_stage": "build.sh synth_voice (read_slang + synth_ecp5 -run :map_luts with 'abc -lut 4:7' + map_cells:, same flow as the fpga_oneshot_top measurement netlist)",
+    "verilog_bytes": 556546836,
+    "verilog_sha256": "8238e1ee9eee312698d8f7579f72f943d359e1e95f309ecc1dc2ca3fbb901c7a"
+  },
+  "no_shrink_note": "the design was not modified, serialized or re-mapped to make simulation feasible",
+  "primitive_models": {
+    "construct_cells": {
+      "$specify2": 18
+    },
+    "files_scanned": [
+      "cells_sim.v",
+      "common_sim.vh",
+      "ccu2c_sim.vh",
+      "cells_ff.vh",
+      "cells_io.vh"
+    ],
+    "flattened_sim_library": {
+      "file": "ecp5_cells_sim_flat.v",
+      "headers_inlined_in_order": [
+        "cells_sim.v",
+        "common_sim.vh",
+        "cells_ff.vh",
+        "cells_io.vh",
+        "ccu2c_sim.vh"
+      ],
+      "note": "include-chain flattening only (duplicate includes are the pinned toolchain's own defect); module texts are byte-identical to the headers",
+      "sha256": "ecb284979244f23dfe893d6b5453761e117b7c4f41d027af821c6756197b780e"
+    },
+    "gap": {
+      "MULT18X18D": "blackbox-only (cells_bb.v)"
+    },
+    "library": "yowasp-yosys (pinned) share/ecp5",
+    "netlist_cell_types": {
+      "$specify2": "yosys-internal, rendered as a Verilog specify construct by write_verilog (needs no model)",
+      "CCU2C": "behavioral",
+      "L6MUX21": "behavioral",
+      "LUT4": "behavioral",
+      "MULT18X18D": "blackbox-only (cells_bb.v)",
+      "PFUMX": "behavioral",
+      "TRELLIS_DPR16X4": "behavioral",
+      "TRELLIS_FF": "behavioral"
+    }
+  },
+  "reason": "primitive-model gap: the pinned toolchain's simulation library provides no behavioral model for MULT18X18D (MULT18X18D: blackbox-only (cells_bb.v)); the simulator's own error output names exactly MULT18X18D as unresolvable, and nothing in the open flow can elaborate these cells",
+  "reasons": [
+    "primitive-model gap: the pinned toolchain's simulation library provides no behavioral model for MULT18X18D (MULT18X18D: blackbox-only (cells_bb.v)); the simulator's own error output names exactly MULT18X18D as unresolvable, and nothing in the open flow can elaborate these cells",
+    "compile failed (rc=123) after 14.8 s, peak RSS 3100024 kB -- output tail follows in simulators_considered.iverilog.compile"
+  ],
+  "sentinel": {
+    "case": "normalization:below",
+    "derivation": "tb/run_voice.py voice_context/voice_derive_case/voice_write_case (the RTL lane's own functions)",
+    "expected": "every declared checkpoint of both passes and the output clip, integer equality (voice_rows/voice_expected), no tolerance",
+    "profile": "regression",
+    "stimulus_files_sha256": {
+      "run0_adsr.txt": "77720422cf6842bde9434459000f84112368811a78057805dcba9d11eae8b088",
+      "run0_bytes.txt": "1e82658d80edca854e32370e6da0a066830bf34dc4499ec31a3c13c7ee136c1d",
+      "run0_depths.txt": "aac402554d664c977598fcae6d4a10eb6d778f4c9b7dad52d240c27f1a61db40",
+      "run0_fq1.txt": "6a3e1b06484f4f07b1e81e7477b86e992c53e39aafdc4a9dfcf92f44ddf1254e",
+      "run0_fq2.txt": "6a3e1b06484f4f07b1e81e7477b86e992c53e39aafdc4a9dfcf92f44ddf1254e",
+      "run0_lfo.txt": "0c632fea9be1e20ac319c32bc4592353a7895239029d02823bf4b57789a1f469",
+      "run0_lqq.txt": "70d934d5893770b29b1a07e27ca7e20d380e5213066a1533d12dbbce5b5ac05a",
+      "run0_params.txt": "8d3ca8648b9c35a86f6b0a02124fec8bbbca26640492277565b96b69d80e7793",
+      "run0_shadow.txt": "957011c4802fffbf1c14f39acdee7ee87f8235541239b4b7f63f368e66b2ebd8",
+      "run0_sqq.txt": "70d934d5893770b29b1a07e27ca7e20d380e5213066a1533d12dbbce5b5ac05a",
+      "run0_walk.txt": "1d594e57c55884786eda29b97613e44225e04621296f87383318b0aaf86263ca",
+      "runs.txt": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    "vector_files_sha256": {
+      "fixed_voice_golden": "e257103d7a8230b958bb084c11e0c73de8c0261a5e5601257a4e4bedd2036b07",
+      "golden_vector_fixed_anchor": "c5868dcdca4b99f86e767a34d90458e8c9e6705af3b17c5fa25c58de8c6aa4bd"
+    }
+  },
+  "simulators_considered": {
+    "iverilog": {
+      "compile": {
+        "command": "iverilog -g2012 -o /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/vsim/voice_gl.vvp /home/ubuntu/GitHub/gf180-rebuild-374/tb/sv/gf180_rtl_constants_pkg.sv /home/ubuntu/GitHub/gf180-rebuild-374/tb/sv/tb_one_shot_voice.sv /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/vsim/ecp5_cells_sim_flat.v",
+        "elapsed_s": 14.8,
+        "max_rss_kb": 3100024,
+        "rc": 123,
+        "tail": [
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3748594: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3748690: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3748786: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3748901: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3749757: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3749853: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3749949: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3750064: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3895598: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3895694: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3987661: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:3987757: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4054185: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4054300: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4054928: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4055024: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4072424: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4072520: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4072844: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4072940: error: Unknown module type: MULT18X18D",
+          "/home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:4073093: error: Unknown module type: MULT18X18D",
+          "379 error(s) during elaboration.",
+          "*** These modules were missing:",
+          "        MULT18X18D referenced 378 times.",
+          "***"
+        ],
+        "timed_out": false,
+        "unknown_modules": [
+          "MULT18X18D"
+        ]
+      },
+      "version": "Icarus Verilog version 13.0 (stable) (v13_0)"
+    },
+    "verilator": {
+      "lint_elaborate": {
+        "command": "verilator --lint-only --timing -Wno-fatal --top-module tb /home/ubuntu/GitHub/gf180-rebuild-374/tb/sv/gf180_rtl_constants_pkg.sv /home/ubuntu/GitHub/gf180-rebuild-374/tb/sv/tb_one_shot_voice.sv /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/vsim/ecp5_cells_sim_flat.v",
+        "elapsed_s": 82.5,
+        "max_rss_kb": 9222288,
+        "rc": 1,
+        "tail": [
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:319359:3: Cannot find file containing module: 'MULT18X18D'",
+          "319359 |   MULT18X18D \\ADSR[2].eng.prod_ad_CCU2C_S1_A1_CCU2C_S1_A1_MULT18X18D_P9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:319455:3: Cannot find file containing module: 'MULT18X18D'",
+          "319455 |   MULT18X18D \\ADSR[2].eng.prod_ad_CCU2C_S1_A1_MULT18X18D_P9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:319551:3: Cannot find file containing module: 'MULT18X18D'",
+          "319551 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:319647:3: Cannot find file containing module: 'MULT18X18D'",
+          "319647 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9_1  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:320047:3: Cannot find file containing module: 'MULT18X18D'",
+          "320047 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9_1_P9_CCU2C_S1_A1_MULT18X18D_P9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:320143:3: Cannot find file containing module: 'MULT18X18D'",
+          "320143 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9_2  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:320543:3: Cannot find file containing module: 'MULT18X18D'",
+          "320543 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9_2_P9_CCU2C_S1_A1_MULT18X18D_P9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error-MODMISSING: /home/ubuntu/GitHub/gf180-rebuild-374/fpga/build/out/one_shot_voice_top.v:320943:3: Cannot find file containing module: 'MULT18X18D'",
+          "320943 |   MULT18X18D \\ADSR[2].eng.prod_ad_MULT18X18D_A9_P9_CCU2C_S1_A1_MULT18X18D_P9  (",
+          "       |   ^~~~~~~~~~",
+          "%Error: Exiting due to too many errors encountered; --error-limit=50"
+        ],
+        "timed_out": false,
+        "unknown_modules": [
+          "MULT18X18D"
+        ]
+      },
+      "version": "Verilator 5.050 2026-07-01 rev vUNKNOWN-built20261005"
+    }
+  },
+  "verdict": "refused"
+}
