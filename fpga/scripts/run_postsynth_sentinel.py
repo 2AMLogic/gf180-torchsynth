@@ -64,6 +64,12 @@ def sha(p: Path) -> str:
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+#: Yosys-internal JSON cell types that ``write_verilog`` renders as Verilog
+#: *constructs* (``specify`` timing paths), not module instances, so they
+#: need no simulation model however the netlist is compiled.
+CONSTRUCT_CELLS = ("$specify2", "$specify3", "$specrule")
+
+
 def run_timed(cmd, cwd: Path, timeout: int, log: Path):
     """Run cmd under GNU time; return {rc, elapsed_s, max_rss_kb, tail}."""
     if shutil.which("time") is None and not Path("/usr/bin/time").is_file():
@@ -75,23 +81,29 @@ def run_timed(cmd, cwd: Path, timeout: int, log: Path):
         proc = subprocess.run(
             argv, cwd=str(cwd), capture_output=True, text=True,
             timeout=timeout)
-        rc, timed_out = proc.returncode, False
-        out = (proc.stdout + proc.stderr)[-4000:]
+        rc, timed_out, full = proc.returncode, False, proc.stdout + proc.stderr
     except subprocess.TimeoutExpired as expired:
-        rc, timed_out = 0 if expired.returncode is None else expired.returncode, True
-        out = ((expired.stdout or b"") + (expired.stderr or b""))
-        if isinstance(out, bytes):
-            out = out.decode("utf-8", "replace")
-        out = ("TIMED OUT after %ds (SIGKILL/timeout); partial output:\n%s"
-               % (timeout, out[-3500:]))
+        rc, timed_out = None, True
+        full = (expired.stdout or b"") + (expired.stderr or b"")
+        if isinstance(full, bytes):
+            full = full.decode("utf-8", "replace")
+        full = ("TIMED OUT after %ds (SIGKILL/timeout); partial output:\n%s"
+                % (timeout, full))
     elapsed = time.monotonic() - start
     rss = None
     m = re.search(r"Maximum resident set size \(kbytes\): (\d+)",
                   log.read_text(errors="replace") if log.is_file() else "")
     if m:
         rss = int(m.group(1))
+    # The compiler's own unknown-module set, extracted from the FULL output
+    # (the tail alone truncates repeated errors away): Icarus and Verilator
+    # word it differently.
+    unknown = set(re.findall(r"Unknown module type: (\S+)", full))
+    unknown |= set(re.findall(
+        r"Cannot find file containing module: '([^']+)'", full))
     return {"rc": rc, "elapsed_s": round(elapsed, 1), "max_rss_kb": rss,
-            "tail": out.strip().splitlines()[-25:], "timed_out": timed_out}
+            "tail": full.strip().splitlines()[-25:], "timed_out": timed_out,
+            "unknown_modules": sorted(unknown)}
 
 
 def write_flat_sim_library(share: Path, dest: Path) -> dict:
@@ -236,8 +248,14 @@ def main(argv=None) -> int:
               "%s (run the env stage first)" % args.venv, file=sys.stderr)
         return 3
     inv = sim_model_inventory(share)
+    # $specify* cells are rendered as Verilog constructs, not instances, so
+    # only primitive instance types can need a simulation model.
+    instance_cells = {c: n for c, n in cells.items()
+                      if not c.startswith(CONSTRUCT_CELLS)}
+    construct_cells = {c: n for c, n in cells.items()
+                       if c.startswith(CONSTRUCT_CELLS)}
     gaps = {c: inv["modules"].get(c, "absent from the simulation library")
-            for c in cells
+            for c in instance_cells
             if inv["modules"].get(c, "absent") != "behavioral"}
     workdir = out / "vsim"
     flat = write_flat_sim_library(share, workdir / "ecp5_cells_sim_flat.v")
@@ -246,7 +264,12 @@ def main(argv=None) -> int:
         "files_scanned": inv["files"],
         "flattened_sim_library": flat,
         "netlist_cell_types": {
-            c: inv["modules"].get(c, "absent") for c in cells},
+            c: (inv["modules"].get(c, "absent")
+                if not c.startswith(CONSTRUCT_CELLS)
+                else "yosys-internal, rendered as a Verilog specify "
+                     "construct by write_verilog (needs no model)")
+            for c in cells},
+        "construct_cells": construct_cells,
         "gap": gaps,
     }
 
@@ -280,13 +303,16 @@ def main(argv=None) -> int:
     }
 
     reasons = []
+    unknown_iv = set(iv.get("unknown_modules") or [])
     if gaps:
         reasons.append(
             "primitive-model gap: the pinned toolchain's simulation library "
-            "provides no behavioral model for %s (%s); nothing in the open "
-            "flow can elaborate these cells"
+            "provides no behavioral model for %s (%s); the simulator's own "
+            "error output names exactly %s as unresolvable, and nothing in "
+            "the open flow can elaborate these cells"
             % (", ".join(sorted(gaps)),
-               "; ".join("%s: %s" % kv for kv in sorted(gaps.items()))))
+               "; ".join("%s: %s" % kv for kv in sorted(gaps.items())),
+               ", ".join(sorted(unknown_iv)) or "nothing (see compile tail)"))
 
     sim = None
     if iv["rc"] == 0 and not iv["timed_out"]:
@@ -356,8 +382,8 @@ def main(argv=None) -> int:
 
     if "verdict" not in record:
         tail_text = "\n".join(iv["tail"])
-        gap_causal = bool(gaps) and any(
-            g in tail_text for g in gaps)
+        gap_causal = (bool(unknown_iv) and unknown_iv <= set(gaps)) or (
+            bool(gaps) and any(g in tail_text for g in gaps))
         if iv["timed_out"]:
             record["verdict"] = "refused"
             record["reason"] = reasons[-1]
