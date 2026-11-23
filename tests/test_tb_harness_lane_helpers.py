@@ -30,6 +30,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tb"))
 
+import lane_adsr  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
 
@@ -57,7 +58,10 @@ class LoadGoldenVectorsRefusalTest(unittest.TestCase):
             with self.subTest(lane=wrapper), \
                     tempfile.TemporaryDirectory() as tmp:
                 empty = Path(tmp)
-                with mock.patch.object(run_tb, global_name, empty):
+                # A re-exported function reads globals from its defining
+                # module, so patch the ADSR lane where it now lives.
+                target = lane_adsr if wrapper == "adsr_load_vectors" else run_tb
+                with mock.patch.object(target, global_name, empty):
                     with self.assertRaises(SystemExit) as caught:
                         getattr(run_tb, wrapper)()
                 self.assertEqual(str(caught.exception), template % empty)
