@@ -3,7 +3,7 @@
 This snapshot records workflow state. Issue closure and Loom labels do not establish technical qualification; consult the committed evidence and capability reports for claim status.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-20T19:40:54Z (snapshot; compare against live labels)_
+_Generated: 2026-11-21T07:24:57Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -30,6 +30,7 @@ Human-approved issues (`loom:issue`) ready for implementation — excluding held
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
+- **#530**: asic/klt-friction.md F3: the paste-ready title is attributed to klayout-tools#5871, but #5798 is the issue that carries it
 
 ## In Progress
 
@@ -75,7 +76,6 @@ Issues carrying `loom:curated`.
 - **#454**: Measure Spot shards and regenerate the three whole-voice evidence records for PR #275 *(curated)* *(held)*
 - **#524**: T1 item 6: record not_applicable against the ratified T1 spec table and cite it in the manifest *(curated)*
 - **#525**: Run the klt functional-verification lanes without editing hashed RTL: pass +lut= through klt and drop the KLT_COCOTB ifdefs from PR #392 *(curated)* *(held)*
-- **#526**: Record the filed upstream issues for klt friction F4 (ABC control) and F5 (multicycle) in asic/klt-friction.md and the #82 feasibility plan *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -93,7 +93,6 @@ Issues carrying `loom:curated`.
 - **#456**: Remove orphaned unratified example listening receipt (examples/listening): unreferenced, stale, superseded by session-01 manifest *(hermit)* *(held)*
 - **#476**: Split the self-contained ADSR lane out of tb/run_tb.py (the named-lane follow-on #383 invited) *(hermit)* *(held)*
 - **#478**: Remove tools/render_reference.py: orphaned wrapper duplicating the documented render CLI *(hermit)* *(held)*
-- **#527**: Reuse each mutation qualifier’s PASS summary when writing its publication *(hermit)*
 
 ## Epics
 
@@ -108,11 +107,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 1 |
 | Important | 2 |
-| Ready (`loom:issue`, net of holds/building/merge-pending) | 3 |
+| Ready (`loom:issue`, net of holds/building/merge-pending) | 4 |
 | In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 22 |
-| Architect / Hermit proposals | 15 |
+| Curated | 21 |
+| Architect / Hermit proposals | 14 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
