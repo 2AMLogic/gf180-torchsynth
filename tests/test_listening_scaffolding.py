@@ -840,8 +840,11 @@ class StatisticsTests(unittest.TestCase):
         self.assertAlmostEqual(spearman([1, 2, 3, 4, 5], [10, 20, 30, 40, 50]), 1.0)
         self.assertAlmostEqual(spearman([1, 2, 3, 4, 5], [50, 40, 30, 20, 10]), -1.0)
         self.assertAlmostEqual(spearman([1, 2, 3], [2, 1, 3]), 0.5)
+        self.assertAlmostEqual(spearman([1, 2, 2, 4], [1, 2, 3, 4]), math.sqrt(0.9))
         self.assertIsNone(spearman([1, 1, 1], [1, 2, 3]))
         self.assertIsNone(spearman([1], [1]))
+        self.assertIsNone(spearman([1, 2, 3], [1, 2]))
+        self.assertIsNone(spearman([], []))
 
     def test_stimulus_codes_are_deterministic_and_opaque(self):
         a = stimulus_code("cfg", "global-0", "gain.db", 3)

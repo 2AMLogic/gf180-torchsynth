@@ -30,7 +30,8 @@ operator/architect decision at ratification, not something this scaffold
 invents silently.
 
 Stdlib only; imports the landed ``torchsynth_voice`` mutation modules for
-operator applications and magnitude ranges. No Torch, no audio files read or
+operator applications and magnitude ranges, and its perceptual-benchmark
+statistics for the shared Spearman arithmetic. No Torch, no audio files read or
 written by this module itself.
 """
 
@@ -50,6 +51,7 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice.digest import sha256_bytes as sha256_hex  # noqa: E402
+from torchsynth_voice.perceptual_benchmark import spearman_rank  # noqa: E402
 
 CONFIG_SCHEMA_PATH = (
     ROOT / "spec" / "reference" / "listening-protocol-config-v1.schema.json"
@@ -1168,31 +1170,8 @@ def _mean(values: Sequence[float]) -> float:
 mean = _mean
 
 
-def _rankdata(values: Sequence[float]) -> List[float]:
-    """Average ranks (1-based), ties share the mean rank."""
-    order = sorted(range(len(values)), key=lambda i: values[i])
-    ranks = [0.0] * len(values)
-    i = 0
-    while i < len(order):
-        j = i
-        while j + 1 < len(order) and values[order[j + 1]] == values[order[i]]:
-            j += 1
-        average = (i + j) / 2.0 + 1.0
-        for k in range(i, j + 1):
-            ranks[order[k]] = average
-        i = j + 1
-    return ranks
-
-
 def spearman(x: Sequence[float], y: Sequence[float]) -> Optional[float]:
     """Spearman rank correlation (average ranks); None when undefined."""
     if len(x) != len(y) or len(x) < 2:
         return None
-    rx, ry = _rankdata(list(x)), _rankdata(list(y))
-    mx, my = _mean(rx), _mean(ry)
-    num = math.fsum((a - mx) * (b - my) for a, b in zip(rx, ry))
-    dx = math.sqrt(math.fsum((a - mx) ** 2 for a in rx))
-    dy = math.sqrt(math.fsum((b - my) ** 2 for b in ry))
-    if dx == 0.0 or dy == 0.0:
-        return None
-    return num / (dx * dy)
+    return spearman_rank(x, y)
