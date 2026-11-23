@@ -484,6 +484,13 @@ class SyntheticProcess:
                 trace = item["trace"]
                 replacement = ops.delay_one(plain_bytes(trace), item["frame"]) + item["instance_id"].encode()
                 detail = {
+                    # The real worker populates operator/trace/slot in every
+                    # module-event detail (mutation_worker_timing), and the
+                    # shared evaluator binds the detail to its schedule row
+                    # through them (#541).
+                    "operator": item["operator"],
+                    "trace": trace,
+                    "slot": slot,
                     "original_slot_sha256": previous.get(trace, sha(plain_bytes(trace))),
                     "replacement_slot_sha256": sha(replacement),
                 }
