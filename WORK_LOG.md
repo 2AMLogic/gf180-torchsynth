@@ -8,11 +8,15 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-23
 
+- **PR #555**: refactor: move ADSR testbench lane into tb/lane_adsr.py
+- **PR #545**: chore: remove unratified example listening receipt
 - **PR #550**: refactor: delegate capabilities schema checks to artifacts and digest helpers
 - **PR #548**: Remove orphaned tools/render_reference.py render wrapper
 - **PR #547**: refactor: share benchmark spearman_rank with the listening protocol
 - **PR #543**: refactor: hoist duplicated signal/timing validation gates into mutation_family_runtime
 - **PR #534**: spec: record T1 item 6 not_applicable against the ratified T1 spec table
+- **Issue #476** (closed): Split the self-contained ADSR lane out of tb/run_tb.py (the named-lane follow-on #383 invited)
+- **Issue #456** (closed): Remove orphaned unratified example listening receipt (examples/listening): unreferenced, stale, superseded by session-01 manifest
 - **Issue #551** (closed): Sibling schema-evaluator and sha256 duplicates remain in case_registry.py and trace_registry.py
 - **Issue #549** (closed): Deduplicate capabilities._structure and _digest into artifacts._structure and digest.sha256_bytes
 - **Issue #546** (closed): Reuse the benchmark Spearman calculation in listening analysis
@@ -414,40 +418,3 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 - **PR #209**: test(ci): pin the break/continue guard's lookbehind and // stripping
 - **PR #210**: feat(protocol): bind render passes to one identity and declared noise digest
 
-### 2026-09-24
-
-- **Issue #84** (closed): Lessons from gf180-parasynth: what cost us most, and the 80/20 that would have prevented it
-- **Issue #151** (closed): reference-scalar CI red on main: intermittent release-era sentinel drift (global-6 canonical)
-- **Issue #165** (closed): fix(tb): latent quotient-bit-offset bug in adsr_engine.sv's dead div_half_even path (found by #71)
-- **Issue #172** (closed): Champion amendment (pre-approved): ratify the host-replay shadow boundary as the #74 declaration-class decision (DR-0008/DR-0010)
-- **Issue #177** (closed): Reference repeatability CI red on main: in-container dispatch tier varies with host generation (sibling of #151, second sentinel workflow)
-- **Issue #180** (closed): Trace artifacts CI red on main after #178 runtime publication republish: renderer QUALIFICATION_SHA256 pin stale
-- **PR #168**: feat(tb): exact host-fed canonical noise-stream lane in RTL (issue 75)
-- **PR #170**: fix(deps): update dependency setuptools to v83 [security]
-- **PR #173**: docs(spec): ratify the host-replay shadow boundary as the #74 declaration-class decision (DR-0008/DR-0010 amendment)
-- **PR #175**: fix(tb): correct dead div_half_even quotient-bit offset (issue 165)
-- **PR #176**: fix(release-era): enforce the scalar sentinel's dispatch pins in the render container and bind the declared envelope (issue 151)
-- **PR #178**: fix(release-era): pin the canonical AVX2 ISA tier in the repeatability render container (#177)
-- **PR #179**: fix(release-era): recapture the scalar sentinel receipt after the #170 lockfile (#151)
-- **PR #181**: fix(artifacts): re-pin the ratified runtime publication digest after the #178 republish (#180)
-- **PR #184**: fix(release-era): republish the scalar receipt at full scope from the post-A2 tree (#179 follow-up)
-
-### 2026-09-23
-
-- **PR #167**: feat(rtl): bit-exact square/saw VCO engine vs the frozen fixed model's golden vectors (issue 74, Part of #74)
-
-### 2026-09-22
-
-- **Issue #69** (closed): [Epic #2] Implement RTL patch loader, identity, reset, and keyboard controls
-- **Issue #70** (closed): [Epic #2] Implement bit-exact RTL ADSR envelope engine
-- **Issue #71** (closed): [Epic #2] Implement bit-exact RTL LFO and control-rate VCA
-- **Issue #72** (closed): [Epic #2] Implement modulation matrix and endpoint-aligned control interpolation RTL
-- **Issue #74** (closed): [Epic #2] Implement bit-exact square/saw VCO RTL
-- **PR #160**: Adopt Renovate dependency security policy (14-day quarantine)
-- **PR #161**: feat: bit-exact RTL ADSR envelope engine + golden-vector flow (Part of issue 70)
-- **PR #162**: .github/workflows: Migrate workflows to Blacksmith runners
-- **PR #163**: feat(rtl): patch loader, identity, reset, and keyboard controls vs a cycle-exact host mirror (issue 69)
-- **PR #164**: feat: bit-exact RTL LFO + control-rate VCA engine vs the frozen fixed model's golden vectors (Closes #71)
-- **PR #166**: feat: bit-exact RTL modulation matrix + endpoint-aligned control interpolation vs the frozen fixed model's golden vectors (Closes #72)
-- **PR #169**: feat(rtl): bit-exact sine VCO engine vs the frozen fixed model's vco_1.raw traces (issue 73)
-- **PR #174**: feat(protocol): host transport client and behavioral-mock explorer backend (issue 66)
