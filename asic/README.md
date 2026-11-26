@@ -169,10 +169,17 @@ python3 -m unittest tests.test_synth_feasibility_evidence -v
 
 `run` writes the derived view and per-target results under the ignored
 `asic/build/`, plus the commit-safe generated Yosys scripts under
-`asic/evidence/scripts/`. A `--timeout` above 300 patches `klt`'s fixed Yosys
-timeout (friction F2) and the record names which targets used it. Install
-nothing on the host: the PDK, `klt`, `yosys`, `openroad` and `verilator` are
-the worker's pinned tools.
+`asic/evidence/scripts/`. Each target's Yosys budget (`--timeout`, or its
+`--timeouts` entry; 300 s by default) is written into that target's request as
+klt's public top-level `yosys_timeout_s` field (friction F2) and is recorded per
+target as `yosys_timeout_s`; a budget outside `0 < N <= 3600` is refused before
+anything runs. This needs a `klt` that accepts the field (`0.9.2`, the CI pin).
+The committed record predates this change: its three 2,700 s targets
+(`mod_matrix_engine`, `upsample_engine`, `normalization_replay_engine`) were
+run through the retired private-patch invocation their `command` fields name,
+and no target has been re-run through the request field. Install nothing on
+the host: the PDK, `klt`, `yosys`, `openroad` and `verilator` are the worker's
+pinned tools.
 
 ## Files
 

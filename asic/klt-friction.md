@@ -134,7 +134,8 @@ way to ask for more from the request or CLI.
 * Workaround here: `tools/synthesize_oneshot.py run --timeout N` (N > 300)
   patches `klayout_tools.synthesize._run_yosys.__kwdefaults__['timeout_s']`
   from a `-I -c` wrapper under klt's own interpreter; the record states which
-  targets ran that way.
+  targets ran that way. (Retired 2026-11-26: the harness now writes the public
+  `request["yosys_timeout_s"]` field instead -- see "Removable workarounds".)
 
 **Status (2026-11-14, `klt 0.9.2.dev1022+g2a9c52b27ce7`): fixed** for the
 request half; the CLI half is still unmet.
@@ -622,3 +623,32 @@ record. At the host `klt 0.9.3.dev2575` the orphan fix is present (F3's
 exist there). The row's verdict — keep the reaper — therefore still holds for
 pinned runs, and becomes removable only when the pin moves past the
 2026-11-17 fix.
+
+**Update 2026-11-26 — F2 workaround retired (#563).** Re-verified at the
+published `klayout-tools==0.9.2` wheel in a throwaway `uv run --no-project
+--with "klayout-tools==0.9.2"` environment: `yosys_timeout_s` is in
+`klayout_tools.synthesize._ALLOWED_REQUEST_KEYS`, and `synthesize_timeout.py`
+is as described in F2's 2026-11-14 status — `bind_yosys_timeout()` is called
+at `synthesize.py:1164` and raises on a value outside `0 < N <= 3600`,
+`DEFAULT_YOSYS_TIMEOUT_S = 300.0` (`:3077`) is resolved in `_run_yosys`
+(`:3117`), and the bound budget is echoed into `provenance` (`:1253`) and the
+report (`:1633`). `tools/synthesize_oneshot.py` therefore no longer reads the
+`klt` shebang, launches klt's interpreter or touches `_run_yosys`: it writes
+each target's budget into the request as top-level `yosys_timeout_s` and runs
+`klt synthesize` directly, and a budget outside `0 < N <= 3600` is refused by
+the harness before anything is written or run. The compatibility boundary is
+that public field and its one-hour ceiling; the `0.8.0` allowlist above does
+not have the field.
+
+What was exercised: the request document and the `klt` argv are checked
+PDK-free in `tests/test_synth_feasibility_evidence.py` (subprocess
+intercepted), and one unrecorded probe at `0.9.2` ran `noise_stream_dut`
+through the request field with `yosys_timeout_s: 2700` — `klt` accepted the
+request, reported `status: ok` and echoed the budget in the report and its
+provenance, and refused a hand-written `3601` with
+`request.yosys_timeout_s must be a finite number > 0 and <= 3600 (seconds);
+got 3601`. That probe is not a committed evidence record: the #82 record is
+unchanged, it still names the retired invocation in its three 2,700 s
+`command` fields, and no target of it has been re-run through the request
+field — this is a harness change, not a flow result. The F3 verdict (keep the
+reaper) is unaffected: the reaper still runs after every `klt synthesize` call.
