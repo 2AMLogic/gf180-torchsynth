@@ -15,6 +15,9 @@ nothing stronger:
   required corner, and every stored verdict equals the verdict recomputed
   from the stored per-corner reports (so a hand-edited ``met`` fails);
 * a target that did not finish carries no metrics and cannot claim timing;
+* the Yosys budget travels in each request's public ``yosys_timeout_s`` field,
+  an unsupported budget is refused before anything runs, and the recorded
+  command is the ``klt`` argv actually run (subprocess intercepted, PDK-free);
 * the record leaks no absolute host paths.
 
 The discrimination checks (mutate a copy, expect refusal) prove the gates
@@ -22,13 +25,19 @@ bite; the synthesis-view generator's replace-exactly-once guard is checked
 the same way.
 """
 
+import contextlib
 import copy
+import io
 import json
 import math
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -222,6 +231,215 @@ class TestSynthesisViewGenerator(unittest.TestCase):
             "import gf180_rtl_constants::*;\nwire [C1_WIDTH-1:0] a;\n", ["C1_WIDTH"])
         self.assertIn("`C1_WIDTH", out)
         self.assertNotIn("import", out)
+
+
+class TestSynthesizeInvocation(unittest.TestCase):
+    """The Yosys budget rides in the request; ``klt`` is invoked directly.
+
+    PDK-free (issue #563): the request is really generated and the subprocess
+    call is intercepted, so these check the request document and the exact
+    ``klt`` argv without ``klt``, Yosys, a liberty or a PDK store. They
+    exercise request generation and subprocess arguments only -- they are
+    not a synthesis result.
+    """
+
+    FAILED = subprocess.CompletedProcess([], 1, stdout="", stderr="boom")
+
+    def setUp(self):
+        tmp = self.enterContext(tempfile.TemporaryDirectory(dir=ROOT / "asic"))
+        self.workdir = Path(tmp)
+
+    def intercepted_klt(self, request, timeout_s):
+        """``run_klt_synthesize`` with the subprocess intercepted -> (outcome, call)."""
+        with mock.patch.object(so, "sh", return_value=self.FAILED) as run, \
+                mock.patch.object(so, "reap_orphan_abc", return_value=[]) as reap:
+            outcome = so.run_klt_synthesize(request, timeout_s)
+        run.assert_called_once()
+        reap.assert_called_once_with()
+        return outcome, run.call_args
+
+    def intercepted_target(self, target, timeout_s):
+        """``run_target`` with the subprocess intercepted -> (result, call)."""
+        with mock.patch.object(so, "sh", return_value=self.FAILED) as run, \
+                mock.patch.object(so, "reap_orphan_abc", return_value=[]) as reap:
+            result = so.run_target(self.workdir, target, timeout_s, force=False)
+        run.assert_called_once()
+        reap.assert_called_once_with()
+        return result, run.call_args
+
+    def assert_ran_from_repo_root(self, call):
+        """klt is given repo-relative paths and the repo root as its cwd."""
+        self.assertEqual(call.kwargs["cwd"], so.ROOT)
+
+    def test_default_budget_is_the_request_field(self):
+        request = so.write_synth_request(self.workdir, "noise_stream_dut", "r1")
+        document = json.loads(request.read_text(encoding="utf-8"))
+        self.assertEqual(document["yosys_timeout_s"], so.KLT_DEFAULT_YOSYS_TIMEOUT_S)
+        self.assertEqual(so.KLT_DEFAULT_YOSYS_TIMEOUT_S, 300.0)
+        self.assertNotIn("yosys_timeout_s", document["constraints"])
+
+    def test_per_target_override_is_the_request_field(self):
+        request = so.write_synth_request(self.workdir, "upsample_engine", "r1", 2700)
+        document = json.loads(request.read_text(encoding="utf-8"))
+        self.assertEqual(document["yosys_timeout_s"], 2700.0)
+        self.assertNotIn("yosys_timeout_s", document["constraints"])
+
+    def test_the_ceiling_itself_is_accepted(self):
+        self.assertEqual(so.KLT_YOSYS_TIMEOUT_MAX_S, 3600.0)
+        request = so.write_synth_request(self.workdir, "upsample_engine", "r1", 3600)
+        self.assertEqual(json.loads(request.read_text(encoding="utf-8"))["yosys_timeout_s"], 3600.0)
+
+    def test_unsupported_budget_is_refused_before_anything_is_written(self):
+        for bad in (so.KLT_YOSYS_TIMEOUT_MAX_S + 1, 7200, 0, -5, float("nan"),
+                    float("inf"), True, "300", None):
+            with self.subTest(budget=bad):
+                shutil.rmtree(self.workdir)
+                self.workdir.mkdir()
+                with self.assertRaises(ValueError) as caught:
+                    so.write_synth_request(self.workdir, "upsample_engine", "r1", bad)
+                message = str(caught.exception)
+                self.assertIn("upsample_engine", message)
+                self.assertIn("yosys_timeout_s", message)
+                self.assertIn("3600", message)
+                self.assertEqual(list(self.workdir.iterdir()), [])
+
+    def test_extended_run_is_a_direct_klt_invocation(self):
+        request = so.write_synth_request(self.workdir, "upsample_engine", "r1", 2700)
+        outcome, call = self.intercepted_klt(request, 2700)
+        self.assertEqual(call.args[0], [
+            "klt", "synthesize", so.rel(request),
+            "--pdk", so.PDK_VARIANT, "--pdk-root", str(so.PDK_ROOT), "--format", "json"])
+        self.assert_ran_from_repo_root(call)
+        self.assertEqual(call.kwargs["timeout"], 2700 + 180)
+        self.assertEqual(outcome["status"], "error")
+        self.assertEqual(outcome["message"], "boom")
+        self.assertEqual(outcome["yosys_timeout_s"], 2700.0)
+
+    def test_recorded_command_is_the_invocation_with_only_the_pdk_root_elided(self):
+        for timeout_s in (so.KLT_DEFAULT_YOSYS_TIMEOUT_S, 2700.0):
+            with self.subTest(timeout_s=timeout_s):
+                request = so.write_synth_request(self.workdir, "upsample_engine", "r1", timeout_s)
+                outcome, call = self.intercepted_klt(request, timeout_s)
+                self.assert_ran_from_repo_root(call)
+                self.assertEqual(call.kwargs["timeout"], timeout_s + 180)
+                argv = call.args[0]
+                self.assertEqual(argv.count(str(so.PDK_ROOT)), 1)
+                self.assertEqual(outcome["command"], " ".join(
+                    "<ciel store>" if tok == str(so.PDK_ROOT) else tok for tok in argv))
+                self.assertEqual(
+                    outcome["command"],
+                    "klt synthesize %s --pdk %s --pdk-root <ciel store> --format json"
+                    % (so.rel(request), so.PDK_VARIANT))
+                self.assertEqual(outcome["yosys_timeout_s"], timeout_s)
+
+    def test_target_result_records_the_request_and_command_it_ran(self):
+        for target, timeout_s in (("noise_stream_dut", so.KLT_DEFAULT_YOSYS_TIMEOUT_S),
+                                  ("upsample_engine", 2700.0)):
+            request_path = self.workdir / "req" / ("synth_%s.json" % target)
+            with self.subTest(target=target):
+                result, call = self.intercepted_target(target, timeout_s)
+                self.assert_ran_from_repo_root(call)
+                self.assertEqual(call.args[0][:3], ["klt", "synthesize", so.rel(request_path)])
+                recorded = json.loads(request_path.read_text(encoding="utf-8"))
+                self.assertEqual(result["request"], recorded)
+                self.assertEqual(result["request"]["yosys_timeout_s"], timeout_s)
+                self.assertEqual(result["request"]["hdl_toplevel"], target)
+                self.assertEqual(result["synthesize"]["yosys_timeout_s"], timeout_s)
+                self.assertIn(so.rel(request_path), result["synthesize"]["command"])
+                self.assertNotIn("__kwdefaults__", json.dumps(result))
+                stored = json.loads((self.workdir / "results" / ("%s.json" % target))
+                                    .read_text(encoding="utf-8"))
+                self.assertEqual(stored, result)
+
+    def test_missing_klt_writes_target_error_and_skips_sta(self):
+        missing = FileNotFoundError(2, "No such file or directory", "klt")
+        with mock.patch.object(subprocess, "run", side_effect=missing) as run, \
+                mock.patch.object(so, "reap_orphan_abc", return_value=[]) as reap:
+            so.run_target(self.workdir, "noise_stream_dut", 2700, force=False)
+
+        request = self.workdir / "req" / "synth_noise_stream_dut.json"
+        run.assert_called_once_with(
+            ["klt", "synthesize", so.rel(request), "--pdk", so.PDK_VARIANT,
+             "--pdk-root", str(so.PDK_ROOT), "--format", "json"],
+            capture_output=True, text=True, cwd=so.ROOT, timeout=2880)
+        reap.assert_not_called()
+        stored = json.loads((self.workdir / "results" / "noise_stream_dut.json").read_text())
+        synth = stored["synthesize"]
+        self.assertEqual(synth["status"], "error")
+        self.assertEqual(synth["message"], str(missing))
+        self.assertEqual(synth["reaped_orphan_abc"], 0)
+        self.assertIsNone(synth["exit_code"])
+        self.assertEqual(synth["command"], so.display_command(run.call_args.args[0]))
+        self.assertEqual(synth["yosys_timeout_s"], 2700)
+        self.assertEqual(stored["request"]["yosys_timeout_s"], 2700)
+        self.assertEqual(stored["sta"]["status"], "not_run")
+
+    def test_missing_klt_without_procfs_keeps_launch_diagnostic_for_every_target(self):
+        missing = FileNotFoundError(2, "No such file or directory", "klt")
+        no_proc = FileNotFoundError(2, "No such file or directory", "/proc")
+        real_iterdir = Path.iterdir
+
+        def iterdir(path):
+            if str(path) == "/proc":
+                raise no_proc
+            return real_iterdir(path)
+
+        with mock.patch.object(subprocess, "run", side_effect=missing), \
+                mock.patch.object(Path, "iterdir", iterdir):
+            for target, budget in (("noise_stream_dut", 300), ("upsample_engine", 2700)):
+                so.run_target(self.workdir, target, budget, force=False)
+
+        for target, budget in (("noise_stream_dut", 300), ("upsample_engine", 2700)):
+            stored = json.loads((self.workdir / "results" / ("%s.json" % target)).read_text())
+            synth = stored["synthesize"]
+            self.assertEqual(synth["status"], "error")
+            self.assertEqual(synth["message"], str(missing))
+            self.assertIsNone(synth["exit_code"])
+            self.assertEqual(synth["yosys_timeout_s"], budget)
+            self.assertEqual(stored["sta"]["status"], "not_run")
+
+    def run_cli(self, argv):
+        result = {"target": "x", "synthesize": {"status": "error"},
+                  "sta": {"verdict": {"verdict": "unverifiable"}}}
+        out = io.StringIO()
+        with mock.patch.object(so.synth_view, "build") as build, \
+                mock.patch.object(so, "run_target", return_value=result) as run_target, \
+                contextlib.redirect_stdout(out):
+            rc = so.main(["run", "--workdir", str(self.workdir)] + argv)
+        return rc, out.getvalue(), build, run_target
+
+    def test_cli_passes_each_target_its_resolved_budget(self):
+        rc, _, build, run_target = self.run_cli(
+            ["--targets", "noise_stream_dut,upsample_engine,quarter_wave_lut",
+             "--timeout", "1800", "--timeouts", "upsample_engine=2700"])
+        self.assertEqual(rc, 0)
+        build.assert_called_once_with(self.workdir / "src")
+        self.assertEqual([(call.args[1], call.args[2]) for call in run_target.call_args_list],
+                         [("noise_stream_dut", 1800.0), ("upsample_engine", 2700.0),
+                          ("quarter_wave_lut", 1800.0)])
+
+    def test_cli_refuses_an_unsupported_budget_before_anything_runs(self):
+        cases = {
+            "per-target": (["--targets", "noise_stream_dut,upsample_engine",
+                            "--timeouts", "noise_stream_dut=300,upsample_engine=3601"],
+                           "upsample_engine"),
+            "global": (["--targets", "noise_stream_dut,upsample_engine", "--timeout", "0"],
+                       "every target"),
+        }
+        for name, (argv, named) in cases.items():
+            with self.subTest(budget=name):
+                rc, out, build, run_target = self.run_cli(argv)
+                self.assertEqual(rc, 2)
+                build.assert_not_called()
+                run_target.assert_not_called()
+                self.assertIn("yosys_timeout_s for %s" % named, out)
+                self.assertIn("<= 3600", out)
+
+    def test_cli_help_names_the_request_field_and_its_ceiling(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out, self.assertRaises(SystemExit):
+            so.main(["run", "--help"])
+        self.assertIn("yosys_timeout_s", out.getvalue())
+        self.assertIn("3600", out.getvalue())
 
 
 @unittest.skipUnless(RECORD.exists(), "no committed synthesis-feasibility record yet")

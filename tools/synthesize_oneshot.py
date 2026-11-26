@@ -36,6 +36,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -89,6 +90,7 @@ MEMORY_TREATMENT = (
 )
 
 KLT_DEFAULT_YOSYS_TIMEOUT_S = 300.0
+KLT_YOSYS_TIMEOUT_MAX_S = 3600.0
 
 TOP = "one_shot_voice_top"
 PKG = synth_view.PKG
@@ -224,13 +226,30 @@ def tool_version(cmd) -> str:
         return "unavailable"
 
 
-def klt_python() -> str | None:
-    """Interpreter klt itself runs under (its shebang)."""
-    path = shutil.which("klt")
-    if not path:
-        return None
-    first = Path(path).read_text(encoding="utf-8", errors="replace").splitlines()[0]
-    return first[2:].strip() if first.startswith("#!") else None
+def checked_yosys_timeout(timeout_s, target: str | None = None) -> float:
+    """Validate a per-target Yosys budget against klt's public request field.
+
+    ``KLT_YOSYS_TIMEOUT_MAX_S`` is the ceiling of klt's top-level
+    ``yosys_timeout_s`` request field (``synthesize_timeout.YOSYS_TIMEOUT_MAX_S``
+    at the CI pin, ``klayout-tools==0.9.2``). The accepted range here is that
+    field's, so an unsupported budget is refused before anything is written or
+    run rather than surfacing as a tool error on a later target.
+    """
+
+    valid = (not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float))
+             and math.isfinite(timeout_s) and 0 < timeout_s <= KLT_YOSYS_TIMEOUT_MAX_S)
+    if not valid:
+        raise ValueError(
+            "yosys_timeout_s for %s must be a finite number > 0 and <= %g "
+            "(klt's yosys_timeout_s ceiling); got %r"
+            % (target or "every target", KLT_YOSYS_TIMEOUT_MAX_S, timeout_s))
+    return float(timeout_s)
+
+
+def display_command(cmd: list) -> str:
+    """Printable form of the ``klt`` argv actually run, PDK store elided."""
+
+    return " ".join("<ciel store>" if tok == str(PDK_ROOT) else tok for tok in cmd)
 
 
 def rel(path: Path) -> str:
@@ -292,7 +311,9 @@ def parse_json_text(*texts):
 # =============================================================================
 # The flow
 # =============================================================================
-def write_synth_request(workdir: Path, target: str, run_id: str) -> Path:
+def write_synth_request(workdir: Path, target: str, run_id: str,
+                        yosys_timeout_s: float = KLT_DEFAULT_YOSYS_TIMEOUT_S) -> Path:
+    yosys_timeout_s = checked_yosys_timeout(yosys_timeout_s, target)
     req_dir = workdir / "req"
     req_dir.mkdir(parents=True, exist_ok=True)
     sources = [PKG] + TARGETS[target]
@@ -304,6 +325,7 @@ def write_synth_request(workdir: Path, target: str, run_id: str) -> Path:
         "hdl_toplevel": target,
         "pdk": {"cell_library": CELL_LIBRARY, "corner": SYNTH_CORNER},
         "constraints": {"clock_period_ns": CLOCK_PERIOD_NS},
+        "yosys_timeout_s": yosys_timeout_s,
     }
     path = req_dir / ("synth_%s.json" % target)
     path.write_text(json.dumps(request, indent=2) + "\n", encoding="utf-8")
@@ -311,41 +333,34 @@ def write_synth_request(workdir: Path, target: str, run_id: str) -> Path:
 
 
 def run_klt_synthesize(request: Path, timeout_s: float) -> dict:
-    """Run ``klt synthesize``; returns an outcome dict (never raises on tool failure)."""
+    """Run ``klt synthesize``; returns an outcome dict (never raises on tool failure).
 
-    base = ["--pdk", PDK_VARIANT, "--pdk-root", str(PDK_ROOT), "--format", "json"]
-    extended = timeout_s > KLT_DEFAULT_YOSYS_TIMEOUT_S
-    if not extended:
-        cmd = ["klt", "synthesize", rel(request)] + base
-        display = "klt synthesize %s --pdk %s --pdk-root <ciel store> --format json" % (
-            rel(request), PDK_VARIANT)
-    else:
-        py = klt_python()
-        if py is None:
-            return {"status": "error", "message": "cannot locate klt interpreter"}
-        code = (
-            "import sys, klayout_tools.synthesize as S; "
-            "S._run_yosys.__kwdefaults__['timeout_s'] = float(sys.argv[1]); "
-            "from klayout_tools.cli import main; "
-            "sys.exit(main(['synthesize'] + sys.argv[2:]))"
-        )
-        cmd = [py, "-I", "-c", code, str(timeout_s), rel(request)] + base
-        display = (
-            "klt-interpreter -I -c 'S._run_yosys.__kwdefaults__[\"timeout_s\"]=%g; "
-            "klayout_tools.cli.main([\"synthesize\", ...])' %s --pdk %s "
-            "--pdk-root <ciel store> --format json" % (timeout_s, rel(request), PDK_VARIANT)
-        )
+    The Yosys budget travels in ``request`` as its top-level ``yosys_timeout_s``
+    field (public since ``klayout-tools==0.9.2``). ``timeout_s`` is that same
+    budget; here it only sizes the outer watchdog and is reported.
+    """
+
+    cmd = ["klt", "synthesize", rel(request), "--pdk", PDK_VARIANT,
+           "--pdk-root", str(PDK_ROOT), "--format", "json"]
+    outcome = {"command": display_command(cmd), "yosys_timeout_s": timeout_s}
     started = time.monotonic()
+    launched = True
     try:
         done = sh(cmd, cwd=ROOT, timeout=timeout_s + 180)
         stdout, stderr, rc = done.stdout, done.stderr, done.returncode
     except subprocess.TimeoutExpired as exc:
         stdout, stderr, rc = exc.stdout or "", exc.stderr or "", None
-    elapsed = round(time.monotonic() - started, 1)
-    reaped = reap_orphan_abc()
+    except OSError as exc:
+        launched = False
+        outcome.update(status="error", exit_code=None, message=str(exc))
+        return outcome
+    finally:
+        outcome["elapsed_s"] = round(time.monotonic() - started, 1)
+        # Nothing to reap when klt never started; skipping also keeps the
+        # launch diagnostic intact on hosts where /proc is unreadable.
+        outcome["reaped_orphan_abc"] = len(reap_orphan_abc()) if launched else 0
+    outcome["exit_code"] = rc
     payload = parse_json_text(stdout, stderr)
-    outcome = {"command": display, "yosys_timeout_s": timeout_s,
-               "elapsed_s": elapsed, "exit_code": rc, "reaped_orphan_abc": len(reaped)}
     if rc == 0 and isinstance(payload, dict) and payload.get("status") == "ok":
         outcome["status"] = "ok"
         outcome["response"] = payload
@@ -492,7 +507,7 @@ def run_target(workdir: Path, target: str, timeout_s: float, force: bool) -> dic
     if result_path.exists() and not force:
         return json.loads(result_path.read_text(encoding="utf-8"))
     run_id = "r%d-%s" % (int(time.time()), re.sub(r"[^A-Za-z0-9]", "", target)[:20])
-    request = write_synth_request(workdir, target, run_id)
+    request = write_synth_request(workdir, target, run_id, timeout_s)
     outcome = run_klt_synthesize(request, timeout_s)
     result = {"target": target, "request": json.loads(request.read_text()),
               "synthesize": {k: v for k, v in outcome.items() if k != "response"}}
@@ -830,14 +845,20 @@ def build_record(workdir: Path) -> dict:
 # =============================================================================
 def cmd_run(args) -> int:
     workdir = Path(args.workdir).resolve()
-    synth_view.build(workdir / "src")
     wanted = args.targets.split(",") if args.targets else list(TARGET_ORDER)
     unknown = [t for t in wanted if t not in TARGETS]
     if unknown:
         print("unknown targets: %s" % ", ".join(unknown))
         return 2
+    try:
+        default = checked_yosys_timeout(args.timeout)
+        timeouts = {t: checked_yosys_timeout(args.timeouts.get(t, default), t) for t in wanted}
+    except ValueError as exc:
+        print(exc)
+        return 2
+    synth_view.build(workdir / "src")
     for target in wanted:
-        timeout = args.timeouts.get(target, args.timeout)
+        timeout = timeouts[target]
         print("== %s (yosys timeout %gs)" % (target, timeout), flush=True)
         result = run_target(workdir, target, timeout, args.force)
         print("   synthesize=%s sta-verdict=%s" % (
@@ -871,9 +892,12 @@ def main(argv=None) -> int:
     run.add_argument("--workdir", default=str(DEFAULT_WORKDIR))
     run.add_argument("--targets", default="")
     run.add_argument("--timeout", type=float, default=KLT_DEFAULT_YOSYS_TIMEOUT_S,
-                     help="Yosys timeout per target in seconds (>300 patches klt's fixed bound)")
+                     help="Yosys timeout per target in seconds, passed to klt as the "
+                          "request's yosys_timeout_s (default %g, at most %g)"
+                      % (KLT_DEFAULT_YOSYS_TIMEOUT_S, KLT_YOSYS_TIMEOUT_MAX_S))
     run.add_argument("--timeouts", type=parse_timeouts, default={},
-                     help="per-target overrides, e.g. upsample_engine=1800")
+                     help="per-target overrides, e.g. upsample_engine=2700 "
+                          "(same yosys_timeout_s ceiling as --timeout)")
     run.add_argument("--force", action="store_true")
     rec = sub.add_parser("record")
     rec.add_argument("--workdir", default=str(DEFAULT_WORKDIR))
