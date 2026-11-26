@@ -79,7 +79,7 @@
       "sham_plan_identity_distinct": true,
       "wrong_then_right_no_contamination": true
     },
-    "envelope_id": "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1",
+    "envelope_id": "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0",
     "events_summary": {
       "applied": 0,
       "complete": true,
@@ -215,7 +215,7 @@
         "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
         "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
         "fault": "osc.phase_offset (property)",
-        "observed_refusal": "property deviation phase_rad observed=0.7853981633974665 declared_offset_match=True",
+        "observed_refusal": "property deviation phase_rad observed=0.7853981633974454 declared_offset_match=True",
         "operator": "osc.phase_offset",
         "seam": "voice.parameter_value",
         "tripped": true
@@ -436,7 +436,7 @@
       "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
       "expected_refusal": "FAIL on the periodic phase_rad deviation from the clean fixture zero-origin reference (tolerance +/-1e-6 rad, declared offset +pi/4) with a PASSing clean control",
       "fault": "osc.phase_offset (property)",
-      "observed_refusal": "property deviation phase_rad observed=0.7853981633974665 declared_offset_match=True",
+      "observed_refusal": "property deviation phase_rad observed=0.7853981633974454 declared_offset_match=True",
       "operator": "osc.phase_offset",
       "seam": "voice.parameter_value",
       "tripped": true
@@ -545,7 +545,7 @@
     "src/torchsynth_voice/mutations_signal.py": "581682b103b8ce4a7fb7a84f82a707d4efffcf0fe6d053e46de024b14ca9a211",
     "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
     "src/torchsynth_voice/periodic_estimators.py": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
-    "src/torchsynth_voice/spectral_estimators.py": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066"
+    "src/torchsynth_voice/spectral_estimators.py": "7c0b647cde6389edbf2ef74540bd2e6db769f632f8f4697b72bfbdc43dd56a57"
   },
   "kind": "mutation-signal-v1",
   "localization": {
@@ -1082,77 +1082,77 @@
   "optional_observations": {
     "clip.round_step": {
       "metric": "band.20000_up.error_rms",
-      "observed": 0.0007339476667104366,
+      "observed": 0.0007339476667104367,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "clip.saturation_ceiling": {
       "metric": "band.20000_up.error_rms",
-      "observed": 0.0013947135624985485,
+      "observed": 0.0013947135624985492,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "clip.truncate_step": {
       "metric": "band.20000_up.error_rms",
-      "observed": 0.0007125356279471845,
+      "observed": 0.0007125356279471846,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "gain.db": {
       "metric": "band.20000_up.error_rms",
-      "observed": 5.323955218707736e-09,
+      "observed": 5.323955218569524e-09,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "gain.db (minus 1 dB)": {
       "metric": "band.20000_up.error_rms",
-      "observed": 4.165154326749308e-09,
+      "observed": 4.165154326708191e-09,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "gain.dc_offset": {
       "metric": "band.20000_up.error_rms",
-      "observed": 7.391239937650287e-10,
+      "observed": 7.391239936913729e-10,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "gain.polarity": {
       "metric": "band.20000_up.error_rms",
-      "observed": 9.197354951776259e-09,
+      "observed": 9.197354949236894e-09,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "osc.mode_substitute": {
       "metric": "band.20000_up.error_rms",
-      "observed": 6.8223514284700845e-09,
+      "observed": 6.822351425936036e-09,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "osc.phase_offset": {
       "metric": "band.20000_up.error_rms",
-      "observed": 6.048254063358137e-09,
+      "observed": 6.048254063378322e-09,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "osc.shape_scale": {
       "metric": "band.20000_up.error_rms",
-      "observed": 1.021716617032772e-08,
+      "observed": 1.0217166170811622e-08,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true
     },
     "osc.tuning_shift": {
       "metric": "band.20000_up.error_rms",
-      "observed": 0.00028222200838134276,
+      "observed": 0.00028222200838134374,
       "optional": true,
       "tolerance": 0.01,
       "tolerant": true

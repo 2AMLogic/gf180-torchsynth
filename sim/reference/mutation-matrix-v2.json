@@ -1625,7 +1625,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.10981661081314087, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1665,7 +1665,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.09787416458129883, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1705,7 +1705,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.7999995946884155, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1743,7 +1743,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=0.050000011920928955, affected_samples=176400)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1783,7 +1783,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.003903329372406006, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1823,7 +1823,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.007808312773704529, affected_samples=176399)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1863,7 +1863,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.4576394557952881, affected_samples=75840)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1903,7 +1903,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=1.045294627547264, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1941,7 +1941,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.3766823038458824, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -1981,7 +1981,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error,mean_error (max_abs_error=1.7999609112739563, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2021,7 +2021,7 @@
       "links": {
         "downstream": "paired exactness contract rows (framing_match/exact_equal/max_abs_error/mean_error <= 1e-9, amplitude-exact, preparation none)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "contract rows failed: exact_equal,max_abs_error (max_abs_error=0.6888300776481628, affected_samples=None)",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2061,7 +2061,7 @@
       "links": {
         "downstream": "periodic.cents analytic property row (identity preparation, no normalization)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "property deviation cents observed=100.00000000000071 declared_offset_match=True",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2101,9 +2101,9 @@
       "links": {
         "downstream": "periodic.phase_rad analytic property row (identity preparation, no normalization)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
-        "observed_refusal": "property deviation phase_rad observed=0.7853981633974665 declared_offset_match=True",
+        "observed_refusal": "property deviation phase_rad observed=0.7853981633974454 declared_offset_match=True",
         "publication": "sim/reference/mutation-signal-v1.json"
       },
       "magnitude": [
@@ -2146,7 +2146,7 @@
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced division must fail the bypass decision and byte-preservation rows",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "below-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2189,7 +2189,7 @@
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; forced bypass must fail the divided output row",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2232,7 +2232,7 @@
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; runner-up divisor must fail the output rule row",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows decision_match,rule_error_max",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2275,7 +2275,7 @@
       "links": {
         "downstream": "spectral normalization contract rows (decision_match/rule_error_max/reciprocal_error/reported_peak_error) over below/at/above-one fixtures; doubled replay reciprocal must fail the gain-error row while audio rows pass",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "above-one fixture: detected, failed rows reciprocal_error",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2313,7 +2313,7 @@
       "links": {
         "downstream": "mutations.validate_plan (fail-closed at plan time)",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "seam is not a writable injection seam (producer handoff required): voice.normalization_decision \u2014 The peak/divide decision inside torchsynth.util.normalize_if_clipping as invoked from AudioMixer.output. Not writable: the decision operand is internal to the",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2351,7 +2351,7 @@
       "links": {
         "downstream": "paired exactness contract rows over the composed ordered application",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "events=applied,applied failed rows exact_equal,max_abs_error",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2402,7 +2402,7 @@
       "links": {
         "downstream": "paired exactness contract rows between the truncated and rounded lanes at the same step, plus directed exact-grid/sign/zero vectors",
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "observed_refusal": "truncated lane differs from rounded lane: True; directed vectors distinguish: True; failed rows exact_equal,max_abs_error",
         "publication": "sim/reference/mutation-signal-v1.json"
@@ -2428,8 +2428,8 @@
     }
   ],
   "inputs": {
-    "sim/reference/mutation-identity-v1.json": "17fb2fa1a51ad69a1b454a3c55ca0f9e3393f31b63929bf19f3f5d8ac7cfc8eb",
-    "sim/reference/mutation-signal-v1.json": "045793c215274eb98a20b002fac29e54ccb94750a9c4bd99ddf2b75f4f86671a",
+    "sim/reference/mutation-identity-v1.json": "6914a1c3b3509804389d897f64cd3523b50727e2d79f9e65501572127daf8cee",
+    "sim/reference/mutation-signal-v1.json": "25d0078fb18ee0be87e635fce490c323623acf5f7be1196dc04a018a877a5e89",
     "sim/reference/mutation-timing-v1.json": "48959d00ec82926bd8a7ed0c95beb377f9c18d2e2d97b584af88f9f930074150",
     "spec/MUTATIONS.md": "ee8098b1df4202246b4518f12544839b7b725842e66e62f3dda3cb5c6bb326df",
     "spec/reference/mutation-seams-v1.json": "8f0d7a6e9b9331909e61308644bc73cb427da446f72ec7c58888d5828efa549a",
@@ -3079,7 +3079,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3117,7 +3117,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3145,7 +3145,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3173,7 +3173,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3201,7 +3201,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3229,7 +3229,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3257,7 +3257,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3285,7 +3285,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3313,7 +3313,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"
@@ -3341,7 +3341,7 @@
       "family": "signal",
       "links": {
         "envelope_ids": [
-          "mu1-420272d03e900b01f1a3dfdc217c166ba7ae63aacb0bc385a5da9eaa54275be1"
+          "mu1-966a5b28180704e2709d61ab7ecefb58283e5cb962890ea9cbd38dd616f5acc0"
         ],
         "publications": [
           "sim/reference/mutation-signal-v1.json"

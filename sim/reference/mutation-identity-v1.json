@@ -1986,7 +1986,7 @@
     "src/torchsynth_voice/mutations_identity.py": "aff3c0ea6129f99eb54dafacf9b3d69b21e7fc42e4402506fc3dead73ca1313f",
     "src/torchsynth_voice/paired_metrics.py": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
     "src/torchsynth_voice/scorecard.py": "fd0187a53bf53c03c08a454feab8f8be137fbd2366dea49fe1b87bd8f1fc5d94",
-    "src/torchsynth_voice/spectral_estimators.py": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
+    "src/torchsynth_voice/spectral_estimators.py": "7c0b647cde6389edbf2ef74540bd2e6db769f632f8f4697b72bfbdc43dd56a57",
     "src/torchsynth_voice/trace_registry.py": "79f3879e99a21bc8ac725ecf533f0058b247b9953b006a55041220014c11745b"
   },
   "kind": "mutation-identity-v1",
