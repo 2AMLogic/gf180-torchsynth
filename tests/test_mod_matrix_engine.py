@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -23,6 +24,7 @@ from hw_tools import has_iverilog  # noqa: E402
 from torchsynth_voice import golden_vectors as gv  # noqa: E402
 from torchsynth_voice import mod_matrix_golden as mm  # noqa: E402
 from torchsynth_voice.fixed_voice import AcceptedFormats  # noqa: E402
+from torchsynth_voice.float_interfaces import AUDIO_SAMPLES  # noqa: E402
 from torchsynth_voice.format_sweep import (  # noqa: E402
     CONTROL_SAMPLES,
     MOD_MATRIX_INPUTS,
@@ -248,6 +250,103 @@ class TestCommittedVectors(unittest.TestCase):
             repacked = mm.pack_words_f32le(words)
             self.assertEqual(repacked, payload, name)
             self.assertEqual(len(words), 176400, name)
+
+
+class TestMirrorModelRowComparison(unittest.TestCase):
+    """The mirrors' model comparison refuses every inequality (#559).
+
+    A model row shorter or longer than the mirror row with a fully
+    matching shared prefix, a changed interior word, and an unexpected or
+    missing model route each used to fall through the ``zip``-based
+    diagnostics and certify the mirror as a pass.
+    """
+
+    ROUTE = "vco_1_pitch"
+    INTERIOR_INDEX = 88199
+
+    @classmethod
+    def setUpClass(cls):
+        cls.formats = AcceptedFormats()
+        cls.fcp = FixedControlPath(cls.formats.control_spec)
+        vector = gv.load_vector(VECTOR_DIR / "mixed-sign-routes.json")
+        (
+            cls.words,
+            cls.signals,
+            cls.matrix,
+            cls.audio,
+            _matrix_counters,
+            _audio_counters,
+        ) = derive(cls.fcp, cls.formats, vector)
+
+    def _run_matrix_mirror(self, model_rows):
+        with patch.object(self.fcp, "_mod_matrix", return_value=model_rows):
+            return mm.mirror_mod_matrix(self.fcp, self.words, self.signals)
+
+    def _run_upsample_mirror(self, model_row):
+        with patch.object(self.fcp, "_upsample", return_value=model_row):
+            return mm.mirror_upsample(
+                self.fcp, self.matrix[self.ROUTE], self.ROUTE
+            )
+
+    def test_matrix_model_row_shorter_than_mirror_fails(self):
+        """The #559 false pass: 1,763 model words against 1,764."""
+
+        rows = {route: list(row) for route, row in self.matrix.items()}
+        rows[self.ROUTE].pop()
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_matrix_mirror(rows)
+        self.assertIn(self.ROUTE, str(ctx.exception))
+        self.assertIn("[%d]" % (CONTROL_SAMPLES - 1), str(ctx.exception))
+
+    def test_matrix_model_row_longer_than_mirror_fails(self):
+        rows = {route: list(row) for route, row in self.matrix.items()}
+        rows[self.ROUTE].append(rows[self.ROUTE][-1])
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_matrix_mirror(rows)
+        self.assertIn("[%d]" % CONTROL_SAMPLES, str(ctx.exception))
+
+    def test_matrix_changed_interior_word_fails(self):
+        rows = {route: list(row) for route, row in self.matrix.items()}
+        rows["noise_amp"][900] += 1
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_matrix_mirror(rows)
+        self.assertIn("noise_amp[900]", str(ctx.exception))
+
+    def test_matrix_unexpected_model_route_fails(self):
+        rows = {route: list(row) for route, row in self.matrix.items()}
+        rows["vco_3_pitch"] = list(rows[self.ROUTE])
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_matrix_mirror(rows)
+        self.assertIn("vco_3_pitch", str(ctx.exception))
+
+    def test_matrix_missing_model_route_fails(self):
+        rows = {route: list(row) for route, row in self.matrix.items()}
+        del rows["noise_amp"]
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_matrix_mirror(rows)
+        self.assertIn("noise_amp", str(ctx.exception))
+
+    def test_upsample_model_row_shorter_than_mirror_fails(self):
+        """The #559 false pass: 176,399 model words against 176,400."""
+
+        model_row = self.audio[self.ROUTE][:-1]
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_upsample_mirror(model_row)
+        self.assertIn(self.ROUTE, str(ctx.exception))
+        self.assertIn("[%d]" % (AUDIO_SAMPLES - 1), str(ctx.exception))
+
+    def test_upsample_model_row_longer_than_mirror_fails(self):
+        model_row = list(self.audio[self.ROUTE]) + [self.audio[self.ROUTE][-1]]
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_upsample_mirror(model_row)
+        self.assertIn("[%d]" % AUDIO_SAMPLES, str(ctx.exception))
+
+    def test_upsample_changed_interior_word_fails(self):
+        model_row = list(self.audio[self.ROUTE])
+        model_row[self.INTERIOR_INDEX] += 1
+        with self.assertRaises(mm.ModMatrixGoldenError) as ctx:
+            self._run_upsample_mirror(model_row)
+        self.assertIn("[%d]" % self.INTERIOR_INDEX, str(ctx.exception))
 
 
 class TestGeneratorDeterminism(unittest.TestCase):
