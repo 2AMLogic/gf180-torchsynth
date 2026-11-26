@@ -86,6 +86,40 @@ class ModMatrixGoldenError(ValueError):
     """Raised when a mirror refuses to match the frozen model."""
 
 
+def _assert_row_equal(
+    mirror: List[int],
+    model: List[int],
+    subject: str,
+    route: str,
+) -> None:
+    """Row-equality gate shared by both mirrors.
+
+    Raises :class:`ModMatrixGoldenError` for every inequality between a
+    mirror row and the frozen model's row. A differing word at a shared
+    index is reported as the first differing index; a row that is a
+    strict prefix of the other — a truncated or extended model result —
+    is reported at the first absent index, naming the absent side, so a
+    matching shared prefix can never certify the row.
+    """
+
+    if mirror == model:
+        return
+    common = min(len(mirror), len(model))
+    for index in range(common):
+        if mirror[index] != model[index]:
+            raise ModMatrixGoldenError(
+                "%s diverges from the frozen model at %s[%d]: "
+                "mirror %d model %d"
+                % (subject, route, index, mirror[index], model[index])
+            )
+    absent = "model" if len(model) == common else "mirror"
+    raise ModMatrixGoldenError(
+        "%s diverges from the frozen model at %s[%d]: %s word absent "
+        "(mirror row %d words, model row %d words)"
+        % (subject, route, common, absent, len(mirror), len(model))
+    )
+
+
 def route_format(fcp: FixedControlPath, route: str) -> FixedFormat:
     """The accepted output word format of one route."""
 
@@ -107,8 +141,10 @@ def mirror_mod_matrix(
 
     Returns the per-route output words plus the sticky counters the RTL's
     exported op counters must reproduce (rounding and saturation events per
-    declared site). Any row disagreement with ``FixedControlPath._mod_matrix``
-    raises: the mirror is a proof obligation, not an alternative model.
+    declared site). Any route-set or row disagreement with
+    ``FixedControlPath._mod_matrix`` — a missing or unexpected model route,
+    a row of the wrong length, or any differing word — raises: the mirror
+    is a proof obligation, not an alternative model.
     """
 
     counters = StickyCounters()
@@ -130,18 +166,17 @@ def mirror_mod_matrix(
             merged.append(word)
         outputs[route] = merged
     model = fcp._mod_matrix(words, signals)
-    if outputs != model:
-        for route in MOD_ROUTES:
-            if outputs[route] != model[route]:
-                for index, (mine, theirs) in enumerate(
-                    zip(outputs[route], model[route])
-                ):
-                    if mine != theirs:
-                        raise ModMatrixGoldenError(
-                            "mod-matrix mirror diverges from the frozen model "
-                            "at %s[%d]: mirror %d model %d"
-                            % (route, index, mine, theirs)
-                        )
+    model_routes = set(model)
+    missing_routes = sorted(set(MOD_ROUTES) - model_routes)
+    unexpected_routes = sorted(model_routes - set(MOD_ROUTES))
+    if missing_routes or unexpected_routes:
+        raise ModMatrixGoldenError(
+            "mod-matrix mirror diverges from the frozen model on route "
+            "keys: model is missing routes %s and returns unexpected "
+            "routes %s" % (missing_routes, unexpected_routes)
+        )
+    for route in MOD_ROUTES:
+        _assert_row_equal(outputs[route], model[route], "mod-matrix mirror", route)
     return outputs, counters.as_json()
 
 
@@ -158,6 +193,8 @@ def mirror_upsample(
     narrowing per interior sample; exact endpoint copies of control indices
     0 and 1763. Returns the full 176,400-word audio stream plus the sticky
     counters (blend roundings, fraction-word formations, saturations).
+    Any row disagreement with ``FixedControlPath._upsample`` — a row of
+    the wrong length or any differing word — raises.
     """
 
     counters = StickyCounters()
@@ -186,11 +223,5 @@ def mirror_upsample(
             quotient = apply_saturation(quotient, fmt, site, counters)
         output.append(quotient)
     model = fcp._upsample(column, fmt)
-    if output != model:
-        for index, (mine, theirs) in enumerate(zip(output, model)):
-            if mine != theirs:
-                raise ModMatrixGoldenError(
-                    "upsample mirror diverges from the frozen model at %s[%d]:"
-                    " mirror %d model %d" % (route, index, mine, theirs)
-                )
+    _assert_row_equal(output, model, "upsample mirror", route)
     return output, counters.as_json()
