@@ -30,7 +30,7 @@ by this workflow-level policy (the job keeps its main/repository guard,
 |---|---|---|---|---|
 | `ci.yml`, `tb-sim.yml` | every change | no | via dispatcher | yes (always executes) |
 | `ci-main-schedule.yml` | no | no | `17 */3 * * *` UTC | yes |
-| other 12 suites | every change | every merge | no | unchanged |
+| other 13 suites | every change | every merge | no | unchanged |
 
 The three-hour cadence is a scheduling target, not a guarantee that GitHub
 starts or finishes a run within three hours.  Whether to shorten it is decided
