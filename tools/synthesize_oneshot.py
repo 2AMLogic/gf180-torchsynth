@@ -344,17 +344,21 @@ def run_klt_synthesize(request: Path, timeout_s: float) -> dict:
            "--pdk-root", str(PDK_ROOT), "--format", "json"]
     outcome = {"command": display_command(cmd), "yosys_timeout_s": timeout_s}
     started = time.monotonic()
+    launched = True
     try:
         done = sh(cmd, cwd=ROOT, timeout=timeout_s + 180)
         stdout, stderr, rc = done.stdout, done.stderr, done.returncode
     except subprocess.TimeoutExpired as exc:
         stdout, stderr, rc = exc.stdout or "", exc.stderr or "", None
     except OSError as exc:
+        launched = False
         outcome.update(status="error", exit_code=None, message=str(exc))
         return outcome
     finally:
         outcome["elapsed_s"] = round(time.monotonic() - started, 1)
-        outcome["reaped_orphan_abc"] = len(reap_orphan_abc())
+        # Nothing to reap when klt never started; skipping also keeps the
+        # launch diagnostic intact on hosts where /proc is unreadable.
+        outcome["reaped_orphan_abc"] = len(reap_orphan_abc()) if launched else 0
     outcome["exit_code"] = rc
     payload = parse_json_text(stdout, stderr)
     if rc == 0 and isinstance(payload, dict) and payload.get("status") == "ok":

@@ -362,16 +362,41 @@ class TestSynthesizeInvocation(unittest.TestCase):
             ["klt", "synthesize", so.rel(request), "--pdk", so.PDK_VARIANT,
              "--pdk-root", str(so.PDK_ROOT), "--format", "json"],
             capture_output=True, text=True, cwd=so.ROOT, timeout=2880)
-        reap.assert_called_once_with()
+        reap.assert_not_called()
         stored = json.loads((self.workdir / "results" / "noise_stream_dut.json").read_text())
         synth = stored["synthesize"]
         self.assertEqual(synth["status"], "error")
         self.assertEqual(synth["message"], str(missing))
+        self.assertEqual(synth["reaped_orphan_abc"], 0)
         self.assertIsNone(synth["exit_code"])
         self.assertEqual(synth["command"], so.display_command(run.call_args.args[0]))
         self.assertEqual(synth["yosys_timeout_s"], 2700)
         self.assertEqual(stored["request"]["yosys_timeout_s"], 2700)
         self.assertEqual(stored["sta"]["status"], "not_run")
+
+    def test_missing_klt_without_procfs_keeps_launch_diagnostic_for_every_target(self):
+        missing = FileNotFoundError(2, "No such file or directory", "klt")
+        no_proc = FileNotFoundError(2, "No such file or directory", "/proc")
+        real_iterdir = Path.iterdir
+
+        def iterdir(path):
+            if str(path) == "/proc":
+                raise no_proc
+            return real_iterdir(path)
+
+        with mock.patch.object(subprocess, "run", side_effect=missing), \
+                mock.patch.object(Path, "iterdir", iterdir):
+            for target, budget in (("noise_stream_dut", 300), ("upsample_engine", 2700)):
+                so.run_target(self.workdir, target, budget, force=False)
+
+        for target, budget in (("noise_stream_dut", 300), ("upsample_engine", 2700)):
+            stored = json.loads((self.workdir / "results" / ("%s.json" % target)).read_text())
+            synth = stored["synthesize"]
+            self.assertEqual(synth["status"], "error")
+            self.assertEqual(synth["message"], str(missing))
+            self.assertIsNone(synth["exit_code"])
+            self.assertEqual(synth["yosys_timeout_s"], budget)
+            self.assertEqual(stored["sta"]["status"], "not_run")
 
     def run_cli(self, argv):
         result = {"target": "x", "synthesize": {"status": "error"},
