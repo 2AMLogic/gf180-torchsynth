@@ -2,6 +2,50 @@
 
 Sections moved byte-for-byte from [WORK_LOG.md](../WORK_LOG.md) by `loom-daemon work-docs archive`.
 
+### 2026-09-26
+
+- **Issue #78** (closed): [Epic #2] Run exhaustive module-level fixed-model-to-RTL conformance
+- **Issue #185** (closed): DRIVER: sweep 20260923T055823Z state — main green at 3c4eed1; open queue: #66 republish (PR #183), docs PR, hygiene
+- **Issue #208** (closed): normalization_replay_engine releases a full pass 2 and asserts done after a pass-1 sticky overrun error
+- **Issue #211** (closed): RTL receiver for RENDER_TRIGGER/NOISE_STREAM and its wire to the replay engine's bind_reject
+- **Issue #215** (closed): capabilities._relative() path-safety regex crashes on ':'-delimited vector filenames
+- **PR #212**: fix(tb): discard a clip entire on a sticky pass-1/pass-2 overrun in normalization_replay_engine
+- **PR #213**: feat(tb): receive RENDER_TRIGGER/NOISE_STREAM and wire the discard to bind_reject
+- **PR #214**: feat(tb): aggregate RTL-module qualification gate over #69-#77's lanes
+- **PR #216**: fix(capabilities): hash walked filenames the declaration grammar refuses
+
+### 2026-09-25
+
+- **Issue #66** (closed): [Epic #2] Implement host transport client and behavioral hardware mock
+- **Issue #73** (closed): [Epic #2] Implement bit-exact sine VCO RTL
+- **Issue #75** (closed): [Epic #2] Implement or stream the exact canonical noise source in RTL
+- **Issue #76** (closed): [Epic #2] Implement bit-exact audio VCA and pre-normalization mixer RTL
+- **Issue #77** (closed): [Epic #2] Implement normalization replay/buffer controller and one-shot top
+- **Issue #182** (closed): Local tb-flow wrapper exits 1 after healthy TB-DONE (vco flow; post-sim aggregation)
+- **Issue #187** (closed): CI never runs six landed RTL lane flows (adsr/patch/lfo/modmatrix/vco/vco2 skip without iverilog)
+- **Issue #188** (closed): Bind the render trigger's pass/digest obligation for the host-fed noise stream (DR-0010 clip lifecycle)
+- **Issue #193** (closed): Correct two fixture-coverage descriptions in the sine-VCO directed vector set (#192 follow-up)
+- **Issue #196** (closed): Partial-write binding tests do not assert the receiver actually resynchronized past the truncated prefix
+- **Issue #198** (closed): Dedupe ProviderSession/ProviderFactory between qualify_trace_artifacts.py and capture_float_sources.py
+- **Issue #201** (closed): test(ci): guard tb/sv against break/continue statements Icarus 12 cannot compile
+- **Issue #206** (closed): Pin the break/continue guard's two untested negative paths (lookbehind + // stripping)
+- **PR #183**: feat(protocol): UART/SPI/USB binding models with expiry stale-state semantics (part of #66)
+- **PR #186**: docs: reinstate the remote-compute (AWS box) policy in AGENTS.md/CLAUDE.md (#185)
+- **PR #189**: feat(tb): bind the fed noise stream's canonical and trigger identity
+- **PR #190**: feat(rtl): implement normalization replay controller + one-shot top sequencer
+- **PR #191**: feat(rtl): bit-exact audio VCA + pre-normalization mixer engine (issue 76)
+- **PR #192**: feat(tb): directed min/mid/max frequency/phase sine-VCO vectors + tuning/phase-init mutations (Closes #73)
+- **PR #194**: docs: correct two fixture-coverage descriptions in the sine-VCO directed vector set
+- **PR #195**: feat(protocol): partial-write failure semantics and a protocol-mock explorer backend (part of #66)
+- **PR #197**: feat: add local tb-flow wrapper with returncode-driven aggregation
+- **PR #200**: feat(ci): wire the six landed RTL lanes into tb-sim.yml
+- **PR #202**: feat(protocol): select the transport binding at the product-model seam (issue 66)
+- **PR #203**: test: pin the core-side resync count on binding partial writes
+- **PR #204**: refactor(tools): share the container-driver capture provider
+- **PR #205**: test(ci): guard tb/sv against break/continue statements Icarus 12 cannot compile
+- **PR #209**: test(ci): pin the break/continue guard's lookbehind and // stripping
+- **PR #210**: feat(protocol): bind render passes to one identity and declared noise digest
+
 ### 2026-09-24
 
 - **Issue #84** (closed): Lessons from gf180-parasynth: what cost us most, and the 80/20 that would have prevented it
