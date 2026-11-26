@@ -6,6 +6,15 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-26
+
+- **PR #562**: refactor: move the LFO testbench lane out of run_tb.py into lane_lfo.py
+- **PR #560**: fix: fail golden mirrors on truncated model rows and route drift
+- **PR #557**: docs: correct upstream issue attribution for the Yosys timeout fix
+- **Issue #561** (closed): Split the self-contained LFO lane out of tb/run_tb.py into a sibling module
+- **Issue #559** (closed): Share the golden mirrors’ row check so a truncated fixed-model result fails
+- **Issue #530** (closed): asic/klt-friction.md F3: the paste-ready title is attributed to klayout-tools#5871, but #5798 is the issue that carries it
+
 ### 2026-11-23
 
 - **PR #555**: refactor: move ADSR testbench lane into tb/lane_adsr.py
