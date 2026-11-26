@@ -36,8 +36,8 @@ What each class establishes, stated no more strongly than it is:
 * **Class 3** (``TestClass3LaneNeverPassesMaxJ``) -- the whole-voice lane
   ``tb/run_voice.py`` never passes ``+max_j`` at all (the plan's wording is
   weaker: "not for non-mutation cases"), the only producer of that plusarg
-  anywhere under ``tb/`` is ``tb/run_tb.py``'s mutation path, and the rewrite
-  removes exactly the consumer that reads it.
+  anywhere under ``tb/`` is ``tb/lane_modmatrix.py``'s mutation path, and
+  the rewrite removes exactly the consumer that reads it.
 * **Class 4** (``TestClass4DivisionLoopGuardIsIdentity``) -- a software model
   of both division-loop forms agrees over the whole denominator range. Two
   honesty notes: the SystemVerilog functions return the **quotient only**
@@ -368,7 +368,7 @@ class TestClass2RomPayloadMatchesTheLaneProducer(unittest.TestCase):
 # Class 3 -- the whole-voice lane never passes +max_j
 # ---------------------------------------------------------------------------
 LANE_PY = synth_view.TB / "run_voice.py"
-MUTATION_LANE_PY = synth_view.TB / "run_tb.py"
+MUTATION_LANE_PY = synth_view.TB / "lane_modmatrix.py"
 UPSAMPLE_SV = synth_view.SV / "upsample_engine.sv"
 
 #: The plusarg as it reaches a simulator argv, and the bare identifier.
