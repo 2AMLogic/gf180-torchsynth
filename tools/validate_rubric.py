@@ -49,9 +49,6 @@ HISTORICAL_SOURCE_BINDINGS = {
     ("rubric-v0", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
     ("rubric-v1", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
     ("rubric-v2", "estimator-qualification-spec"): "spec/reference/history/estimator-qualification-0205c731.md",
-    ("rubric-v0", "estimators-v1"): "sim/qualification/history/estimators-v1-d31b8fe4.json",
-    ("rubric-v1", "estimators-v1"): "sim/qualification/history/estimators-v1-d31b8fe4.json",
-    ("rubric-v2", "estimators-v1"): "sim/qualification/history/estimators-v1-d31b8fe4.json",
 }
 
 

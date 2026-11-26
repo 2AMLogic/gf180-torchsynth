@@ -1,4 +1,4 @@
-"""Version 1 estimator qualification ledger: validity, floors, and refusals.
+"""Estimator qualification ledger for validity, floors, and refusals.
 
 A consumer/publication integration over the landed producer family grids
 (#25 paired metrics, #26 periodic, #27 envelope/routes, #28 spectral/noise/
@@ -8,7 +8,7 @@ producer evidence. Refusals serialize as ``NO VERDICT`` (DR-0004); coverage
 and floor-limited cases are counted separately from PASS/FAIL.
 
 See spec/ESTIMATOR-QUALIFICATION.md for the publication contract and
-spec/reference/estimator-obligations-v1.json for the reviewed expected
+spec/reference/estimator-obligations-v2.json for the reviewed expected
 inventory this module reconciles against.
 """
 
@@ -29,7 +29,7 @@ from .scorecard import ScorecardError, validate_row
 LEDGER_SCHEMA_FILE = "estimator-qualification-v1.schema.json"
 LEDGER_SCHEMA_VERSION = 1
 LEDGER_ID = "estimator-qualification"
-LEDGER_VERSION = "1"
+LEDGER_VERSION = "2"
 FAMILIES = ("paired", "periodic", "envelope", "spectral", "preparation")
 VERDICTS = ("PASS", "FAIL", "NO VERDICT", "MISSING EVIDENCE")
 PREPARATION_MODULE = "src/torchsynth_voice/preparation.py"
@@ -867,6 +867,8 @@ def check_inventory(ledger: dict[str, Any], inventory: dict[str, Any]) -> None:
         raise EstimatorQualificationError("inventory schema_version must be 1")
     if inventory.get("inventory") != "estimator-obligations":
         raise EstimatorQualificationError("unknown inventory identity")
+    if inventory.get("inventory_version") != ledger["ledger_version"]:
+        raise EstimatorQualificationError("inventory version differs from ledger version")
     expected_families = inventory["families"]
     if set(expected_families) != set(FAMILIES):
         raise EstimatorQualificationError(

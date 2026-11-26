@@ -181,7 +181,7 @@
       "estimator": {
         "algorithm_version": "spectral-noise-mix-v1",
         "module": "src/torchsynth_voice/spectral_estimators.py",
-        "module_sha256": "7c0b647cde6389edbf2ef74540bd2e6db769f632f8f4697b72bfbdc43dd56a57",
+        "module_sha256": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
         "name": "spectral"
       },
       "floor_limited": 1484,

@@ -30,8 +30,8 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from torchsynth_voice import estimator_qualification as eq  # noqa: E402
 
-INVENTORY_PATH = ROOT / "spec/reference/estimator-obligations-v1.json"
-LEDGER_PATH = ROOT / "sim/qualification/estimators-v1.json"
+INVENTORY_PATH = ROOT / "spec/reference/estimator-obligations-v2.json"
+LEDGER_PATH = ROOT / "sim/qualification/estimators-v2.json"
 
 # Executed-replay surface: each landed producer tool regenerates its own
 # artifact exactly as its family CI does. The ledger compares recomputed

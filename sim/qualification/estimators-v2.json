@@ -181,7 +181,7 @@
       "estimator": {
         "algorithm_version": "spectral-noise-mix-v1",
         "module": "src/torchsynth_voice/spectral_estimators.py",
-        "module_sha256": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
+        "module_sha256": "7c0b647cde6389edbf2ef74540bd2e6db769f632f8f4697b72bfbdc43dd56a57",
         "name": "spectral"
       },
       "floor_limited": 1484,
@@ -214,7 +214,7 @@
     }
   },
   "ledger": "estimator-qualification",
-  "ledger_version": "1",
+  "ledger_version": "2",
   "preparation": {
     "declared": {
       "envelope_shared_preparation": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
