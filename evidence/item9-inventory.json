@@ -21,6 +21,7 @@
     "tb/run_tb.py",
     "tb/tb_harness.py",
     "tb/lane_adsr.py",
+    "tb/lane_lfo.py",
     "tb/run_oneshot.py",
     "tb/run_voice.py"
   ],

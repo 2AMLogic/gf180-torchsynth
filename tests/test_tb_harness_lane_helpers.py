@@ -31,8 +31,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tb"))
 
 import lane_adsr  # noqa: E402
+import lane_lfo  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
+
+#: Wrappers whose lane lives in its own module (``tb/lane_adsr.py`` #476,
+#: ``tb/lane_lfo.py`` #561): a re-exported function reads globals from
+#: its defining module, so the patch target is the lane module.
+LANE_MODULES = {
+    "adsr_load_vectors": lane_adsr,
+    "lfo_load_vectors": lane_lfo,
+}
 
 
 class LoadGoldenVectorsRefusalTest(unittest.TestCase):
@@ -59,8 +68,8 @@ class LoadGoldenVectorsRefusalTest(unittest.TestCase):
                     tempfile.TemporaryDirectory() as tmp:
                 empty = Path(tmp)
                 # A re-exported function reads globals from its defining
-                # module, so patch the ADSR lane where it now lives.
-                target = lane_adsr if wrapper == "adsr_load_vectors" else run_tb
+                # module, so patch each split-out lane where it now lives.
+                target = LANE_MODULES.get(wrapper, run_tb)
                 with mock.patch.object(target, global_name, empty):
                     with self.assertRaises(SystemExit) as caught:
                         getattr(run_tb, wrapper)()
