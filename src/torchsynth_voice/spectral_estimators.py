@@ -373,6 +373,11 @@ def spectrum(samples, *, sample_rate_hz, fundamental_band_hz):
     return result
 
 
+def _centered_mean_square(x):
+    mean = math.fsum(x) / len(x)
+    return math.fsum((v - mean) ** 2 for v in x) / len(x)
+
+
 def mix(inputs, output, *, sample_rate_hz, clip_bounds=(-1.0, 1.0)):
     """Measure original named inputs against a pre-normalization mixed output."""
     if (
@@ -408,10 +413,7 @@ def mix(inputs, output, *, sample_rate_hz, clip_bounds=(-1.0, 1.0)):
         reason = "frame_mismatch"
     elif len(y) < 64:
         reason = "insufficient_duration"
-    elif any(
-        math.fsum((v - math.fsum(x) / len(x)) ** 2 for v in x) / len(x) <= POWER_FLOOR
-        for x in channels.values()
-    ):
+    elif any(_centered_mean_square(x) <= POWER_FLOOR for x in channels.values()):
         reason = "input_variance_at_or_below_floor"
     else:
         np = require_numpy()
