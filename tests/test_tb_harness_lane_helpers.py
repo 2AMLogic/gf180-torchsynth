@@ -271,6 +271,10 @@ class SimulateRunsTest(unittest.TestCase):
 
 
 class ReExportTest(unittest.TestCase):
+    def test_run_tb_re_exports_mod_matrix_route_order(self):
+        self.assertIs(run_tb.MOD_MATRIX_INPUTS, lane_modmatrix.MOD_MATRIX_INPUTS)
+        self.assertIs(run_tb.MOD_MATRIX_OUTPUTS, lane_modmatrix.MOD_MATRIX_OUTPUTS)
+
     def test_run_tb_re_exports_every_shared_lane_helper(self):
         for name in ("load_golden_vectors", "read_ops_rows", "simulate_runs",
                      "check_owner_row_budget"):

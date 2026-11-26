@@ -621,6 +621,8 @@ from lane_modmatrix import (  # noqa: E402,F401  (re-exported for consumers)
     MM_UPSAMPLE_STATIC_FULL,
     MM_UP_DUT_SV,
     MM_VECTOR_DIR,
+    MOD_MATRIX_INPUTS,
+    MOD_MATRIX_OUTPUTS,
     check_mm_budget,
     mm_audio_mismatches,
     mm_check_case,
