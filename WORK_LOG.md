@@ -8,6 +8,8 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-26
 
+- **PR #572**: refactor: replace the private Yosys timeout patch with klt's public yosys_timeout_s field
+- **Issue #563** (closed): Remove the private Yosys timeout patch from extended synthesis runs
 - **PR #567**: docs: record CI-scheduling live evidence and measured seven-day windows
 - **PR #562**: refactor: move the LFO testbench lane out of run_tb.py into lane_lfo.py
 - **PR #560**: fix: fail golden mirrors on truncated model rows and route drift

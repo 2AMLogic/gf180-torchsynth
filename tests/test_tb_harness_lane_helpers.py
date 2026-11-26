@@ -32,15 +32,17 @@ sys.path.insert(0, str(ROOT / "tb"))
 
 import lane_adsr  # noqa: E402
 import lane_lfo  # noqa: E402
+import lane_modmatrix  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
 
 #: Wrappers whose lane lives in its own module (``tb/lane_adsr.py`` #476,
-#: ``tb/lane_lfo.py`` #561): a re-exported function reads globals from
+#: ``tb/lane_lfo.py`` #561, ``tb/lane_modmatrix.py`` #573): a re-exported function reads globals from
 #: its defining module, so the patch target is the lane module.
 LANE_MODULES = {
     "adsr_load_vectors": lane_adsr,
     "lfo_load_vectors": lane_lfo,
+    "mm_load_vectors": lane_modmatrix,
 }
 
 
@@ -269,6 +271,10 @@ class SimulateRunsTest(unittest.TestCase):
 
 
 class ReExportTest(unittest.TestCase):
+    def test_run_tb_re_exports_mod_matrix_route_order(self):
+        self.assertIs(run_tb.MOD_MATRIX_INPUTS, lane_modmatrix.MOD_MATRIX_INPUTS)
+        self.assertIs(run_tb.MOD_MATRIX_OUTPUTS, lane_modmatrix.MOD_MATRIX_OUTPUTS)
+
     def test_run_tb_re_exports_every_shared_lane_helper(self):
         for name in ("load_golden_vectors", "read_ops_rows", "simulate_runs",
                      "check_owner_row_budget"):
