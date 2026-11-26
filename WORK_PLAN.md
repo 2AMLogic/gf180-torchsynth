@@ -30,21 +30,20 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
-- **#563**: Remove the private Yosys timeout patch from extended synthesis runs
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#374**: [Epic #2] FPGA post-route sentinel simulation and clean-checkout rebuild
+- **#563**: Remove the private Yosys timeout patch from extended synthesis runs
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#567**: docs: record CI-scheduling live evidence and measured seven-day windows
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -64,7 +63,6 @@ Issues carrying `loom:curated`.
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate *(curated)*
-- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
@@ -104,11 +102,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 5 |
+| Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 3 |
-| PRs awaiting review | 1 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 20 |
+| Curated | 19 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
