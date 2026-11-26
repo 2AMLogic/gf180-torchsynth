@@ -3809,8 +3809,8 @@
     ],
     "status": "ratified_by_decision_record_on_merge"
   },
-  "revision": 2,
-  "revision_policy": "Adding, removing or re-dispositioning any entry (including #297/#298 additions and the proposed align_corners operator) requires a new manifest revision with a new frozen digest and a decision-record note; the denominator never changes silently.",
+  "revision": 3,
+  "revision_policy": "Adding, removing or re-dispositioning any entry (including #297/#298 additions and the proposed align_corners operator) requires a new manifest revision with a new frozen digest and a decision-record note; the denominator never changes silently. Revision 3 rebinds the identity and signal publication digests (DR-0015 amendment for #575).",
   "schema": "torchsynth-runtime-family-campaign",
   "schema_version": 1,
   "sensitivity_inventory": [

@@ -248,7 +248,7 @@ class RuntimeDefinitionTests(unittest.TestCase):
             for definition in non_sham:
                 self.assertIn(provenance, definition["summary"])
                 self.assertTrue(definition["summary"].endswith(
-                    "); bound to runtime-family-campaign-v1 revision 1"))
+                    f"); bound to {module.ops.MANIFEST_IDENTITY} revision {module.ops.MANIFEST_REVISION}"))
 
     def test_only_timing_declares_control_trace_and_partner(self):
         signal_configurations = [d["configuration"] for d in sr.runtime_definitions().values()]

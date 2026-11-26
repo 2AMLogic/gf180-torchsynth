@@ -17,7 +17,7 @@ the worker loads this file by path (the same way it loads
 mutation framework and never renders a Voice.
 
 The realisations are the frozen signal runtime cells of
-``spec/reference/runtime-family-campaign-v1.json`` revision 1 (DR-0012):
+``spec/reference/runtime-family-campaign-v1.json`` (DR-0012 and DR-0015):
 
 * output replacements at ``voice.post_module`` (the injection site the
   manifest names for ``gain.*``, ``clip.*`` and ``osc.mode_substitute``):
@@ -61,7 +61,7 @@ AUDIO_SAMPLES = 176400
 
 MANIFEST_PATH = "spec/reference/runtime-family-campaign-v1.json"
 MANIFEST_IDENTITY = "runtime-family-campaign-v1"
-MANIFEST_REVISION = 2
+MANIFEST_REVISION = 3
 MANIFEST_FROZEN_SHA256 = (
     "b632d7ee43e2da2f0319e6ea9612f9101ef30040211af290f8d3ef0a914f1cd9"
 )

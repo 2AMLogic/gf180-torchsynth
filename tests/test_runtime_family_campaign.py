@@ -7,6 +7,7 @@ publications, never that any fault was detected in the actual Voice.
 """
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -40,6 +41,14 @@ class CommittedManifestTests(unittest.TestCase):
     def test_committed_manifest_validates(self):
         self.assertEqual(campaign.validate_manifest(load()), [])
 
+    def test_campaign_revision_binds_the_reviewed_sources(self):
+        manifest = load()
+        source_digest = hashlib.sha256(campaign.canonical(manifest["sources"])).hexdigest()
+        self.assertEqual(
+            (manifest["revision"], source_digest),
+            (3, "1de13887edf37f306492cd65e485f02ce7006c974c83a9590c5c778dd5ff43fb"),
+        )
+
     def test_cli_is_non_writing_and_reports_unmeasured(self):
         before = sorted(p.name for p in (ROOT / "spec/reference").iterdir())
         result = subprocess.run(
@@ -49,6 +58,7 @@ class CommittedManifestTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         report = json.loads(result.stdout)
         self.assertFalse(report["measured"])
+        self.assertEqual(report["revision"], load()["revision"])
         self.assertEqual(report["status"], "VALID_PREREGISTRATION")
         after = sorted(p.name for p in (ROOT / "spec/reference").iterdir())
         self.assertEqual(before, after)

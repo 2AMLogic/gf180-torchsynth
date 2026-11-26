@@ -1,7 +1,7 @@
 """Timing-family actual-Voice runtime adapter, host side (#335; Part of #300).
 
 Stdlib-only. Binds the timing slice of the committed DR-0012 campaign
-manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 1,
+manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 3,
 frozen inventory digest ``b632d7ee...``) to the declared ``voice.*`` seams of
 ``spec/reference/mutation-seams-v1.json``:
 
@@ -54,7 +54,7 @@ from .mutations import MutationError
 REQUEST_DOMAIN = b"torchsynth-timing-runtime-request-v1\n"
 FAMILY = ops.FAMILY
 
-# Exact adapter dispositions for the timing slice of manifest revision 2.
+# Exact adapter dispositions for the timing slice of manifest revision 3.
 ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "timing:attack-breakpoint-shift-plus2": "runtime_cell",
     "timing:one-control-sample-delay": "runtime_cell",
