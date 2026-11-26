@@ -174,12 +174,13 @@ python3 -m unittest tests.test_synth_feasibility_evidence -v
 klt's public top-level `yosys_timeout_s` field (friction F2) and is recorded per
 target as `yosys_timeout_s`; a budget outside `0 < N <= 3600` is refused before
 anything runs. This needs a `klt` that accepts the field (`0.9.2`, the CI pin).
-The committed record predates this change: its three 2,700 s targets
+The historical #82 record predates this change. Its three 2,700 s targets
 (`mod_matrix_engine`, `upsample_engine`, `normalization_replay_engine`) were
-run through the retired private-patch invocation their `command` fields name,
-and no target has been re-run through the request field. Install nothing on
-the host: the PDK, `klt`, `yosys`, `openroad` and `verilator` are the worker's
-pinned tools.
+run through the retired private-patch invocation their `command` fields name.
+A later `noise_stream_dut` probe used the request field at 2,700 s. It produced
+no new committed evidence and left the #82 record unchanged. Install nothing
+on the host: the PDK, `klt`, `yosys`, `openroad` and `verilator` are the
+worker's pinned tools.
 
 ## Files
 

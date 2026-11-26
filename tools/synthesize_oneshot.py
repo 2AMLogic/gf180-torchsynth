@@ -342,18 +342,21 @@ def run_klt_synthesize(request: Path, timeout_s: float) -> dict:
 
     cmd = ["klt", "synthesize", rel(request), "--pdk", PDK_VARIANT,
            "--pdk-root", str(PDK_ROOT), "--format", "json"]
-    display = display_command(cmd)
+    outcome = {"command": display_command(cmd), "yosys_timeout_s": timeout_s}
     started = time.monotonic()
     try:
         done = sh(cmd, cwd=ROOT, timeout=timeout_s + 180)
         stdout, stderr, rc = done.stdout, done.stderr, done.returncode
     except subprocess.TimeoutExpired as exc:
         stdout, stderr, rc = exc.stdout or "", exc.stderr or "", None
-    elapsed = round(time.monotonic() - started, 1)
-    reaped = reap_orphan_abc()
+    except OSError as exc:
+        outcome.update(status="error", exit_code=None, message=str(exc))
+        return outcome
+    finally:
+        outcome["elapsed_s"] = round(time.monotonic() - started, 1)
+        outcome["reaped_orphan_abc"] = len(reap_orphan_abc())
+    outcome["exit_code"] = rc
     payload = parse_json_text(stdout, stderr)
-    outcome = {"command": display, "yosys_timeout_s": timeout_s,
-               "elapsed_s": elapsed, "exit_code": rc, "reaped_orphan_abc": len(reaped)}
     if rc == 0 and isinstance(payload, dict) and payload.get("status") == "ok":
         outcome["status"] = "ok"
         outcome["response"] = payload

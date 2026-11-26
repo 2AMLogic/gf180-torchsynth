@@ -647,8 +647,6 @@ through the request field with `yosys_timeout_s: 2700` — `klt` accepted the
 request, reported `status: ok` and echoed the budget in the report and its
 provenance, and refused a hand-written `3601` with
 `request.yosys_timeout_s must be a finite number > 0 and <= 3600 (seconds);
-got 3601`. That probe is not a committed evidence record: the #82 record is
-unchanged, it still names the retired invocation in its three 2,700 s
-`command` fields, and no target of it has been re-run through the request
-field — this is a harness change, not a flow result. The F3 verdict (keep the
-reaper) is unaffected: the reaper still runs after every `klt synthesize` call.
+got 3601`. The probe produced no new committed evidence and left the #82
+record unchanged. Its three 2,700 s `command` fields identify the retired
+invocation. The F3 reaper still runs after every `klt synthesize` call.

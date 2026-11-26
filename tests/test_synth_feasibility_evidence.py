@@ -246,13 +246,8 @@ class TestSynthesizeInvocation(unittest.TestCase):
     FAILED = subprocess.CompletedProcess([], 1, stdout="", stderr="boom")
 
     def setUp(self):
-        build = ROOT / "asic" / "build"
-        if not build.exists():
-            build.mkdir(parents=True)
-            self.addCleanup(build.rmdir)
-        tmp = tempfile.mkdtemp(dir=build)
-        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
-        self.workdir = Path(tmp).resolve()
+        tmp = self.enterContext(tempfile.TemporaryDirectory(dir=ROOT / "asic"))
+        self.workdir = Path(tmp)
 
     def intercepted_klt(self, request, timeout_s):
         """``run_klt_synthesize`` with the subprocess intercepted -> (outcome, call)."""
@@ -355,6 +350,28 @@ class TestSynthesizeInvocation(unittest.TestCase):
                 stored = json.loads((self.workdir / "results" / ("%s.json" % target))
                                     .read_text(encoding="utf-8"))
                 self.assertEqual(stored, result)
+
+    def test_missing_klt_writes_target_error_and_skips_sta(self):
+        missing = FileNotFoundError(2, "No such file or directory", "klt")
+        with mock.patch.object(subprocess, "run", side_effect=missing) as run, \
+                mock.patch.object(so, "reap_orphan_abc", return_value=[]) as reap:
+            so.run_target(self.workdir, "noise_stream_dut", 2700, force=False)
+
+        request = self.workdir / "req" / "synth_noise_stream_dut.json"
+        run.assert_called_once_with(
+            ["klt", "synthesize", so.rel(request), "--pdk", so.PDK_VARIANT,
+             "--pdk-root", str(so.PDK_ROOT), "--format", "json"],
+            capture_output=True, text=True, cwd=so.ROOT, timeout=2880)
+        reap.assert_called_once_with()
+        stored = json.loads((self.workdir / "results" / "noise_stream_dut.json").read_text())
+        synth = stored["synthesize"]
+        self.assertEqual(synth["status"], "error")
+        self.assertEqual(synth["message"], str(missing))
+        self.assertIsNone(synth["exit_code"])
+        self.assertEqual(synth["command"], so.display_command(run.call_args.args[0]))
+        self.assertEqual(synth["yosys_timeout_s"], 2700)
+        self.assertEqual(stored["request"]["yosys_timeout_s"], 2700)
+        self.assertEqual(stored["sta"]["status"], "not_run")
 
     def run_cli(self, argv):
         result = {"target": "x", "synthesize": {"status": "error"},
