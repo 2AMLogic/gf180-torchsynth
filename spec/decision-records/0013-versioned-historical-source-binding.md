@@ -50,3 +50,33 @@ skipped.
   rubric's pinned sha256 against the archived bytes.
 - The live `spec/ESTIMATOR-QUALIFICATION.md` is free to advance with its
   schema; no holdout identity is read (`holdout_identities_read` stays `0`).
+
+## Amendment 2026-11-26: third binding (estimator-qualification ledger, issue #575)
+
+The same mechanism is applied a third time, to the derived ledger. Issue
+#575 hoists the mixer channel mean in
+`src/torchsynth_voice/spectral_estimators.py` without changing any
+estimator output. The ledger re-derives each family's module digest from
+the actual tree, so `tools/qualify_estimators.py check` requires
+`sim/qualification/estimators-v1.json` and the reviewed inventory to carry
+the new digest, while rubrics v0, v1 and v2 — all `status: frozen` — pin
+the pre-change ledger bytes by sha256
+(`d31b8fe4a621a768083c2311ebd7dbe6be4e9e425b3bb6f8bbf3b610f7c07447`).
+As before: rubric bytes are unchanged, no seal moves, `pinned_commit` stays
+`eb9207c4606bc867a9f85458b39853fe0eef12a0`, and no hash verification is
+skipped.
+
+- The pre-change bytes are archived at
+  `sim/qualification/history/estimators-v1-d31b8fe4.json` (sha256
+  `d31b8fe4…`; a `sim/qualification/` document archives under
+  `sim/qualification/history/`).
+- `HISTORICAL_SOURCE_BINDINGS` carries
+  (`rubric-v0`|`rubric-v1`|`rubric-v2`, `estimators-v1`) rows resolving to
+  that archive; `tools/validate_rubric.py` still checks each rubric's pinned
+  sha256 against the archived bytes.
+- The live ledger is free to advance with its runner
+  (`tools/qualify_estimators.py build`). In this change the spectral
+  `module_sha256` is the only field that moved: every reviewed census value
+  in the inventory reproduces exactly, and no artifact digest changed. The
+  committed spectral report is not regenerated; it remains the record of
+  the run executed by the previous source.

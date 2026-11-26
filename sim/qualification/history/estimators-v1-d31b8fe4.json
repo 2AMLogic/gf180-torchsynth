@@ -1,0 +1,255 @@
+{
+  "artifacts": {
+    "envelope": "38ec07a269824fbc57c63c6a224b29f9829e2ff6855769b347ec536e3a909815",
+    "periodic": "686f9423fc03d7f284527f87b1800a5f8fc7a640e93d40ef4e5f65383050b158",
+    "preparation": "c01546d42cf457180cc1cd99681954571b719b197a11576c84e7a16f435edd81",
+    "spectral": "a2827fe97996b360d7d4922e1b2db02f6364c839f9ed0c8344e613f88f0fcc31"
+  },
+  "families": {
+    "envelope": {
+      "artifact": "sim/qualification/envelope-routes-v1.json",
+      "artifact_sha256": "38ec07a269824fbc57c63c6a224b29f9829e2ff6855769b347ec536e3a909815",
+      "coverage": {
+        "missing": 0,
+        "present": 2407,
+        "qualified": 1158,
+        "refused": 79,
+        "requested": 387
+      },
+      "estimator": {
+        "algorithm_version": "envelope-routes-qualification-v1",
+        "module": "src/torchsynth_voice/envelope_estimators.py",
+        "module_sha256": "e11266ad5749b23368ff42406cbbdf6607e1dd636603e5983c31a5e0b3f903cc",
+        "name": "envelope"
+      },
+      "floor_limited": 304,
+      "floors": {
+        "count": 18,
+        "unit_bound": "per-domain empirical statistics; see artifact"
+      },
+      "grid": {
+        "cases": 387,
+        "obligations": 1380,
+        "shared_preparation_cases": 13
+      },
+      "limitations": [
+        "The report carries 1027 (case, property) row keys beyond the preregistered obligations; they are counted as producer census, not silently dropped.",
+        "Numeric field replay follows the producer's declared replay policy v2; this ledger asserts case/row/obligation identity, not cross-host byte portability."
+      ],
+      "preparation_dependent": true,
+      "refusals": {
+        "floor_limited_cases": 304,
+        "obligations_expected_no_verdict": 79
+      },
+      "validity_predicate": "Each preregistered obligation must be observed with its expected verdict and satisfied=true, and must own at least one report row; the full report validates as scorecard v1. Floors are empirical per-domain statistics kept distinct from the producer's declared limits; comparisons at the floor refuse instead of loosening it.",
+      "verdicts": {
+        "FAIL": 164,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 508,
+        "PASS": 1735
+      }
+    },
+    "paired": {
+      "artifact": "sim/qualification/periodic-v1.json",
+      "artifact_sha256": "686f9423fc03d7f284527f87b1800a5f8fc7a640e93d40ef4e5f65383050b158",
+      "coverage": {
+        "missing": 0,
+        "present": 510,
+        "qualified": 2,
+        "refused": 506,
+        "requested": 510
+      },
+      "estimator": {
+        "algorithm_version": "paired-metrics-v1",
+        "module": "src/torchsynth_voice/paired_metrics.py",
+        "module_sha256": "82aa74dfedeb36524b19d76d0162094b9a5134e1b02a938e048042486cdfa72e",
+        "name": "paired"
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "cases": 2,
+        "sentinel_rows": 510
+      },
+      "limitations": [
+        "Apparatus only; framing refusals are producer-visible and are never preparation crops."
+      ],
+      "preparation_dependent": false,
+      "refusals": {
+        "framing": "count/rate mismatches remain producer-side refusals",
+        "rows": null
+      },
+      "validity_predicate": "Every family row is a strict scorecard v1 row produced through the public paired_metrics adapters; the two periodic paired sentinels exercise the apparatus end to end. No native floor: the apparatus is the comparison layer, not a judged estimator.",
+      "verdicts": {
+        "FAIL": 2,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 506,
+        "PASS": 2
+      }
+    },
+    "periodic": {
+      "artifact": "sim/qualification/periodic-v1.json",
+      "artifact_sha256": "686f9423fc03d7f284527f87b1800a5f8fc7a640e93d40ef4e5f65383050b158",
+      "coverage": {
+        "missing": 0,
+        "present": 1605,
+        "qualified": 202,
+        "refused": 119,
+        "requested": 321
+      },
+      "estimator": {
+        "algorithm_version": "periodic-v2",
+        "module": "src/torchsynth_voice/periodic_estimators.py",
+        "module_sha256": "91bf758e42bbb491d06ae556aff629753e1229f37889f4f044e605f9913355bb",
+        "name": "periodic"
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "cap_failures": 0,
+        "cases": 321,
+        "qualified_cells": 35,
+        "range_cells": 41,
+        "sentinel_cases": 2
+      },
+      "limitations": [
+        "The artifact's production_preparation field records a historical 'pending #86 runtime evidence' statement; this publication layer supersedes it with the landed #103 receipts recorded under the preparation family, without rewriting the producer artifact.",
+        "Analytic development only; no Voice or runtime integration."
+      ],
+      "preparation_dependent": true,
+      "refusals": {
+        "cases": 119,
+        "rows": 665
+      },
+      "validity_predicate": "A case qualifies when its measured absolute errors stay within the preregistered per-property caps and its range cell reports qualified=true with no cap failure; refusals are recorded per case with concrete reasons and never counted as passes.",
+      "verdicts": {
+        "FAIL": 6,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 665,
+        "PASS": 934
+      }
+    },
+    "preparation": {
+      "artifact": "sim/qualification/preparation-v1.json",
+      "artifact_sha256": "c01546d42cf457180cc1cd99681954571b719b197a11576c84e7a16f435edd81",
+      "coverage": {
+        "missing": 0,
+        "present": 70,
+        "qualified": 70,
+        "refused": 0,
+        "requested": 70
+      },
+      "estimator": {
+        "algorithm_version": "preparation-qualification",
+        "module": "src/torchsynth_voice/preparation.py",
+        "module_sha256": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+        "name": "preparation"
+      },
+      "floor_limited": 0,
+      "floors": [],
+      "grid": {
+        "actual_integrations": 4,
+        "cases": 70
+      },
+      "limitations": [
+        "The analytic artifact's runtime_integration field records PENDING; it is superseded by the four VALIDATED actual-integration receipts recorded in the same artifact, per the final disposition note in spec/SIGNAL-PREPARATION.md.",
+        "No normative production oracle is claimed; scalar status stays diagnostic regardless of byte-equivalence PASS."
+      ],
+      "preparation_dependent": false,
+      "refusals": {
+        "production_no_verdict_receipts": 4,
+        "reason": "diagnostic oracle cannot qualify normative production rows"
+      },
+      "validity_predicate": "All 70 analytic checks pass with exact record bytes; actual #12/#88 runtime receipts carry evidence_status VALIDATED while production status stays NO_VERDICT because the scalar oracle is diagnostic (DR-0007). Apparatus failure forces every dependent family row to NO VERDICT.",
+      "verdicts": {
+        "FAIL": 0,
+        "MISSING EVIDENCE": 0,
+        "NO VERDICT": 0,
+        "PASS": 70
+      }
+    },
+    "spectral": {
+      "artifact": "sim/qualification/spectral-noise-mix-v1.json",
+      "artifact_sha256": "a2827fe97996b360d7d4922e1b2db02f6364c839f9ed0c8344e613f88f0fcc31",
+      "coverage": {
+        "missing": 26,
+        "present": 2396,
+        "qualified": 879,
+        "refused": 1484,
+        "requested": 150
+      },
+      "estimator": {
+        "algorithm_version": "spectral-noise-mix-v1",
+        "module": "src/torchsynth_voice/spectral_estimators.py",
+        "module_sha256": "fd9ee76b0ab938dc8f05009f344b2932951940aec9e49c07b53779ae14d1c066",
+        "name": "spectral"
+      },
+      "floor_limited": 1484,
+      "floors": {
+        "count": 67,
+        "exceeding_preregistered_bound": 0
+      },
+      "grid": {
+        "cases": 150,
+        "controls": 4,
+        "ensemble_seeds": 16,
+        "mutation_detector_obligations": 21
+      },
+      "limitations": [
+        "MISSING EVIDENCE rows and refusal rows are retained verbatim; production status is MISSING EVIDENCE and holdout stays sealed.",
+        "The 21 mutation detector obligations are exercised detection counts, not fidelity margins."
+      ],
+      "preparation_dependent": true,
+      "refusals": {
+        "reasons": 20,
+        "rows": 1484
+      },
+      "validity_predicate": "A case qualifies when every preregistered property check stays inside its analytic bound; expected refusals are exercised detection only when an assigned valid detector actually FAILs; floor entries compare measured maxima against independently preregistered bounds, kept distinct fields.",
+      "verdicts": {
+        "FAIL": 33,
+        "MISSING EVIDENCE": 26,
+        "NO VERDICT": 1458,
+        "PASS": 879
+      }
+    }
+  },
+  "ledger": "estimator-qualification",
+  "ledger_version": "1",
+  "preparation": {
+    "declared": {
+      "envelope_shared_preparation": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+      "preparation_artifact": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+      "spectral_probe": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297"
+    },
+    "dependent_families": [
+      "periodic",
+      "envelope",
+      "spectral"
+    ],
+    "module": "src/torchsynth_voice/preparation.py",
+    "recomputed_sha256": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+    "spec_described_sha256": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+    "status": "consistent"
+  },
+  "provenance": {
+    "shared_preparation": {
+      "historical_snapshot_sha256": "52d42960f1fec157a48e9ba0bc35fb13619c0c6b3f4274fa711cd22c58a99426",
+      "note": "The 52d42960 digest was recorded by PR101's pre-merge snapshot only; it appears in no landed artifact. Recomputation against the landed tree reproduces 0f8e9e6e in spec prose, the preparation-v1 pin, and the envelope shared_preparation pin. The snapshot is retained as history and not rewritten.",
+      "recomputed_sha256": "0f8e9e6ee2b31dd6b2b2f5118e81a90d08849d013da13ff04d0c3100c660d297",
+      "status": "consistent"
+    }
+  },
+  "schema_version": 1,
+  "scope": "analytic development qualification of estimator validity, floors, and refusals over landed producer grids; holdout sealed; no fixed-point, runtime, Voice, fidelity, or hardware claim; no tolerance derived from holdout or future RTL data",
+  "source_target": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d",
+  "totals": {
+    "floor_limited": 1788,
+    "rows": 6988,
+    "verdicts": {
+      "FAIL": 205,
+      "MISSING EVIDENCE": 26,
+      "NO VERDICT": 3137,
+      "PASS": 3620
+    }
+  }
+}
