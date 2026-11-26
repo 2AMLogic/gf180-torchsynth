@@ -30,20 +30,21 @@ Human-approved issues ready for implementation (`loom:issue`).
 - **#382**: Consolidate duplicated FamilySession and fixture harness in mutations_identity/mutations_timing
 - **#388**: Emit a klt functional-verification report for the bit-exact RTL suite (T1 item 5, functional half)
 - **#394**: Requalify PyTorch 2.14.1 patch evidence without changing the historical reference (#393)
+- **#563**: Remove the private Yosys timeout patch from extended synthesis runs
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
+- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main)
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#374**: [Epic #2] FPGA post-route sentinel simulation and clean-checkout rebuild
-- **#530**: asic/klt-friction.md F3: the paste-ready title is attributed to klayout-tools#5871, but #5798 is the issue that carries it
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#557**: docs: correct upstream issue attribution for the Yosys timeout fix
+- **#567**: docs: record CI-scheduling live evidence and measured seven-day windows
 
 ## Approved (Awaiting Merge)
 
@@ -75,7 +76,6 @@ Issues carrying `loom:curated`.
 - **#431**: Record release-image byte-identity run for the #430 mutation worker family refactor *(curated)*
 - **#454**: Measure Spot shards and regenerate the three whole-voice evidence records for PR #275 *(curated)*
 - **#525**: Run the klt functional-verification lanes without editing hashed RTL: pass +lut= through klt and drop the KLT_COCOTB ifdefs from PR #392 *(curated)*
-- **#530**: asic/klt-friction.md F3: the paste-ready title is attributed to klayout-tools#5871, but #5798 is the issue that carries it *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -104,11 +104,11 @@ Issues carrying `loom:curated`.
 | Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 4 |
+| Ready (`loom:issue`) | 5 |
 | In Progress (`loom:building`) | 3 |
 | PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 21 |
+| Curated | 20 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
