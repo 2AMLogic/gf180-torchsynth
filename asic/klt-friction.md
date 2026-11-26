@@ -16,7 +16,7 @@ status in its own section below supersedes its row here.
 |---|---|---|
 | F1 | `fixed` | fixed by upstream #3797 (`read_verilog -sv` inference) and #4198 (`sv2v` front end) |
 | F2 | `fixed` (request half) | #5773 (open; tracks the remaining CLI/env-override half) |
-| F3 | `still present` | #5871 (this file's paste-ready title) and #5798, both closed COMPLETED 2026-11-17 — fixed, see F3's 2026-11-20 status |
+| F3 | `still present` | #5871 and #5798, both closed COMPLETED 2026-11-17 — fixed, see F3's 2026-11-20 status |
 | F4 | `still present` | #6907 (open) |
 | F5 | `changed` | landed halves: #2968, #4240, #4241, #5240, #5236; remaining multicycle/generated-clock half: #6908 (open) |
 | F6 | `still present` (host-scoped) | none — host provisioning matter, not a klt code bug |
@@ -201,9 +201,11 @@ this a cheap upstream change.
 
 **Status (2026-11-20, host `klt 0.9.3.dev2575+g6bd18bbc8637`, CI pin
 `klayout-tools==0.9.2`): fixed upstream — present at the host tool, absent at
-the CI pin.** Filed upstream as #5871 (under the paste-ready title above) and
-independently as #5798; both closed COMPLETED on 2026-11-17 — #5871 by PR
-#5918, #5798 by PR #6012. Same read-only method as the 2026-11-14 re-check,
+the CI pin.** Upstream #5798 opened as a TMPDIR-length report. Its renamed
+title matches the proposed fix of killing the whole process group on timeout.
+PR #6012 closed #5798. PR #5918 closed the broader process-group report
+(#5871) and introduced the `_engine_proc.run_in_group()` helper observed on
+the host. Same read-only method as the 2026-11-14 re-check,
 installed package source (the host tool's site-packages now lives under
 `lib/python3.13/`, not the `python3.14` path quoted in the re-check preamble —
 the tool was re-provisioned):
