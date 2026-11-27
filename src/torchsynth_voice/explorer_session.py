@@ -34,11 +34,56 @@ Renderer = Callable[[int], Mapping[str, str]]
 Player = Callable[[StoredArtifact], None]
 
 
-def _identity(index: int) -> None:
+def check_sound_index(index: int, *, error_cls=SessionError) -> None:
+    """The global identity range and the pre-access holdout refusal."""
     if type(index) is not int or not 0 <= index <= 2**53 - 1:
-        raise SessionError("sound_index must be an integer in [0, 2^53-1]")
+        raise error_cls("sound_index must be an integer in [0, 2^53-1]")
     if 96 <= index < 128:
-        raise SessionError(f"sound_index {index} is reserved holdout; access refused")
+        raise error_cls(f"sound_index {index} is reserved holdout; access refused")
+
+
+def read_unaliased_file(path, *, error_cls=SessionError) -> bytes:
+    """Read one regular file that no other name or hard link aliases."""
+    path = Path(os.path.abspath(path))
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(descriptor, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+            raise error_cls(f"{path.name}: expected an unaliased regular file")
+        return stream.read()
+
+
+def outside_store_path(
+    path, store_root, *, label="bookmark", error_cls=SessionError
+) -> Path:
+    """Resolve `path` for caller state, refusing the store's whole namespace."""
+    path = Path(os.path.abspath(path))
+    root = Path(os.path.abspath(store_root))
+    # Keep state out of this store's entire namespace, including its staging
+    # and lock files. A parent symlink cannot redirect writes into the store.
+    if path.is_relative_to(root) or path.resolve().is_relative_to(root.resolve()):
+        raise error_cls(f"{label} must be outside the artifact store")
+    if path.is_symlink():
+        raise error_cls(f"{label} must not be a symlink")
+    return path
+
+
+def write_json_atomic(path: Path, document) -> None:
+    """Publish one JSON document by rename; nothing partial is ever visible."""
+    data = (
+        json.dumps(document, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    ).encode("utf-8")
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)  # Commit point; no rollback after success.
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def _reference(reference: Mapping[str, str]) -> dict[str, str]:
@@ -62,15 +107,6 @@ def _reference(reference: Mapping[str, str]) -> dict[str, str]:
     if reference["ref"] != expected:
         raise SessionError("ref must be the canonical store-relative metadata path")
     return reference
-
-
-def _read_file(path: Path) -> bytes:
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(descriptor, "rb") as stream:
-        info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-            raise SessionError(f"{path.name}: expected an unaliased regular file")
-        return stream.read()
 
 
 @dataclass(frozen=True)
@@ -140,7 +176,7 @@ class ExplorerSession:
         try:
             indices = tuple(allowed_indices)
             for index in indices:
-                _identity(index)
+                check_sound_index(index)
             if not indices or len(set(indices)) != len(indices):
                 raise SessionError("allowed identities must be nonempty and unique")
         except (TypeError, ValueError) as error:
@@ -170,7 +206,7 @@ class ExplorerSession:
         return dict(self._last_error) if self._last_error else None
 
     def _check_identity(self, index):
-        _identity(index)  # Holdout refusal precedes every backend/store access.
+        check_sound_index(index)  # Holdout refusal precedes every backend/store access.
         if index not in self._allowed:
             raise SessionError(f"sound_index {index} is outside the allowed identities")
 
@@ -184,7 +220,7 @@ class ExplorerSession:
             raise SessionError(
                 "verified store reference disagrees with requested reference"
             )
-        data = _read_file(stored.path / METADATA)
+        data = read_unaliased_file(stored.path / METADATA)
         # StoredArtifact carries no parsed metadata. Bind this separate read to
         # the exact external pin, including whitespace and the trailing newline.
         verify_sha256(data, reference["sha256"])
@@ -295,49 +331,24 @@ class ExplorerSession:
         self._audition = self._audition_record("succeeded")
 
     def _bookmark_path(self, path):
-        path = Path(os.path.abspath(path))
-        # Keep state out of this store's entire namespace, including its staging
-        # and lock files. A parent symlink cannot redirect writes into the store.
-        if path.is_relative_to(self._store.root) or path.resolve().is_relative_to(
-            self._store.root.resolve()
-        ):
-            raise SessionError("bookmark must be outside the artifact store")
-        if path.is_symlink():
-            raise SessionError("bookmark must not be a symlink")
-        return path
+        return outside_store_path(path, self._store.root)
 
     @_action
     def save(self, path: str | Path) -> None:
         path = self._bookmark_path(path)
         selected = self._current()
-        data = (
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "sound_index": selected.sound_index,
-                    "artifact": selected.stored.reference,
-                },
-                indent=2,
-                sort_keys=True,
-                allow_nan=False,
-            )
-            + "\n"
-        ).encode("utf-8")
-        descriptor, temporary = tempfile.mkstemp(
-            prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+        write_json_atomic(
+            path,
+            {
+                "schema_version": 1,
+                "sound_index": selected.sound_index,
+                "artifact": selected.stored.reference,
+            },
         )
-        try:
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(data)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, path)  # Commit point; no rollback after success.
-        finally:
-            Path(temporary).unlink(missing_ok=True)
 
     @_action
     def recall(self, path: str | Path) -> Selection:
-        record = loads(_read_file(self._bookmark_path(path)))
+        record = loads(read_unaliased_file(self._bookmark_path(path)))
         if type(record) is not dict or set(record) != {
             "schema_version",
             "sound_index",
