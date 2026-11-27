@@ -32,7 +32,7 @@ from .artifact_renderer import (
 )
 from .artifacts import content_id
 from .contract import UpstreamContract, repository_root, sha256_file
-from .explorer_session import ExplorerSession, SessionError
+from .explorer_session import ExplorerSession, SessionError, check_sound_index
 from .inventory import INVENTORY_PATH, load_json
 from .storage import ArtifactStore, StoredArtifact
 
@@ -43,13 +43,6 @@ _ADMITTED_EXECUTION = {
     "batch_size": 32,
     "reproducible": True,
 }
-
-
-def _identity(index):
-    if type(index) is not int or not 0 <= index <= 2**53 - 1:
-        raise SessionError("sound_index must be an integer in [0, 2^53-1]")
-    if 96 <= index < 128:
-        raise SessionError(f"sound_index {index} is reserved holdout; access refused")
 
 
 class StoreRenderer:
@@ -67,7 +60,7 @@ class StoreRenderer:
         self.last_receipt: Mapping | None = None
 
     def __call__(self, sound_index: int) -> dict[str, str]:
-        _identity(sound_index)
+        check_sound_index(sound_index)
         request = dict(
             request_template(project_root=self.producer_root),
             fixture=fixture(sound_index),
@@ -187,7 +180,7 @@ class FakePlayer:
 def _fake_record(sound_index: int) -> tuple[dict, dict[str, bytes]]:
     """A clearly synthetic, schema-valid protocol fixture; never real audio."""
 
-    _identity(sound_index)
+    check_sound_index(sound_index)
     contract = UpstreamContract.load()
     names = [row["name"] for row in load_json(INVENTORY_PATH)["parameters"]]
     inputs = {
@@ -308,7 +301,7 @@ class FakeRenderer:
         self._references: dict[int, dict[str, str]] = {}
 
     def __call__(self, sound_index: int) -> dict[str, str]:
-        _identity(sound_index)
+        check_sound_index(sound_index)
         self.calls.append(sound_index)
         if sound_index in self.failures:
             raise self.failures[sound_index]
@@ -351,21 +344,17 @@ def build_session(
     """
 
     if backend == "protocol-mock":
-        # Local import: protocol_backend builds on this module's fake mode.
+        # Local import: protocol_backend builds on this module's fake mode. It
+        # refuses an unmodeled binding by name before touching the store.
         from .protocol_backend import (
             DEFAULT_TRANSPORT_BINDING,
-            TRANSPORT_BINDINGS,
             build_protocol_mock_session,
         )
 
-        binding = DEFAULT_TRANSPORT_BINDING if transport is None else transport
-        if binding not in TRANSPORT_BINDINGS:
-            known = ", ".join(sorted(TRANSPORT_BINDINGS))
-            raise SessionError(
-                f"unknown transport binding {binding!r}; known bindings: {known}"
-            )
         session, probe = build_protocol_mock_session(
-            store_root, seed=seed, transport=binding
+            store_root,
+            seed=seed,
+            transport=DEFAULT_TRANSPORT_BINDING if transport is None else transport,
         )
         probe["session"] = session
         return session, probe

@@ -92,26 +92,9 @@ def _parser():
         action="store_true",
         help="fake backend only: fail the audition attempt",
     )
-    initial = parser.add_mutually_exclusive_group()
-    initial.add_argument(
-        "--selected",
-        nargs=3,
-        metavar=("SOUND_INDEX", "ARTIFACT_ID", "SHA256"),
-        help="select this exact reference before the command",
-    )
-    initial.add_argument("--bookmark", help="recall this bookmark before the command")
+    explorer_commands.add_initial_selection_arguments(parser)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("next", "random", "show", "repeat", "audition"):
-        commands.add_parser(name, allow_abbrev=False)
-    request = commands.add_parser("request", allow_abbrev=False)
-    request.add_argument("sound_index", type=int)
-    select = commands.add_parser("select", allow_abbrev=False)
-    select.add_argument("sound_index", type=int)
-    select.add_argument("artifact_id")
-    select.add_argument("sha256")
-    for name in ("save", "recall"):
-        command = commands.add_parser(name, allow_abbrev=False)
-        command.add_argument("path")
+    explorer_commands.add_session_subparsers(commands)
     favorite_save = commands.add_parser("favorite-save", allow_abbrev=False)
     favorite_save.add_argument("path")
     favorite_save.add_argument("--notes", help="optional free text; never a locator")
@@ -183,31 +166,13 @@ def main(argv=None):
             fake_fail_player=args.fake_fail_player,
             transport=args.transport,
         )
-        if args.selected:
-            index, artifact_id, sha256 = args.selected
-            session.select(
-                int(index),
-                {
-                    "artifact_id": artifact_id,
-                    "sha256": sha256,
-                    "ref": f"artifacts/{artifact_id}/metadata.json",
-                },
-            )
-        elif args.bookmark:
-            session.recall(args.bookmark)
+        explorer_commands.apply_initial_selection(session, args)
         command = args.command
         favorite_document = None
         if command.startswith("favorite"):
             favorite_document, shown = _favorite_command(args, session, probe["store"])
         else:
-            rest = []
-            if command == "request":
-                rest = [str(args.sound_index)]
-            elif command == "select":
-                rest = [str(args.sound_index), args.artifact_id, args.sha256]
-            elif command in ("save", "recall"):
-                rest = [args.path]
-            shown = explorer_commands.dispatch(session, [command, *rest])
+            shown = explorer_commands.dispatch_parsed(session, args)
         envelope = {
             "session": shown,
             "backend": BACKEND_LABELS[args.backend],
