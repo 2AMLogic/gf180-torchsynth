@@ -32,6 +32,7 @@ sys.path.insert(0, str(ROOT / "tb"))
 
 import lane_adsr  # noqa: E402
 import lane_lfo  # noqa: E402
+import lane_mix  # noqa: E402
 import lane_modmatrix  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
@@ -271,6 +272,15 @@ class SimulateRunsTest(unittest.TestCase):
 
 
 class ReExportTest(unittest.TestCase):
+    def test_run_tb_re_exports_mix_lane_and_oneshot_dependencies(self):
+        for name in (
+            "mix", "MIX_DUT_SV", "MIX_FIXTURE_CASES", "MIX_RTL_MUTATIONS",
+            "mix_derive_case", "mix_expected_ops", "mix_load_fixtures",
+            "mix_load_receipt", "mix_write_case", "dr", "mx",
+        ):
+            with self.subTest(name=name):
+                self.assertIs(getattr(run_tb, name), getattr(lane_mix, name))
+
     def test_run_tb_re_exports_mod_matrix_route_order(self):
         self.assertIs(run_tb.MOD_MATRIX_INPUTS, lane_modmatrix.MOD_MATRIX_INPUTS)
         self.assertIs(run_tb.MOD_MATRIX_OUTPUTS, lane_modmatrix.MOD_MATRIX_OUTPUTS)
