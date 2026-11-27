@@ -8,6 +8,8 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 
 ### 2026-11-26
 
+- **PR #574**: refactor: extract the modmatrix testbench lane into lane_modmatrix.py
+- **Issue #573** (closed): Extract the modmatrix testbench lane and preserve its mutation-only walk cap
 - **PR #572**: refactor: replace the private Yosys timeout patch with klt's public yosys_timeout_s field
 - **Issue #563** (closed): Remove the private Yosys timeout patch from extended synthesis runs
 - **PR #567**: docs: record CI-scheduling live evidence and measured seven-day windows
@@ -381,9 +383,4 @@ Merged PRs and closed issues from the initial 30-day maintenance window. These e
 - **PR #244**: refactor: remove five unused torchsynth_voice helpers
 - **PR #245**: chore: remove orphaned one-shot format-sweep table renderer
 - **PR #246**: ci: move short and scheduled jobs off Blacksmith to GitHub-hosted
-
-### 2026-09-27
-
-- **Issue #217** (closed): gitignore: add .claude/skills/repo/logs/ so guard-hook logs don't block fleet resync (2am#1184)
-- **PR #219**: chore: ignore Repo Skills guard-hook logs
 

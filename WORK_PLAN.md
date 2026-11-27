@@ -37,7 +37,7 @@ Issues currently being built (`loom:building`).
 
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure
 - **#374**: [Epic #2] FPGA post-route sentinel simulation and clean-checkout rebuild
-- **#563**: Remove the private Yosys timeout patch from extended synthesis runs
+- **#575**: Compute each channel mean once in the mixer variance check
 
 ## PRs Awaiting Review
 
@@ -50,6 +50,7 @@ _None._
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 - **#542**: feat(fpga): post-synthesis sentinel attempt, refusal record and clean-checkout rebuild
+- **#577**: perf(spectral): compute each mixer channel mean once
 
 ## Proposed
 
@@ -63,6 +64,7 @@ Issues carrying `loom:curated`.
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
 - **#263**: [Epic #2] Give the whole-voice vco-pitch-wire-swap control a trace-level kill *(curated)*
 - **#264**: [Epic #2] Fold both one-shot lanes into the #78 aggregate RTL-qualification gate *(curated)*
+- **#284**: CI: run TB sim and CI on the newest main on a schedule, not on every merge (~1,700 job-min/day on main) *(curated)*
 - **#286**: [Epic #1] Execute per-path directed trace captures for each registry trace *(curated)*
 - **#287**: [Epic #1] Measure traced development-corpus storage and memory cost *(curated)*
 - **#298**: [Part of #9] Add explicit contract-wrong-but-perceptually-similar rows (small gain, one-sample delay) asserting identity/property failure *(curated)*
@@ -105,8 +107,8 @@ Issues carrying `loom:curated`.
 | Ready (`loom:issue`) | 4 |
 | In Progress (`loom:building`) | 3 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 1 |
-| Curated | 19 |
+| Approved PRs awaiting merge | 2 |
+| Curated | 20 |
 | Architect / Hermit proposals | 11 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
