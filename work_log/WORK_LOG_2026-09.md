@@ -2,6 +2,11 @@
 
 Sections moved byte-for-byte from [WORK_LOG.md](../WORK_LOG.md) by `loom-daemon work-docs archive`.
 
+### 2026-09-27
+
+- **Issue #217** (closed): gitignore: add .claude/skills/repo/logs/ so guard-hook logs don't block fleet resync (2am#1184)
+- **PR #219**: chore: ignore Repo Skills guard-hook logs
+
 ### 2026-09-26
 
 - **Issue #78** (closed): [Epic #2] Run exhaustive module-level fixed-model-to-RTL conformance
