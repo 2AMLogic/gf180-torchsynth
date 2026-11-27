@@ -13,15 +13,10 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 import math
-import os
 import random
 import re
-import stat
-import tempfile
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Mapping
 
 from .artifacts import (
@@ -32,7 +27,15 @@ from .artifacts import (
     verify_sha256,
 )
 from .contract import UpstreamContract, repository_root, sha256_file
-from .explorer_session import ExplorerSession, Selection, SessionError
+from .explorer_session import (
+    ExplorerSession,
+    Selection,
+    SessionError,
+    check_sound_index,
+    outside_store_path,
+    read_unaliased_file,
+    write_json_atomic,
+)
 from .inventory import INVENTORY_PATH, load_json
 from .storage import METADATA, ArtifactStore
 
@@ -123,13 +126,6 @@ def _inventory() -> dict[str, tuple[float, float]]:
     }
 
 
-def _check_index(index) -> None:
-    if type(index) is not int or not 0 <= index <= 2**53 - 1:
-        raise FavoriteError("sound_index must be an integer in [0, 2^53-1]")
-    if 96 <= index < 128:
-        raise FavoriteError(f"sound_index {index} is reserved holdout; access refused")
-
-
 def _check_portable(node, key=None) -> None:
     """Refuse locator-style absolute or traversing paths outside free-text notes."""
 
@@ -181,7 +177,7 @@ def _favorite(document) -> Favorite:
         type(document["notes"]) is not str or not document["notes"].strip()
     ):
         raise FavoriteError("notes must be nonempty text when present")
-    _check_index(document["sound_index"])
+    check_sound_index(document["sound_index"], error_cls=FavoriteError)
     _check_portable(document)
     if kind == "capture":
         if document["parent_id"] is not None:
@@ -314,32 +310,11 @@ def vary(
     return _favorite(document)
 
 
-def _read_file(path: Path) -> bytes:
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    with os.fdopen(descriptor, "rb") as stream:
-        info = os.fstat(stream.fileno())
-        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
-            raise FavoriteError(f"{path.name}: expected an unaliased regular file")
-        return stream.read()
-
-
-def _favorite_path(path, *, store: ArtifactStore) -> Path:
-    """Favorites live outside the entire store namespace, like bookmarks."""
-
-    path = Path(os.path.abspath(path))
-    root = Path(os.path.abspath(store.root))
-    if path.is_relative_to(root) or path.resolve().is_relative_to(root.resolve()):
-        raise FavoriteError("favorite must be outside the artifact store")
-    if path.is_symlink():
-        raise FavoriteError("favorite must not be a symlink")
-    return path
-
-
 def load(path) -> Favorite:
     """Strictly read and validate one favorite document (environment-free)."""
 
     try:
-        document = loads(_read_file(Path(os.path.abspath(path))))
+        document = loads(read_unaliased_file(path, error_cls=FavoriteError))
     except ValidationError as error:
         raise FavoriteError(f"invalid favorite document: {error}") from error
     return _favorite(document)
@@ -348,22 +323,11 @@ def load(path) -> Favorite:
 def save(favorite: Favorite, path, *, store: ArtifactStore) -> None:
     """Atomically write the schema-validated favorite; portable by construction."""
 
-    path = _favorite_path(path, store=store)
-    _favorite(favorite.document)  # Revalidate the exact document being written.
-    data = (
-        json.dumps(favorite.document, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    ).encode("utf-8")
-    descriptor, temporary = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    path = outside_store_path(
+        path, store.root, label="favorite", error_cls=FavoriteError
     )
-    try:
-        with os.fdopen(descriptor, "wb") as stream:
-            stream.write(data)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)  # Commit point; no rollback after success.
-    finally:
-        Path(temporary).unlink(missing_ok=True)
+    _favorite(favorite.document)  # Revalidate the exact document being written.
+    write_json_atomic(path, favorite.document)
 
 
 def _check_environment(favorite: Favorite) -> None:
@@ -412,7 +376,9 @@ def recall(session: ExplorerSession, path, *, store: ArtifactStore) -> Selection
     renderer and zero selection-RNG calls.
     """
 
-    path = _favorite_path(path, store=store)
+    path = outside_store_path(
+        path, store.root, label="favorite", error_cls=FavoriteError
+    )
     favorite = load(path)
     if favorite.kind != "capture":
         raise FavoriteError(
@@ -433,7 +399,7 @@ def recall(session: ExplorerSession, path, *, store: ArtifactStore) -> Selection
         raise FavoriteError(
             "verified store reference disagrees with the favorite artifact pin"
         )
-    data = _read_file(stored.path / METADATA)
+    data = read_unaliased_file(stored.path / METADATA, error_cls=FavoriteError)
     verify_sha256(data, document["artifact"]["sha256"])
     record = loads(data)
     inputs = record["inputs"]["value"]

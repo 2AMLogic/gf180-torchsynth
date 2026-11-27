@@ -34,7 +34,6 @@ from __future__ import annotations
 import hashlib
 import struct
 from fractions import Fraction
-from pathlib import Path
 
 from .core_protocol import (
     KNOWN_CAPABILITIES,
@@ -45,7 +44,7 @@ from .core_protocol import (
 )
 from .core_protocol_mock import MockCore
 from .explorer import FakePlayer, publish_fake_artifact
-from .explorer_session import ExplorerSession
+from .explorer_session import ExplorerSession, SessionError
 from .inventory import INVENTORY_PATH, load_json
 from .protocol_client import HostClient, MockTransport, Transport
 from .transport_binding_models import (
@@ -120,31 +119,31 @@ def build_mock_core(*, audio_source=GOLDEN_AUDIO_VECTOR) -> MockCore:
     )
 
 
+def require_transport_binding(binding: str) -> None:
+    """Refuse an unmodeled carrier by name, before anything is built for it.
+
+    Lists the known ones rather than silently falling back: a transport nobody
+    modeled must never look like one that was. A `SessionError` is a
+    `ValueError`, so every caller's existing refusal still holds.
+    """
+    if binding not in TRANSPORT_BINDINGS:
+        known = ", ".join(sorted(TRANSPORT_BINDINGS))
+        raise SessionError(
+            f"unknown transport binding {binding!r}; known bindings: {known}"
+        )
+
+
 def build_transport(
     core: MockCore, binding: str = DEFAULT_TRANSPORT_BINDING
 ) -> Transport:
-    """The named carrier, configured identically to every other carrier.
-
-    Refuses an unknown name by listing the known ones rather than silently
-    falling back: a transport nobody modeled must never look like one that was.
-    """
-    try:
-        factory = TRANSPORT_BINDINGS[binding]
-    except KeyError:
-        known = ", ".join(sorted(TRANSPORT_BINDINGS))
-        raise ValueError(
-            f"unknown transport binding {binding!r}; known bindings: {known}"
-        ) from None
-    return factory(core)
+    """The named carrier, configured identically to every other carrier."""
+    require_transport_binding(binding)
+    return TRANSPORT_BINDINGS[binding](core)
 
 
 def transport_binding_identity(binding: str = DEFAULT_TRANSPORT_BINDING) -> dict:
     """What carrier ran, stated honestly (no physical link is involved)."""
-    if binding not in TRANSPORT_BINDINGS:
-        known = ", ".join(sorted(TRANSPORT_BINDINGS))
-        raise ValueError(
-            f"unknown transport binding {binding!r}; known bindings: {known}"
-        )
+    require_transport_binding(binding)
     return {
         "binding": binding,
         "kind": "software-lane-binding-model",
@@ -241,6 +240,7 @@ def build_protocol_mock_session(
     diagnostic inspection, plus the contract identity the backend negotiated
     and the binding identity of the carrier that ran.
     """
+    require_transport_binding(transport)  # Before ArtifactStore touches the disk.
     import random
 
     from .storage import ArtifactStore

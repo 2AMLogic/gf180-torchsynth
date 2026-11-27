@@ -20,7 +20,14 @@ sys.path.insert(0, str(ROOT / "tests"))
 from test_storage import fixture, save_metadata  # noqa: E402
 
 from torchsynth_voice.artifacts import content_id, loads, validate_artifact  # noqa: E402
-from torchsynth_voice.explorer_session import ExplorerSession, SessionError  # noqa: E402
+from torchsynth_voice.explorer_session import (  # noqa: E402
+    ExplorerSession,
+    SessionError,
+    check_sound_index,
+    outside_store_path,
+    read_unaliased_file,
+    write_json_atomic,
+)
 from torchsynth_voice.identity import SoundIdentity  # noqa: E402
 from torchsynth_voice.inventory import INVENTORY_PATH, load_json  # noqa: E402
 from torchsynth_voice.storage import ArtifactStore  # noqa: E402
@@ -522,6 +529,118 @@ class ExplorerSessionTests(unittest.TestCase):
         self.assertEqual(recalled.stored.reference, selected.stored.reference)
         self.assertEqual(recalled.inputs, selected.inputs)
         self.assertIsNone(relocated.show()["audition"])
+
+
+class SharedHelperTests(unittest.TestCase):
+    """The one copy of each safety gate every Explorer layer shares.
+
+    Each helper is the union of the per-layer copies it replaced, differing
+    only by the caller's error class and label; the layers' own tests keep
+    proving the gates at their public seams.
+    """
+
+    class LayerError(ValueError):
+        pass
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.base = Path(temporary.name).resolve()
+        self.store = ArtifactStore(self.base / "store")
+
+    def test_check_sound_index_range_and_holdout_use_the_callers_error_class(self):
+        for index in (0, 95, 128, 2**53 - 1):
+            with self.subTest(index=index):
+                self.assertIsNone(check_sound_index(index))
+                self.assertIsNone(check_sound_index(index, error_cls=self.LayerError))
+        for index, message in (
+            (96, "reserved holdout"),
+            (127, "reserved holdout"),
+            (-1, "integer in"),
+            (2**53, "integer in"),
+            (True, "integer in"),
+            (6.0, "integer in"),
+            ("6", "integer in"),
+        ):
+            with self.subTest(index=index):
+                with self.assertRaisesRegex(SessionError, message):
+                    check_sound_index(index)
+                with self.assertRaisesRegex(self.LayerError, message):
+                    check_sound_index(index, error_cls=self.LayerError)
+
+    def test_read_unaliased_file_accepts_only_single_link_regular_files(self):
+        path = self.base / "document.json"
+        path.write_bytes(b"{}\n")
+        self.assertEqual(read_unaliased_file(path), b"{}\n")
+        self.assertEqual(
+            read_unaliased_file(str(path), error_cls=self.LayerError), b"{}\n"
+        )
+        hard = self.base / "hard.json"
+        os.link(path, hard)
+        # A second name aliases both names; neither may be read as pinned bytes.
+        for aliased in (path, hard):
+            for error_cls in (SessionError, self.LayerError):
+                with self.subTest(path=aliased, error_cls=error_cls):
+                    with self.assertRaisesRegex(
+                        error_cls, "expected an unaliased regular file"
+                    ):
+                        read_unaliased_file(aliased, error_cls=error_cls)
+        alias = self.base / "alias.json"
+        alias.symlink_to(hard)
+        # O_NOFOLLOW refuses the alias at open, before any class-specific check.
+        with self.assertRaises(OSError):
+            read_unaliased_file(alias, error_cls=self.LayerError)
+
+    def test_outside_store_path_refuses_store_namespace_and_symlinks(self):
+        target = self.base / "state.json"
+        self.assertEqual(outside_store_path(target, self.store.root), target)
+        self.assertEqual(
+            outside_store_path(str(target), os.path.relpath(self.store.root)), target
+        )
+        alias = self.base / "store-alias"
+        alias.symlink_to(self.store.root, target_is_directory=True)
+        for refused in (self.store.root / "state.json", alias / "state.json"):
+            with self.subTest(path=refused):
+                with self.assertRaisesRegex(SessionError, "bookmark must be outside"):
+                    outside_store_path(refused, self.store.root)
+                with self.assertRaisesRegex(
+                    self.LayerError, "favorite must be outside"
+                ):
+                    outside_store_path(
+                        refused,
+                        os.path.relpath(self.store.root),
+                        label="favorite",
+                        error_cls=self.LayerError,
+                    )
+        link = self.base / "link.json"
+        link.symlink_to(target)
+        for error_cls, label in (
+            (SessionError, "bookmark"),
+            (self.LayerError, "favorite"),
+        ):
+            with self.subTest(label=label), self.assertRaisesRegex(
+                error_cls, f"{label} must not be a symlink"
+            ):
+                outside_store_path(
+                    link, self.store.root, label=label, error_cls=error_cls
+                )
+
+    def test_write_json_atomic_commits_sorted_bytes_and_leaves_no_temporary(self):
+        target = self.base / "state.json"
+        document = {"b": 1, "a": {"d": [1, 2], "c": "x"}}
+        self.assertIsNone(write_json_atomic(target, document))
+        expected = (
+            json.dumps(document, indent=2, sort_keys=True) + "\n"
+        ).encode("utf-8")
+        self.assertEqual(target.read_bytes(), expected)
+        self.assertTrue(target.read_bytes().startswith(b'{\n  "a": {\n    "c": "x",'))
+        write_json_atomic(target, {"a": 2})
+        self.assertEqual(json.loads(target.read_bytes()), {"a": 2})
+        # Refused before any temporary exists; the previous document survives.
+        with self.assertRaises(ValueError):
+            write_json_atomic(target, {"a": float("nan")})
+        self.assertEqual(json.loads(target.read_bytes()), {"a": 2})
+        self.assertEqual(list(self.base.glob(".state.json.*.tmp")), [])
 
 
 if __name__ == "__main__":

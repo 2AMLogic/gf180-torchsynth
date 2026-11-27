@@ -49,6 +49,7 @@ from torchsynth_voice.protocol_backend import (  # noqa: E402
     build_protocol_mock_session,
     build_transport,
     name_table_reference,
+    require_transport_binding,
     transport_binding_identity,
 )
 from torchsynth_voice.protocol_client import (  # noqa: E402
@@ -251,6 +252,27 @@ class TransportSubstitutabilityTests(unittest.TestCase):
             # Refused by listing what is modeled, never silently defaulted.
             for known in TRANSPORT_BINDINGS:
                 self.assertIn(known, message)
+
+    def test_unknown_binding_is_refused_before_any_store_is_created(self):
+        for call in (
+            lambda: require_transport_binding("rs232"),
+            lambda: build_protocol_mock_session(
+                self.root / "library", transport="rs232"
+            ),
+            lambda: build_session(
+                self.root / "seam", backend="protocol-mock", transport="rs232"
+            ),
+        ):
+            with self.assertRaises(SessionError):
+                call()
+        # The refused binding never reached ArtifactStore's mkdir.
+        self.assertEqual([path.name for path in self.root.iterdir()], [])
+        # A known binding still builds its store through the same gate.
+        build_protocol_mock_session(self.root / "library", transport="uart")
+        self.assertEqual(
+            sorted(path.name for path in (self.root / "library").iterdir()),
+            [".staging", "artifacts"],
+        )
 
     def test_product_model_identical_across_every_binding(self):
         results = {}
