@@ -16,23 +16,20 @@ class _Parser(argparse.ArgumentParser):
         raise SessionError(message)
 
 
-def _parser(*, standalone=False):
-    parser = _Parser(description=__doc__, allow_abbrev=False)
-    if standalone:
-        parser.add_argument(
-            "--store", required=True, help="physical local ArtifactStore root"
-        )
-        initial = parser.add_mutually_exclusive_group()
-        initial.add_argument(
-            "--selected",
-            nargs=3,
-            metavar=("SOUND_INDEX", "ARTIFACT_ID", "SHA256"),
-            help="select this exact reference before the command",
-        )
-        initial.add_argument(
-            "--bookmark", help="recall this bookmark before the command"
-        )
-    commands = parser.add_subparsers(dest="command", required=True)
+def add_initial_selection_arguments(parser) -> None:
+    """The mutually exclusive pre-command `--selected` / `--bookmark` pair."""
+    initial = parser.add_mutually_exclusive_group()
+    initial.add_argument(
+        "--selected",
+        nargs=3,
+        metavar=("SOUND_INDEX", "ARTIFACT_ID", "SHA256"),
+        help="select this exact reference before the command",
+    )
+    initial.add_argument("--bookmark", help="recall this bookmark before the command")
+
+
+def add_session_subparsers(commands) -> None:
+    """The nine session commands on a parent's subparser group."""
     for name in ("next", "random", "show", "repeat", "audition"):
         commands.add_parser(name, allow_abbrev=False)
     request = commands.add_parser("request", allow_abbrev=False)
@@ -44,6 +41,16 @@ def _parser(*, standalone=False):
     for name in ("save", "recall"):
         command = commands.add_parser(name, allow_abbrev=False)
         command.add_argument("path", help="bookmark path outside the artifact store")
+
+
+def _parser(*, standalone=False):
+    parser = _Parser(description=__doc__, allow_abbrev=False)
+    if standalone:
+        parser.add_argument(
+            "--store", required=True, help="physical local ArtifactStore root"
+        )
+        add_initial_selection_arguments(parser)
+    add_session_subparsers(parser.add_subparsers(dest="command", required=True))
     return parser
 
 
@@ -58,7 +65,13 @@ def _select(session, index, artifact_id, sha256):
     )
 
 
-def _dispatch(session, args):
+def dispatch_parsed(session: ExplorerSession, args) -> dict:
+    """Execute one command already parsed by this module's parser helpers.
+
+    Parent CLIs that compose `add_initial_selection_arguments` and
+    `add_session_subparsers` call this with their own parsed namespace instead
+    of re-serializing and re-parsing it through `dispatch`.
+    """
     if args.command == "select":
         _select(session, args.sound_index, args.artifact_id, args.sha256)
     elif args.command == "request":
@@ -77,19 +90,24 @@ def dispatch(session: ExplorerSession, argv: Sequence[str]) -> dict:
     Parent #64 supplies its configured session here. No rendering/player adapter
     or persisted session status is implicitly created by this command handler.
     """
-    return _dispatch(session, _parser().parse_args(argv))
+    return dispatch_parsed(session, _parser().parse_args(argv))
+
+
+def apply_initial_selection(session: ExplorerSession, args) -> None:
+    """Apply a parsed `--selected` or `--bookmark` before the command runs."""
+    if args.selected:
+        index, artifact_id, sha256 = args.selected
+        _select(session, int(index), artifact_id, sha256)
+    elif args.bookmark:
+        session.recall(args.bookmark)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     try:
         args = _parser(standalone=True).parse_args(argv)
         session = ExplorerSession(ArtifactStore(args.store))
-        if args.selected:
-            index, artifact_id, sha256 = args.selected
-            _select(session, int(index), artifact_id, sha256)
-        elif args.bookmark:
-            session.recall(args.bookmark)
-        result = _dispatch(session, args)
+        apply_initial_selection(session, args)
+        result = dispatch_parsed(session, args)
         print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
     except (OSError, ValueError) as error:
         print(f"explorer: {error}", file=sys.stderr)
