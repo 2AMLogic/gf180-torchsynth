@@ -1,3 +1,4 @@
+Preparing to run yowasp-nextpnr-ecp5. This might take a while...
 
 
 Info: Logic utilisation before packing:
@@ -37,7 +38,6 @@ Info: 	                 GSR:       0/      1     0%
 Info: 	               JTAGG:       0/      1     0%
 Info: 	                OSCG:       0/      1     0%
 Info: 	               SEDGA:       0/      1     0%
-Info: 	                 DTR:       0/      1     0%
 [...]
     1: 0x36a16e - <unknown>!<wasm function 3985>
     2:   0x23b6 - <unknown>!<wasm function 21>

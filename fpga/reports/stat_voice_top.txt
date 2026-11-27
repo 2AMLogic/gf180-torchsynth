@@ -1,0 +1,22 @@
+
+8. Printing statistics.
+
+=== one_shot_voice_top ===
+
+        +----------Local Count, excluding submodules.
+        | 
+   229407 wires
+   912065 wire bits
+   229407 public wires
+   912065 public wire bits
+      145 ports
+     7711 port bits
+   376656 cells
+    61661   CCU2C
+    26763   L6MUX21
+   223603   LUT4
+      378   MULT18X18D
+    51467   PFUMX
+     6660   TRELLIS_DPR16X4
+     6124   TRELLIS_FF
+

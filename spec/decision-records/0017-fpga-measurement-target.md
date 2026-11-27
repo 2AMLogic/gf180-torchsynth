@@ -87,8 +87,13 @@ sources into `fpga/build/src` and applies exactly five asserted edits:
    `tb/sv/adsr_engine.sv`, applies the same replacement, and compares the
    original and rewritten functions under Icarus on directed edges plus
    fixed-seed random vectors (100,290 vectors, 0 mismatches at the default
-   size; a deliberately wrong bound of 105 is caught). Equivalence of the
-   synthesized netlist is not established; that is #374. It is needed because the data-dependent start index could not
+   size; a deliberately wrong bound of 105 is caught). **Equivalence of the
+   synthesized netlist is still not established: #374 attempted the
+   exact-sentinel simulation of the `one_shot_voice_top` synth netlist and
+   was refused — the pinned open flow ships no behavioral simulation model
+   for `MULT18X18D` (see `fpga/reports/post-synth-sim.json`), so the
+   bounded check above remains the only evidence for this rewrite.** The
+   rewrite was needed because the data-dependent start index could not
    be unrolled by the front end (it exhausted the 4 GiB WebAssembly memory
    before elaboration finished).
 
@@ -108,18 +113,30 @@ report utilisation without optimizing).
 ## Consequences
 
 - #81 inherits the device and must still pick and trace a board and pins.
-- #374 simulates the netlists emitted by `fpga/build.sh` against the golden
-  sentinel and rebuilds from a clean checkout; this record does not claim
-  either.
+- **#374 outcome (2026-11-23).** The exact-sentinel simulation of the
+  `one_shot_voice_top` post-synthesis netlist was attempted and **refused
+  with a measured reason**: the pinned yowasp-yosys 0.70 simulation
+  library has behavioral models for every primitive the netlist uses
+  except `MULT18X18D` (378 instances), which exists only as a blackbox
+  declaration; Icarus parsed all 556 MB of gate-level Verilog in 14.8 s /
+  3.0 GB and failed elaboration naming exactly that module, and Verilator
+  failed independently (81.7 s / 9.2 GB). No post-route netlist exists
+  (#80 did not fit), so no post-route claim is made either. The committed
+  record is `fpga/reports/post-synth-sim.json`; the sentinel stimulus
+  (`normalization:below`) was prepared and hashed. The design was not
+  modified to make simulation fit. The clean-checkout rebuild of the same
+  commit reproduced every #80 number with zero drift (byte-identical
+  netlist JSON) and regenerated the report's hash bindings across the
+  DR-0013 -> DR-0017 rebind: verdict in
+  `fpga-build-report.json`'s `clean_checkout_rebuild`, drift gate
+  `fpga/scripts/rebuild_compare.py --check`.
 - A different device or toolchain pin requires amending this record.
 - **Renumbering note.** This record was written as DR-0013 while #375 was open;
   `0013-versioned-historical-source-binding.md` landed on `main` first, so it
-  was renumbered to DR-0017 on rebase. The committed evidence under
-  `fpga/reports/` predates the renumber and still reads `DR-0013`. It is left
-  byte-identical on purpose: `fpga/reports/fpga-build-report.json` binds the
-  SHA-256 of `fpga/build.sh`, `fpga/requirements.txt` and the staged sources
-  (including `fpga/rtl/fpga_oneshot_top.sv`) and embeds `build.sh` verbatim, so
-  editing any of them to say `DR-0017` would silently invalidate a currently
-  valid hash binding. `DR-0013` inside `fpga/reports/` and those three files
-  therefore means **this** record. Rebinding them is part of #374's
-  clean-checkout rebuild, not a renumbering edit.
+  was renumbered to DR-0017 on rebase. #80's committed evidence kept the
+  `DR-0013` spelling so its hash bindings stayed valid; #374 completed the
+  rebind (`fpga/build.sh`, `fpga/requirements.txt` and
+  `fpga/rtl/fpga_oneshot_top.sv` now read `DR-0017`), and the
+  clean-checkout rebuild regenerated `fpga/reports/fpga-build-report.json`'s
+  bindings in the same change — exactly the rebind path this note reserved
+  for #374. The synthesized netlist is byte-identical across the rebind.

@@ -1,4 +1,4 @@
-# FPGA target (issue #80, DR-0017)
+# FPGA target (issues #80 and #374, DR-0017)
 
 A resource-generous **feasibility measurement** of the passing one-shot RTL
 (`tb/sv/one_shot_voice_top.sv`, #79) on one Lattice ECP5 device with the open
@@ -10,12 +10,14 @@ Decision record: [`spec/decision-records/0017-fpga-measurement-target.md`](../sp
 (Proposed until a reviewed merge ratifies it).
 
 > **Numbering note.** This record was DR-0013 until it was renumbered to
-> DR-0017 on rebase (`main` landed a different 0013 first). The committed
-> evidence in `reports/` — and `build.sh`, `requirements.txt` and
-> `rtl/fpga_oneshot_top.sv`, whose SHA-256 that evidence binds — still read
-> `DR-0013` and are deliberately left byte-identical, so the recorded hashes
-> stay valid. `DR-0013` in those files means this record. See the DR's
-> "Renumbering note".
+> DR-0017 on rebase (`main` landed a different 0013 first). #80's evidence
+> deliberately kept the `DR-0013` spelling so its recorded hashes stayed
+> valid; #374 completed the rebind — `build.sh`, `requirements.txt` and
+> `rtl/fpga_oneshot_top.sv` now say `DR-0017`, and the clean-checkout
+> rebuild regenerated `reports/fpga-build-report.json`'s hash bindings in
+> the same change (see "Clean-checkout rebuild" below). The synthesized
+> netlist is byte-identical across the rebind; only the three edited files'
+> hashes moved.
 
 ## Result (summary; details in `reports/fpga-build-report.json`)
 
@@ -87,6 +89,74 @@ published negative result, not a pass.
   exercised — this check validates the shim schedule, not noise ingestion.
   The exact-sentinel simulation of the netlist is #374.
 
+## #374: post-synthesis sentinel attempt and clean-checkout rebuild
+
+**Outcome: the exact-sentinel simulation of the synthesized netlist is
+REFUSED with a measured reason — the pinned open flow ships no simulation
+model for the DSP primitive — and the clean-checkout rebuild reproduced
+every #80 number with zero drift.** Details and commands:
+`reports/post-synth-sim.json` (the refusal record) and
+`reports/fpga-build-report.json` (`clean_checkout_rebuild`).
+
+### The refusal (primitive-model gap)
+
+- A **post-synthesis netlist of the unmodified `one_shot_voice_top`** (same
+  staged sources and flow as the #80 measurement, no shim — the shim's
+  pseudo-random host streams cannot carry golden vectors) was built by the
+  new `synth_voice` stage: 376,656 cells — LUT4 223,603, CCU2C 61,661,
+  PFUMX 51,467, L6MUX21 26,763, TRELLIS_FF 6,124, TRELLIS_DPR16X4 6,660,
+  **MULT18X18D 378** (plus 18 `$specify2` cells that `write_verilog`
+  renders as `specify` constructs). 556 MB of Verilog / 491 MB of JSON,
+  both hash-bound in the report.
+- The sentinel would have been the committed fixed-model golden vector's
+  param-committed regression case `normalization:below`, derived and
+  written by `tb/run_voice.py`'s own `voice_write_case`, compared
+  sample-exactly with `voice_rows`/`voice_expected` (integer equality, no
+  tolerance) — exactly the RTL lane's check. The stimulus was prepared and
+  hashed; the simulation could not run:
+- **Icarus Verilog 13.0**: parsed the entire 556 MB netlist in **14.8 s /
+  3.0 GB peak RSS**, then failed elaboration with `Unknown module type:
+  MULT18X18D` at every one of the 378 DSP instances (rc 123).
+- **Verilator 5.050**: same failure independently —
+  `Cannot find file containing module: 'MULT18X18D'` (rc 1, **81.7 s /
+  9.2 GB peak RSS**, error limit 50).
+- The gap is the toolchain's, not a missing file: the pinned
+  yowasp-yosys 0.70 `share/ecp5` simulation library provides behavioral
+  models for every other cell the netlist uses (LUT4, CCU2C, PFUMX,
+  L6MUX21, TRELLIS_FF, TRELLIS_DPR16X4) but only a `(* blackbox *)`
+  declaration for `MULT18X18D` (`cells_bb.v`). No design was shrunk,
+  serialized or re-mapped to fit: per the issue, a committed refusal is a
+  complete outcome.
+- Consequence for DR-0017 D3.4: the **ADSR constant-bound loop rewrite's
+  synthesized-netlist equivalence remains open**; the bounded simulation
+  check (`fpga/scripts/check_adsr_div_equiv.py`, 100,290 vectors, 0
+  mismatches) is still the only evidence for that rewrite.
+
+### Clean-checkout rebuild (reproducibility)
+
+A clean detached checkout of the rebinding commit (no working-tree
+changes) ran `fpga/build.sh env stage synth engines pnr synth_voice`,
+the RTL cycle check, `vsim` and `report`:
+
+- Every compared field is **identical** to the #80 report (verdict
+  `identical`, zero drift): all flat cell counts, all per-engine counts,
+  `engines_failed`, device, yosys/nextpnr banners, venv package list, and
+  the pnr exit (`nextpnr exit code: 1`, same wasm abort at TRELLIS_COMB
+  400%). The **synthesized netlist JSON is byte-identical** to #80's
+  despite the three rebound files' comment edits, as is
+  `reports/cycle_check.txt`. Nondeterminism sources: none observed in any
+  reported number (the toolchain is pinned by `fpga/requirements.txt`);
+  the only run-to-run textual variance found is two cosmetic lines in
+  nextpnr's stderr (banner placement and one zero-count `DTR` row),
+  recorded by the differing `pnr_stderr_excerpt.txt`.
+- `fpga/scripts/rebuild_compare.py --check` re-runs the same comparison
+  between two committed reports and fails on any drift; the DR-0013 ->
+  DR-0017 rebind regenerated the report's hash bindings in the same
+  change (`build.sh`, `requirements.txt`, wrapper hashes moved; the
+  netlist and all staged `tb/sv` sources did not).
+- `reports/stat_voice_top.txt` / the report's `synthesis_voice_top` block
+  carry the new netlist's own stat.
+
 ### DR-0010 assumptions vs the inferred mapping
 
 - **P2/A5 (12 KiB sine LUT, macro vs distributed memory):** the 4097 x 24 ROM
@@ -112,22 +182,23 @@ published negative result, not a pass.
 ## Not run / not established
 
 - Placement, routing, Fmax, slack, bitstream (`ecppack` not run): no timing.
-- Post-synthesis / post-route simulation and clean-checkout rebuild
-  reproducibility: #374. `build.sh` was run once in the working tree
-  (dirty state recorded in the report); nondeterminism is **not** quantified.
-- The report's `git.head` (`4d650c1`) and `git.dirty: true` describe the tree
-  the build actually ran in; the build was **not** re-run on later branch
-  heads and the numbers were not re-measured. The report is bound to this
-  tree by its committed hash manifest, not by that stale `git.head`:
-  `reports/sources.json` records the SHA-256 of all 12 staged sources and
-  still matches `tb/sv/*.sv` at the current head, and the report's
-  `hashes_sha256` for the wrapper (`rtl/fpga_oneshot_top.sv`), `build.sh`,
-  `requirements.txt` and the golden vector still match the committed files.
-  The one input path that moved since the build — `write_lut_memh`, from
-  `tb/run_tb.py` to `tb/tb_harness.py` (re-exported; `scripts/gen_luts.py`
-  imports both helpers from `tb/run_tb.py`) — moved byte-identical, so the
-  ROM-generation path that produced the committed images is unchanged.
-  Re-verify those hashes before re-using any number in `reports/`.
+- **Gate-level (post-synthesis/post-route) simulation**: REFUSED with a
+  measured reason (#374, see above) — the pinned flow has no behavioral
+  model for `MULT18X18D`; no post-route netlist exists at all because the
+  design does not fit. The RTL-level checks (`tb/run_voice.py`,
+  `tb/tb_fpga_cycles.sv`) are unchanged and remain the correctness
+  evidence. The ADSR loop-rewrite synthesized-netlist equivalence caveat
+  (DR-0017 D3.4) is **still open**.
+- The #80 build ran once in a dirty working tree; #374's clean-checkout
+  rebuild (see above) reproduced every reported number with zero drift
+  and is bound into the regenerated `reports/fpga-build-report.json`
+  (`clean_checkout_rebuild`).
+- The report's `git.head` fields describe the tree each build actually ran
+  in: #80's `4d650c1` (dirty, on `feature/issue-80`) and the rebuild's
+  detached clean checkout of the #374 rebinding commit. Each report is
+  bound to its inputs by its committed hash manifest
+  (`reports/sources.json` and `hashes_sha256`); re-verify those hashes
+  before re-using any number in `reports/`.
 - Any board work, pin assignment (DR-0017 D1: none), programming, audio.
 - Any ABC9 result: `abc9` did not finish in 590 s, so `abc -lut 4:7` was used.
 - Whole-design `-noflatten` hierarchy: killed (4 GiB wasm limit); replaced by
@@ -142,17 +213,23 @@ published negative result, not a pass.
 | `scripts/gen_luts.py` | Emits the two `$readmemh` images (same gate as `tb/run_voice.py`) |
 | `scripts/yowasp_bigstack.py` | Runs YoWASP tools with a bigger wasm stack (workaround, see friction) |
 | `scripts/make_report.py` | Parses build outputs into `reports/` |
-| `build.sh` | `env stage synth engines pnr report` stages |
+| `scripts/run_postsynth_sentinel.py` | #374: netlist/model inventories + the named exact-sentinel attempt; writes `reports/post-synth-sim.json` (verdict or committed refusal) |
+| `scripts/rebuild_compare.py` | #374: report-vs-report comparison; `--check` fails on any resource-count drift |
+| `build.sh` | `env stage synth engines pnr synth_voice vsim report` stages |
 | `requirements.txt` | Pinned throwaway toolchain (installed only into `build/venv`) |
 | `tb/tb_fpga_cycles.sv` | Shim schedule / cycle-count check (RTL level) |
-| `reports/` | Committed evidence: JSON report, stats, pnr excerpts |
-| `build/` | Git-ignored venv, staged sources, netlist, logs |
+| `reports/` | Committed evidence: JSON report, stats, pnr excerpts, post-synth-sim record |
+| `build/` | Git-ignored venv, staged sources, netlists, logs |
 
 ## Run
 
 ```
 fpga/build.sh            # all stages; needs uv and network for the first `env`
-fpga/build.sh synth      # flat synthesis only (~15 min, single job)
+fpga/build.sh synth      # flat synthesis only (~15 min, single job; host-dependent)
+fpga/build.sh synth_voice  # whole-voice post-synthesis netlist (#374)
+python3 fpga/scripts/rebuild_compare.py \
+  fpga/reports/fpga-build-report.json fpga/reports/fpga-build-report.json \
+  --check   # the drift gate (identical reports -> exit 0)
 ```
 
 Single-threaded by design (one tool at a time). The pinned toolchain installs
@@ -183,4 +260,15 @@ cd fpga/build/src && iverilog -g2012 -o ../tbc -P tb_fpga_cycles.WALK=176400 \
   exhausted memory.
 - nextpnr-ecp5 (YoWASP) aborts with an uncaught wasm exception and no error
   text when the design exceeds device capacity.
+- yowasp-yosys 0.70's `share/ecp5/cells_sim.v` includes `cells_ff.vh` and
+  `cells_io.vh` twice (once via `common_sim.vh`, once itself), so no
+  compiler accepts it as-is (`read_verilog +/ecp5/cells_sim.v` fails in
+  Yosys itself with "Re-definition of module"; Icarus likewise).
+  `run_postsynth_sentinel.py` flattens the include chain, inlining each
+  header once (module texts untouched).
+- yowasp-yosys 0.70 ships **no behavioral simulation model for
+  `MULT18X18D`** — `cells_sim.v` covers every other ECP5 primitive the
+  flow emits, but the DSP multiplier exists only as a `(* blackbox *)`
+  declaration in `cells_bb.v`. This alone makes gate-level simulation of
+  the synthesized netlist impossible in the open flow (#374 refusal).
 - klt is not used here (FPGA, not the ASIC flow); no klt friction observed.

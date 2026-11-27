@@ -15,6 +15,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from rebuild_compare import compare_reports  # noqa: E402
+
 ROOT, OUT, SRC, REP = (Path(a).resolve() for a in sys.argv[1:5])
 FREQ = float(sys.argv[5])
 SAMPLES = 176400
@@ -85,6 +88,16 @@ def main():
     report = {"issue": 80, "decision_record": "DR-0017",
               "clock_constraint_mhz": FREQ,
               "device": "LFE5U-85F CABGA381 speed 6 (nextpnr --85k)"}
+    # #374: when this run is the clean-checkout rebuild, the previously
+    # committed report is still on disk here -- read it BEFORE this script
+    # overwrites it, and embed what reproduced and what drifted.
+    baseline_path = REP / "fpga-build-report.json"
+    baseline = None
+    if baseline_path.is_file():
+        try:
+            baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+        except ValueError:
+            baseline = None
     report["git"] = provenance()
     report["python_packages_in_build_venv"] = dist_versions()
     yl = read(OUT / "synth_flat.log")
@@ -103,6 +116,8 @@ def main():
         "requirements": sha(ROOT / "fpga/requirements.txt"),
         "golden_vector_fixed_voice": sha(ROOT / "sim/reference/fixed-voice-golden-v1.json"),
         "netlist_json": sha(OUT / "fpga_oneshot_top.json"),
+        "voice_netlist_json": sha(OUT / "one_shot_voice_top.json"),
+        "voice_netlist_verilog": sha(OUT / "one_shot_voice_top.v"),
     }
     report["staging_manifest"] = json.loads(read(OUT / "sources.json") or "[]")
     report["lut_manifest"] = json.loads(read(OUT / "luts.json") or "{}")
@@ -173,11 +188,43 @@ def main():
     cyc = read(OUT / "cycle_check.txt").strip()
     report["sim_cycle_check"] = cyc or "not run"
 
+    # #374: the whole-voice post-synthesis netlist's own stat, and the
+    # exact-sentinel attempt record (verdict or committed refusal).
+    voice_stat = parse_stat(read(OUT / "stat_voice_top.txt"))
+    if voice_stat:
+        report["synthesis_voice_top"] = {
+            "cells": stat_summary(voice_stat), "raw_cell_types": voice_stat,
+            "note": "unmodified one_shot_voice_top (no measurement shim), "
+                    "same staged sources and flow as the flat measurement "
+                    "synthesis; netlist for the #374 sentinel attempt"}
+    psim_path = OUT / "post-synth-sim.json"
+    if psim_path.is_file():
+        try:
+            psim = json.loads(psim_path.read_text(encoding="utf-8"))
+            report["post_synth_sim"] = {
+                k: psim.get(k) for k in ("verdict", "reason", "issue",
+                                         "claim_scope", "no_shrink_note")}
+            report["post_synth_sim"]["netlist"] = psim.get("netlist", {}).get(
+                "cell_counts")
+        except ValueError:
+            report["post_synth_sim"] = "present but unparseable"
+    else:
+        report["post_synth_sim"] = "not run"
+
+    if baseline is not None:
+        report["clean_checkout_rebuild"] = dict(
+            compare_reports(baseline, report),
+            baseline_report="fpga/reports/fpga-build-report.json as committed "
+                            "by #80 (PR #375), read before this rebuild "
+                            "overwrote it",
+            rebuild_issue=374)
+
     REP.mkdir(parents=True, exist_ok=True)
     (REP / "fpga-build-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n")
-    for name in ("stat_flat.txt", "stat_engines.txt", "pnr.rc", "luts.json",
-                 "sources.json", "cycle_check.txt"):
+    for name in ("stat_flat.txt", "stat_engines.txt", "stat_voice_top.txt",
+                 "pnr.rc", "luts.json", "sources.json", "cycle_check.txt",
+                 "post-synth-sim.json"):
         if (OUT / name).is_file():
             shutil.copy(OUT / name, REP / name)
     err = read(OUT / "pnr.stderr").splitlines()
