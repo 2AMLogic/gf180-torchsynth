@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 24/24 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 25/25 attestation checks passed (klt signoff --attest)",
   "source": "evidence/item9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 24,
-    "passed_count": 24,
+    "check_count": 25,
+    "passed_count": 25,
     "checks": [
       {
         "check": "present",
@@ -36,6 +36,13 @@
       {
         "check": "present",
         "role": "testbench",
+        "path": "tb/lane_vco.py",
+        "passed": true,
+        "content_hash": "sha256:0ad318815d7e2b92de3e82958f1fc0f43c955f608dd70417c7d1061aaea8e3ce"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
         "path": "tb/run_oneshot.py",
         "passed": true,
         "content_hash": "sha256:35edfb335b0871958d7e9aa85745f180ef13f83411ee23e40916209d1337ad0e"
@@ -45,7 +52,7 @@
         "role": "testbench",
         "path": "tb/run_tb.py",
         "passed": true,
-        "content_hash": "sha256:d6015977743024a8eeb2880effd3afb9b5d9194413b1153fbd69a32458629a92"
+        "content_hash": "sha256:50b08fb17ddd3a0fad1e17c3446823bf39e15bd14a1478b03163079fce941068"
       },
       {
         "check": "present",
@@ -201,7 +208,7 @@
         "path": "evidence/item9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:8583311a75978c39c37137964b0487e56e09f606b0948feae4213ba3d883eb94"
+      "content_hash": "sha256:6593d1ad75ef8a81c1b7cb68676a7e1f4875bbbf234bb098744549bee4dec48b"
     }
   }
 }

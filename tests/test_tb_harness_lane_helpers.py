@@ -33,16 +33,19 @@ sys.path.insert(0, str(ROOT / "tb"))
 import lane_adsr  # noqa: E402
 import lane_lfo  # noqa: E402
 import lane_modmatrix  # noqa: E402
+import lane_vco  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
 
 #: Wrappers whose lane lives in its own module (``tb/lane_adsr.py`` #476,
-#: ``tb/lane_lfo.py`` #561, ``tb/lane_modmatrix.py`` #573): a re-exported function reads globals from
-#: its defining module, so the patch target is the lane module.
+#: ``tb/lane_lfo.py`` #561, ``tb/lane_modmatrix.py`` #573, ``tb/lane_vco.py``
+#: #589): a re-exported function reads globals from its defining module, so
+#: the patch target is the lane module.
 LANE_MODULES = {
     "adsr_load_vectors": lane_adsr,
     "lfo_load_vectors": lane_lfo,
     "mm_load_vectors": lane_modmatrix,
+    "sine_load_vectors": lane_vco,
 }
 
 
@@ -281,6 +284,19 @@ class ReExportTest(unittest.TestCase):
             with self.subTest(helper=name):
                 self.assertIs(
                     getattr(run_tb, name), getattr(tb_harness, name)
+                )
+
+    def test_run_tb_re_exports_the_sine_vco_lane(self):
+        # ``tb/lane_vco.py`` (#589): the names ``tb/run_voice.py`` /
+        # ``tb/run_oneshot.py`` import off ``run_tb``, ``main``'s dispatch
+        # table and ``except VcoCaptureIntegrityError`` handler resolve off
+        # it, and the ``mix`` lane's ``vco_load_receipt`` call reads off it.
+        for name in ("VCO_DUT_SV", "VCO_RECEIPT_PATH",
+                     "VcoCaptureIntegrityError", "vco", "vco_load_receipt",
+                     "mm", "vg"):
+            with self.subTest(name=name):
+                self.assertIs(
+                    getattr(run_tb, name), getattr(lane_vco, name)
                 )
 
 
