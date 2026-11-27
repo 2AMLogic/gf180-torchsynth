@@ -3435,7 +3435,7 @@ def noise(workdir: Path, simulator: str) -> int:
         owner_ok = owner_ok and matches
     except Exception as error:  # noqa: BLE001 - reported, never a silent pass
         print("  budget constants: emission failed -> %s" % error)
-        return False
+        return 1
     ok = ok and owner_ok
 
     # 6. Mutations: every planted fault MUST be detected (AC-5).
