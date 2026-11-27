@@ -2,7 +2,7 @@
   "block": "gf180-torchsynth",
   "kind": "digital",
   "evidence": {
-    "9": {"file": "evidence/item9-attestation.json", "content_hash": "sha256:8583311a75978c39c37137964b0487e56e09f606b0948feae4213ba3d883eb94"},
+    "9": {"file": "evidence/item9-attestation.json", "content_hash": "sha256:6593d1ad75ef8a81c1b7cb68676a7e1f4875bbbf234bb098744549bee4dec48b"},
     "10": {"file": "evidence/item10-attestation.json", "content_hash": "sha256:08aebe2df56d99c4fc709d9befd3384b5bc6507c3812d56554c7290575a13175"},
     "6": {"not_applicable": {"spec": {"file": "spec/T1-SPEC.md", "content_hash": "sha256:a08cb6d023147b61063605363241acd8bcb6a2ac2f04496a412ae8e41949f6a7", "format": "markdown-table", "id_column": "id"}, "statement": {"file": "evidence/item6-na-statement.json", "content_hash": "sha256:4c8feb1c5388721266e2f5e8e3cb0ec87e1ee4e7ff84c653bf3e60d6ad44cd31"}}}
   }
