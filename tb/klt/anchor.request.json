@@ -1,0 +1,12 @@
+{
+  "schema": "klt.functional_verification.request/1",
+  "engine": "icarus",
+  "sources": [
+    "../sv/gf180_rtl_constants_pkg.sv",
+    "../sv/lut_sine_dut.sv",
+    "../sv/tb_lut_sine_dut.sv"
+  ],
+  "hdl_toplevel": "tb",
+  "testbench": {"module": "test_anchor"},
+  "options": {"timescale": ["1ns", "1ps"], "defines": {"KLT_COCOTB": "1"}}
+}

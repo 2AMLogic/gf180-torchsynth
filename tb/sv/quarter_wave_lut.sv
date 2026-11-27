@@ -25,7 +25,14 @@ module quarter_wave_lut (
 
     reg [1023:0] lut_file;
     initial begin
+`ifdef KLT_COCOTB
+        // klt functional-verification cannot pass plusargs; the cocotb lane
+        // writes the accepted table next to the simulation.
+        lut_file = "lut_quarter_cos.memh";
+        if (1'b0) begin
+`else
         if (!$value$plusargs("lut=%s", lut_file)) begin
+`endif
             $display("LUT-ERROR missing +lut=<memh path> plusarg");
             $finish;
         end

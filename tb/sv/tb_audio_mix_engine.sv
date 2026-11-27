@@ -32,8 +32,19 @@ import gf180_rtl_constants::*;
 
 module tb;
 
+`ifdef KLT_COCOTB
+    // Set only after every capture file is closed; a cocotb test waits on it.
+    // Every error path still calls $finish, which fails the cocotb test.
+    reg klt_done = 1'b0;
+`endif
+
     localparam integer AUDIO_SAMPLES = 176400;
+`ifdef KLT_COCOTB
+    // One sim carries all 29 committed cases (receipt + directed fixtures).
+    localparam integer MAX_RUNS      = 32;
+`else
     localparam integer MAX_RUNS      = 8;
+`endif
 
     reg clk = 1'b0;
     reg rst = 1'b1;
@@ -197,7 +208,11 @@ module tb;
             $fclose(cap_fd[r]);
 
         $display("TB-DONE %0d", RUNS);
+`ifdef KLT_COCOTB
+        klt_done = 1'b1;
+`else
         $finish;
+`endif
     end
 
 endmodule

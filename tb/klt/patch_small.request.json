@@ -1,0 +1,28 @@
+{
+  "schema": "klt.functional_verification.request/1",
+  "engine": "icarus",
+  "sources": [
+    "../sv/gf180_rtl_constants_pkg.sv",
+    "../sv/patch_control.sv",
+    "../sv/tb_patch_control.sv"
+  ],
+  "hdl_toplevel": "tb_patch_control",
+  "testbench": {
+    "module": "test_patch_small"
+  },
+  "options": {
+    "timescale": [
+      "1ns",
+      "1ps"
+    ],
+    "defines": {
+      "KLT_COCOTB": "1"
+    },
+    "includes": [
+      "../sv"
+    ]
+  },
+  "parameters": {
+    "NOISE_CLIP_BYTES": 2048
+  }
+}

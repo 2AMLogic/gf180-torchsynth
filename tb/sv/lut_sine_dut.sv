@@ -47,8 +47,14 @@ module lut_sine_dut (
     reg [1023:0] lut_file;
     initial begin
         if (!$value$plusargs("lut=%s", lut_file)) begin
+`ifdef KLT_COCOTB
+            // klt functional-verification requests carry no plusargs: the
+            // cocotb lane stages the table under this cwd-relative name.
+            lut_file = "lut_quarter_cos.memh";
+`else
             $display("DUT-ERROR missing +lut=<memh path> plusarg");
             $finish;
+`endif
         end
         $readmemh(lut_file, rom);
     end
