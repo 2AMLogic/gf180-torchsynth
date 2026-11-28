@@ -33,6 +33,7 @@ sys.path.insert(0, str(ROOT / "tb"))
 import lane_adsr  # noqa: E402
 import lane_lfo  # noqa: E402
 import lane_modmatrix  # noqa: E402
+import lane_normreplay  # noqa: E402
 import lane_patch  # noqa: E402
 import lane_vco  # noqa: E402
 import run_tb  # noqa: E402
@@ -314,6 +315,23 @@ class ReExportTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIs(
                     getattr(run_tb, name), getattr(lane_patch, name)
+                )
+
+    def test_run_tb_re_exports_the_normreplay_lane(self):
+        # ``tb/lane_normreplay.py`` (#597): ``main``'s dispatch table
+        # resolves ``normreplay`` off ``run_tb``, and ``tb/run_voice.py`` /
+        # ``tb/run_oneshot.py`` import the other nine names off it.
+        for name in ("normreplay", "NORMREPLAY_DUT_SV",
+                     "NORMREPLAY_ALWAYS_ON_ANCHOR",
+                     "NORMREPLAY_ALWAYS_ON_MUTANT",
+                     "NORMREPLAY_ALWAYS_OFF_MUTANT",
+                     "NORMREPLAY_WRONG_PEAK_ANCHOR",
+                     "NORMREPLAY_WRONG_PEAK_MUTANT",
+                     "NORMREPLAY_WRONG_RECIPROCAL_ANCHOR",
+                     "NORMREPLAY_WRONG_RECIPROCAL_MUTANT", "nrg"):
+            with self.subTest(name=name):
+                self.assertIs(
+                    getattr(run_tb, name), getattr(lane_normreplay, name)
                 )
 
 
