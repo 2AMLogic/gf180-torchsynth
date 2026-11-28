@@ -209,7 +209,7 @@ def runtime_definitions(ops: Any, *, family_label: str, provenance: str,
                 + spec["seam"]
                 + " ("
                 + provenance
-                + "); bound to runtime-family-campaign-v1 revision 1"
+                + f"); bound to {ops.MANIFEST_IDENTITY} revision {ops.MANIFEST_REVISION}"
             ),
         }
     return definitions

@@ -1,4 +1,4 @@
-# Estimator qualification and refusal ledger v1
+# Estimator qualification and refusal ledger v2
 
 This is the versioned consumer/publication ledger for estimator validity,
 floors, and refusals over the landed producer family grids. It integrates
@@ -9,7 +9,7 @@ future RTL data. The source target remains
 
 ## What this ledger is
 
-One commit, `sim/qualification/estimators-v1.json`, binds every mandatory
+The current ledger, `sim/qualification/estimators-v2.json`, binds every mandatory
 estimator family to its version, configuration identity, validity predicate,
 qualification grid, floors, and known limitations, and counts coverage and
 floor-limited cases separately from PASS/FAIL. All refusals serialize as
@@ -41,9 +41,9 @@ to pass a comparison; floor-limited comparisons refuse.
 
 The ledger's structure is owned by one committed schema,
 [`spec/schemas/estimator-qualification-v1.schema.json`](schemas/estimator-qualification-v1.schema.json),
-which governs `sim/qualification/estimators-v1.json`. It fixes the exact
-top-level and per-family field sets, the `schema_version` / `ledger` /
-`ledger_version` / `source_target` constants, the mandatory family set, the
+which covers ledger versions 1 and 2. It fixes the top-level and per-family
+field sets, the `schema_version`, `ledger` and `source_target` constants,
+the allowed `ledger_version` values, the mandatory family set, the
 64-hex digest shapes, the nonnegative count domains, and the
 `preparation.status` enum. `estimator_qualification.validate_ledger` loads it
 on every read and write, so a document that violates it refuses as an
@@ -133,11 +133,17 @@ python3 tools/qualify_estimators.py replay
 
 `check` is a three-way comparison: the recomputed census, the committed
 ledger, and the reviewed inventory
-`spec/reference/estimator-obligations-v1.json` must agree exactly — exact
+`spec/reference/estimator-obligations-v2.json` must agree exactly — exact
 key sets and multiplicities, not lengths or prefixes. The inventory is the
 reviewed consumer policy; regenerating it is reproduction, not authority,
 and any drift is an error to reconcile under a new reviewed ledger version,
 with old evidence retained.
+
+Ledger v2 binds the spectral module after the mixer mean change in #575.
+Its paired inventory has `inventory_version: "2"`. Both versions draw their
+census from the same producer reports. The v1 ledger and inventory remain
+at `sim/qualification/estimators-v1.json` and
+`spec/reference/estimator-obligations-v1.json` for consumers of that version.
 
 `replay` delegates grid execution to the landed producer tools exactly as
 their family CI workflows do, then compares recomputed census identity. It

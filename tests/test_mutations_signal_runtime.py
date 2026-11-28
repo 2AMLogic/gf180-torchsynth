@@ -118,7 +118,7 @@ class InventoryBindingTests(unittest.TestCase):
 
     def test_wrong_revision_or_digest_refuses(self):
         for mutate in (
-            lambda m: m.update(revision=3),
+            lambda m: m.update(revision=m["revision"] - 1),
             lambda m: m["frozen_inventory_digest"].update(sha256="0" * 64),
             lambda m: m["inventory"].pop(),
         ):
@@ -672,9 +672,11 @@ class ReportValidationTests(unittest.TestCase):
         self.assertNotIn(("signal:osc.phase_offset (property)", "global-31", 1), mixed)
         one_repeat = {k: v for k, v in outcomes.items() if k[2] == 1}
         self.assertEqual(validator.runtime_kill_totals(signal_only, one_repeat)["kills"], 0)
-        with self.assertRaisesRegex(MutationError, "another campaign revision"):
-            sr.campaign_outcomes(dict(self.report, campaign=dict(self.report["campaign"],
-                                                                 frozen_inventory_sha256="0" * 64)))
+        for stale in ({"frozen_inventory_sha256": "0" * 64},
+                      {"revision": MANIFEST["revision"] - 1}):
+            campaign = dict(self.report["campaign"], **stale)
+            with self.subTest(stale=stale), self.assertRaisesRegex(MutationError, "another campaign revision"):
+                sr.campaign_outcomes(dict(self.report, campaign=campaign))
 
     def assertRefused(self, mutate, pattern):
         records = copy.deepcopy(self.process.records)

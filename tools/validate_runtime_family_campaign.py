@@ -675,6 +675,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     expected = manifest["expected"]
     print(json.dumps({
         "status": "VALID_PREREGISTRATION",
+        "revision": manifest["revision"],
         "measured": False,
         "inventory_entries": expected["inventory_entries"],
         "source_rows": expected["inventory_source_rows"],

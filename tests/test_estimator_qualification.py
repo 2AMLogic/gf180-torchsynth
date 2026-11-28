@@ -189,6 +189,7 @@ class SyntheticTreeTestCase(unittest.TestCase):
         return {
             "schema_version": 1,
             "inventory": "estimator-obligations",
+            "inventory_version": ledger["ledger_version"],
             "families": {
                 name: eq._ledger_inventory_view(ledger, name)
                 for name in eq.FAMILIES
@@ -537,9 +538,7 @@ class SyntheticTreeTestCase(unittest.TestCase):
             properties["schema_version"]["const"], eq.LEDGER_SCHEMA_VERSION
         )
         self.assertEqual(properties["ledger"]["const"], eq.LEDGER_ID)
-        self.assertEqual(
-            properties["ledger_version"]["const"], eq.LEDGER_VERSION
-        )
+        self.assertIn(eq.LEDGER_VERSION, properties["ledger_version"]["enum"])
         self.assertEqual(
             properties["source_target"]["const"], eq.SOURCE_TARGET
         )
@@ -605,15 +604,25 @@ class LandedTreeTestCase(unittest.TestCase):
 
     def test_committed_ledger_and_inventory_reconcile(self):
         committed = eq.ledger_from_json(
-            (ROOT / "sim/qualification/estimators-v1.json").read_text(
+            (ROOT / "sim/qualification/estimators-v2.json").read_text(
                 encoding="utf-8"
             )
         )
         self.assertEqual(committed, self.ledger)
         inventory = eq.load_artifact(
-            ROOT / "spec/reference/estimator-obligations-v1.json"
+            ROOT / "spec/reference/estimator-obligations-v2.json"
         )
         eq.check_inventory(self.ledger, inventory)
+
+    def test_historical_v1_ledger_requires_its_own_inventory(self):
+        ledger = eq.ledger_from_json(
+            (ROOT / "sim/qualification/estimators-v1.json").read_text(encoding="utf-8")
+        )
+        inventory = eq.load_artifact(ROOT / "spec/reference/estimator-obligations-v1.json")
+        self.assertEqual(ledger["ledger_version"], "1")
+        eq.check_inventory(ledger, inventory)
+        with self.assertRaisesRegex(eq.EstimatorQualificationError, "inventory version"):
+            eq.check_inventory(self.ledger, inventory)
 
     def test_publication_totals(self):
         totals = self.ledger["totals"]
@@ -676,6 +685,7 @@ class ReplayOrchestrationTestCase(unittest.TestCase):
         inventory = {
             "schema_version": 1,
             "inventory": "estimator-obligations",
+            "inventory_version": committed["ledger_version"],
             "families": {
                 name: eq._ledger_inventory_view(committed, name)
                 for name in eq.FAMILIES

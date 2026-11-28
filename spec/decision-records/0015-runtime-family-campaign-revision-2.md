@@ -51,3 +51,20 @@ worker attempts in 6 worker processes, 7 expected refusals.
 No result of any kind for the new entries: they are neither measured nor
 detected, and no sensitivity is claimed beyond what the #297 publications
 record on synthetic fixtures.
+
+## Amendment for #575 (2026-11-26)
+
+Campaign revision 3 binds the identity and signal publications regenerated
+after the spectral mixer change. The following SHA-256 values identify the
+two revisions at the #575 boundary.
+
+| Source under `sim/reference/` | Revision 2 at `28bce63` | Revision 3 |
+| --- | --- | --- |
+| `mutation-identity-v1.json` | `17fb2fa1a51ad69a1b454a3c55ca0f9e3393f31b63929bf19f3f5d8ac7cfc8eb` | `6914a1c3b3509804389d897f64cd3523b50727e2d79f9e65501572127daf8cee` |
+| `mutation-signal-v1.json` | `045793c215274eb98a20b002fac29e54ccb94750a9c4bd99ddf2b75f4f86671a` | `25d0078fb18ee0be87e635fce490c323623acf5f7be1196dc04a018a877a5e89` |
+
+The frozen digest covers the inventory, sensitivity inventory, supporting
+entries, cases and detectors. Those inputs reproduce the revision 2 digest
+`b632d7ee43e2da2f0319e6ea9612f9101ef30040211af290f8d3ef0a914f1cd9`.
+Schedules and reports distinguish the two source bindings by campaign
+revision. Revision 3 is preregistration only.

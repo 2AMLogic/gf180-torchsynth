@@ -18,6 +18,26 @@ from torchsynth_voice.paired_metrics import Limit
 from torchsynth_voice.scorecard import validate_row
 
 
+def full_channel_sums(channels, output, *, sample_rate_hz):
+    expected = [[float(v) for v in values] for values in channels.values()]
+    counts = [0] * len(expected)
+    real = math.fsum
+
+    def counting(iterable):
+        for index, channel in enumerate(expected):
+            if isinstance(iterable, list) and iterable == channel:
+                counts[index] += 1
+                break
+        return real(iterable)
+
+    math.fsum = counting
+    try:
+        result = se.mix(channels, output, sample_rate_hz=sample_rate_hz)
+    finally:
+        math.fsum = real
+    return tuple(counts), result
+
+
 class SpectralContractTests(unittest.TestCase):
     def test_noise_identity_is_original_bytes_and_selection(self):
         a = se.NoiseRecord(struct.pack("<4f", 0, 1, -1, 0), (4,), "<f4", 13, 0)
@@ -208,6 +228,37 @@ class SpectralContractTests(unittest.TestCase):
                 "floor-mutant", result, {"noise.mean": 0}, domain="rational-noise"
             )
 
+    def test_mixer_variance_check_sums_each_channel_once(self):
+        for length in (64, 1024, 2048, 44100 * 4):
+            channel = [0.5] * length
+            with self.subTest(length=length):
+                counts, result = full_channel_sums(
+                    {"a": channel}, [0.0] * length, sample_rate_hz=44100
+                )
+                self.assertEqual(counts, (1,))
+                gain = result["metrics"]["mix.a.gain"]
+                self.assertEqual(
+                    (gain["status"], gain["reason"]),
+                    ("insufficient", "input_variance_at_or_below_floor"),
+                )
+
+    def test_mixer_variance_check_stops_at_first_refused_channel(self):
+        constant = [0.5] * 64
+        varying = [float(i % 7 - 3) / 8 for i in range(64)]
+        for channels, expected in (
+            ({"a": constant, "b": varying}, (1, 0)),
+            ({"a": varying, "b": constant}, (1, 1)),
+        ):
+            with self.subTest(channels=list(channels)):
+                counts, result = full_channel_sums(
+                    channels, [0.0] * 64, sample_rate_hz=44100
+                )
+                self.assertEqual(counts, expected)
+                self.assertEqual(
+                    result["metrics"]["mix.a.gain"]["reason"],
+                    "input_variance_at_or_below_floor",
+                )
+
 
 def numerical_suite(preparation_source=None):
     np = se.require_numpy()
@@ -303,6 +354,48 @@ def numerical_suite(preparation_source=None):
             )
             result = se.mix({"a": None}, x, sample_rate_hz=4096)
             self.assertEqual(result["metrics"]["mix.a.gain"]["status"], "missing")
+
+        def test_mixer_variance_floor_is_inclusive(self):
+            amplitude = math.sqrt(2 * se.POWER_FLOOR)
+            for edge, level in (
+                ("below", math.nextafter(amplitude, -math.inf)),
+                ("at", amplitude),
+                ("above", math.nextafter(amplitude, math.inf)),
+            ):
+                with self.subTest(edge=edge):
+                    x = [level, -level] * 16 + [0.0] * 32
+                    mean = math.fsum(x) / len(x)
+                    centered = math.fsum((v - mean) ** 2 for v in x) / len(x)
+                    result = se.mix(
+                        {"a": x}, [2 * v for v in x], sample_rate_hz=44100
+                    )
+                    gain = result["metrics"]["mix.a.gain"]
+                    if edge == "at":
+                        self.assertEqual(centered, se.POWER_FLOOR)
+                    elif edge == "below":
+                        self.assertLess(centered, se.POWER_FLOOR)
+                    else:
+                        self.assertGreater(centered, se.POWER_FLOOR)
+                    if edge == "above":
+                        self.assertEqual(gain["status"], "valid")
+                        self.assertAlmostEqual(gain["value"], 2, delta=1e-12)
+                    else:
+                        self.assertEqual(
+                            (gain["status"], gain["reason"]),
+                            ("insufficient", "input_variance_at_or_below_floor"),
+                        )
+
+        def test_mixer_variance_check_sums_each_valid_channel_once(self):
+            a = np.sin(2 * np.pi * np.arange(256) / 16) + 0.125
+            b = np.cos(2 * np.pi * np.arange(256) / 32) - 0.25
+            counts, result = full_channel_sums(
+                {"a": a, "b": b}, a + 0.5 * b, sample_rate_hz=4096
+            )
+            self.assertEqual(counts, (1, 1))
+            for name in ("a", "b"):
+                self.assertEqual(
+                    result["metrics"][f"mix.{name}.gain"]["status"], "valid"
+                )
 
         def test_float64_and_late_peak(self):
             x = np.array([0, -1, 0, 2.0], dtype=np.float64)

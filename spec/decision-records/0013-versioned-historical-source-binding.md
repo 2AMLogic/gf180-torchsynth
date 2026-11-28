@@ -50,3 +50,15 @@ skipped.
   rubric's pinned sha256 against the archived bytes.
 - The live `spec/ESTIMATOR-QUALIFICATION.md` is free to advance with its
   schema; no holdout identity is read (`holdout_identities_read` stays `0`).
+
+## Estimator ledger v2 and rubric provenance (#575, 2026-11-26)
+
+The mixer change advances the spectral module digest. The reviewed inventory
+and ledger publish this binding as version 2. Rubrics v0, v1 and v2 all retain
+their original estimator-ledger pin, SHA-256
+`d31b8fe4a621a768083c2311ebd7dbe6be4e9e425b3bb6f8bbf3b610f7c07447`,
+which resolves directly to `sim/qualification/estimators-v1.json`.
+
+Rubrics v0 and v1 retain their original bytes. Rubric v2 changes only its
+`mutation-matrix-v2` source pin to identify the regenerated mutation matrix.
+The committed spectral report retains the source digest of its original run.

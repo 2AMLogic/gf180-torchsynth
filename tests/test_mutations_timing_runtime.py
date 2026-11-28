@@ -111,7 +111,7 @@ class InventoryBindingTests(unittest.TestCase):
             tr.require_inventory_match(retargeted)
 
     def test_wrong_revision_or_digest_refuses(self):
-        for key, value in (("revision", 3), ("identity", "other")):
+        for key, value in (("revision", MANIFEST["revision"] - 1), ("identity", "other")):
             tampered = copy.deepcopy(MANIFEST)
             tampered[key] = value
             with self.assertRaises(ValueError):

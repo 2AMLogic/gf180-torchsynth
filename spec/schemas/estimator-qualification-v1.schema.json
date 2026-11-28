@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:gf180-torchsynth:estimator-qualification:v1",
-  "title": "Estimator qualification ledger v1",
+  "title": "Estimator qualification ledger (schema v1)",
   "description": "Versioned consumer publication of estimator validity, floors, and refusals over the landed producer family artifacts. validate_ledger additionally re-derives counts, digest pins, and preparation bindings; JSON Schema alone cannot establish these relationships. Refusals serialize as NO VERDICT (DR-0004); coverage and floor-limited cases are counted separately from PASS/FAIL.",
   "type": "object",
   "additionalProperties": false,
@@ -9,7 +9,7 @@
   "properties": {
     "schema_version": {"type": "integer", "const": 1},
     "ledger": {"type": "string", "const": "estimator-qualification"},
-    "ledger_version": {"type": "string", "const": "1"},
+    "ledger_version": {"type": "string", "enum": ["1", "2"]},
     "scope": {"type": "string", "minLength": 1},
     "source_target": {"type": "string", "const": "2b0964d4c6c3d472a2a0d54d91b408caaeffca6d"},
     "preparation": {"$ref": "#/$defs/preparation"},

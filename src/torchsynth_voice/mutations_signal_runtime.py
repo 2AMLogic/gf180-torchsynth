@@ -1,7 +1,7 @@
 """Signal-family actual-Voice runtime adapter, host side (#336; Part of #300).
 
 Stdlib-only. Binds the signal slice of the committed DR-0012 campaign
-manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 1,
+manifest (``spec/reference/runtime-family-campaign-v1.json`` revision 3,
 frozen inventory digest ``b632d7ee...``) to the declared writable ``voice.*``
 seams of ``spec/reference/mutation-seams-v1.json``:
 
@@ -50,7 +50,7 @@ from .mutations import MutationError
 REQUEST_DOMAIN = b"torchsynth-signal-runtime-request-v1\n"
 FAMILY = ops.FAMILY
 
-# Exact adapter dispositions for the signal slice of manifest revision 2.
+# Exact adapter dispositions for the signal slice of manifest revision 3.
 ADAPTER_DISPOSITIONS: Dict[str, str] = {
     "signal:gain.db": "runtime_cell",
     "signal:gain.polarity": "runtime_cell",
@@ -789,7 +789,9 @@ def campaign_outcomes(report: Dict[str, Any]) -> Dict[Tuple[str, str, int], str]
     entries are never keyed here: they never count toward runtime kills.
     """
     _require(report.get("schema") == "torchsynth-signal-runtime-process-v1", "not a signal process report")
-    _require(report["campaign"].get("frozen_inventory_sha256") == ops.MANIFEST_FROZEN_SHA256,
+    campaign = report["campaign"]
+    _require(campaign.get("revision") == ops.MANIFEST_REVISION
+             and campaign.get("frozen_inventory_sha256") == ops.MANIFEST_FROZEN_SHA256,
              "report bound to another campaign revision")
     case_id = report["case"]["id"]
     repeat = report["repeat"]
