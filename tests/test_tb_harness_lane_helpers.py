@@ -35,18 +35,20 @@ import lane_lfo  # noqa: E402
 import lane_modmatrix  # noqa: E402
 import lane_patch  # noqa: E402
 import lane_vco  # noqa: E402
+import lane_vco2  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
 
 #: Wrappers whose lane lives in its own module (``tb/lane_adsr.py`` #476,
 #: ``tb/lane_lfo.py`` #561, ``tb/lane_modmatrix.py`` #573, ``tb/lane_vco.py``
-#: #589): a re-exported function reads globals from its defining module, so
-#: the patch target is the lane module.
+#: #589, ``tb/lane_vco2.py`` #585): a re-exported function reads globals from
+#: its defining module, so the patch target is the lane module.
 LANE_MODULES = {
     "adsr_load_vectors": lane_adsr,
     "lfo_load_vectors": lane_lfo,
     "mm_load_vectors": lane_modmatrix,
     "sine_load_vectors": lane_vco,
+    "vco_load_vectors": lane_vco2,
 }
 
 
@@ -299,6 +301,24 @@ class ReExportTest(unittest.TestCase):
                 self.assertIs(
                     getattr(run_tb, name), getattr(lane_vco, name)
                 )
+
+    def test_run_tb_re_exports_vco2_lane_and_vco2_golden(self):
+        # ``tb/run_voice.py`` imports VCO2_DUT_SV / VCO_LUT_SV / vc off
+        # ``run_tb`` (#585), so every lane name re-exported there must be
+        # the lane module's own object, never a second copy.
+        for name in (
+            "vco2", "vco_load_vectors", "vco2_derive_case", "vco2_write_case",
+            "vco2_simulate", "vco_mismatch_trace_set",
+            "vco_report_first_mismatch", "vco2_check_case",
+            "vco2_expected_ops", "vco2_run_mutation",
+            "vco_run_vector_mutation", "VCO2_DUT_SV", "VCO_LUT_SV",
+            "VCO2_TB_SV", "VCO_VECTOR_DIR", "VCO_FROZEN_PREFIX",
+            "VCO_SHAPE_MUTATION_CASE", "VCO_VECTOR_MUTATION_CASE",
+            "VCO_SHADOW_MUTATION_INDEX", "VCO2_MUTATION_WALK_CAP",
+            "VCO2_REPLAY_PAIR", "VCO_STREAM_NAMES", "vc",
+        ):
+            with self.subTest(name=name):
+                self.assertIs(getattr(run_tb, name), getattr(lane_vco2, name))
 
     def test_run_tb_re_exports_the_patch_lane(self):
         # ``tb/lane_patch.py`` (#593): ``main``'s dispatch table resolves
