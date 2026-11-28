@@ -9,7 +9,7 @@ body:
 
         **Important**: Loom uses GitHub Issues to control the AI-driven development process. Issues are actionable development tasks, not discussions.
 
-        - **For questions, ideas, or feedback**: Use [GitHub Discussions](https://github.com/rjwalters/loom/discussions)
+        - **For questions, ideas, or feedback**: Use [GitHub Discussions](https://github.com/2AMLogic/loom/discussions)
         - **For development tasks**: Use this template
 
         **External contributors**: Your issue will be automatically labeled as `external` and reviewed by maintainers. Our AI agents focus on internal workflow, so external issues require manual triage.
