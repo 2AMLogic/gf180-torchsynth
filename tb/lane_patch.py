@@ -1,9 +1,7 @@
 """Patch-control lane of the gf180 testbench harness (issue #69, split out
 by #593).
 
-Moved verbatim from ``tb/run_tb.py``, which re-exports every public name
-here so ``import run_tb`` / ``from run_tb import patch`` consumers keep
-working. ``tb/run_tb.py`` stays the lane registry plus the shared core; it
+``tb/run_tb.py`` re-exports selected names such as ``patch`` and
 calls :func:`bind_core` right after defining the shared symbols this lane
 needs (``CONSTANTS_PKG_SV``), so the lane reads them from the one live
 ``run_tb`` module (including when it runs as ``__main__``) instead of

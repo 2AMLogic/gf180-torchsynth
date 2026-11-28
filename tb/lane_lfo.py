@@ -1,8 +1,6 @@
 """LFO lane of the gf180 testbench harness (issue #71, split out by #561).
 
-Moved verbatim from ``tb/run_tb.py``, which re-exports every public name here
-so ``import run_tb`` / ``from run_tb import LFO_DUT_SV`` consumers keep
-working. ``tb/run_tb.py`` stays the lane registry plus the shared core; it
+``tb/run_tb.py`` re-exports selected names such as ``LFO_DUT_SV`` and
 calls :func:`bind_core` right after defining the shared symbols this lane
 needs (``CONSTANTS_PKG_SV``, ``_emitted_constants_match``), so the lane reads
 them from the one live ``run_tb`` module (including when it runs as
