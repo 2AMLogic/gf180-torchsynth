@@ -34,6 +34,7 @@ import lane_adsr  # noqa: E402
 import lane_lfo  # noqa: E402
 import lane_mix  # noqa: E402
 import lane_modmatrix  # noqa: E402
+import lane_patch  # noqa: E402
 import lane_vco  # noqa: E402
 import run_tb  # noqa: E402
 import tb_harness  # noqa: E402
@@ -307,6 +308,22 @@ class ReExportTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIs(
                     getattr(run_tb, name), getattr(lane_vco, name)
+                )
+
+    def test_run_tb_re_exports_the_patch_lane(self):
+        # ``tb/lane_patch.py`` (#593): ``main``'s dispatch table resolves
+        # ``patch`` off ``run_tb``, and the ``normreplay`` lane's
+        # ``render_binding_frames`` / ``render_binding_integration`` read the
+        # other fifteen names off it.
+        for name in ("patch", "CAPS_WITH_RENDER", "CORE_IDENTITY",
+                     "PATCH_DUT_SV", "RENDER_DIGEST_A", "RENDER_DIGEST_B",
+                     "SeqCounter", "noise_pass_frames", "paced_render",
+                     "patch_anchor_words", "patch_build_model",
+                     "render_full_tx", "render_hello", "render_trigger_frame",
+                     "schedule_of", "write_schedule"):
+            with self.subTest(name=name):
+                self.assertIs(
+                    getattr(run_tb, name), getattr(lane_patch, name)
                 )
 
 
