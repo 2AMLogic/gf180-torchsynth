@@ -59,7 +59,7 @@
         "role": "testbench",
         "path": "tb/run_tb.py",
         "passed": true,
-        "content_hash": "sha256:28f6f06b0e933d7f104e6f9e6a175f889f01168e107d154f736c141bc15b22ca"
+        "content_hash": "sha256:1b4fefe2accc66f8149dd48c13f9a8da91ea04c57d75ef4a7f3776511b1bf7e7"
       },
       {
         "check": "present",
