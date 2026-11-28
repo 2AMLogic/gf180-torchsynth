@@ -5,7 +5,7 @@
   "tier": null,
   "t1_item_count": 11,
   "build_t1_item_count": 11,
-  "t1_met_count": 1,
+  "t1_met_count": 2,
   "t1_not_applicable_count": 1,
   "source_doc": "docs/design-evidence-tiers.md",
   "source_doc_content_hash": "sha256:d9287ec9dc6107e560e00b1a8b7a670f757722713b5c651dee3d2cbde058490a",
@@ -178,17 +178,33 @@
       "partition": null,
       "text": "every claimed measurement's testbench committed, with a documented cold-start invocation a third party can run; pinned PDK revision.",
       "notes": [],
-      "status": "unmet",
-      "reason": "stale_evidence",
+      "status": "met",
+      "reason": null,
       "graded_by_build": true,
-      "citation": null,
-      "detail": {
-        "content_hash_pin": "stale",
-        "hash_check": {
-          "field": "provenance.input.content_hash",
-          "expected": "sha256:46669d606522a316ff932918fb63fd1fdce4c6107ab17c82d17e5ef927c16bdc",
-          "actual": "sha256:9b1ca4b60f58f41caf1cde753c21a5e843b53ba1df8355639a1b62f5bd331233",
-          "match": false
+      "citation": {
+        "file": "evidence/item9-attestation.json",
+        "command": null,
+        "kind": "generic",
+        "check_status": "pass",
+        "content_hash": "sha256:9b1ca4b60f58f41caf1cde753c21a5e843b53ba1df8355639a1b62f5bd331233",
+        "input_verified": true,
+        "exit_status": 0,
+        "artifact_binding": {
+          "t1_item": 9,
+          "path": {
+            "path": "evidence/item9-inventory.json",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:9b1ca4b60f58f41caf1cde753c21a5e843b53ba1df8355639a1b62f5bd331233",
+          "input_verified": true,
+          "summary": "T1 item 9 (Testbenches shipped): 27/27 attestation checks passed (klt signoff --attest)",
+          "source": "evidence/item9-inventory.json",
+          "attestation": {
+            "producer": "klt signoff --attest",
+            "inventory_schema_version": 1,
+            "check_count": 27,
+            "passed_count": 27
+          }
         }
       }
     },
