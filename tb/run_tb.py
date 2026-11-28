@@ -39,6 +39,7 @@ import shutil
 import struct
 import sys
 import tempfile
+from dataclasses import dataclass
 from fractions import Fraction
 from pathlib import Path
 
@@ -2493,6 +2494,60 @@ def noise_simulate(workdir: Path, simulator: str, runs: int,
     )
 
 
+@dataclass(frozen=True)
+class _NoiseReceiptStream:
+    raw: bytes
+    mirror: list[int]
+    byte_sha256: str
+    trace_digest: str
+
+
+def _noise_receipt_streams(cases):
+    """Resolve the streams and check every receipt row's identity and digests."""
+    ok = True
+    streams = {}
+    for case in cases:
+        sound_index = case["sound_index"]
+        meta = case["noise"]
+        if meta["seed"] != 13 or meta["slot"] != nsg.canonical_slot(sound_index):
+            print(
+                "NOISE FAILED: case %s noise identity block violates the "
+                "C8 slot rule" % case["id"]
+            )
+            ok = False
+            continue
+        stream = streams.get(sound_index)
+        if stream is None:
+            raw = nsg.resolve_canonical_bytes(sound_index)
+            mirror = nsg.mirror_stream(raw)
+            stream = _NoiseReceiptStream(
+                raw, mirror, nsg.noise_bytes_sha256(raw), nsg.trace_digest(mirror)
+            )
+            streams[sound_index] = stream
+        if (
+            stream.byte_sha256 != meta["sha256"]
+            or stream.trace_digest != case["traces"]["noise.raw"]
+        ):
+            print(
+                "NOISE FAILED: case %s mirror/digest binding broken "
+                "(bytes %s vs %s; noise.raw %s vs %s)"
+                % (
+                    case["id"],
+                    stream.byte_sha256,
+                    meta["sha256"],
+                    stream.trace_digest,
+                    case["traces"]["noise.raw"],
+                )
+            )
+            ok = False
+    print(
+        "host feed + mirror: %d golden cases resolved (seed 13, slot "
+        "sound_index %% 32), every noise.raw digest bound bit-exactly -> %s"
+        % (len(cases), "OK" if ok else "FAIL")
+    )
+    return streams, ok
+
+
 def noise(workdir: Path, simulator: str) -> int:
     """Issue #75 flow: the host-fed exact noise lane vs the golden receipt."""
 
@@ -2500,45 +2555,16 @@ def noise(workdir: Path, simulator: str) -> int:
     if receipt["kind"] != "fixed-voice-golden-release-receipt":
         raise SystemExit("unexpected receipt kind: %r" % receipt["kind"])
     cases = receipt["cases"]
-    ok = True
 
     # 1+2. Host-feed resolve + golden bit-exactness of the mirror lane.
-    streams = {}
-    for case in cases:
-        sound_index = case["sound_index"]
-        meta = case["noise"]
-        if meta["seed"] != 13 or meta["slot"] != sound_index % 32:
-            print(
-                "NOISE FAILED: case %s noise identity block violates the "
-                "C8 slot rule" % case["id"]
-            )
-            ok = False
-            continue
-        raw = nsg.resolve_canonical_bytes(sound_index)
-        sha = nsg.noise_bytes_sha256(raw)
-        mirror = nsg.mirror_stream(raw)
-        digest = nsg.trace_digest(mirror)
-        if sha != meta["sha256"] or digest != case["traces"]["noise.raw"]:
-            print(
-                "NOISE FAILED: case %s mirror/digest binding broken "
-                "(bytes %s vs %s; noise.raw %s vs %s)"
-                % (case["id"], sha, meta["sha256"], digest,
-                   case["traces"]["noise.raw"])
-            )
-            ok = False
-        streams[sound_index] = (raw, mirror)
-    print(
-        "host feed + mirror: %d golden cases resolved (seed 13, slot "
-        "sound_index %% 32), every noise.raw digest bound bit-exactly -> %s"
-        % (len(cases), "OK" if ok else "FAIL")
-    )
+    streams, ok = _noise_receipt_streams(cases)
 
     # 2b. The pre-render gate (AC-4): length + declared digest + framing +
     # canonical seed-13 identity, all checked BEFORE a stream is fed.
     gate_ok = True
     for case in cases:
         sound_index = case["sound_index"]
-        raw, _ = streams[sound_index]
+        raw = streams[sound_index].raw
         try:
             gated = nsg.check_fed_bytes(
                 raw,
@@ -2566,7 +2592,7 @@ def noise(workdir: Path, simulator: str) -> int:
     run_plan = []  # (label, sound_index, declared_slot, bytes)
     for case in cases:
         sound_index = case["sound_index"]
-        raw, _ = streams[sound_index]
+        raw = streams[sound_index].raw
         run_plan.append((case["id"], sound_index,
                          nsg.canonical_slot(sound_index), raw))
     # The synthetic pattern stream rides in one full clip (the DUT's length
@@ -2581,7 +2607,7 @@ def noise(workdir: Path, simulator: str) -> int:
     assert len(pattern_bytes) == nsg.EXPECTED_NOISE_BYTES
     run_plan.append(("synthetic-patterns", 0, 0, pattern_bytes))
     first, replay_index = NOISE_REPLAY_INDICES
-    raw0, _ = streams[first]
+    raw0 = streams[first].raw
     raw_replay = nsg.resolve_canonical_bytes(replay_index)
     if nsg.noise_bytes_sha256(raw_replay) != nsg.noise_bytes_sha256(raw0):
         raise SystemExit(
@@ -2604,7 +2630,7 @@ def noise(workdir: Path, simulator: str) -> int:
         if label == "synthetic-patterns" or sound_index not in streams:
             mirror = nsg.mirror_stream(raw)
         else:
-            mirror = streams[sound_index][1]
+            mirror = streams[sound_index].mirror
         if label.startswith("replay-sound-"):
             replay_positions[label] = run
         captured = captures[run]
@@ -2645,7 +2671,7 @@ def noise(workdir: Path, simulator: str) -> int:
     replay_ok = (
         captures[replay_positions["replay-sound-32"]]
         == captures[replay_positions["replay-sound-0"]]
-        == streams[first][1]
+        == streams[first].mirror
     )
     print(
         "replay/reset: sound_index %d -> %d back-to-back through one en gap "
@@ -2701,7 +2727,8 @@ def noise(workdir: Path, simulator: str) -> int:
     mut_case = cases[NOISE_MUTATION_CASE_INDEX]
     mut_sound = mut_case["sound_index"]
     mut_slot = nsg.canonical_slot(mut_sound)
-    mut_raw, mut_mirror = streams[mut_sound]
+    mut_raw = streams[mut_sound].raw
+    mut_mirror = streams[mut_sound].mirror
 
     # 6a. Dropped final byte (stimulus): the length check must latch.
     mut_dir = workdir / "mut-dropped"
