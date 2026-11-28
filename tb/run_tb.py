@@ -524,199 +524,111 @@ def _emitted_constants_match(
     return matches
 
 
-# ADSR lane (issue #70) lives in ``tb/lane_adsr.py`` (#476); re-exported so
-# ``from run_tb import ADSR_DUT_SV`` etc. keep working. Placed after the shared
-# symbols the lane reads through ``bind_core``.
+# Bind each lane after defining its shared core and import its entry point
+# for the command table in main. run_voice needs the ADSR DUT path, and
+# harness tests reference the vector and budget helpers.
 import lane_adsr  # noqa: E402
 
 lane_adsr.bind_core(sys.modules[__name__])
-from lane_adsr import (  # noqa: E402,F401  (re-exported for consumers)
-    ADSR_DUT_SV,
-    ADSR_MUTATION_CASE,
-    ADSR_REPLAY_PAIR,
-    ADSR_TB_SV,
-    ADSR_VECTOR_DIR,
-    _word_halves,
+from lane_adsr import (  # noqa: E402
+    ADSR_DUT_SV,  # noqa: F401
+    ADSR_VECTOR_DIR,  # noqa: F401
     adsr,
-    adsr_derive_case,
-    adsr_detects,
-    adsr_load_vectors,
-    adsr_simulate,
-    adsr_write_case,
-    check_adsr_budget,
+    adsr_load_vectors,  # noqa: F401
+    check_adsr_budget,  # noqa: F401
 )
 
 
-# LFO lane (issue #71) lives in ``tb/lane_lfo.py`` (#561); re-exported the
-# same way, with ``ag``/``lgo`` along for the ride because
-# ``tb/run_voice.py`` imports them off ``run_tb``. Placed after the shared
-# symbols the lane reads through ``bind_core``.
+# run_voice imports the LFO DUT path, ag and lgo.
+# Harness and LUT-path tests reference the vector, budget and simulation helpers.
 import lane_lfo  # noqa: E402
 
 lane_lfo.bind_core(sys.modules[__name__])
-from lane_lfo import (  # noqa: E402,F401  (re-exported for consumers)
-    LFO_CLAMP_MUTATION_CASE,
-    LFO_DUT_SV,
-    LFO_MUTATION_CASE,
-    LFO_PHASE_MUTATION_CASE,
-    LFO_REPLAY_PAIR,
-    LFO_TB_SV,
-    LFO_VECTOR_DIR,
-    _word32,
-    ag,
-    check_lfo_budget,
+from lane_lfo import (  # noqa: E402
+    LFO_DUT_SV,  # noqa: F401
+    LFO_VECTOR_DIR,  # noqa: F401
+    ag,  # noqa: F401
+    check_lfo_budget,  # noqa: F401
     lfo,
-    lfo_derive_case,
-    lfo_detects,
-    lfo_load_vectors,
-    lfo_run_mutation,
-    lfo_simulate,
-    lfo_write_case,
-    lgo,
+    lfo_derive_case,  # noqa: F401
+    lfo_load_vectors,  # noqa: F401
+    lfo_simulate,  # noqa: F401
+    lfo_write_case,  # noqa: F401
+    lgo,  # noqa: F401
 )
 
 
-# Modulation-matrix lane (issue #72) lives in ``tb/lane_modmatrix.py`` (#573);
-# re-exported the same way. ``MM_MUTATION_WALK_CAP`` is deliberately defined
-# only in the lane module (the sole producer of the mutation walk cap).
+# run_voice imports both modulation-matrix DUT paths. Tests reference the
+# vector loader and mutation cap. ReExportTest pins the route order.
 import lane_modmatrix  # noqa: E402
 
 lane_modmatrix.bind_core(sys.modules[__name__])
-from lane_modmatrix import (  # noqa: E402,F401  (re-exported for consumers)
-    MM_CLAMP_MUTATION_CASE,
-    MM_DROPPED_ROUTE,
-    MM_DUT_SV,
-    MM_MUTATION_CASE,
-    MM_MUTATION_WALK_CAP,
-    MM_REPLAY_PAIR,
-    MM_TB_SV,
-    MM_UPSAMPLE_STATIC_FULL,
-    MM_UP_DUT_SV,
-    MM_VECTOR_DIR,
-    MOD_MATRIX_INPUTS,
-    MOD_MATRIX_OUTPUTS,
-    check_mm_budget,
-    mm_audio_mismatches,
-    mm_check_case,
-    mm_depth_words,
-    mm_derive_case,
-    mm_expected_upsample_ops,
-    mm_load_vectors,
-    mm_matrix_by_route,
-    mm_mismatch_trace_set,
-    mm_mod_digest,
-    mm_ops,
-    mm_run_mutation,
-    mm_run_vector_mutation,
-    mm_simulate,
-    mm_write_case,
+from lane_modmatrix import (  # noqa: E402
+    MM_DUT_SV,  # noqa: F401
+    MM_MUTATION_WALK_CAP,  # noqa: F401
+    MM_UP_DUT_SV,  # noqa: F401
+    MM_VECTOR_DIR,  # noqa: F401
+    MOD_MATRIX_INPUTS,  # noqa: F401
+    MOD_MATRIX_OUTPUTS,  # noqa: F401
+    mm_load_vectors,  # noqa: F401
     modmatrix,
 )
-# Sine VCO lane (issue #73) lives in ``tb/lane_vco.py`` (#589);
-# re-exported the same way, with ``mm``/``vg`` along for the ride
-# because ``tb/run_voice.py`` imports them off ``run_tb``. ``main``'s
-# ``except VcoCaptureIntegrityError`` handler and the ``mix`` lane's
-# ``vco_load_receipt`` call keep resolving off this module. Placed
-# after the shared symbols the lane reads through ``bind_core``.
+
+
+# main handles VCO capture errors, and the mix lane loads the VCO receipt.
+# The integrated runners and VCO tests use the paths, model aliases and
+# simulation helpers through run_tb.
 import lane_vco  # noqa: E402
 
 lane_vco.bind_core(sys.modules[__name__])
-from lane_vco import (  # noqa: E402,F401  (re-exported for consumers)
-    SINE_BUDGET_CASE,
-    SINE_FREQ_POINTS,
-    SINE_MOD_POINTS,
-    SINE_PHASE_MUTATION_CASE,
-    SINE_PHASE_POINTS,
-    SINE_TUNING_MUTATION_CASE,
-    SINE_TUNING_STIMULUS_CASE,
-    SINE_VECTOR_DIR,
-    VCO_CAPTURE_FIELDS,
-    VCO_CLAMP_MUTATION_CASE,
-    VCO_DUT_SV,
-    VCO_HARNESS_FAULT_MARKERS,
-    VCO_LUT_PLUSARG_CHARS,
-    VCO_MUTATION_CASE,
-    VCO_MUTATION_WALK_CAP,
-    VCO_OPS_FIELDS,
-    VCO_PARAMS_LINE_ANCHORS,
-    VCO_RECEIPT_PATH,
-    VCO_REPLAY_PAIR,
-    VCO_SIDECAR_DIR,
-    VCO_TB_SV,
+from lane_vco import (  # noqa: E402
+    SINE_VECTOR_DIR,  # noqa: F401
+    VCO_DUT_SV,  # noqa: F401
+    VCO_LUT_PLUSARG_CHARS,  # noqa: F401
+    VCO_RECEIPT_PATH,  # noqa: F401
     VcoCaptureIntegrityError,
-    _run_logged,
-    check_vco_budget,
-    mm,
-    sine_check_matrix,
-    sine_derive_vector,
-    sine_load_vectors,
+    mm,  # noqa: F401
+    sine_load_vectors,  # noqa: F401
     vco,
-    vco_check_case,
-    vco_check_sim_log,
-    vco_derive_case,
-    vco_expected_ops,
+    vco_check_sim_log,  # noqa: F401
+    vco_derive_case,  # noqa: F401
     vco_load_receipt,
-    vco_read_captures,
-    vco_run_mutation,
-    vco_simulate,
-    vco_verdict_text,
-    vco_write_case,
-    vg,
+    vco_read_captures,  # noqa: F401
+    vco_simulate,  # noqa: F401
+    vco_verdict_text,  # noqa: F401
+    vco_write_case,  # noqa: F401
+    vg,  # noqa: F401
 )
 
 
-# Patch-control lane (issue #69) lives in ``tb/lane_patch.py`` (#593);
-# re-exported the same way. ``main``'s dispatch table and the
-# ``normreplay`` lane's ``render_binding_frames`` /
-# ``render_binding_integration`` resolve the frame builders off this module.
-# Placed after the shared symbols the lane reads through ``bind_core``.
+# The normreplay lane uses the patch frame builders, model and scheduler.
+# Retain the protocol helpers referenced elsewhere in the repository.
 import lane_patch  # noqa: E402
 
 lane_patch.bind_core(sys.modules[__name__])
-from lane_patch import (  # noqa: E402,F401  (re-exported for consumers)
-    CAPS_PATCH_AND_RESET,
+from lane_patch import (  # noqa: E402
     CAPS_WITH_RENDER,
     CORE_IDENTITY,
-    CORE_PROFILE_ID,
-    NOISE_CHUNK_MAX,
-    NOISE_CLIP_BYTES,
+    NOISE_CLIP_BYTES,  # noqa: F401
     PATCH_DUT_SV,
-    PATCH_TB_SV,
-    PATCH_TIMEOUT_CYCLES,
     RENDER_DIGEST_A,
     RENDER_DIGEST_B,
-    RENDER_FOREIGN_IDENTITY,
-    RENDER_SHORT_IDENTITY,
-    RENDER_SMALL_CLIP_BYTES,
-    SOURCE_VERSION,
     SeqCounter,
-    build_scenarios,
-    compare_run,
-    crc16_ccitt_false,
-    formats_midi,
-    frame,
-    frame_v1,
-    noise_frame,
+    compare_run,  # noqa: F401
+    crc16_ccitt_false,  # noqa: F401
+    frame,  # noqa: F401
     noise_pass_frames,
-    obs_from_mirror,
-    paced,
+    paced,  # noqa: F401
     paced_render,
     patch,
     patch_anchor_words,
     patch_build_model,
-    patch_hash_entries,
-    patch_simulate,
     render_full_tx,
-    render_happy_path_frames,
     render_hello,
-    render_negative_frames,
     render_trigger_frame,
     schedule_of,
-    word4,
     write_schedule,
 )
-
-
 
 
 # Audio VCA and pre-normalization mixer lane. The one-shot runners also
