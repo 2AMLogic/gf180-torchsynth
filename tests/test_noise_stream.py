@@ -13,16 +13,22 @@ The RTL itself is exercised by ``tb/run_tb.py noise`` (Icarus; runs in CI
 and on the remote tb host) — these offline tests never stand in for it.
 """
 
+import contextlib
+import copy
+import io
 import json
 import math
 import struct
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "tb"))
 
+import run_tb
 from torchsynth_voice import noise_stream_golden as nsg  # noqa: E402
 from torchsynth_voice.digest import digest_words  # noqa: E402
 from torchsynth_voice.fixed_voice import (  # noqa: E402
@@ -125,6 +131,51 @@ class TestConvertMirrorVsModel(unittest.TestCase):
 
 class TestGoldenReceiptBinding(unittest.TestCase):
     """Every committed golden case binds byte digest, slot rule, and lane."""
+
+    def test_runner_derives_once_per_full_sound_index(self):
+        first, repeated = RECEIPT["cases"][:2]
+        self.assertEqual((first["sound_index"], repeated["sound_index"]), (0, 0))
+        same_slot = dict(first, id="same-slot", sound_index=32)
+        raw = nsg.resolve_canonical_bytes(0)
+        with (
+            mock.patch.object(
+                nsg, "resolve_canonical_bytes", return_value=raw
+            ) as resolve,
+            mock.patch.object(nsg, "mirror_stream", wraps=nsg.mirror_stream) as mirror,
+            mock.patch.object(
+                nsg, "noise_bytes_sha256", wraps=nsg.noise_bytes_sha256
+            ) as sha,
+            mock.patch.object(nsg, "trace_digest", wraps=nsg.trace_digest) as trace,
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            _, ok = run_tb._noise_receipt_streams([first, same_slot, repeated])
+        self.assertTrue(ok)
+        self.assertEqual(resolve.call_args_list, [mock.call(0), mock.call(32)])
+        self.assertEqual(mirror.call_count, 2)
+        self.assertEqual(sha.call_count, 2)
+        self.assertEqual(trace.call_count, 2)
+
+    def test_runner_checks_later_rows_on_cache_hit(self):
+        first, repeated = RECEIPT["cases"][:2]
+        for section, field, bad_value, diagnostic in (
+            ("noise", "seed", 14, "noise identity block"),
+            ("noise", "slot", 1, "noise identity block"),
+            ("noise", "sha256", "0" * 64, "mirror/digest binding broken"),
+            ("traces", "noise.raw", "0" * 64, "mirror/digest binding broken"),
+        ):
+            with self.subTest(field=field):
+                corrupt = copy.deepcopy(repeated)
+                corrupt[section][field] = bad_value
+                out = io.StringIO()
+                with contextlib.redirect_stdout(out):
+                    _, ok = run_tb._noise_receipt_streams([first, corrupt])
+                self.assertFalse(ok)
+                self.assertIn(f"case {repeated['id']} {diagnostic}", out.getvalue())
+
+    def test_runner_refuses_noninteger_index_equal_to_cached_index(self):
+        first, repeated = RECEIPT["cases"][:2]
+        with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(ValueError):
+            run_tb._noise_receipt_streams([first, dict(repeated, sound_index=0.0)])
 
     def test_all_cases_bit_exact(self):
         self.assertEqual(RECEIPT["kind"], "fixed-voice-golden-release-receipt")
