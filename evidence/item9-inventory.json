@@ -23,6 +23,7 @@
     "tb/lane_adsr.py",
     "tb/lane_lfo.py",
     "tb/lane_modmatrix.py",
+    "tb/lane_mix.py",
     "tb/lane_patch.py",
     "tb/lane_vco.py",
     "tb/lane_vco2.py",
