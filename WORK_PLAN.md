@@ -59,6 +59,7 @@ Issues carrying `loom:curated`.
 - **#4**: [Epic #1] Phase plan: reproducible corpus artifacts *(curated)*
 - **#7**: [Epic #1] Phase plan: observable named Voice traces *(curated)*
 - **#55**: [Epic #1] Unseal and run the 32-case blind holdout once *(curated)*
+- **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(curated)*
 - **#82**: [Epic #2] Run reproducible gf180mcu synthesis and timing feasibility *(curated)*
 - **#199**: Champion: Merge-Risk Hold Digest *(curated)*
 - **#243**: Renovate PR #232 (setuptools 83→84) fails scalar sentinel: uv.lock provenance requires re-baselined reference bytes *(curated)*
@@ -90,6 +91,7 @@ Issues carrying `loom:curated`.
 - **#67**: [Epic #2] Demonstrate and archive the end-to-end hardware sound explorer *(architect)*
 - **#81**: [Epic #2] Integrate FPGA control and audio I/O and capture playback *(architect)*
 - **#83**: [Epic #2] Measure gf180mcu floorplan, place, route, and timing feasibility *(architect)*
+- **#580**: Return a failing exit status when noise constants emission raises *(hermit)*
 
 ## Epics
 
@@ -108,7 +110,7 @@ Issues carrying `loom:curated`.
 | In Progress (`loom:building`) | 3 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 2 |
-| Curated | 20 |
-| Architect / Hermit proposals | 11 |
+| Curated | 21 |
+| Architect / Hermit proposals | 12 |
 | Active epics | 3 |
 <!-- guide:plan-body:end -->
